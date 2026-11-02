@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Godot desktop</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background:
+          radial-gradient(420px 220px at 50% 18%, rgba(198, 239, 74, 0.28), transparent 70%),
+          linear-gradient(#1a3a2c, #10241c 70%);
+        color: #f7f3e8;
+      }
+      body {
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+      canvas {
+        width: min(92%, 640px);
+        height: 220px;
+        border-radius: 24px;
+        background: transparent;
+      }
+      p {
+        max-width: 36rem;
+        margin: 0.4rem auto 0;
+        line-height: 1.45;
+      }
+      #isolation-status {
+        font-size: 0.92rem;
+        opacity: 0.86;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <canvas id="canvas" width="640" height="220" aria-label="Godot canvas"></canvas>
+      <p>Godot 4 web export loads in this frame.</p>
+      <p id="isolation-status">Checking SharedArrayBuffer…</p>
+    </div>
+    <script>
+      const canvas = document.getElementById("canvas");
+      const status = document.getElementById("isolation-status");
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.fillStyle = "#c6ef4a";
+        context.beginPath();
+        context.ellipse(320, 120, 78, 58, 0, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#14211a";
+        context.beginPath();
+        context.arc(292, 116, 7, 0, Math.PI * 2);
+        context.arc(348, 116, 7, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      const isolated =
+        window.crossOriginIsolated === true && typeof SharedArrayBuffer === "function";
+      status.textContent = isolated
+        ? "SharedArrayBuffer is available. Replace public/godot-game with your Godot 4 web export."
+        : "SharedArrayBuffer is blocked. The server must send COOP same-origin and COEP require-corp.";
+    </script>
+  </body>
+</html>
