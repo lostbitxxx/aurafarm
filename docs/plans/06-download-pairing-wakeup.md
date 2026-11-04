@@ -41,7 +41,7 @@ Closing tabs, the score button, code signing, and auto-update. The extension's s
 
 RLS: `authenticated` selects own rows. The pair route generates the device token, then `pair_pet_device(token_hash text, label text)` runs as `security definer`, checks `auth.uid()`, and stores the hash. The route returns the raw token once. Heartbeats go through `touch_pet_device(raw_token text)`, which hashes the token, updates `last_seen_at`, and returns `user_id`, or raises when the token is unknown. Grant execute on `touch_pet_device` to `anon`. Do not grant table update to `anon`.
 
-`claim_study_session(raw_code text)` 
+`claim_study_session(raw_code text, token_hash text)` 
 
 - `security definer`, granted to `anon`
 - Finds an `active` session whose `launch_code_hash` matches, whose `launch_code_expires_at` is still in the future, and whose `claimed_at` is null
