@@ -301,6 +301,18 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.15rem;
 }
 
+.score-layout {
+  width: min(720px, calc(100% - 8vw));
+  margin: 0 auto 3rem;
+}
+
+.score-points {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 4rem;
+  line-height: 1;
+}
+
 .study-active { display: grid; gap: 0.55rem; margin-bottom: 0.4rem; }
 .study-active p { margin: 0; }
 .launch-link, .launch-code { word-break: break-all; }

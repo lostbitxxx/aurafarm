@@ -19,6 +19,16 @@ test("scores are only the focused or distracted point values", () => {
   assert.match(sql, /grant execute on function public\.submit_study_score/);
 });
 
+test("older profile tables gain a display name without dropping email", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0004_profile_display_name.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /add column if not exists display_name/);
+  assert.match(sql, /has_display and has_email/);
+  assert.match(sql, /insert into public\.profiles \(id, display_name, email\)/);
+});
+
 test("cancelling a session is a separate function from scoring", () => {
   assert.match(sql, /function public\.cancel_study_session/);
   assert.match(sql, /set status = 'cancelled'/);
