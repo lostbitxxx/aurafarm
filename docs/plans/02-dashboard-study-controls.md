@@ -1,6 +1,6 @@
 # Phase 2 — Dashboard study controls
 
-Status: not started.
+Status: done. The desk shows the blocklist, starts one session, shows the `aurafarm://` code once, and cancels it. `npm test` covers the launch URL and the active-session guard. Against the linked Supabase project, a signed-in user can insert one active session, a second insert is rejected, cancel sets `cancelled`, and `session_token_hash` stays null.
 
 Depends on: [phase 1](01-domain-model.md).
 
