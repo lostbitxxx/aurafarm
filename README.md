@@ -4,7 +4,7 @@ A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `publi
 
 ## Setup
 
-1. Create a Supabase project and run [`supabase/migrations/0001_profiles_and_user_pets.sql`](supabase/migrations/0001_profiles_and_user_pets.sql), then [`supabase/migrations/0002_study_sessions.sql`](supabase/migrations/0002_study_sessions.sql), in the SQL editor.
+1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0004`, in the SQL editor.
 2. Copy [`.env.example`](.env.example) to `.env.local` and fill in the project URL and publishable key. Add `SUPABASE_SECRET_KEY` when email confirmation is enabled, so signup can insert the profile and starter pet before a session exists. The migration also installs a signup trigger that creates those rows inside the auth transaction.
 3. Install and start the dev server:
 

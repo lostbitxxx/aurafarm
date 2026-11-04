@@ -1,6 +1,6 @@
 # Phase 3 — Score API
 
-Status: not started.
+Status: done. `POST /api/sessions/:id/score` parses the sample body, writes 40 or 100 through `submit_study_score`, and returns the score-screen URL. A second submit is 409. `/dashboard/sessions/[id]` shows the score to the signed-in owner and redirects everyone else to login. Existing databases need [`0003_score_submit_status.sql`](../../supabase/migrations/0003_score_submit_status.sql). Databases whose `profiles` table has `email` and no `display_name` also need [`0004_profile_display_name.sql`](../../supabase/migrations/0004_profile_display_name.sql) before signup can create a user.
 
 Depends on: [phase 1](01-domain-model.md). It does not need the dashboard panel, but the score screen should sit on the desk the panel will also use.
 

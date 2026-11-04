@@ -1,3 +1,11 @@
+export function labelForBlockedHost(
+  host: string,
+  entries: readonly { host: string; label: string }[],
+) {
+  const match = entries.find((entry) => hostMatchesBlocklist(host, [entry.host]));
+  return match?.label ?? host;
+}
+
 export function hostMatchesBlocklist(host: string, blockedHosts: readonly string[]) {
   const normalized = normalizeHost(host);
   if (!normalized) return false;

@@ -186,8 +186,15 @@ begin
 
   if not found
     or session_row.session_token_hash is null
-    or session_row.session_token_hash <> token_hash
-    or session_row.status <> 'active' then
+    or session_row.session_token_hash <> token_hash then
+    raise exception 'Score rejected';
+  end if;
+
+  if session_row.status = 'submitted' then
+    raise exception 'Score already submitted';
+  end if;
+
+  if session_row.status <> 'active' then
     raise exception 'Score rejected';
   end if;
 
@@ -238,6 +245,9 @@ begin
   );
 
   return query select result_points, result_distracted;
+exception
+  when unique_violation then
+    raise exception 'Score already submitted';
 end;
 $$;
 
