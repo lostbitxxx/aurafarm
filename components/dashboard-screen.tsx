@@ -22,11 +22,14 @@ export function DashboardScreen({
   scores: StudyScoreCard[];
   studyError: string | null;
 }) {
+  const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
   return (
     <>
       <SiteHeader displayName={displayName} />
       <main className="desk">
-        <GodotFrame />
+        <GodotFrame
+          pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
+        />
         <div className="desk-side">
           <StudyPanel
             blocklist={blocklist}

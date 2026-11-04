@@ -1,6 +1,6 @@
 # Phase 4 — Godot web mini-game
 
-Status: not started.
+Status: done. Editor pinned to Godot 4.5.2-stable.
 
 Depends on: the pet desk iframe. It does not depend on study sessions. It can be built beside phase 5.
 

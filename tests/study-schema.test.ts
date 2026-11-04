@@ -29,6 +29,15 @@ test("older profile tables gain a display name without dropping email", () => {
   assert.match(sql, /insert into public\.profiles \(id, display_name, email\)/);
 });
 
+test("older pet tables gain a created_at column", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0005_user_pets_created_at.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /alter table public\.user_pets/);
+  assert.match(sql, /add column if not exists created_at/);
+});
+
 test("cancelling a session is a separate function from scoring", () => {
   assert.match(sql, /function public\.cancel_study_session/);
   assert.match(sql, /set status = 'cancelled'/);

@@ -43,6 +43,15 @@ export function buildStarterPetRecord(userId: string): StarterPetRecord {
   };
 }
 
+export function buildGodotFrameSrc(pet: { pet_type: string; level: number } | null) {
+  if (!pet) return "/godot-game/index.html";
+  const params = new URLSearchParams({
+    pet: pet.pet_type,
+    level: String(pet.level),
+  });
+  return `/godot-game/index.html?${params.toString()}`;
+}
+
 export function describePet(petType: string) {
   const known = PET_COPY[petType];
   if (known) return known;

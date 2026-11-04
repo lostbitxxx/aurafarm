@@ -4,7 +4,7 @@ A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `publi
 
 ## Setup
 
-1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0004`, in the SQL editor.
+1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0005`, in the SQL editor. `0005` adds `user_pets.created_at` when an older table is missing it. The desk lists pets without that column.
 2. Copy [`.env.example`](.env.example) to `.env.local` and fill in the project URL and publishable key. Add `SUPABASE_SECRET_KEY` when email confirmation is enabled, so signup can insert the profile and starter pet before a session exists. The migration also installs a signup trigger that creates those rows inside the auth transaction.
 3. Install and start the dev server:
 
@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-4. Replace [`public/godot-game/index.html`](public/godot-game/index.html) with your Godot 4 web export. Keep the files in that folder so the dashboard iframe keeps loading `/godot-game/index.html`.
+4. The desk already loads the committed Godot 4.5.2 export in [`public/godot-game`](public/godot-game). Rebuild that folder from [`godot`](godot) with the same editor when the scene changes, and leave thread support off.
 
 ## SharedArrayBuffer
 
