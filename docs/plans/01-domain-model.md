@@ -1,6 +1,6 @@
 # Phase 1 — Domain model
 
-Status: not started.
+Status: done. The migration, helpers, and tests are in the repo. `npm test` covers the formula, hashes, hostname matching, and the migration text. The migration was applied after `0001` on PostgreSQL 16: a signed-in role can insert and read its own session, cannot insert a score or a second active session, and `submit_study_score` writes 100 or 40, rejects a null or wrong token, and rejects a second submit.
 
 Depends on: the pet desk (`profiles`, `user_pets`, signup trigger).
 
