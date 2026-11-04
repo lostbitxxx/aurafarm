@@ -23,3 +23,7 @@ npm run dev
 - `Cross-Origin-Embedder-Policy: require-corp`
 
 The placeholder frame reports whether `SharedArrayBuffer` is available.
+
+## Study sessions
+
+The desktop pet, browser extension, and scoring work is planned in [`docs/PLAN.md`](docs/PLAN.md). Each phase has its own small plan in [`docs/plans`](docs/plans).
