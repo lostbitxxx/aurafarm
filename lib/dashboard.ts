@@ -1,6 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { isAnyDeviceFresh } from "./pet-device";
 import type { PetCard } from "./pets";
 import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "./study";
 import { createClient } from "./supabase/server";
@@ -12,7 +13,7 @@ export async function loadDashboard() {
   const userId = data?.claims.sub;
   if (error || !userId) redirect("/login");
 
-  const [{ data: profile }, petsResult, blocklistResult, sessionResult, scoresResult] =
+  const [{ data: profile }, petsResult, blocklistResult, sessionResult, scoresResult, devicesResult] =
     await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
       supabase
@@ -33,6 +34,7 @@ export async function loadDashboard() {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(10),
+      supabase.from("pet_devices").select("last_seen_at").eq("user_id", userId),
     ]);
 
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => ({
@@ -77,5 +79,20 @@ export async function loadDashboard() {
     activeSession,
     scores,
     studyError,
+    petRunning: isAnyDeviceFresh(
+      (devicesResult.data ?? []).map((device) =>
+        device.last_seen_at ? String(device.last_seen_at) : null,
+      ),
+      Date.now(),
+    ),
+    petError: presenceMessage(devicesResult.error?.message ?? null),
   };
+}
+
+function presenceMessage(message: string | null) {
+  if (!message) return null;
+  if (/pet_devices|schema cache/i.test(message)) {
+    return "Run migration 0006 before pairing a pet.";
+  }
+  return message;
 }
