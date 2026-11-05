@@ -15,6 +15,14 @@ npm run dev
 
 4. The desk already loads the committed Godot 4.5.2 export in [`public/godot-game`](public/godot-game). Rebuild that folder from [`godot`](godot) with the same editor when the scene changes, and leave thread support off.
 
+The roaming pet is a separate Windows export and is not committed:
+
+```bash
+godot --headless --path godot --export-release "Windows Desktop" desktop/build/aurafarm.exe
+```
+
+Double-click `desktop/build/aurafarm.exe` on Windows. The window is the sprite, stays above other windows, and walks the usable area of each monitor. Clicks outside the sprite pass through.
+
 ## SharedArrayBuffer
 
 `next.config.ts` sends these headers on every dev and production response, including the Godot files:
