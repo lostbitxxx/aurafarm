@@ -19,7 +19,7 @@ export async function loadDashboard() {
         .from("user_pets")
         .select("id, pet_type, level, is_desktop_active")
         .eq("user_id", userId)
-        .order("created_at", { ascending: true }),
+        .order("id", { ascending: true }),
       supabase.from("blocklist_hosts").select("host, label").order("host", { ascending: true }),
       supabase
         .from("study_sessions")
