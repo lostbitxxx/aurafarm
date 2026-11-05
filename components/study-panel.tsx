@@ -114,7 +114,7 @@ export function StudyPanel({
           </p>
           {launchUrl ? (
             <>
-              <p>The desktop pet will open this link later. The code expires in 5 minutes.</p>
+              <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
               <a className="launch-link" href={launchUrl}>
                 {launchUrl}
               </a>

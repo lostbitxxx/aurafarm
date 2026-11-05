@@ -25,7 +25,7 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5 adds the Windows roaming scene to the same Godot project. The executable stays out of git. There is no installer or extension yet.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5 adds the Windows roaming scene to the same Godot project. The executable stays out of git. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. There is no extension yet.
 
 ## Rules for every phase
 

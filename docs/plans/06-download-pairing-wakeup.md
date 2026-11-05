@@ -1,6 +1,6 @@
 # Phase 6 — Download, pairing, and wake-up
 
-Status: not started.
+Status: implemented. Run [`supabase/migrations/0006_pet_devices.sql`](../../supabase/migrations/0006_pet_devices.sql). The plan originally named that file `0003`; that number was already used.
 
 Depends on: [phase 2](02-dashboard-study-controls.md) and [phase 5](05-roaming-desktop-pet.md).
 
@@ -16,7 +16,7 @@ Closing tabs, the score button, code signing, and auto-update. The extension's s
 
 ## Touch
 
-- `supabase/migrations/0003_pet_devices.sql`
+- `supabase/migrations/0006_pet_devices.sql`
 - `app/api/pet/pair/route.ts`
 - `app/api/pet/heartbeat/route.ts`
 - `app/api/sessions/claim/route.ts`

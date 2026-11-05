@@ -7,7 +7,7 @@ script = ExtResource("1_desk")
 
 [node name="Slime" type="Polygon2D" parent="."]
 unique_name_in_owner = true
-position = Vector2(64, 64)
+position = Vector2(110, 78)
 scale = Vector2(0.72, 0.72)
 color = Color(0.776471, 0.937255, 0.290196, 1)
 polygon = PackedVector2Array(-70, -20, -40, -62, 40, -62, 78, -10, 62, 48, -58, 48)

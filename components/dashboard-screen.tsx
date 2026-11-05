@@ -1,5 +1,7 @@
+import { HEARTBEAT_INTERVAL_MS } from "@/lib/pet-device";
 import { GodotFrame } from "./godot-frame";
 import { PetInventory } from "./pet-inventory";
+import { PetStatus } from "./pet-status";
 import { SiteHeader } from "./site-header";
 import { StudyPanel } from "./study-panel";
 import type { PetCard } from "@/lib/pets";
@@ -13,6 +15,9 @@ export function DashboardScreen({
   activeSession,
   scores,
   studyError,
+  petRunning,
+  petError,
+  downloadUrl,
 }: {
   displayName: string;
   pets: PetCard[];
@@ -21,6 +26,9 @@ export function DashboardScreen({
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   studyError: string | null;
+  petRunning: boolean;
+  petError: string | null;
+  downloadUrl: string | null;
 }) {
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
   return (
@@ -31,6 +39,12 @@ export function DashboardScreen({
           pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
         />
         <div className="desk-side">
+          <PetStatus
+            downloadUrl={downloadUrl}
+            running={petRunning}
+            presenceError={petError}
+            pollMs={HEARTBEAT_INTERVAL_MS}
+          />
           <StudyPanel
             blocklist={blocklist}
             activeSession={activeSession}

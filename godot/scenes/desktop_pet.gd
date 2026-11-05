@@ -1,10 +1,10 @@
 extends Node2D
 
 const DesktopWalk = preload("res://scripts/desktop_walk.gd")
-const WINDOW_SIZE := Vector2i(128, 128)
+const WINDOW_SIZE := Vector2i(220, 260)
+const PetLinkScript = preload("res://scripts/pet_link.gd")
 const SPEED := Vector2i(80, 36)
 
-@onready var slime: Polygon2D = %Slime
 var origin := Vector2i.ZERO
 var velocity := SPEED
 
@@ -16,7 +16,8 @@ func _ready() -> void:
 	var rects := _usable_rects()
 	origin = _starting_origin(rects)
 	DisplayServer.window_set_position(origin)
-	DisplayServer.window_set_mouse_passthrough(_slime_polygon())
+	DisplayServer.window_set_mouse_passthrough(_click_shape())
+	add_child(PetLinkScript.new())
 
 
 func _process(delta: float) -> void:
@@ -55,11 +56,13 @@ func _configure_window() -> void:
 	get_viewport().transparent_bg = true
 
 
-func _slime_polygon() -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for point in slime.polygon:
-		points.append(slime.to_global(point))
-	return points
+func _click_shape() -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(8, 20),
+		Vector2(WINDOW_SIZE.x - 8, 20),
+		Vector2(WINDOW_SIZE.x - 8, WINDOW_SIZE.y - 12),
+		Vector2(8, WINDOW_SIZE.y - 12),
+	])
 
 
 func _usable_rects() -> Array:

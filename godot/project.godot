@@ -15,12 +15,12 @@ config/features=PackedStringArray("4.5", "GL Compatibility")
 
 window/size/viewport_width=640
 window/size/viewport_height=360
-window/size/viewport_width.windows=128
-window/size/viewport_height.windows=128
+window/size/viewport_width.windows=220
+window/size/viewport_height.windows=260
 window/size/window_width_override=640
 window/size/window_height_override=360
-window/size/window_width_override.windows=128
-window/size/window_height_override.windows=128
+window/size/window_width_override.windows=220
+window/size/window_height_override.windows=260
 window/size/borderless.windows=true
 window/size/transparent.windows=true
 window/per_pixel_transparency/allowed.windows=true
