@@ -1,6 +1,6 @@
 # Phase 5 — Roaming desktop pet
 
-Status: not started.
+Status: implemented. The walk math passed a headless check on Godot 4.5.2. Launching the window over a real desktop still has to be checked on Windows.
 
 Depends on: nothing on the website. Use the same `godot/` project created in phase 4. If phase 4 has not created it yet, create the project here and leave the Web preset for phase 4.
 
@@ -52,3 +52,21 @@ Manual, on Windows: launch the export, open a browser, and watch the pet cross t
 - The Windows export launches as its own process and the pet crosses the usable desktop, including over a browser window.
 - The window stays sprite-sized. The rest of the screen stays clickable.
 - `desktop/build/` is gitignored and the executable is not in the commit.
+
+## Implementation notes
+
+Headless check, Godot 4.5.2, exit 0, printed `desktop walk ok`:
+
+```text
+godot --headless --path godot --script res://scripts/walk_check.gd
+```
+
+`npm test` runs that command when `godot` is on `PATH` and skips it otherwise.
+
+Windows export, not committed:
+
+```text
+godot --headless --path godot --export-release "Windows Desktop" desktop/build/aurafarm.exe
+```
+
+The project keeps `run/main_scene` on the web pet. `run/main_scene.windows` selects `desktop_pet.tscn` for the Windows export, along with the 128×128 transparent borderless window. The export packed those overrides. This machine cannot launch the exe.

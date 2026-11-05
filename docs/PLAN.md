@@ -25,7 +25,7 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. There is no installer, desktop export, or extension yet.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5 adds the Windows roaming scene to the same Godot project. The executable stays out of git. There is no installer or extension yet.
 
 ## Rules for every phase
 
@@ -52,8 +52,9 @@ Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supab
 | 7 | [Browser extension](plans/07-browser-extension.md) | 6 | Closes blocklist tabs and tells the pet |
 | 8 | [Pet scoring action](plans/08-pet-scoring-action.md) | 3, 7 | The pet submits the score and opens the desk |
 | 9 | [Packaging](plans/09-packaging.md) | 6, 7, 8 | Signing notes, updates, privacy note, optional native messaging |
+| 10 | [Disable email confirmation](plans/10-disable-email-confirmation.md) | none | New accounts open the desk without a confirmation email |
 
-Order: 1, then 2 and 3. Phase 4 can proceed beside phase 5. Phase 6 needs 2 and 5. Phase 7 needs 6. Phase 8 needs 3 and 7. Phase 9 is last. Phase 4 and phase 5 stay separate exports so the web game can ship before the desktop pet exists.
+Order: 1, then 2 and 3. Phase 4 can proceed beside phase 5. Phase 6 needs 2 and 5. Phase 7 needs 6. Phase 8 needs 3 and 7. Phase 9 is last. Phase 4 and phase 5 stay separate exports so the web game can ship before the desktop pet exists. Phase 10 can happen at any time. It does not wait for the desktop pet.
 
 ## Settled decisions
 
