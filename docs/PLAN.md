@@ -25,11 +25,11 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Electron client for those routes is not built yet.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Mac Electron pet in [`desktop/`](../desktop/) calls those routes. Phase 7 reads the frontmost browser tab during a claimed session.
 
 ## Next commit
 
-The Mac Electron pet is the current desktop work, described in [phase 5](plans/05-roaming-desktop-pet.md). Do not add the frontmost-site reader or the Finish button in that work. Those stay in phases 7 and 8. Windows packaging waits.
+The Finish action is the current desktop work, described in [phase 8](plans/08-pet-scoring-action.md). The pet already keeps the blocked count from phase 7. Do not add packaging in that work. Windows packaging waits.
 
 ## Rules for every phase
 

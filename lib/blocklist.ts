@@ -1,3 +1,6 @@
+// The Electron pet applies this same host rule in desktop/frontmost.js.
+// tests/frontmost.test.ts checks the two copies still agree.
+
 export function labelForBlockedHost(
   host: string,
   entries: readonly { host: string; label: string }[],
