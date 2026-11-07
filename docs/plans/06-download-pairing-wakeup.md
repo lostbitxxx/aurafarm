@@ -1,6 +1,6 @@
 # Phase 6 — Download, pairing, and wake-up
 
-Status: implemented. Run [`supabase/migrations/0006_pet_devices.sql`](../../supabase/migrations/0006_pet_devices.sql). The plan originally named that file `0003`; that number was already used.
+Status: the server routes are implemented. Run [`supabase/migrations/0006_pet_devices.sql`](../../supabase/migrations/0006_pet_devices.sql). The plan originally named that file `0003`; that number was already used. The Godot client (`godot/scripts/pet_link.gd` and `desktop/install-protocol.reg`) is removed by the phase 5 deletion commit. The Electron pet calls these same routes after that commit.
 
 Depends on: [phase 2](02-dashboard-study-controls.md) and [phase 5](05-roaming-desktop-pet.md).
 
@@ -12,7 +12,7 @@ The deployed website does not open `ws://127.0.0.1` or `http://127.0.0.1`.
 
 ## Out of scope
 
-Closing tabs, the score button, code signing, and auto-update. The extension's socket is reserved here and used in phase 7. SmartScreen warnings are expected until phase 9.
+Closing tabs, the score button, code signing, and auto-update. The pet opens no local socket. SmartScreen warnings are expected until phase 9.
 
 ## Touch
 
@@ -23,8 +23,7 @@ Closing tabs, the score button, code signing, and auto-update. The extension's s
 - `lib/pet-device.ts` — token helpers, freshness (`HEARTBEAT_INTERVAL_MS = 10_000`, `HEARTBEAT_FRESH_MS = 30_000`)
 - `components/pet-status.tsx` — download link and running / not-running
 - `components/study-panel.tsx` — keep the phase 2 link; add a one-line hint to launch the pet
-- `desktop/` Godot scripts for pair, heartbeat, and claim
-- `desktop/install-protocol.reg` — registers `aurafarm` for the current user's `HKCU`
+- The Godot client that used to live in `godot/scripts/pet_link.gd` and `desktop/install-protocol.reg` is deleted with the phase 5 Windows pet. The Electron pet replaces that client and calls the routes below.
 - `.env.example` — `NEXT_PUBLIC_PET_DOWNLOAD_URL`
 - `tests/pet-device.test.ts`
 
@@ -73,14 +72,14 @@ Presence is `last_seen_at` within 30 seconds on any of the user's devices. Load 
 Pairing controls on the desk, while signed in:
 
 - "Pair this computer" calls `POST /api/pet/pair` with the session cookie and shows the device token once, together with `aurafarm://pair?token=…`. Tell the user the token is shown once.
-- The pet stores the token locally in `user://` and heartbeats `POST /api/pet/heartbeat` with `Authorization: Bearer <device token>` every 10 seconds. Bind no port in this phase.
+- The Electron pet stores the token locally and heartbeats `POST /api/pet/heartbeat` with `Authorization: Bearer <device token>` every 10 seconds. Bind no port.
 
 Wake-up:
 
 - The phase 2 link stays `aurafarm://session?code=CODE`.
-- `desktop/install-protocol.reg` points the `aurafarm` protocol at the exported exe with a `"%1"` argument.
-- On startup the pet reads the argument. `pair` saves the token. `session` POSTs `{ "code": "..." }` to `/api/sessions/claim` using the API origin baked into the export.
-- Dev export uses `http://localhost:3000`. The production export uses the deployed origin. One constant in the Godot project, set before export.
+- The Electron app registers `aurafarm://` for the current user and points it at that app with the URL as an argument. This replaces `desktop/install-protocol.reg`.
+- On startup the pet reads the argument. `pair` saves the token. `session` POSTs `{ "code": "..." }` to `/api/sessions/claim` using the API origin baked into the app.
+- The dev app uses `http://localhost:3000`. The production build uses the deployed origin. One constant in the Electron app, set before packaging.
 - Fallback when the protocol is not registered: the pet has a one-line code field. Pasting the launch code calls the same claim function. This is how the phase is tested without an installer.
 
 ## Done when
