@@ -15,15 +15,7 @@ npm run dev
 
 4. The desk already loads the committed Godot 4.5.2 export in [`public/godot-game`](public/godot-game). Rebuild that folder from [`godot`](godot) with the same editor when the scene changes, and leave thread support off.
 
-The roaming pet is a separate Windows export and is not committed:
-
-```bash
-godot --headless --path godot --export-release "Windows Desktop" desktop/build/aurafarm.exe
-```
-
-Double-click `desktop/build/aurafarm.exe` on Windows. The window stays above other windows, walks the usable desktop, and has a launch-code field. Edit the exe path in [`desktop/install-protocol.reg`](desktop/install-protocol.reg) and double-click it to register `aurafarm://` for your user. The dev export calls `http://localhost:3000`. Change `API_ORIGIN` in [`godot/scripts/pet_link.gd`](godot/scripts/pet_link.gd) before a production export. Set `NEXT_PUBLIC_PET_DOWNLOAD_URL` when the file is hosted outside this app.
-
-On the desk, Pair this computer shows a device token once. The pet saves it from `aurafarm://pair?token=…` and heartbeats every 10 seconds.
+The Godot Windows pet has been removed. The next desktop pet is Electron and is not in this repo yet. Pairing routes remain on the desk. Set `NEXT_PUBLIC_PET_DOWNLOAD_URL` when a build is hosted outside this app.
 
 ## SharedArrayBuffer
 
@@ -36,4 +28,4 @@ The placeholder frame reports whether `SharedArrayBuffer` is available.
 
 ## Study sessions
 
-Study sessions, the web pet, the Godot Windows pet, and pairing are in the repo. The next plan step deletes that Windows pet before any Electron code. The frontmost-site reader and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension.
+Study sessions, the web pet, and pairing are in the repo. The Godot Windows pet has been removed. The Electron pet, the frontmost-site reader, and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension.

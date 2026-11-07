@@ -25,11 +25,11 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5's Godot Windows scene is still in the tree. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Godot client for that pairing is `godot/scripts/pet_link.gd`.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Electron client for those routes is not built yet.
 
 ## Next commit
 
-Delete the Godot desktop pet, and do not add the Electron app in that same commit. The file list is in [phase 5](plans/05-roaming-desktop-pet.md). The web export, the desk, and the pairing routes stay. Electron starts only after that deletion lands. The frontmost-site reader and the Finish button stay in phases 7 and 8.
+Build the Electron pet described in [phase 5](plans/05-roaming-desktop-pet.md). Do not add the frontmost-site reader or the Finish button in that commit. Those stay in phases 7 and 8.
 
 ## Rules for every phase
 
@@ -58,7 +58,7 @@ Delete the Godot desktop pet, and do not add the Electron app in that same commi
 | 9 | [Packaging](plans/09-packaging.md) | 6, 7, 8 | Signed Electron build, updates, privacy note |
 | 10 | [Disable email confirmation](plans/10-disable-email-confirmation.md) | none | New accounts open the desk without a confirmation email |
 
-Order: the next commit is the phase 5 deletion and nothing else. Electron follows that commit. Phases 1 through 4 and the phase 6 server routes are already in the repo. Phase 7 needs the Electron pet and a claimed session. Phase 8 needs 3 and 7. Phase 9 is last. Phase 10 can happen at any time. It does not wait for the desktop pet.
+Order: the Godot Windows pet is removed. The next commit is the Electron pet from phase 5. Phases 1 through 4 and the phase 6 server routes are already in the repo. Phase 7 needs the Electron pet and a claimed session. Phase 8 needs 3 and 7. Phase 9 is last. Phase 10 can happen at any time. It does not wait for the desktop pet.
 
 ## Settled decisions
 

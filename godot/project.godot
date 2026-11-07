@@ -1,6 +1,5 @@
 ; Engine configuration file.
-; Godot 4.5.2-stable. The web and Windows exports both stay on this editor.
-; .windows values apply only to the Windows export. The web export keeps the base values.
+; Godot 4.5.2-stable. This project is the web mini-game.
 
 config_version=5
 
@@ -8,27 +7,17 @@ config_version=5
 
 config/name="Aurafarm"
 run/main_scene="res://scenes/web_pet.tscn"
-run/main_scene.windows="res://scenes/desktop_pet.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [display]
 
 window/size/viewport_width=640
 window/size/viewport_height=360
-window/size/viewport_width.windows=220
-window/size/viewport_height.windows=260
 window/size/window_width_override=640
 window/size/window_height_override=360
-window/size/window_width_override.windows=220
-window/size/window_height_override.windows=260
-window/size/borderless.windows=true
-window/size/transparent.windows=true
-window/per_pixel_transparency/allowed.windows=true
 window/stretch/mode="canvas_items"
-window/stretch/mode.windows="disabled"
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-viewport/transparent_background.windows=true
