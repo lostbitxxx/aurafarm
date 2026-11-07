@@ -23,7 +23,11 @@ npm install
 npm start
 ```
 
-The sprite walks the Mac desktop. Click it to sign in or paste a launch code. `aurafarm://pair` and `aurafarm://session` open this app. Set `NEXT_PUBLIC_PET_DOWNLOAD_URL` when a Mac build is hosted outside this app.
+The sprite walks the Mac desktop. Click it to sign in or paste a launch code. On startup the pet registers `aurafarm://` for the current user, so `aurafarm://pair?token=…` and `aurafarm://session?code=…` open this app.
+
+Build a Mac zip from `desktop/` with `npm run pack`. The zip is written to `desktop/dist/` and is not committed. Host that zip outside this app and set `NEXT_PUBLIC_PET_DOWNLOAD_URL` to its address. The desk download button and `GET /api/pet/version` both use that address. A newer version there shows an update line in the pet; the pet opens the zip when asked and does not replace its own files.
+
+`npm run pack` skips code signing. Sign a release with `npm run pack:signed` on a Mac that has `CSC_LINK` and `CSC_KEY_PASSWORD` in the environment. Do not commit the certificate or the password. Until that signed zip is the download URL, the desk says to right-click the app and choose Open.
 
 ## SharedArrayBuffer
 
@@ -36,4 +40,4 @@ The placeholder frame reports whether `SharedArrayBuffer` is available.
 
 ## Study sessions
 
-Study sessions, the web pet, pairing, and the Mac Electron pet are in the repo. The frontmost-site reader and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension, and there is no Windows pet.
+Study sessions, the web pet, pairing, the Mac Electron pet, the frontmost-site reader, and the Finish score action are in the repo. What the pet can see is on `/privacy`. There is no browser extension, and there is no Windows pet.

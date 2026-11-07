@@ -1,6 +1,6 @@
 # Phase 9 — Packaging
 
-Status: not started.
+Status: `GET /api/pet/version` returns the pet version and `NEXT_PUBLIC_PET_DOWNLOAD_URL`. The pet shows an update line when that version is newer and opens the zip only when asked. `/privacy` is linked from the desk. An unsigned local build tells the user to right-click and choose Open. `npm run pack` writes a Mac zip under `desktop/dist/`, which stays gitignored. No certificate is committed.
 
 Depends on: [phase 6](06-download-pairing-wakeup.md), [phase 7](07-browser-extension.md), and [phase 8](08-pet-scoring-action.md).
 

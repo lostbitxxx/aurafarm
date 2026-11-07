@@ -67,7 +67,10 @@ export function PetStatus({
           Download the Mac pet
         </a>
       ) : (
-        <p>The desktop build is not published yet. Install the pet, then pair this computer.</p>
+        <p>
+          The desktop build is not published yet. An unsigned Mac app is blocked until you
+          right-click it and choose Open. Then pair this computer.
+        </p>
       )}
       <button type="button" className="button" disabled={pending} onClick={onPair}>
         {pending ? "Pairing…" : "Pair this computer"}
