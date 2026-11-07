@@ -1,12 +1,12 @@
 # Phase 5 — Roaming desktop pet
 
-Status: the Godot window is in the tree. The next commit deletes it and adds nothing. The Electron pet starts only after that commit.
+Status: the Godot window is removed. The Electron pet has not been started.
 
 Depends on: nothing on the website. The web scene from phase 4 stays.
 
-## Next commit: delete the Godot desktop pet
+## Removed
 
-This commit removes the Windows pet. It does not add `desktop/` Electron source, a sprite, or a new scene. The web export, the desk, and the pairing routes stay as they are.
+The Windows pet is gone. That commit added no `desktop/` Electron source, sprite, or new scene. The web export, the desk, and the pairing routes stayed.
 
 Delete:
 
@@ -30,9 +30,9 @@ Delete a local `desktop/build/` if one exists. It is gitignored.
 
 Leave `godot/scenes/web_pet.*`, `public/godot-game/`, `user_pets`, Equip to Desktop, and the phase 6 routes. There is no `extension/` directory.
 
-## After that commit
+## Next
 
-Build the Electron pet in `desktop/`. Do not open that work in the deletion commit.
+Build the Electron pet in `desktop/`.
 
 The window is sprite-sized, frameless, transparent, and always on top. It walks the usable area of each monitor. Clicks outside the sprite pass through. Windows is the first target. One local image is `baby_slime`.
 
@@ -58,7 +58,5 @@ The frontmost address-bar reader, the Finish button, packaging, and a browser ex
 
 ## Done when
 
-- The deletion commit is the first one, and it contains no Electron source.
-- `npm test` passes after `tests/desktop-walk.test.ts` is gone.
-- The Godot project still opens the web pet, and the Web preset is the only export preset.
+- The deletion landed with no Electron source. The Web preset is the only export preset, and `run/main_scene` is the web pet.
 - A later commit launches the Electron window on Windows, shows the equipped pet from `user_pets`, and still walks over other windows with the surrounding screen clickable.

@@ -39,5 +39,5 @@ next-env.d.ts
 godot/.godot/
 godot/.import/
 
-# Windows pet export. Build it locally; do not commit the exe.
+# Local desktop builds. Do not commit the executable.
 desktop/build/
