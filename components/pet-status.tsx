@@ -39,7 +39,11 @@ export function PetStatus({
     if (pending) return;
     setPending(true);
     setError(null);
-    const response = await fetch("/api/pet/pair", { method: "POST" });
+    const response = await fetch("/api/pet/pair", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ label: "Mac pet" }),
+    });
     const body = (await response.json().catch(() => null)) as
       | { token?: string; url?: string; error?: string }
       | null;
@@ -60,7 +64,7 @@ export function PetStatus({
       </div>
       {downloadUrl ? (
         <a className="button" href={downloadUrl}>
-          Download the Windows pet
+          Download the Mac pet
         </a>
       ) : (
         <p>The desktop build is not published yet. Install the pet, then pair this computer.</p>

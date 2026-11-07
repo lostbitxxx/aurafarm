@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aurafarm</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: #10241c;
+        color: #f7f3e8;
+      }
+      form,
+      p {
+        margin: 0 0 12px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 4px;
+        padding: 8px;
+      }
+      button {
+        margin-top: 8px;
+      }
+      #status {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="sign-in">
+      <label>Email <input name="email" type="email" autocomplete="username" required /></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit">Sign in</button>
+    </form>
+    <form id="claim">
+      <label>Launch code <input name="code" type="text" autocomplete="off" required /></label>
+      <button type="submit">Claim session</button>
+    </form>
+    <p id="status">Sign in to show the equipped pet.</p>
+    <script src="panel.js"></script>
+  </body>
+</html>

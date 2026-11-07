@@ -1,0 +1,13 @@
+{
+  "name": "aurafarm-pet",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "electron": "^35.7.5"
+  }
+}
