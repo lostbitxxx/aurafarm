@@ -1,4 +1,10 @@
 const status = document.getElementById("status");
+const update = document.getElementById("update");
+const updateLabel = document.getElementById("update-label");
+
+document.getElementById("update-button").addEventListener("click", () => {
+  window.pet.openUpdate();
+});
 
 document.getElementById("sign-in").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -16,4 +22,10 @@ document.getElementById("claim").addEventListener("submit", async (event) => {
 
 window.pet.onState((state) => {
   if (state.status) status.textContent = state.status;
+  if (state.updateUrl) {
+    update.hidden = false;
+    updateLabel.textContent = state.updateLabel || "A newer pet is available.";
+  } else {
+    update.hidden = true;
+  }
 });

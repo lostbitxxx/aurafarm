@@ -7,6 +7,8 @@ const { parseAurafarmLink } = require("./links");
 const { createFrontLog, describeFrontRead, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
 const { readFrontBrowser } = require("./front-browser");
 const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
+const { updateOffer } = require("./version");
+const { version: PET_VERSION } = require("./package.json");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -163,7 +165,7 @@ function togglePanel() {
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 340,
+    height: 420,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -471,6 +473,26 @@ ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
 ipcMain.on("finish-session", () => {
   void finishSession();
 });
+ipcMain.on("open-update", () => {
+  if (typeof state.updateUrl === "string" && state.updateUrl) void shell.openExternal(state.updateUrl);
+});
+
+async function checkForUpdate() {
+  try {
+    const response = await fetch(`${API_ORIGIN}/api/pet/version`);
+    if (!response.ok) return;
+    const offer = updateOffer(PET_VERSION, await response.json());
+    if (!offer) return;
+    state = {
+      ...state,
+      updateLabel: `Version ${offer.version} is available.`,
+      updateUrl: offer.url,
+    };
+    publish();
+  } catch {
+    // The desk can be down. The running pet stays as it is.
+  }
+}
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -506,6 +528,7 @@ if (!gotLock) {
     deviceToken = readSecret("device-token.txt");
     await restoreSession();
     if (deviceToken) void sendHeartbeat();
+    void checkForUpdate();
     for (const arg of [...process.argv, ...pendingLinks]) {
       if (arg.startsWith("aurafarm://")) await handleLink(parseAurafarmLink(arg));
     }

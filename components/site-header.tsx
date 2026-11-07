@@ -8,6 +8,7 @@ export function SiteHeader({ displayName }: { displayName: string }) {
         Aurafarm
       </Link>
       <div className="topbar-user">
+        <Link href="/privacy">Privacy</Link>
         <span>{displayName}</span>
         <form action={signOut}>
           <button type="submit" className="button button-small button-ghost">
