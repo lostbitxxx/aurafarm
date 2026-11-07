@@ -4,12 +4,16 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
+const { createFrontLog, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
+const { readFrontBrowserUrl } = require("./front-browser");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
 const WINDOW = { x: 128, y: 128 };
 const API_ORIGIN = process.env.AURAFARM_API_ORIGIN || "http://localhost:3000";
+const DESK_HOST = deskHostFromOrigin(API_ORIGIN);
 const HEARTBEAT_MS = 10_000;
+const FRONT_POLL_MS = 2_000;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey =
@@ -28,6 +32,9 @@ let spriteWindow = null;
 let panelWindow = null;
 let velocity = { x: 2, y: 0 };
 let deviceToken = "";
+let study = null;
+let frontTimer = null;
+let frontPoll = null;
 let state = {
   petType: "baby_slime",
   level: 1,
@@ -201,7 +208,12 @@ async function refreshPet() {
     return;
   }
   if (!data) {
-    setStatus("No pet is equipped on the desk.");
+    if (!study) setStatus("No pet is equipped on the desk.");
+    return;
+  }
+  if (study) {
+    state = { ...state, petType: data.pet_type, level: data.level };
+    publish();
     return;
   }
   setStatus(`${data.pet_type} is on the desktop.`, {
@@ -244,10 +256,84 @@ async function claim(code) {
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) return { error: body?.error ?? "Claim rejected." };
-  if (body?.pet_type) {
-    setStatus("Session claimed.", { petType: body.pet_type, level: body.level });
+  if (!body?.session_id || !Array.isArray(body.blocklist)) {
+    return { error: "Claim rejected." };
   }
+  beginFrontWatch(body);
   return { error: "" };
+}
+
+function beginFrontWatch(body) {
+  stopFrontWatch();
+  study = {
+    id: String(body.session_id),
+    // Held in memory for the later score submit. It is not written to disk.
+    token: typeof body.token === "string" ? body.token : "",
+    blocklist: body.blocklist.filter((host) => typeof host === "string"),
+    log: createFrontLog(),
+  };
+  if (body.pet_type) {
+    state = {
+      ...state,
+      petType: body.pet_type,
+      level: typeof body.level === "number" ? body.level : state.level,
+    };
+  }
+  publishWatch();
+  frontTimer = setInterval(() => {
+    void pollFront();
+  }, FRONT_POLL_MS);
+  void pollFront();
+}
+
+function stopFrontWatch() {
+  if (frontTimer) clearInterval(frontTimer);
+  frontTimer = null;
+  frontPoll = null;
+  study = null;
+}
+
+function publishWatch() {
+  if (!study) return;
+  const count = study.log.blockedCount;
+  const hosts = study.log.blockedHosts.join(", ");
+  setStatus(
+    count === 0 ? "Watching. Nothing on the blocklist is in front." : `Watching. Blocked ${count}: ${hosts}`,
+  );
+}
+
+async function studyStillActive(sessionId) {
+  if (!supabase) return true;
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return true;
+  const { data, error } = await supabase
+    .from("study_sessions")
+    .select("status")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) return true;
+  return data?.status === "active";
+}
+
+async function pollFront() {
+  if (!study || frontPoll) return;
+  const current = study;
+  frontPoll = current;
+  try {
+    const active = await studyStillActive(current.id);
+    if (study !== current) return;
+    if (!active) {
+      stopFrontWatch();
+      setStatus("Study session ended.");
+      return;
+    }
+    const url = await readFrontBrowserUrl();
+    if (study !== current) return;
+    current.log = nextFrontLog(true, current.log, url, current.blocklist, DESK_HOST);
+    publishWatch();
+  } finally {
+    if (frontPoll === current) frontPoll = null;
+  }
 }
 
 function rememberDevice(token) {
@@ -297,6 +383,10 @@ if (!gotLock) {
     for (const arg of argv) {
       if (arg.startsWith("aurafarm://")) void handleLink(parseAurafarmLink(arg));
     }
+  });
+
+  app.on("before-quit", () => {
+    stopFrontWatch();
   });
 
   app.on("open-url", (event, url) => {

@@ -1,6 +1,6 @@
 # Phase 7 — Frontmost site
 
-Status: not started. There is no browser extension, and this phase does not add one.
+Status: the Mac pet polls the frontmost Safari, Chrome, or Edge tab while a claimed session is active. A matching host increments the in-memory blocked count once per visit. The desk host is ignored. Quitting the pet, or a signed-in pet seeing the session leave `active`, stops the poll. There is no browser extension.
 
 Depends on: the Electron pet from [phase 5](05-roaming-desktop-pet.md) and a claimed session from [phase 6](06-download-pairing-wakeup.md). The pet must already have the blocklist from the claim response.
 
