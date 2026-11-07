@@ -4,8 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
-const { createFrontLog, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
-const { readFrontBrowserUrl } = require("./front-browser");
+const { createFrontLog, describeFrontRead, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
+const { readFrontBrowser } = require("./front-browser");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -155,7 +155,7 @@ function togglePanel() {
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 280,
+    height: 340,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -293,13 +293,19 @@ function stopFrontWatch() {
   study = null;
 }
 
-function publishWatch() {
+function setPetLevel(level) {
+  for (const win of [spriteWindow, panelWindow]) {
+    if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
+  }
+}
+
+function publishWatch(reading) {
   if (!study) return;
-  const count = study.log.blockedCount;
-  const hosts = study.log.blockedHosts.join(", ");
-  setStatus(
-    count === 0 ? "Watching. Nothing on the blocklist is in front." : `Watching. Blocked ${count}: ${hosts}`,
-  );
+  if (!reading) {
+    setStatus("Watching. Nothing on the blocklist is in front.");
+    return;
+  }
+  setStatus(describeFrontRead(reading, study.log));
 }
 
 async function studyStillActive(sessionId) {
@@ -320,18 +326,21 @@ async function pollFront() {
   const current = study;
   frontPoll = current;
   try {
+    setPetLevel("floating");
+    const reading = await readFrontBrowser();
+    if (study !== current) return;
+    if (reading.url) {
+      current.log = nextFrontLog(true, current.log, reading.url, current.blocklist, DESK_HOST);
+    }
+    publishWatch(reading);
     const active = await studyStillActive(current.id);
     if (study !== current) return;
     if (!active) {
       stopFrontWatch();
       setStatus("Study session ended.");
-      return;
     }
-    const url = await readFrontBrowserUrl();
-    if (study !== current) return;
-    current.log = nextFrontLog(true, current.log, url, current.blocklist, DESK_HOST);
-    publishWatch();
   } finally {
+    setPetLevel("screen-saver");
     if (frontPoll === current) frontPoll = null;
   }
 }
