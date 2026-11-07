@@ -1,6 +1,8 @@
 {
   "name": "aurafarm-pet",
   "version": "0.1.0",
+  "description": "Aurafarm desktop pet for Mac",
+  "author": "Aurafarm",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -37,10 +39,10 @@
     }
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
-    "electron": "^35.7.5"
+    "@supabase/supabase-js": "^2.118.0"
   },
   "devDependencies": {
+    "electron": "^35.7.5",
     "electron-builder": "^26.0.12"
   }
 }
