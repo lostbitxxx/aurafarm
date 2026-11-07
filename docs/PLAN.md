@@ -2,18 +2,18 @@
 
 This is the master plan. Each phase has a small plan in [`docs/plans`](plans) and should be implemented on its own, after the phase it depends on meets that plan's "Done when".
 
-The desk that already exists (accounts, pets, Equip to Desktop, Godot iframe, cross-origin isolation headers) is the baseline. These plans add study sessions, a roaming desktop pet, a browser extension, and scoring.
+The desk that already exists (accounts, pets, Equip to Desktop, Godot iframe, cross-origin isolation headers) is the baseline. These plans add study sessions, an Electron desktop pet, a frontmost-site reader, and scoring. There is no browser extension.
 
 ## Product
 
 Aurafarm is two programs that share one account.
 
 - The website is the desk: account, pets, a Godot mini-game inside the page, study-session controls, and score history.
-- The desktop pet is a separate download. Its window is the size of the sprite and moves across the whole screen, including over the browser.
-- A browser extension, installed by the user, is the only piece that can see tab hostnames and close a distracting tab during a session the user started.
+- The desktop pet is a separate Electron download. Its window is the size of the sprite and moves across the whole screen, including over the browser. It shows the pet equipped in `user_pets`.
+- During a study session the user started, the pet reads the address bar of the frontmost browser window. It does not close tabs, and it does not see background tabs.
 - The server stores the score. The pet shows a higher or lower scoring action from what happened in the session, then `POST`s that result and opens the site.
 
-The score trusts the pet's report for this version. The extension is the sensor, the pet forwards the blocked count, and the server applies the point formula. A later version can harden that. This version does not record browsing history. It records how many blocklist hosts were opened, and which of those hosts they were.
+The score trusts the pet's report for this version. The pet is the sensor. A later version can harden that. This version does not record browsing history. It records how many blocklist hosts were in front, and which of those hosts they were.
 
 ## Already built
 
@@ -25,17 +25,21 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5 adds the Windows roaming scene to the same Godot project. The executable stays out of git. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. There is no extension yet.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. Phase 5's Godot Windows scene is still in the tree. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Godot client for that pairing is `godot/scripts/pet_link.gd`.
+
+## Next commit
+
+Delete the Godot desktop pet, and do not add the Electron app in that same commit. The file list is in [phase 5](plans/05-roaming-desktop-pet.md). The web export, the desk, and the pairing routes stay. Electron starts only after that deletion lands. The frontmost-site reader and the Finish button stay in phases 7 and 8.
 
 ## Rules for every phase
 
-- The user starts and can stop a session. The extension checks hostnames against the blocklist only while that session is active.
-- The pet executable does not read the browser. The extension reports block events to the pet.
+- The user starts and can stop a session. The pet checks the frontmost address bar against the blocklist only while that session is active.
+- The pet reads that address bar itself. It does not use a browser extension, and it does not close tabs.
 - Points come from the session record. Focused is `100`. Distracted (`blocked_count > 0`) is `40`. Duration is stored and does not change the points yet.
 - Windows is the first desktop target. macOS and Linux stay out of these plans because overlay windows differ, especially on Wayland.
-- One Godot project, two exports: Web for the dashboard mini-game, Windows for the roaming pet.
+- Godot is the web mini-game only. The roaming pet is Electron.
 - The website learns whether the pet is running from an API heartbeat. It does not connect to `127.0.0.1`. The isolation headers already on the site, and the browser's local-network permission, make a public page calling loopback a bad wake-up path.
-- The pet listens on `127.0.0.1` only, and only for the extension. The session token is not put in a page-to-pet socket or in the `aurafarm://` URL.
+- The pet opens no local port. The session token is not put in the `aurafarm://` URL. The equipped character comes from `user_pets`, using the public Supabase key and that user's session. The service-role key stays on the server.
 - Follow the existing server-action and Supabase cookie patterns in [`lib/actions/pets.ts`](../lib/actions/pets.ts) and [`lib/supabase/server.ts`](../lib/supabase/server.ts). Do not cache session, score, or heartbeat data. Load them the way [`lib/dashboard.ts`](../lib/dashboard.ts) loads pets.
 - New tests stay on `node:test` and `npm test`. Do not add a second test runner.
 
@@ -47,24 +51,24 @@ Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supab
 | 2 | [Dashboard study controls](plans/02-dashboard-study-controls.md) | 1 | Start, stop, blocklist, past scores, and an `aurafarm://` link |
 | 3 | [Score API](plans/03-score-api.md) | 1 | Token-authenticated `POST` that writes points and opens a score screen |
 | 4 | [Godot web mini-game](plans/04-godot-web-minigame.md) | pet desk | A real web export in the desk iframe |
-| 5 | [Roaming desktop pet](plans/05-roaming-desktop-pet.md) | none (same Godot project as 4) | A Windows pet that walks the whole screen |
+| 5 | [Roaming desktop pet](plans/05-roaming-desktop-pet.md) | phase 4 web scene stays | Delete the Godot Windows pet, then build the Electron pet |
 | 6 | [Download, pairing, and wake-up](plans/06-download-pairing-wakeup.md) | 2, 5 | Hosted download, device heartbeat, one-time code claim |
-| 7 | [Browser extension](plans/07-browser-extension.md) | 6 | Closes blocklist tabs and tells the pet |
+| 7 | [Frontmost site](plans/07-browser-extension.md) | 5, 6 | The pet reads the front address bar during a claimed session |
 | 8 | [Pet scoring action](plans/08-pet-scoring-action.md) | 3, 7 | The pet submits the score and opens the desk |
-| 9 | [Packaging](plans/09-packaging.md) | 6, 7, 8 | Signing notes, updates, privacy note, optional native messaging |
+| 9 | [Packaging](plans/09-packaging.md) | 6, 7, 8 | Signed Electron build, updates, privacy note |
 | 10 | [Disable email confirmation](plans/10-disable-email-confirmation.md) | none | New accounts open the desk without a confirmation email |
 
-Order: 1, then 2 and 3. Phase 4 can proceed beside phase 5. Phase 6 needs 2 and 5. Phase 7 needs 6. Phase 8 needs 3 and 7. Phase 9 is last. Phase 4 and phase 5 stay separate exports so the web game can ship before the desktop pet exists. Phase 10 can happen at any time. It does not wait for the desktop pet.
+Order: the next commit is the phase 5 deletion and nothing else. Electron follows that commit. Phases 1 through 4 and the phase 6 server routes are already in the repo. Phase 7 needs the Electron pet and a claimed session. Phase 8 needs 3 and 7. Phase 9 is last. Phase 10 can happen at any time. It does not wait for the desktop pet.
 
 ## Settled decisions
 
 - Wake-up: `aurafarm://session?code=…`. The pet exchanges that code with the API over HTTPS. The code is single-use, expires in 5 minutes, and is shorter than the session token. The link is safe to land in browser history.
 - Presence: the pet heartbeats every 10 seconds. The desk treats a heartbeat newer than 30 seconds as "running".
-- Local link: WebSocket on `127.0.0.1:47331` between the extension and the pet. Chrome native messaging can replace it in phase 9.
+- The pet does not open a local socket. There is no extension and no native-messaging host.
 - Blocklist: server-owned table. The first hosts are `instagram.com`, `tiktok.com`, and `youtube.com`. A host matches itself and its subdomains.
 - Score: `scoreForBlockedCount` in `lib/scoring.ts`. The pet does not invent the point value. The database function uses the same two numbers.
-- Auth for the exe: a short-lived session token returned when the launch code is claimed. The pet does not store the user's Supabase password. Device heartbeats use a separate device token from pairing.
-- First blocklist event during a session is enough to make the score the lower one. Closing the tab is the extension's job. The pet only needs the count and the hostnames that were blocked.
+- Auth for the pet: a short-lived session token returned when the launch code is claimed. The pet does not store the user's Supabase password. Device heartbeats use a separate device token from pairing. The sprite uses the user's own Supabase session to read `user_pets`.
+- The first blocklist host in front during a session is enough to make the score the lower one. The pet records the count and the hostnames. It does not close the tab.
 
 ## What a small plan is for
 

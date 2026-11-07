@@ -36,4 +36,4 @@ The placeholder frame reports whether `SharedArrayBuffer` is available.
 
 ## Study sessions
 
-Study sessions, the web pet, the Windows pet, and pairing are in the repo. The extension and scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md).
+Study sessions, the web pet, the Godot Windows pet, and pairing are in the repo. The next plan step deletes that Windows pet before any Electron code. The frontmost-site reader and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension.

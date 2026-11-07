@@ -10,7 +10,7 @@ The pet, or any client that has the session token, can submit one result. The se
 
 ## Out of scope
 
-The Godot button that calls this route (phase 8), the extension, and awarding points from a dashboard click. The desk does not get a "give me 100" button.
+The Electron Finish button that calls this route (phase 8), and awarding points from a dashboard click. The desk does not get a "give me 100" button. There is no browser extension.
 
 ## Touch
 

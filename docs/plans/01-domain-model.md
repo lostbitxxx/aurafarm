@@ -10,7 +10,7 @@ Store a study session, the global blocklist, and one score per session. A SQL fu
 
 ## Out of scope
 
-Desktop pet, extension, download, pairing, heartbeat, and any new page. Launch-code columns belong here so phase 2 can fill them without another migration. Claiming a code is phase 6.
+Desktop pet, the frontmost-site reader, download, pairing, heartbeat, and any new page. Launch-code columns belong here so phase 2 can fill them without another migration. Claiming a code is phase 6. There is no browser extension.
 
 ## Touch
 
