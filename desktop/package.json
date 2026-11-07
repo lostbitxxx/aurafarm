@@ -4,7 +4,7 @@
   "private": true,
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "node ensure-apple-events.js && electron ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

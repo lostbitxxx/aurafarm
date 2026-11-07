@@ -9,6 +9,7 @@ const {
   deskHostFromOrigin,
   hostMatchesBlocklist: petMatchesBlocklist,
   hostnameFromUrl,
+  describeFrontRead,
   nextFrontLog,
   recordFrontHost,
 } = require("../desktop/frontmost.js") as {
@@ -16,6 +17,10 @@ const {
   deskHostFromOrigin: (origin: string) => string;
   hostMatchesBlocklist: (host: string, blockedHosts: readonly string[]) => boolean;
   hostnameFromUrl: (value: string) => string;
+  describeFrontRead: (
+    reading: { app?: string; url?: string; error?: string },
+    log: { blockedCount: number; blockedHosts: string[] },
+  ) => string;
   nextFrontLog: (
     active: boolean,
     log: { blockedCount: number; blockedHosts: string[]; currentHost: string },
@@ -31,8 +36,9 @@ const {
     matches?: (host: string, blockedHosts: readonly string[]) => boolean,
   ) => { blockedCount: number; blockedHosts: string[]; currentHost: string };
 };
-const { frontBrowserScript, supportedFrontBrowser } = require("../desktop/front-browser.js") as {
-  frontBrowserScript: () => string;
+const { frontAppStatement, frontUrlStatement, supportedFrontBrowser } = require("../desktop/front-browser.js") as {
+  frontAppStatement: () => string;
+  frontUrlStatement: (appName: string) => string;
   supportedFrontBrowser: (appName: string) => boolean;
 };
 
@@ -122,16 +128,31 @@ test("a missing browser url does not clear the current visit", () => {
 });
 
 test("the mac reader asks only the front window of safari, chrome, or edge", () => {
-  const script = frontBrowserScript();
   assert.equal(supportedFrontBrowser("Safari"), true);
   assert.equal(supportedFrontBrowser("Google Chrome"), true);
   assert.equal(supportedFrontBrowser("Microsoft Edge"), true);
   assert.equal(supportedFrontBrowser("Firefox"), false);
-  assert.match(script, /URL of current tab of front window/);
-  assert.match(script, /URL of active tab of front window/);
-  assert.match(script, /frontApp is "Safari"/);
-  assert.match(script, /frontApp is "Google Chrome"/);
-  assert.match(script, /frontApp is "Microsoft Edge"/);
-  assert.doesNotMatch(script, /every tab/);
-  assert.doesNotMatch(script, /Firefox/);
+  assert.match(frontAppStatement(), /frontmost is true/);
+  assert.match(frontUrlStatement("Safari"), /URL of current tab of front window/);
+  assert.match(frontUrlStatement("Google Chrome"), /URL of active tab of front window/);
+  assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
+  assert.equal(frontUrlStatement("Firefox"), "");
+  assert.doesNotMatch(frontUrlStatement("Google Chrome"), /every tab/);
+});
+
+test("a failed browser read is shown instead of a clear session", () => {
+  const blockedRead = describeFrontRead(
+    { error: "Not authorized to send Apple events to System Events. (-1743)" },
+    createFrontLog(),
+  );
+  assert.match(blockedRead, /Allow Electron/);
+
+  const otherApp = describeFrontRead({ app: "Electron", url: "", error: "" }, createFrontLog());
+  assert.match(otherApp, /Electron is in front/);
+
+  const youtube = recordFrontHost(createFrontLog(), "https://www.youtube.com/", blocked, desk);
+  assert.equal(
+    describeFrontRead({ app: "Google Chrome", url: "https://www.youtube.com/", error: "" }, youtube),
+    "Watching. Blocked 1: www.youtube.com",
+  );
 });

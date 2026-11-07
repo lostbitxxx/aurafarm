@@ -3,58 +3,62 @@
 const { execFile } = require("node:child_process");
 
 const FRONT_BROWSERS = ["Safari", "Google Chrome", "Microsoft Edge"];
+const OSA_TIMEOUT_MS = 20_000;
 
-function frontBrowserScript() {
-  return `
-tell application "System Events"
-  set frontApp to name of first application process whose frontmost is true
-end tell
-if frontApp is "Safari" then
-  tell application "Safari"
-    if (count of windows) is 0 then return ""
-    return URL of current tab of front window
-  end tell
-else if frontApp is "Google Chrome" then
-  tell application "Google Chrome"
-    if (count of windows) is 0 then return ""
-    return URL of active tab of front window
-  end tell
-else if frontApp is "Microsoft Edge" then
-  tell application "Microsoft Edge"
-    if (count of windows) is 0 then return ""
-    return URL of active tab of front window
-  end tell
-else
-  return ""
-end if
-`.trim();
+function frontAppStatement() {
+  return 'tell application "System Events" to get name of first application process whose frontmost is true';
+}
+
+function frontUrlStatement(appName) {
+  if (appName === "Safari") {
+    return 'tell application "Safari" to get URL of current tab of front window';
+  }
+  if (appName === "Google Chrome") {
+    return 'tell application "Google Chrome" to get URL of active tab of front window';
+  }
+  if (appName === "Microsoft Edge") {
+    return 'tell application "Microsoft Edge" to get URL of active tab of front window';
+  }
+  return "";
 }
 
 function supportedFrontBrowser(appName) {
   return FRONT_BROWSERS.includes(appName);
 }
 
-function readFrontBrowserUrl() {
-  if (process.platform !== "darwin") return Promise.resolve("");
+function runOsascript(statement) {
   return new Promise((resolve) => {
     execFile(
       "osascript",
-      ["-e", frontBrowserScript()],
-      { timeout: 3000 },
-      (error, stdout) => {
+      ["-e", statement],
+      { timeout: OSA_TIMEOUT_MS },
+      (error, stdout, stderr) => {
         if (error) {
-          resolve("");
+          const detail = String(stderr || error.message || "osascript failed").trim();
+          resolve({ ok: false, value: "", error: detail });
           return;
         }
-        resolve(String(stdout ?? "").trim());
+        resolve({ ok: true, value: String(stdout ?? "").trim(), error: "" });
       },
     );
   });
 }
 
+async function readFrontBrowser() {
+  if (process.platform !== "darwin") return { app: "", url: "", error: "" };
+  const app = await runOsascript(frontAppStatement());
+  if (!app.ok) return { app: "", url: "", error: app.error };
+  const statement = frontUrlStatement(app.value);
+  if (!statement) return { app: app.value, url: "", error: "" };
+  const url = await runOsascript(statement);
+  if (!url.ok) return { app: app.value, url: "", error: url.error };
+  return { app: app.value, url: url.value, error: "" };
+}
+
 module.exports = {
   FRONT_BROWSERS,
-  frontBrowserScript,
-  readFrontBrowserUrl,
+  frontAppStatement,
+  frontUrlStatement,
+  readFrontBrowser,
   supportedFrontBrowser,
 };
