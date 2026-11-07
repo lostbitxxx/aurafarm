@@ -15,7 +15,15 @@ npm run dev
 
 4. The desk already loads the committed Godot 4.5.2 export in [`public/godot-game`](public/godot-game). Rebuild that folder from [`godot`](godot) with the same editor when the scene changes, and leave thread support off.
 
-The Godot Windows pet has been removed. The next desktop pet is Electron and is not in this repo yet. Pairing routes remain on the desk. Set `NEXT_PUBLIC_PET_DOWNLOAD_URL` when a build is hosted outside this app.
+The desktop pet is a Mac Electron app. Windows is not built yet. From the repo root, with the public Supabase keys in `.env.local`:
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+The sprite walks the Mac desktop. Click it to sign in or paste a launch code. `aurafarm://pair` and `aurafarm://session` open this app. Set `NEXT_PUBLIC_PET_DOWNLOAD_URL` when a Mac build is hosted outside this app.
 
 ## SharedArrayBuffer
 
@@ -28,4 +36,4 @@ The placeholder frame reports whether `SharedArrayBuffer` is available.
 
 ## Study sessions
 
-Study sessions, the web pet, and pairing are in the repo. The Godot Windows pet has been removed. The Electron pet, the frontmost-site reader, and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension.
+Study sessions, the web pet, pairing, and the Mac Electron pet are in the repo. The frontmost-site reader and the scoring action are still planned in [`docs/PLAN.md`](docs/PLAN.md). There is no browser extension, and there is no Windows pet.

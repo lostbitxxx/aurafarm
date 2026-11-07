@@ -6,7 +6,7 @@ Depends on: [phase 6](06-download-pairing-wakeup.md), [phase 7](07-browser-exten
 
 ## Goal
 
-A person can download a signed Windows Electron build, read what the pet is allowed to see, and update the pet when a new version is published.
+A person can download a signed Mac Electron build, read what the pet is allowed to see, and update the pet when a new version is published. Windows packaging waits.
 
 ## Out of scope
 
@@ -21,12 +21,12 @@ macOS notarization, a Linux package, a Chrome extension, and native messaging. T
 
 ## Signing and the file the desk serves
 
-Publish the Electron Windows build as a zip or installer at `NEXT_PUBLIC_PET_DOWNLOAD_URL`. The Next.js app does not contain the binary. `electron-builder` output stays under `desktop/dist/` and is gitignored.
+Publish the Electron Mac build as a zip at `NEXT_PUBLIC_PET_DOWNLOAD_URL`. The Next.js app does not contain the binary. `electron-builder` output stays under `desktop/dist/` and is gitignored.
 
 Document the signing step in `desktop/SIGNING.md` only if a certificate is actually in use. Until then, this plan is the instruction:
 
-- Authenticode-sign the executable with the project's certificate before uploading the release.
-- An unsigned build still fails SmartScreen on a new download. The desk copy should say to use "More info" then "Run anyway" for an unsigned build, and that sentence comes off the page once the signed URL is the one in the env var.
+- Sign and notarize the Mac app before uploading the release. Windows Authenticode waits with the Windows build.
+- An unsigned Mac build is blocked by Gatekeeper. The desk copy should say to right-click the app and choose Open for an unsigned build, and that sentence comes off the page once the signed URL is the one in the env var.
 - Do not commit the certificate or its password. The signing machine reads them from the environment.
 
 The Electron app registers `aurafarm://` for the current user. That registration replaces `desktop/install-protocol.reg`, which the phase 5 deletion commit removes.

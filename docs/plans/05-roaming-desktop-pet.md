@@ -1,6 +1,6 @@
 # Phase 5 — Roaming desktop pet
 
-Status: the Godot window is removed. The Electron pet has not been started.
+Status: the Godot window is removed. The Electron pet is a Mac app in `desktop/`. Windows is not part of this phase.
 
 Depends on: nothing on the website. The web scene from phase 4 stays.
 
@@ -34,7 +34,7 @@ Leave `godot/scenes/web_pet.*`, `public/godot-game/`, `user_pets`, Equip to Desk
 
 Build the Electron pet in `desktop/`.
 
-The window is sprite-sized, frameless, transparent, and always on top. It walks the usable area of each monitor. Clicks outside the sprite pass through. Windows is the first target. One local image is `baby_slime`.
+The window is sprite-sized, frameless, transparent, and always on top. It walks the usable area of each Mac display. Clicks outside the sprite pass through. macOS is the only target. One local drawing is the baby slime.
 
 The pet signs in with the public Supabase key and stores the session with `safeStorage`. It reads the equipped row:
 
@@ -50,7 +50,7 @@ Row-level security already limits that to the signed-in user. When `pet_type` ch
 
 Ignore `desktop/node_modules` and `desktop/dist`. Do not commit the packaged app.
 
-The same app then calls the phase 6 routes that already exist: pair, heartbeat, and launch-code claim. It registers `aurafarm://` for the current user and points that protocol at the Electron executable. The dev app uses `http://localhost:3000`.
+The same app then calls the phase 6 routes that already exist: pair, heartbeat, and launch-code claim. On macOS it registers `aurafarm://` for the current user and points that protocol at the Electron app. The dev app uses `http://localhost:3000`. There is no Windows installer and no `.exe`.
 
 ## Out of scope
 
@@ -59,4 +59,4 @@ The frontmost address-bar reader, the Finish button, packaging, and a browser ex
 ## Done when
 
 - The deletion landed with no Electron source. The Web preset is the only export preset, and `run/main_scene` is the web pet.
-- A later commit launches the Electron window on Windows, shows the equipped pet from `user_pets`, and still walks over other windows with the surrounding screen clickable.
+- On a Mac, `npm start` in `desktop/` opens the sprite over other windows. Clicks outside the slime reach the window underneath. Signing in shows the equipped `user_pets` row, and Equip to Desktop changes that sprite. `aurafarm://pair` and `aurafarm://session` reach the running app.

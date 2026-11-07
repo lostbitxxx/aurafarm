@@ -29,14 +29,14 @@ Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supab
 
 ## Next commit
 
-Build the Electron pet described in [phase 5](plans/05-roaming-desktop-pet.md). Do not add the frontmost-site reader or the Finish button in that commit. Those stay in phases 7 and 8.
+The Mac Electron pet is the current desktop work, described in [phase 5](plans/05-roaming-desktop-pet.md). Do not add the frontmost-site reader or the Finish button in that work. Those stay in phases 7 and 8. Windows packaging waits.
 
 ## Rules for every phase
 
 - The user starts and can stop a session. The pet checks the frontmost address bar against the blocklist only while that session is active.
 - The pet reads that address bar itself. It does not use a browser extension, and it does not close tabs.
 - Points come from the session record. Focused is `100`. Distracted (`blocked_count > 0`) is `40`. Duration is stored and does not change the points yet.
-- Windows is the first desktop target. macOS and Linux stay out of these plans because overlay windows differ, especially on Wayland.
+- macOS is the first desktop target. The pet is an Electron app on the Mac. Windows waits. Linux stays out because overlay windows differ on Wayland.
 - Godot is the web mini-game only. The roaming pet is Electron.
 - The website learns whether the pet is running from an API heartbeat. It does not connect to `127.0.0.1`. The isolation headers already on the site, and the browser's local-network permission, make a public page calling loopback a bad wake-up path.
 - The pet opens no local port. The session token is not put in the `aurafarm://` URL. The equipped character comes from `user_pets`, using the public Supabase key and that user's session. The service-role key stays on the server.
@@ -58,7 +58,7 @@ Build the Electron pet described in [phase 5](plans/05-roaming-desktop-pet.md). 
 | 9 | [Packaging](plans/09-packaging.md) | 6, 7, 8 | Signed Electron build, updates, privacy note |
 | 10 | [Disable email confirmation](plans/10-disable-email-confirmation.md) | none | New accounts open the desk without a confirmation email |
 
-Order: the Godot Windows pet is removed. The next commit is the Electron pet from phase 5. Phases 1 through 4 and the phase 6 server routes are already in the repo. Phase 7 needs the Electron pet and a claimed session. Phase 8 needs 3 and 7. Phase 9 is last. Phase 10 can happen at any time. It does not wait for the desktop pet.
+Order: the Godot Windows pet is removed. The desktop pet is the Mac Electron app from phase 5. Phases 1 through 4 and the phase 6 server routes are already in the repo. Phase 7 needs that Mac pet and a claimed session. Phase 8 needs 3 and 7. Phase 9 is last. Phase 10 can happen at any time. It does not wait for the desktop pet. Windows is not part of the current work.
 
 ## Settled decisions
 

@@ -39,5 +39,7 @@ next-env.d.ts
 godot/.godot/
 godot/.import/
 
-# Local desktop builds. Do not commit the executable.
+# Local desktop builds. Do not commit the app or its dependencies.
 desktop/build/
+desktop/dist/
+desktop/node_modules/
