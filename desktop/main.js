@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen, shell } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -6,6 +6,7 @@ const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
 const { createFrontLog, describeFrontRead, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
 const { readFrontBrowser } = require("./front-browser");
+const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -30,6 +31,8 @@ const supabase =
 
 let spriteWindow = null;
 let panelWindow = null;
+let finishWindow = null;
+let finishing = false;
 let velocity = { x: 2, y: 0 };
 let deviceToken = "";
 let study = null;
@@ -91,8 +94,12 @@ function readSecret(name) {
 }
 
 function publish() {
-  for (const win of [spriteWindow, panelWindow]) {
-    if (win && !win.isDestroyed()) win.webContents.send("state", state);
+  const payload = {
+    ...state,
+    finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
+  };
+  for (const win of [spriteWindow, panelWindow, finishWindow]) {
+    if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
 
@@ -118,6 +125,7 @@ function walk() {
   const next = step({ x, y }, velocity, WINDOW, usableRects());
   velocity = next.velocity;
   spriteWindow.setPosition(next.position.x, next.position.y);
+  placeFinishWindow();
 }
 
 function createSprite() {
@@ -271,6 +279,7 @@ function beginFrontWatch(body) {
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
     log: createFrontLog(),
+    startedAt: Date.now(),
   };
   if (body.pet_type) {
     state = {
@@ -279,7 +288,9 @@ function beginFrontWatch(body) {
       level: typeof body.level === "number" ? body.level : state.level,
     };
   }
+  state = { ...state, finishNote: "" };
   publishWatch();
+  openFinishWindow();
   frontTimer = setInterval(() => {
     void pollFront();
   }, FRONT_POLL_MS);
@@ -291,11 +302,85 @@ function stopFrontWatch() {
   frontTimer = null;
   frontPoll = null;
   study = null;
+  closeFinishWindow();
+}
+
+function openFinishWindow() {
+  if (finishWindow && !finishWindow.isDestroyed()) return;
+  const win = new BrowserWindow({
+    width: 240,
+    height: 72,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  finishWindow = win;
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.loadFile(path.join(__dirname, "finish.html"));
+  win.on("closed", () => {
+    if (finishWindow === win) finishWindow = null;
+  });
+  win.webContents.once("did-finish-load", publish);
+  placeFinishWindow();
+}
+
+function closeFinishWindow() {
+  const win = finishWindow;
+  finishWindow = null;
+  if (win && !win.isDestroyed()) win.close();
+}
+
+function placeFinishWindow() {
+  if (!finishWindow || finishWindow.isDestroyed() || !spriteWindow || spriteWindow.isDestroyed()) return;
+  const [x, y] = spriteWindow.getPosition();
+  finishWindow.setPosition(x, y + WINDOW.y + 6);
 }
 
 function setPetLevel(level) {
-  for (const win of [spriteWindow, panelWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
+  }
+}
+
+async function finishSession() {
+  if (!study?.token || finishing) return;
+  const current = study;
+  finishing = true;
+  try {
+    const response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(scoreRequestBody(current, Date.now())),
+    });
+    const payload = await response.json().catch(() => null);
+    if (study !== current) return;
+    const result = interpretScoreResponse(response.status, payload, API_ORIGIN, current.id);
+    if (!result.clearToken) {
+      setStatus(result.message, { finishNote: result.message });
+      return;
+    }
+    if (result.url) await shell.openExternal(result.url);
+    if (study !== current) return;
+    stopFrontWatch();
+    setStatus(result.message, { finishNote: "" });
+  } catch {
+    if (study === current) {
+      setStatus("Could not submit the score. Try again.", {
+        finishNote: "Could not submit the score. Try again.",
+      });
+    }
+  } finally {
+    finishing = false;
   }
 }
 
@@ -383,6 +468,9 @@ ipcMain.on("toggle-panel", () => {
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
+ipcMain.on("finish-session", () => {
+  void finishSession();
+});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {

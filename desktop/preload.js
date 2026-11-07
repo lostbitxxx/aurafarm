@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld("pet", {
   },
   signIn: (email, password) => ipcRenderer.invoke("sign-in", { email, password }),
   claim: (code) => ipcRenderer.invoke("claim", code),
+  finish: () => ipcRenderer.send("finish-session"),
 });

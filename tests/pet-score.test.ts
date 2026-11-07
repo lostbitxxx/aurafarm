@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { test } from "node:test";
+import { parseScoreRequest } from "../lib/scoring";
+
+const require = createRequire(import.meta.url);
+const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("../desktop/score.js") as {
+  finishLabel: (blockedCount: number) => string;
+  interpretScoreResponse: (
+    status: number,
+    body: unknown,
+    origin: string,
+    sessionId: string,
+  ) => { ok: boolean; url: string; clearToken: boolean; message: string };
+  scoreRequestBody: (
+    study: {
+      token: string;
+      startedAt: number;
+      log: { blockedCount: number; blockedHosts: string[] };
+    },
+    nowMs: number,
+  ) => {
+    token: string;
+    duration_seconds: number;
+    blocked_count: number;
+    blocked_hosts: string[];
+  };
+};
+
+const exampleBody = {
+  token: "session-secret",
+  duration_seconds: 1200,
+  blocked_count: 1,
+  blocked_hosts: ["www.instagram.com"],
+};
+
+test("the pet score body is the phase 3 example", () => {
+  const startedAt = 1_700_000_000_000;
+  const body = scoreRequestBody(
+    {
+      token: "session-secret",
+      startedAt,
+      log: { blockedCount: 1, blockedHosts: ["www.instagram.com"] },
+    },
+    startedAt + 1200 * 1000 + 400,
+  );
+  assert.deepEqual(body, exampleBody);
+  const parsed = parseScoreRequest(body);
+  assert.equal(parsed.ok, true);
+});
+
+test("the finish label follows the blocked count", () => {
+  assert.equal(finishLabel(0), "Finish focused session");
+  assert.equal(finishLabel(1), "Finish distracted session");
+  const clear = scoreRequestBody(
+    { token: "session-secret", startedAt: 0, log: { blockedCount: 0, blockedHosts: [] } },
+    500,
+  );
+  assert.equal(clear.blocked_count, 0);
+  assert.deepEqual(clear.blocked_hosts, []);
+  assert.equal(clear.duration_seconds, 0);
+});
+
+test("a saved score opens the screen and a failed score keeps the token", () => {
+  const sent = interpretScoreResponse(
+    200,
+    { url: "http://localhost:3000/dashboard/sessions/session-id", points: 40, distracted: true },
+    "http://localhost:3000",
+    "session-id",
+  );
+  assert.equal(sent.ok, true);
+  assert.equal(sent.clearToken, true);
+  assert.equal(sent.url, "http://localhost:3000/dashboard/sessions/session-id");
+
+  const again = interpretScoreResponse(409, { error: "That session was already scored." }, "http://localhost:3000", "session-id");
+  assert.equal(again.ok, true);
+  assert.equal(again.clearToken, true);
+  assert.equal(again.url, "http://localhost:3000/dashboard/sessions/session-id");
+  assert.match(again.message, /already scored/);
+
+  const rejected = interpretScoreResponse(403, { error: "Score rejected." }, "http://localhost:3000", "session-id");
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.clearToken, false);
+  assert.equal(rejected.url, "");
+  assert.match(rejected.message, /Try again/);
+});
+
+test("the pet posts the score and does not open a port", () => {
+  const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(main, /\/api\/sessions\/\$\{current\.id\}\/score/);
+  assert.match(main, /openExternal/);
+  assert.doesNotMatch(main, /\.listen\(/);
+});
