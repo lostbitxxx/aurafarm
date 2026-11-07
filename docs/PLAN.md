@@ -25,11 +25,11 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Mac Electron pet in [`desktop/`](../desktop/) calls those routes. Phase 7 reads the frontmost browser tab during a claimed session.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Mac Electron pet in [`desktop/`](../desktop/) calls those routes. Phase 7 reads the frontmost browser tab during a claimed session. Phase 8 submits that count from a Finish control on the pet and opens the score screen.
 
 ## Next commit
 
-The Finish action is the current desktop work, described in [phase 8](plans/08-pet-scoring-action.md). The pet already keeps the blocked count from phase 7. Do not add packaging in that work. Windows packaging waits.
+Packaging is the remaining desktop work, described in [phase 9](plans/09-packaging.md). The Finish control already submits the phase 7 count. Windows packaging waits.
 
 ## Rules for every phase
 

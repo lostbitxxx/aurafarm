@@ -1,6 +1,6 @@
 # Phase 8 — Pet scoring action
 
-Status: not started.
+Status: the pet shows one Finish control beside the sprite during a claimed session. A clear session submits `blocked_count: 0`. A blocklist visit switches the label to "Finish distracted session" and submits that count and host. A successful score or a `409` opens the score screen and hides the control. A failed submit leaves the control in place.
 
 Depends on: [phase 3](03-score-api.md) and [phase 7](07-browser-extension.md).
 
