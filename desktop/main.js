@@ -174,6 +174,7 @@ function createSprite() {
   spriteWindow.on("closed", () => {
     spriteWindow = null;
   });
+  spriteWindow.webContents.once("did-finish-load", publish);
   placeOnScreen();
 }
 

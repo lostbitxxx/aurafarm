@@ -38,6 +38,13 @@ test("a study link shows the equipped pet for that session's user", () => {
   assert.doesNotMatch(refresh, /searchParams|link\.pet|body\.pet_type/);
   assert.match(desktop, /PET_REFRESH_MS/);
   assert.match(desktop, /void refreshPet\(\)/);
+  const sprite = readFileSync(new URL("../desktop/sprite.js", import.meta.url), "utf8");
+  assert.match(sprite, /function drawPet\(petType\)/);
+  assert.match(sprite, /petType === "lantern_moth"/);
+  assert.match(sprite, /petType === "river_newt"/);
+  assert.match(sprite, /drawPet\(state\.petType\)/);
+  assert.match(desktop, /loadFile\(path\.join\(__dirname, "sprite\.html"\)\)/);
+  assert.match(desktop, /did-finish-load", publish/);
   assert.match(desktop, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
   assert.doesNotMatch(desktop, /SUPABASE_SECRET_KEY|SERVICE_ROLE/);
 });
