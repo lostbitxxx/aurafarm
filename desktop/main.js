@@ -15,6 +15,7 @@ const {
   noteCloseAttempt,
 } = require("./frontmost");
 const { closeFrontTab, readFrontBrowser } = require("./front-browser");
+const { readPetConfig } = require("./config");
 const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
@@ -22,23 +23,39 @@ const { version: PET_VERSION } = require("./package.json");
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
 const WINDOW = { x: 128, y: 128 };
-const API_ORIGIN = process.env.AURAFARM_API_ORIGIN || "http://localhost:3000";
+const API_ORIGIN = (
+  process.env.AURAFARM_API_ORIGIN ||
+  require("./bundled-origin") ||
+  "http://localhost:3000"
+).replace(/\/$/, "");
 const DESK_HOST = deskHostFromOrigin(API_ORIGIN);
 const PET_REFRESH_MS = 10_000;
 const FRONT_POLL_MS = 2_000;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "";
+let supabase = createSupabase(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+);
 
-const supabase =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false, autoRefreshToken: true },
-      })
-    : null;
+function createSupabase(url, key) {
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: true },
+  });
+}
+
+async function loadRemoteConfig() {
+  if (supabase) return;
+  try {
+    const response = await fetch(`${API_ORIGIN}/api/pet/config`);
+    if (!response.ok) return;
+    const parsed = readPetConfig(await response.json());
+    if (!parsed) return;
+    supabase = createSupabase(parsed.url, parsed.key);
+  } catch {
+    // The desk can be down. A local .env.local still works for npm start.
+  }
+}
 
 let spriteWindow = null;
 let panelWindow = null;
@@ -851,6 +868,7 @@ if (!gotLock) {
     openPanel();
     openDebugWindow();
     setDebug(describeCloseDebug({ session: false }));
+    await loadRemoteConfig();
     await restoreSession();
     void checkForUpdate();
     for (const arg of [...process.argv, ...pendingLinks]) {

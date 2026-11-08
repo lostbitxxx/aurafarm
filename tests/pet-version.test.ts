@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { petConfigPayload } from "../lib/pet-config";
 import { PET_VERSION, petVersionPayload } from "../lib/pet-version";
 
 const require = createRequire(import.meta.url);
@@ -57,6 +58,34 @@ test("the privacy page states what the pet reads", () => {
   assert.match(page, /quitting the pet stops the address-bar check/);
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   assert.match(header, /href="\/privacy"/);
+});
+
+test("the pet config route returns only the public supabase values", () => {
+  const { readPetConfig } = require("../desktop/config.js") as {
+    readPetConfig: (body: unknown) => { url: string; key: string } | null;
+  };
+  assert.deepEqual(petConfigPayload(undefined, undefined), {
+    supabase_url: "",
+    supabase_publishable_key: "",
+  });
+  assert.deepEqual(
+    petConfigPayload("https://project.supabase.co/", "sb_publishable_example"),
+    {
+      supabase_url: "https://project.supabase.co",
+      supabase_publishable_key: "sb_publishable_example",
+    },
+  );
+  assert.equal(petConfigPayload("notaurl", "sb_publishable_example").supabase_url, "");
+  assert.equal(readPetConfig({ supabase_url: "https://project.supabase.co", supabase_publishable_key: "sb_publishable_example" })?.url, "https://project.supabase.co");
+  assert.equal(readPetConfig({ supabase_url: "", supabase_publishable_key: "secret" }), null);
+  const route = readFileSync(new URL("../app/api/pet/config/route.ts", import.meta.url), "utf8");
+  assert.match(route, /export async function GET/);
+  assert.match(route, /await connection\(\)/);
+  assert.match(route, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
+  assert.doesNotMatch(route, /SUPABASE_SECRET_KEY|SERVICE_ROLE/);
+  const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(main, /\/api\/pet\/config/);
+  assert.match(main, /loadRemoteConfig/);
 });
 
 test("the version route is public and the repo has no extension", () => {

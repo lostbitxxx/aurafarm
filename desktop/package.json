@@ -7,8 +7,8 @@
   "main": "main.js",
   "scripts": {
     "start": "node ensure-apple-events.js && electron .",
-    "pack": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac zip",
-    "pack:signed": "electron-builder --mac zip"
+    "pack": "node pack.js",
+    "pack:signed": "node pack.js --signed"
   },
   "build": {
     "appId": "app.aurafarm.pet",
