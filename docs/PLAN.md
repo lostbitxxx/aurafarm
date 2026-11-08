@@ -73,3 +73,7 @@ Order: the Godot Windows pet is removed. The desktop pet is the Mac Electron app
 ## What a small plan is for
 
 Implement that file only. Leave the later phases' files unbuilt. When a decision in a small plan conflicts with this page, this page wins, and the small plan should be edited before the code changes.
+
+## Shop and inventory
+
+A separate review set lives in [docs/plans/shop](plans/shop/README.md). It starts with a visual restyle, then adds a point wallet, `/shop`, and `/inventory`. It does not replace the phases above, and it is not implemented until those shop files are accepted.
