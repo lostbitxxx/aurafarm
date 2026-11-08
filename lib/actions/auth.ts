@@ -13,6 +13,9 @@ export type AuthFormState = {
 
 const emptyState: AuthFormState = { error: "", message: "" };
 
+const confirmationStillRequired =
+  "This project is still requiring email confirmation. Turn off Confirm email in the Supabase dashboard, then register again.";
+
 function readCredentials(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -65,24 +68,15 @@ export async function register(
     };
   }
 
-  const admin = createAdminClient();
-  if (!admin && !data.session) {
-    return {
-      ...emptyState,
-      message:
-        "Account created. Confirm your email, then sign in. The signup trigger in supabase/migrations creates your profile and level 1 baby slime. Set SUPABASE_SECRET_KEY if you want this form to insert those rows before confirmation.",
-    };
+  if (!data.session) {
+    return { ...emptyState, error: confirmationStillRequired };
   }
 
+  const admin = createAdminClient();
   const saved = await saveNewFarmer(admin ?? supabase, data.user.id, displayName);
   if (saved.error) return { ...emptyState, error: saved.error };
 
-  if (data.session) redirect("/dashboard");
-
-  return {
-    ...emptyState,
-    message: "Account created. Confirm your email, then sign in. Your baby slime is waiting on the desktop.",
-  };
+  redirect("/dashboard");
 }
 
 export async function signIn(

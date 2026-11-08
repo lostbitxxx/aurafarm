@@ -1,6 +1,6 @@
 # Disable email confirmation
 
-Status: not started.
+Status: Confirm email is off in the hosted project. Registration redirects to the desk when signup returns a session. If it does not, the form says confirmation is still required. The "Confirm your email" copy is gone. The signup trigger still creates the profile and starter pet.
 
 Depends on: nothing. It can be done beside the desktop phases.
 
