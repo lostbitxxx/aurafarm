@@ -16,6 +16,7 @@ export function SiteHeader({
           Aurafarm
         </Link>
         <Link href="/shop">Shop</Link>
+        <Link href="/inventory">Inventory</Link>
       </div>
       <div className="topbar-user">
         <span className="points-balance">

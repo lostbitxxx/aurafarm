@@ -1,6 +1,6 @@
 # Phase 4 — Inventory
 
-Status: for review. Do not build this until phases 1 and 2 are accepted. It can follow phase 3 or land beside it.
+Status: implemented. `/inventory` lists owned pets and equips one. The desk keeps the equipped name and a link.
 
 Depends on: [phase 1](01-points-and-purchase.md) and [phase 2](02-points-header.md). The shop is what puts a second pet in this list.
 

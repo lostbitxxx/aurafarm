@@ -30,6 +30,8 @@ test("the shop and the desk require an account", () => {
   assert.equal(requiresAccount("/login"), false);
   assert.equal(requiresAccount("/privacy"), false);
   assert.equal(requiresAccount("/shopping"), false);
+  assert.equal(requiresAccount("/inventory"), true);
+  assert.equal(requiresAccount("/inventory/extra"), true);
 
   const proxy = readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url), "utf8");
   assert.match(proxy, /requiresAccount\(pathname\)/);
@@ -39,7 +41,9 @@ test("the shop and the desk require an account", () => {
     "utf8",
   );
   assert.match(header, /href="\/shop"/);
+  assert.match(header, /href="\/inventory"/);
   assert.doesNotMatch(publicHeader, /\/shop/);
+  assert.doesNotMatch(publicHeader, /\/inventory/);
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
   assert.match(action, /shopPurchaseBlock/);
   assert.match(action, /purchase_pet/);

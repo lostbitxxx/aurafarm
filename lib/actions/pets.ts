@@ -29,6 +29,7 @@ export async function equipPetToDesktop(petId: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
+  revalidatePath("/inventory");
   return { error: "" };
 }
 
