@@ -27,10 +27,6 @@ export default function PrivacyPage() {
               The server stores the score, the duration, the blocked count, and the blocked
               hostnames for that session.
             </li>
-            <li>
-              The pet heartbeats so the desk can show that it is running. The heartbeat is a
-              timestamp, not a list of tabs.
-            </li>
             <li>Stopping the session or quitting the pet stops the address-bar check.</li>
           </ul>
         </div>

@@ -25,7 +25,7 @@ On the pet-desk branch:
 - [`next.config.ts`](../next.config.ts) sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on every response except the dev HMR socket.
 - Tests are `node:test` files in [`tests`](../tests), run with `npm test`. SQL behavior is checked by reading the migration file. Pure helpers live in `lib/` and are what the tests import.
 
-Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link, device pairing, heartbeats, and the launch-code claim. The Mac Electron pet in [`desktop/`](../desktop/) calls those routes. Phase 7 reads the frontmost browser tab during a claimed session. Phase 8 submits that count from a Finish control on the pet and opens the score screen. Phase 9 publishes the version and download URL, the privacy page, and the Mac zip command. Phase 11 adds the desk toggle that lets the pet close the front blocked tab.
+Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supabase/migrations/0002_study_sessions.sql), [`lib/scoring.ts`](../lib/scoring.ts), and [`lib/blocklist.ts`](../lib/blocklist.ts). Phase 2 adds the study panel on the desk. Phase 3 adds `POST /api/sessions/:id/score` and the score screen. Phase 4 replaces the desk placeholder with a Godot 4.5.2 web export. The Godot Windows scene from phase 5 has been removed. Phase 6 adds the download link and the launch-code claim. The desk no longer pairs a computer or shows whether the pet process is running. The Mac Electron pet in [`desktop/`](../desktop/) calls the claim route. Phase 7 reads the frontmost browser tab during a claimed session. Phase 8 submits that count from a Finish control on the pet and opens the score screen. Phase 9 publishes the version and download URL, the privacy page, and the Mac zip command. Phase 11 adds the desk toggle that lets the pet close the front blocked tab.
 
 ## Next commit
 
@@ -38,9 +38,9 @@ The planned phases through email confirmation are in the repo. Phase 11 is the o
 - Points come from the session record. Focused is `100`. Distracted (`blocked_count > 0`) is `40`. Duration is stored and does not change the points yet.
 - macOS is the first desktop target. The pet is an Electron app on the Mac. Windows waits. Linux stays out because overlay windows differ on Wayland.
 - Godot is the web mini-game only. The roaming pet is Electron.
-- The website learns whether the pet is running from an API heartbeat. It does not connect to `127.0.0.1`. The isolation headers already on the site, and the browser's local-network permission, make a public page calling loopback a bad wake-up path.
+- The website does not connect to `127.0.0.1`. The isolation headers already on the site, and the browser's local-network permission, make a public page calling loopback a bad wake-up path.
 - The pet opens no local port. The session token is not put in the `aurafarm://` URL. The equipped character comes from `user_pets`, using the public Supabase key and that user's session. The service-role key stays on the server.
-- Follow the existing server-action and Supabase cookie patterns in [`lib/actions/pets.ts`](../lib/actions/pets.ts) and [`lib/supabase/server.ts`](../lib/supabase/server.ts). Do not cache session, score, or heartbeat data. Load them the way [`lib/dashboard.ts`](../lib/dashboard.ts) loads pets.
+- Follow the existing server-action and Supabase cookie patterns in [`lib/actions/pets.ts`](../lib/actions/pets.ts) and [`lib/supabase/server.ts`](../lib/supabase/server.ts). Do not cache session or score data. Load them the way [`lib/dashboard.ts`](../lib/dashboard.ts) loads pets.
 - New tests stay on `node:test` and `npm test`. Do not add a second test runner.
 
 ## Phases
@@ -64,11 +64,10 @@ Order: the Godot Windows pet is removed. The desktop pet is the Mac Electron app
 ## Settled decisions
 
 - Wake-up: `aurafarm://session?code=…`. The pet exchanges that code with the API over HTTPS. The code is single-use, expires in 5 minutes, and is shorter than the session token. The link is safe to land in browser history.
-- Presence: the pet heartbeats every 10 seconds. The desk treats a heartbeat newer than 30 seconds as "running".
 - The pet does not open a local socket. There is no extension and no native-messaging host.
 - Blocklist: server-owned table. The first hosts are `instagram.com`, `tiktok.com`, and `youtube.com`. A host matches itself and its subdomains.
 - Score: `scoreForBlockedCount` in `lib/scoring.ts`. The pet does not invent the point value. The database function uses the same two numbers.
-- Auth for the pet: a short-lived session token returned when the launch code is claimed. The pet does not store the user's Supabase password. Device heartbeats use a separate device token from pairing. The sprite uses the user's own Supabase session to read `user_pets`.
+- Auth for the pet: a short-lived session token returned when the launch code is claimed. The pet does not store the user's Supabase password. The sprite uses the user's own Supabase session to read `user_pets`.
 - The first blocklist host in front during a session is enough to make the score the lower one. The pet records the count and the hostnames. Closing the tab, when the farmer has turned that on, does not undo the visit.
 
 ## What a small plan is for

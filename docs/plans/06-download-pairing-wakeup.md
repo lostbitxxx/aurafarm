@@ -1,6 +1,6 @@
 # Phase 6 — Download, pairing, and wake-up
 
-Status: the server routes are implemented. Run [`supabase/migrations/0006_pet_devices.sql`](../../supabase/migrations/0006_pet_devices.sql). The plan originally named that file `0003`; that number was already used. The Godot client (`godot/scripts/pet_link.gd` and `desktop/install-protocol.reg`) is removed by the phase 5 deletion commit. The Electron pet calls these same routes after that commit.
+Status: the launch-code claim remains. The desk no longer pairs a computer or shows whether the pet is running, and the pet no longer heartbeats. Run [`supabase/migrations/0006_pet_devices.sql`](../../supabase/migrations/0006_pet_devices.sql) because `claim_study_session` is in that file. The plan originally named that file `0003`; that number was already used. The Godot client (`godot/scripts/pet_link.gd` and `desktop/install-protocol.reg`) is removed by the phase 5 deletion commit.
 
 Depends on: [phase 2](02-dashboard-study-controls.md) and [phase 5](05-roaming-desktop-pet.md).
 

@@ -283,9 +283,6 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .pet-status .button { justify-self: start; }
-.pet-status .form-error { color: #ffb4b4; margin: 0; }
-.pair-token { display: grid; gap: 0.4rem; }
-.pair-token p { margin: 0; }
 
 .study-panel {
   background: rgba(246, 241, 228, 0.08);

@@ -1,4 +1,4 @@
-/** Reads aurafarm://pair and aurafarm://session links. */
+/** Reads aurafarm://session links. */
 
 function parseAurafarmLink(value) {
   if (typeof value !== "string") return null;
@@ -9,12 +9,6 @@ function parseAurafarmLink(value) {
     return null;
   }
   if (url.protocol !== "aurafarm:") return null;
-
-  if (url.hostname === "pair") {
-    const token = url.searchParams.get("token");
-    if (!token) return null;
-    return { kind: "pair", token };
-  }
 
   if (url.hostname === "session") {
     const code = url.searchParams.get("code");

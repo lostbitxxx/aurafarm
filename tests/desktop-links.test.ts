@@ -4,17 +4,11 @@ import { test } from "node:test";
 
 const require = createRequire(import.meta.url);
 const { parseAurafarmLink } = require("../desktop/links.js") as {
-  parseAurafarmLink: (value: string) =>
-    | { kind: "pair"; token: string }
-    | { kind: "session"; code: string }
-    | null;
+  parseAurafarmLink: (value: string) => { kind: "session"; code: string } | null;
 };
 
-test("pair and session links keep only their own field", () => {
-  assert.deepEqual(parseAurafarmLink("aurafarm://pair?token=device-token"), {
-    kind: "pair",
-    token: "device-token",
-  });
+test("session links keep only the launch code", () => {
+  assert.equal(parseAurafarmLink("aurafarm://pair?token=device-token"), null);
   assert.deepEqual(parseAurafarmLink("aurafarm://session?code=ABC234"), {
     kind: "session",
     code: "ABC234",

@@ -53,7 +53,7 @@ test("the privacy page states what the pet reads", () => {
   assert.match(page, /closes that front tab after 8 seconds/);
   assert.match(page, /does not close any other tab/);
   assert.match(page, /stores the score, the duration, the blocked count, and the blocked hostnames/);
-  assert.match(page, /heartbeat is a timestamp, not a list of tabs/);
+  assert.doesNotMatch(page, /heartbeat/);
   assert.match(page, /quitting the pet stops the address-bar check/);
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   assert.match(header, /href="\/privacy"/);
