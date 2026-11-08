@@ -18,7 +18,7 @@ export default async function StudyScorePage({
 
   return (
     <>
-      <SiteHeader displayName={score.displayName} />
+      <SiteHeader displayName={score.displayName} points={score.balance} />
       <main className="score-layout">
         <section className="study-panel" aria-label="Score">
           <div className="inventory-heading">

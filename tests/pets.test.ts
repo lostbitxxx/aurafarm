@@ -11,6 +11,7 @@ import {
   buildGodotFrameSrc,
   describePet,
   shopCatalog,
+  wholePoints,
 } from "../lib/pets";
 
 test("registration inserts a profile and a desktop-active baby slime", () => {
@@ -91,6 +92,32 @@ test("buying a pet spends the shared price and cannot mint one", () => {
     assert.match(sql, new RegExp(`'${pet.pet_type}'`));
   }
   assert.doesNotMatch(sql, /'baby_slime'/);
+});
+
+test("the signed-in header shows the wallet and public pages do not", () => {
+  assert.equal(wholePoints(100), 100);
+  assert.equal(wholePoints("40"), 40);
+  assert.equal(wholePoints(undefined), 0);
+  assert.equal(wholePoints(Number.NaN), 0);
+
+  const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
+  const score = readFileSync(new URL("../lib/study-score.ts", import.meta.url), "utf8");
+  assert.match(header, /Points/);
+  assert.match(header, /points/);
+  assert.match(dashboard, /select\("display_name, points"\)/);
+  assert.match(score, /select\("display_name, points"\)/);
+
+  for (const file of [
+    "../components/public-header.tsx",
+    "../app/page.tsx",
+    "../app/login/page.tsx",
+    "../app/register/page.tsx",
+    "../app/privacy/page.tsx",
+  ]) {
+    const source = readFileSync(new URL(file, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /points-balance|Points /, file);
+  }
 });
 
 test("equipping a pet is one database transaction", () => {

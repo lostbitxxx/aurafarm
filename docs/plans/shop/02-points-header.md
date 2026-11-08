@@ -1,6 +1,6 @@
 # Phase 2 — Points in the header
 
-Status: for review. Do not build this until phase 1 is accepted.
+Status: implemented. The signed-in header shows `profiles.points`. The public pages do not. The rejected HUD frame was not brought back.
 
 Depends on: [phase 1](01-points-and-purchase.md). Uses the HUD stat cluster left empty by [phase 0](00-rpg-redesign.md).
 
