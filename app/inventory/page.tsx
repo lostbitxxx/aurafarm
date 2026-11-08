@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Inventory",
 };
 
+export const instant = false;
+
 export default async function InventoryPage() {
   const inventory = await loadInventory();
   return (

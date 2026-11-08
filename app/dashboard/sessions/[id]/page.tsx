@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: "Score",
 };
 
+export const instant = false;
+
 export default async function StudyScorePage({
   params,
 }: {

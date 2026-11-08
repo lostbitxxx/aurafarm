@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: "Shop",
 };
 
+export const instant = false;
+
 export default async function ShopPage() {
   const shop = await loadShop();
   return <ShopScreen {...shop} />;

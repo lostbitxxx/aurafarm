@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Desk",
 };
 
+export const instant = false;
+
 export default async function DashboardPage() {
   const dashboard = await loadDashboard();
   return (
