@@ -55,6 +55,7 @@ test("server headers allow SharedArrayBuffer", () => {
 });
 
 test("the shop catalog sells every pet for the same price and skips the starter", () => {
+  assert.equal(SHOP_PRICE, 100);
   const catalog = shopCatalog();
   assert.deepEqual(
     catalog.map((pet) => pet.pet_type),
@@ -82,8 +83,9 @@ test("buying a pet spends the shared price and cannot mint one", () => {
   assert.match(sql, new RegExp(`balance < ${SHOP_PRICE}`));
   assert.match(sql, new RegExp(`points = points - ${SHOP_PRICE}`));
   assert.match(sql, /is_desktop_active\)\s*values \(auth\.uid\(\), target_pet_type, 1, false\)/);
-  assert.match(sql, /user_pets_one_type_per_user/);
+  assert.match(sql, /user_pets_one_type_per_user\s+on public\.user_pets \(user_id, pet_type\)/);
   assert.match(sql, /drop policy if exists "user_pets_insert_own"/);
+  assert.doesNotMatch(sql, /create policy "user_pets_insert_own"/);
   assert.match(sql, /revoke insert on table public\.user_pets from authenticated/);
   assert.match(sql, /grant update \(display_name, close_blocked\) on table public\.profiles/);
   assert.doesNotMatch(sql, /grant update on table public\.profiles/);
@@ -101,6 +103,13 @@ test("the signed-in header shows the wallet and public pages do not", () => {
   assert.equal(wholePoints(Number.NaN), 0);
 
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const publicHeader = readFileSync(
+    new URL("../components/public-header.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(header, /points: number/);
+  assert.match(header, /\{shown\}/);
+  assert.doesNotMatch(publicHeader, /\bpoints\b/);
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const score = readFileSync(new URL("../lib/study-score.ts", import.meta.url), "utf8");
   assert.match(header, /Points/);
