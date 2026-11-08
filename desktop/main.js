@@ -54,7 +54,7 @@ let frontPoll = null;
 let state = {
   petType: "baby_slime",
   level: 1,
-  status: "Sign in to show the equipped pet.",
+  status: "Paste the launch code from the desk.",
 };
 const pendingLinks = [];
 
@@ -186,7 +186,7 @@ function togglePanel() {
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 468,
+    height: 280,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -221,7 +221,7 @@ async function restoreSession() {
     }
     await refreshPet();
   } catch {
-    setStatus("Sign in to show the equipped pet.");
+    setStatus("Paste the launch code from the desk.");
   }
 }
 
