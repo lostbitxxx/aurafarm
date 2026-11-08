@@ -110,11 +110,17 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /Cancel study session/);
   assert.match(script, /window\.pet\.cancelStudy\(\)/);
   assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
-  assert.match(main, /cancel_study_session/);
-  assert.doesNotMatch(
-    readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8"),
-    /Cancel session/,
+  assert.match(main, /\/api\/sessions\/\$\{sessionId\}\/cancel/);
+  assert.match(main, /openExternal\(url\)/);
+  const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(desk, /Cancel session/);
+  assert.match(desk, /cancelStudySession/);
+  const cancelRoute = readFileSync(
+    new URL("../app/api/sessions/[id]/cancel/route.ts", import.meta.url),
+    "utf8",
   );
+  assert.match(cancelRoute, /cancel_study_session/);
+  assert.match(cancelRoute, /\/dashboard/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);

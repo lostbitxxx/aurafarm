@@ -397,24 +397,22 @@ async function useToken(raw) {
 }
 
 async function cancelStudy() {
-  if (!supabase) return { error: "Supabase is not configured." };
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) return { error: "Paste a session token before cancelling." };
   let sessionId = study?.id ?? "";
-  if (!sessionId) {
-    const { data, error: findError } = await supabase
-      .from("study_sessions")
-      .select("id")
-      .eq("status", "active")
-      .maybeSingle();
-    if (findError) return { error: findError.message };
-    sessionId = data?.id ?? "";
+  if (!sessionId && supabase) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      const { data, error: findError } = await supabase
+        .from("study_sessions")
+        .select("id")
+        .eq("status", "active")
+        .maybeSingle();
+      if (findError) return { error: findError.message };
+      sessionId = data?.id ?? "";
+    }
   }
   if (!sessionId) return { error: "No study session is running." };
-  const { error } = await supabase.rpc("cancel_study_session", {
-    target_session_id: sessionId,
-  });
-  if (error) return { error: error.message };
+  const url = `${API_ORIGIN}/api/sessions/${sessionId}/cancel`;
+  await shell.openExternal(url);
   if (study) stopFrontWatch();
   hidePet();
   setStatus("Study session cancelled.");
