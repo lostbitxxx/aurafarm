@@ -107,7 +107,16 @@ function readSecret(name) {
   return buffer.toString("utf8");
 }
 
+let lastPetLog = "";
+
+function petLog(line) {
+  if (line === lastPetLog) return;
+  lastPetLog = line;
+  console.log(line);
+}
+
 function publish() {
+  petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
   const payload = {
     ...state,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
@@ -238,37 +247,53 @@ async function restoreSession() {
     return;
   }
   const raw = readSecret("session.json");
-  if (!raw) return;
+  if (!raw) {
+    petLog(`[pet] no saved sign-in at ${secretPath("session.json")}.`);
+    return;
+  }
   try {
     const saved = JSON.parse(raw);
     const { error } = await supabase.auth.setSession(saved);
     if (error) {
+      petLog(`[pet] saved sign-in rejected: ${error.message}`);
       setStatus(error.message);
       return;
     }
     await refreshPet();
   } catch {
+    petLog("[pet] saved sign-in could not be read.");
     setStatus("Paste a session token to show the pet.");
   }
 }
 
 async function refreshPet() {
-  if (!supabase) return;
+  if (!supabase) {
+    petLog("[pet] no Supabase client. .env.local needs NEXT_PUBLIC_SUPABASE_URL and the publishable key.");
+    return;
+  }
   const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) return;
+  if (!sessionData.session) {
+    petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
+    return;
+  }
   const { data, error } = await supabase
     .from("user_pets")
     .select("pet_type, level")
     .eq("is_desktop_active", true)
     .maybeSingle();
   if (error) {
+    petLog(`[pet] equipped pet query failed: ${error.message}`);
     setStatus(error.message);
     return;
   }
   if (!data) {
+    petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
     if (!study) setStatus("No pet is equipped on the desk.");
     return;
   }
+  petLog(
+    `[pet] equipped ${data.pet_type} level ${data.level} for ${sessionData.session.user?.id ?? "unknown"}`,
+  );
   if (study) {
     state = { ...state, petType: data.pet_type, level: data.level };
     publish();
@@ -373,11 +398,16 @@ function beginFrontWatch(body) {
     startedAt: Date.now(),
   };
   if (body.pet_type) {
+    petLog(
+      `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level}`,
+    );
     state = {
       ...state,
       petType: body.pet_type,
       level: typeof body.level === "number" ? body.level : state.level,
     };
+  } else {
+    petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
   state = { ...state, finishNote: "" };
   setDebug(
