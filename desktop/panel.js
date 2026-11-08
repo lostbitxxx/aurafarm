@@ -10,11 +10,11 @@ document.getElementById("quit").addEventListener("click", () => {
   window.pet.quit();
 });
 
-document.getElementById("claim").addEventListener("submit", async (event) => {
+document.getElementById("session-token").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
-  const result = await window.pet.claim(String(data.get("code") ?? ""));
-  status.textContent = result.error || "Session claimed.";
+  const result = await window.pet.useToken(String(data.get("token") ?? ""));
+  status.textContent = result.error || "Session token accepted.";
 });
 
 window.pet.onState((state) => {

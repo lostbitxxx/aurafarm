@@ -51,10 +51,11 @@ let velocity = { x: 2, y: 0 };
 let study = null;
 let frontTimer = null;
 let frontPoll = null;
+let appQuitting = false;
 let state = {
   petType: "baby_slime",
   level: 1,
-  status: "Paste the launch code from the desk.",
+  status: "Paste a session token to show the pet.",
 };
 const pendingLinks = [];
 
@@ -155,6 +156,7 @@ function createSprite() {
   spriteWindow = new BrowserWindow({
     width: WINDOW.x,
     height: WINDOW.y,
+    show: false,
     transparent: true,
     frame: false,
     resizable: false,
@@ -178,16 +180,37 @@ function createSprite() {
   placeOnScreen();
 }
 
+function showPet() {
+  const win = spriteWindow;
+  if (!win || win.isDestroyed() || win.isVisible()) return;
+  win.show();
+}
+
+function hidePet() {
+  const win = spriteWindow;
+  if (!win || win.isDestroyed() || !win.isVisible()) return;
+  win.hide();
+  openPanel();
+}
+
 function togglePanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
     panelWindow.close();
     panelWindow = null;
     return;
   }
+  openPanel();
+}
+
+function openPanel() {
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.show();
+    return;
+  }
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 280,
+    height: 360,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -202,6 +225,9 @@ function togglePanel() {
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
   panelWindow.on("closed", () => {
     panelWindow = null;
+    if (!appQuitting && spriteWindow && !spriteWindow.isDestroyed() && !spriteWindow.isVisible()) {
+      setImmediate(() => openPanel());
+    }
   });
   panelWindow.webContents.once("did-finish-load", publish);
 }
@@ -222,7 +248,7 @@ async function restoreSession() {
     }
     await refreshPet();
   } catch {
-    setStatus("Paste the launch code from the desk.");
+    setStatus("Paste a session token to show the pet.");
   }
 }
 
@@ -284,6 +310,53 @@ async function claim(code) {
     return { error: "Claim rejected." };
   }
   beginFrontWatch(body);
+  showPet();
+  return { error: "" };
+}
+
+function readSessionToken(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return { error: "A session token is required." };
+  if (!trimmed.startsWith("{")) return { launchCode: trimmed };
+  let parsed;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { error: "That session token is not valid." };
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    typeof parsed.access_token !== "string" ||
+    parsed.access_token.length === 0 ||
+    typeof parsed.refresh_token !== "string" ||
+    parsed.refresh_token.length === 0
+  ) {
+    return { error: "That session token is not valid." };
+  }
+  return { accessToken: parsed.access_token, refreshToken: parsed.refresh_token };
+}
+
+async function useToken(raw) {
+  const parsed = readSessionToken(raw);
+  if (parsed.error) return { error: parsed.error };
+  if (parsed.launchCode) return claim(parsed.launchCode);
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { data, error } = await supabase.auth.setSession({
+    access_token: parsed.accessToken,
+    refresh_token: parsed.refreshToken,
+  });
+  if (error || !data.session) return { error: error?.message ?? "That session token is not valid." };
+  writeSecret(
+    "session.json",
+    JSON.stringify({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    }),
+  );
+  await refreshPet();
+  showPet();
+  setStatus("Session token accepted.");
   return { error: "" };
 }
 
@@ -498,6 +571,7 @@ async function finishSession() {
     if (result.url) await shell.openExternal(result.url);
     if (study !== current) return;
     stopFrontWatch();
+    hidePet();
     setStatus(result.message, { finishNote: "" });
   } catch {
     if (study === current) {
@@ -610,6 +684,7 @@ async function pollFront() {
     if (study !== current) return;
     if (!active) {
       stopFrontWatch();
+      hidePet();
       setStatus("Study session ended.");
     }
   } finally {
@@ -647,6 +722,7 @@ ipcMain.on("toggle-panel", () => {
 });
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
+ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
 ipcMain.on("finish-session", () => {
   void finishSession();
@@ -686,6 +762,7 @@ if (!gotLock) {
   });
 
   app.on("before-quit", () => {
+    appQuitting = true;
     stopFrontWatch();
   });
 
@@ -706,6 +783,7 @@ if (!gotLock) {
       ]),
     );
     createSprite();
+    openPanel();
     openDebugWindow();
     setDebug(describeCloseDebug({ session: false }));
     await restoreSession();
