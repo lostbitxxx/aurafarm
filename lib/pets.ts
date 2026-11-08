@@ -1,5 +1,6 @@
 export const STARTER_PET_TYPE = "baby_slime";
 export const STARTER_PET_LEVEL = 1;
+export const SHOP_PRICE = 100;
 
 export type ProfileRecord = {
   id: string;
@@ -20,12 +21,37 @@ export type PetCard = {
   is_desktop_active: boolean;
 };
 
-const PET_COPY: Record<string, { name: string; note: string }> = {
+const PET_COPY: Record<string, { name: string; note: string; price?: number }> = {
   baby_slime: {
     name: "Baby Slime",
     note: "A wobbly starter that sticks to the desktop.",
   },
+  lantern_moth: {
+    name: "Lantern Moth",
+    note: "A small light that follows the desk.",
+    price: SHOP_PRICE,
+  },
+  river_newt: {
+    name: "River Newt",
+    note: "A quiet swimmer from the farm stream.",
+    price: SHOP_PRICE,
+  },
 };
+
+export type ShopPet = {
+  pet_type: string;
+  name: string;
+  note: string;
+  price: number;
+};
+
+export function shopCatalog(): ShopPet[] {
+  return Object.entries(PET_COPY).flatMap(([pet_type, pet]) =>
+    pet.price === undefined
+      ? []
+      : [{ pet_type, name: pet.name, note: pet.note, price: pet.price }],
+  );
+}
 
 export function buildProfileRecord(userId: string, displayName: string): ProfileRecord {
   return {

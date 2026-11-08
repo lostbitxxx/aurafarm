@@ -3,12 +3,14 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { crossOriginIsolationHeaders } from "../lib/cross-origin-isolation";
 import {
+  SHOP_PRICE,
   STARTER_PET_LEVEL,
   STARTER_PET_TYPE,
   buildProfileRecord,
   buildStarterPetRecord,
   buildGodotFrameSrc,
   describePet,
+  shopCatalog,
 } from "../lib/pets";
 
 test("registration inserts a profile and a desktop-active baby slime", () => {
@@ -49,6 +51,46 @@ test("server headers allow SharedArrayBuffer", () => {
   const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
   assert.match(config, /crossOriginIsolationHeaders/);
   assert.match(config, /_next\/hmr/);
+});
+
+test("the shop catalog sells every pet for the same price and skips the starter", () => {
+  const catalog = shopCatalog();
+  assert.deepEqual(
+    catalog.map((pet) => pet.pet_type),
+    ["lantern_moth", "river_newt"],
+  );
+  for (const pet of catalog) {
+    assert.equal(pet.price, SHOP_PRICE);
+    assert.equal(describePet(pet.pet_type).name, pet.name);
+  }
+  assert.equal(catalog.some((pet) => pet.pet_type === STARTER_PET_TYPE), false);
+  assert.equal(describePet("lantern_moth").name, "Lantern Moth");
+  assert.equal(describePet("river_newt").name, "River Newt");
+});
+
+test("buying a pet spends the shared price and cannot mint one", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0008_pet_shop.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /add column if not exists points integer not null default 100/);
+  assert.match(sql, /check \(points >= 0\)/);
+  assert.match(sql, /function public\.purchase_pet/);
+  assert.match(sql, /for update/);
+  assert.match(sql, /Pet already owned/);
+  assert.match(sql, new RegExp(`balance < ${SHOP_PRICE}`));
+  assert.match(sql, new RegExp(`points = points - ${SHOP_PRICE}`));
+  assert.match(sql, /is_desktop_active\)\s*values \(auth\.uid\(\), target_pet_type, 1, false\)/);
+  assert.match(sql, /user_pets_one_type_per_user/);
+  assert.match(sql, /drop policy if exists "user_pets_insert_own"/);
+  assert.match(sql, /revoke insert on table public\.user_pets from authenticated/);
+  assert.match(sql, /grant update \(display_name, close_blocked\) on table public\.profiles/);
+  assert.doesNotMatch(sql, /grant update on table public\.profiles/);
+  assert.doesNotMatch(sql, /grant update \([^)]*points/);
+  for (const pet of shopCatalog()) {
+    assert.match(sql, new RegExp(`'${pet.pet_type}'`));
+  }
+  assert.doesNotMatch(sql, /'baby_slime'/);
 });
 
 test("equipping a pet is one database transaction", () => {
