@@ -91,6 +91,12 @@ test("the sign-in panel can quit the pet", () => {
   const script = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   const preload = readFileSync(new URL("../desktop/preload.js", import.meta.url), "utf8");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(panel, /Launch code/);
+  assert.match(panel, /id="claim"/);
+  assert.doesNotMatch(panel, /type="email"|type="password"|id="sign-in"/);
+  assert.match(main, /signInWithPassword/);
+  assert.match(main, /ipcMain\.handle\("sign-in"/);
+  assert.match(preload, /signIn: \(email, password\)/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);
