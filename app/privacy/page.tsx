@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <>
       <PublicHeader />
       <main className="hero">
-        <div className="panel hero-copy">
+        <div className="hero-copy">
           <p className="eyebrow">Privacy</p>
           <h1>What the pet can see.</h1>
           <p className="lede">

@@ -7,7 +7,7 @@ export function GodotFrame({
 }) {
   const src = buildGodotFrameSrc(pet);
   return (
-    <section className="viewport monitor" aria-label="Desktop">
+    <section className="monitor" aria-label="Desktop">
       <div className="monitor-caption">
         <span>Desktop</span>
         <span className="monitor-dots" aria-hidden="true">

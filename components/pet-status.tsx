@@ -1,6 +1,6 @@
 export function PetStatus({ downloadUrl }: { downloadUrl: string | null }) {
   return (
-    <section className="panel pet-status" aria-label="Desktop pet">
+    <section className="pet-status" aria-label="Desktop pet">
       <div className="inventory-heading">
         <h2>Desktop pet</h2>
       </div>
