@@ -7,7 +7,7 @@ This set does not replace [the study-session plan](../../PLAN.md). Study session
 ## Settled decisions
 
 - The spendable balance is `profiles.points`. It is shown on every signed-in page. `/`, `/login`, `/register`, and `/privacy` stay without it.
-- `study_scores.points` is a different number. A finished study session still stores 100 for focused and 40 for distracted. Those rows are not added to `profiles.points` in this set. Earning wallet points from a study session is a later project.
+- `study_scores.points` stays the session result: 100 for focused and 40 for distracted. `submit_study_score` also adds that result to `profiles.points`. A second submit does not add it again.
 - Every shop pet costs 100. The starter `baby_slime` stays free and is not listed for sale.
 - One `user_pets` row per pet type per user. Buying a type the user already owns is rejected.
 - New accounts start with 100 points, enough to buy one pet. Adding the column also sets existing profiles to 100.
