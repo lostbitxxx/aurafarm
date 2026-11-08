@@ -103,6 +103,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /signInWithPassword/);
   assert.match(main, /ipcMain\.handle\("sign-in"/);
   assert.match(preload, /signIn: \(email, password\)/);
+  assert.match(panel, /id="cancel"/);
+  assert.match(panel, /Cancel study session/);
+  assert.match(script, /window\.pet\.cancelStudy\(\)/);
+  assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
+  assert.match(main, /cancel_study_session/);
+  assert.doesNotMatch(
+    readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8"),
+    /Cancel session/,
+  );
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);
