@@ -6,6 +6,10 @@ document.getElementById("update-button").addEventListener("click", () => {
   window.pet.openUpdate();
 });
 
+document.getElementById("quit").addEventListener("click", () => {
+  window.pet.quit();
+});
+
 document.getElementById("sign-in").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
