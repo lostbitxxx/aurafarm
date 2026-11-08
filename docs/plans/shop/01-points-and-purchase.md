@@ -10,7 +10,7 @@ Give every profile a spendable balance and one database transaction that buys a 
 
 ## Wallet
 
-Add `profiles.points integer not null default 100 check (points >= 0)` in `supabase/migrations/0007_pet_shop.sql`.
+Add `profiles.points integer not null default 100 check (points >= 0)` in `supabase/migrations/0008_pet_shop.sql`, after `0007_close_blocked.sql`.
 
 The default covers two cases:
 
@@ -47,7 +47,7 @@ The price check in SQL must match the catalog constant. A test reads both so the
 
 A signed-in user must not be able to set their own balance or insert a pet.
 
-- Replace the table-wide update grant on `profiles` with update on `display_name` only. `purchase_pet` updates `points` as definer.
+- Replace the table-wide update grant on `profiles` with update on `display_name` and `close_blocked` only. `setCloseBlocked` writes `close_blocked` as the signed-in user, so that column stays writable. `purchase_pet` updates `points` as definer.
 - Replace the table-wide insert grant on `profiles` with insert on `id, display_name` only.
 - Drop `user_pets_insert_own` and the `authenticated` insert grant on `user_pets`.
 - Leave select and the equip update path. `equip_pet_to_desktop` stays the way to change `is_desktop_active`. The partial unique index still allows one active pet per user.
@@ -61,7 +61,7 @@ A signed-in user must not be able to set their own balance or insert a pet.
 
 ## Touch
 
-- `supabase/migrations/0007_pet_shop.sql`
+- `supabase/migrations/0008_pet_shop.sql`
 - `lib/pets.ts` for the catalog and a pure `shopCatalog()` helper
 - `lib/farmers.ts` so the client insert of the starter pet is gone
 - `tests/pets.test.ts` for the catalog, the starter record, and the migration text
@@ -73,4 +73,5 @@ A signed-in user must not be able to set their own balance or insert a pet.
 - `purchase_pet('baby_slime')` and an unknown type do nothing.
 - A user with fewer than 100 points cannot buy.
 - From the browser session, `insert` into `user_pets` fails, and `update profiles set points = …` fails.
+- `setCloseBlocked` still updates `profiles.close_blocked`.
 - Signup still creates one active level 1 `baby_slime`.

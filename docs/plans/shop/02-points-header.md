@@ -10,7 +10,7 @@ Show `profiles.points` on every signed-in page. The public homepage, login, regi
 
 ## Load
 
-`loadDashboard` already requires `getClaims()` and redirects to `/login`. Extend that profile read to include `points`, and pass the number into `SiteHeader`.
+`loadDashboard` already requires `getClaims()` and redirects to `/login`. It reads `display_name` and `close_blocked` in two profile selects. Add `points` to the `display_name` select and pass the number into `SiteHeader`. Leave the `close_blocked` read in place.
 
 The session score page at `/dashboard/sessions/[id]` uses `SiteHeader` too. Its loader must select the same `points` value for the signed-in user. Do not read another user's balance. The score page already loads the session through the user-scoped client.
 

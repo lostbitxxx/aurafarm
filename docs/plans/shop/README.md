@@ -28,3 +28,11 @@ This set does not replace [the study-session plan](../../PLAN.md). Study session
 | 6 | [Tests](06-tests.md) | 1–5 | `npm test` locks the wallet, the purchase, the guards, and the launch link |
 
 Phase 0 is visual only. Phases 3 and 4 can be built in either order after phase 2. Phase 5 checks the desktop pet that already exists. It does not add a second session page.
+
+## After the close-tab and pairing merges
+
+Two merges landed after this set was drafted. They do not change the wallet, the 100-point price, or which pet a session shows. They do change three details:
+
+- `0007_close_blocked.sql` already exists. The shop migration is `0008_pet_shop.sql`.
+- `profiles.close_blocked` is updated by the signed-in user. A later grant must still allow that update and must still refuse an update of `points`.
+- Pairing and the "pet is running" line are gone. The desk download panel stays. The pet still reloads the equipped row on its own 10 second timer. `claim_study_session` also returns that user's equipped pet. The launch link still carries only the code.

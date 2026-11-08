@@ -20,7 +20,7 @@ Use the phase 0 slot frame and the phase 2 header. Move `components/pet-inventor
 
 `equipPetToDesktop` also revalidates `/inventory`. It still revalidates `/dashboard`.
 
-The desk no longer renders the full pet grid. It keeps one line for the equipped pet's name and a link to `/inventory`. The study panel and pet status stay on the desk.
+The desk no longer renders the full pet grid. It keeps one line for the equipped pet's name and a link to `/inventory`. The study panel, including the close-blocked control, stays on the desk. The download panel stays a download link, with no pairing control.
 
 Add Inventory to the signed-in HUD. The public header does not link to it.
 

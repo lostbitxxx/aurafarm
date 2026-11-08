@@ -16,13 +16,14 @@ Catalog and starter, in `tests/pets.test.ts`:
 - Every `shopCatalog()` entry has price 100.
 - `describePet` returns the catalog name for `lantern_moth` and `river_newt`.
 
-Migration `0007_pet_shop.sql`:
+Migration `0008_pet_shop.sql`:
 
 - The text adds `profiles.points` with default 100 and a `points >= 0` check.
 - It creates `purchase_pet`, locks the profile row, rejects an owned type, subtracts 100, and inserts an inactive `user_pets` row.
 - It creates a unique index on `(user_id, pet_type)`.
 - It drops the authenticated insert policy on `user_pets`.
 - It does not grant `authenticated` an update on `profiles.points`.
+- It still grants `authenticated` an update on `profiles.close_blocked`.
 
 Proxy:
 
@@ -32,7 +33,8 @@ Proxy:
 Session link, in the existing desktop link test:
 
 - `aurafarm://session?code=ABC234` keeps only `code`.
-- A URL that also has `pet` or `user` is not treated as a pet selector. The parser may ignore the extra field, but no helper may return it as the character to draw.
+- `aurafarm://pair?token=…` stays null. Do not teach the parser to read a pair token again.
+- A session URL that also has `pet` or `user` is not treated as a pet selector. The parser may ignore the extra field, but no helper may return it as the character to draw.
 
 Header:
 

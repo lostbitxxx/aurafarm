@@ -10,11 +10,13 @@ Opening a study session from the launch link shows the pet that user has equippe
 
 ## What already does this
 
-`buildPetLaunchUrl` returns `aurafarm://session?code=…`. The code is the only query parameter. `desktop/links.js` parses that code and nothing else.
+`buildPetLaunchUrl` returns `aurafarm://session?code=…`. The code is the only query parameter. `desktop/links.js` parses that code and nothing else. `aurafarm://pair` is no longer a link, and `parseAurafarmLink` returns null for it.
+
+`claim_study_session` looks up `user_pets` for the session's own `user_id` where `is_desktop_active` is true, and returns that `pet_type` and `level` with the claim. It also returns `close_blocked`. The code does not carry either value.
 
 After the pet has the user's Supabase session, `refreshPet` in `desktop/main.js` selects `pet_type, level` from `user_pets` where `is_desktop_active` is true. It does not send a user id. Row-level security applies `user_id = auth.uid()`, so the same link on two machines returns two different rows. The partial unique index allows one active row per user.
 
-`refreshPet` also runs on the heartbeat interval, so an equip on the website reaches a running pet without a relaunch.
+`refreshPet` runs on `PET_REFRESH_MS` (10 seconds). That timer is not a presence heartbeat. Pairing and `/api/pet/heartbeat` are gone. An equip on the website still reaches a running pet on the next tick.
 
 The sprite uses the publishable key and that session. It must keep doing that. The service-role key does not go into `desktop/`.
 
