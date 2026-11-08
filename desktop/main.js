@@ -219,7 +219,7 @@ function openPanel() {
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 360,
+    height: 420,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -382,6 +382,27 @@ async function useToken(raw) {
   await refreshPet();
   showPet();
   setStatus("Session token accepted.");
+  return { error: "" };
+}
+
+async function cancelStudy() {
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { error: "Paste a session token before cancelling." };
+  const { data, error: findError } = await supabase
+    .from("study_sessions")
+    .select("id")
+    .eq("status", "active")
+    .maybeSingle();
+  if (findError) return { error: findError.message };
+  if (!data?.id) return { error: "No study session is running." };
+  const { error } = await supabase.rpc("cancel_study_session", {
+    target_session_id: data.id,
+  });
+  if (error) return { error: error.message };
+  if (study) stopFrontWatch();
+  hidePet();
+  setStatus("Study session cancelled.");
   return { error: "" };
 }
 
@@ -753,6 +774,7 @@ ipcMain.on("toggle-panel", () => {
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
 ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
+ipcMain.handle("cancel-study", () => cancelStudy());
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
 ipcMain.on("finish-session", () => {
   void finishSession();

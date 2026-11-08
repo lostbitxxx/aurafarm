@@ -84,7 +84,7 @@ type ScoreSession = {
 function scoreRejectionHint(session: ScoreSession | null) {
   if (!session) return "";
   if (session.status === "cancelled") {
-    return " | Cancel session on the desk is the only writer of cancelled, and a cancelled session cannot be scored.";
+    return " | A cancelled session cannot be scored.";
   }
   if (session.status === "active" && session.tokenHash) {
     return " | The token in this request does not match the claim.";
