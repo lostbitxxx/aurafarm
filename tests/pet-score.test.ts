@@ -113,8 +113,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /\/api\/sessions\/\$\{sessionId\}\/cancel/);
   assert.match(main, /openExternal\(url\)/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(desk, /Cancel session/);
-  assert.doesNotMatch(desk, /cancelStudySession/);
+  assert.match(desk, /Cancel session/);
+  assert.match(desk, /cancelStudySession/);
   const cancelRoute = readFileSync(
     new URL("../app/api/sessions/[id]/cancel/route.ts", import.meta.url),
     "utf8",
