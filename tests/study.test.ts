@@ -35,6 +35,8 @@ test("a study link shows the equipped pet for that session's user", () => {
   );
   assert.match(refresh, /\.eq\("is_desktop_active", true\)/);
   assert.match(refresh, /petType: data\.pet_type/);
+  assert.match(refresh, /\[pet\] equipped /);
+  assert.match(refresh, /no signed-in pet session/);
   assert.doesNotMatch(refresh, /searchParams|link\.pet|body\.pet_type/);
   assert.match(desktop, /PET_REFRESH_MS/);
   assert.match(desktop, /void refreshPet\(\)/);
