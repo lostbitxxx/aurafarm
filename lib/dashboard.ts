@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import type { PetCard } from "./pets";
+import { wholePoints, type PetCard } from "./pets";
 import {
   closeBlockedMigrationMessage,
   type ActiveStudySession,
@@ -25,7 +25,7 @@ export async function loadDashboard() {
     sessionResult,
     scoresResult,
   ] = await Promise.all([
-      supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("display_name, points").eq("id", userId).maybeSingle(),
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
@@ -83,6 +83,7 @@ export async function loadDashboard() {
 
   return {
     displayName: profile?.display_name?.trim() || "Farmer",
+    points: wholePoints(profile?.points),
     pets,
     petsError: petsResult.error?.message ?? null,
     blocklist,

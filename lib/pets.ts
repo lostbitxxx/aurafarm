@@ -2,6 +2,11 @@ export const STARTER_PET_TYPE = "baby_slime";
 export const STARTER_PET_LEVEL = 1;
 export const SHOP_PRICE = 100;
 
+export function wholePoints(value: unknown) {
+  const points = Number(value);
+  return Number.isFinite(points) ? Math.trunc(points) : 0;
+}
+
 export type ProfileRecord = {
   id: string;
   display_name: string;

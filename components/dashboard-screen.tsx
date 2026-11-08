@@ -8,6 +8,7 @@ import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "@/lib/s
 
 export function DashboardScreen({
   displayName,
+  points,
   pets,
   petsError,
   blocklist,
@@ -19,6 +20,7 @@ export function DashboardScreen({
   downloadUrl,
 }: {
   displayName: string;
+  points: number;
   pets: PetCard[];
   petsError: string | null;
   blocklist: BlocklistEntry[];
@@ -32,7 +34,7 @@ export function DashboardScreen({
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
   return (
     <>
-      <SiteHeader displayName={displayName} />
+      <SiteHeader displayName={displayName} points={points} />
       <main className="desk">
         <GodotFrame
           pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
