@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aurafarm pet</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 128px;
+        height: 128px;
+        overflow: hidden;
+        background: transparent;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        user-select: none;
+      }
+      canvas {
+        display: block;
+      }
+      p {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 6px;
+        margin: 0;
+        text-align: center;
+        font-size: 11px;
+        color: #f7f3e8;
+        text-shadow: 0 1px 2px #14211a;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="sprite" width="128" height="128"></canvas>
+    <p id="caption">Baby slime</p>
+    <script src="sprite.js"></script>
+  </body>
+</html>

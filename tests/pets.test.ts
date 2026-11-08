@@ -7,6 +7,7 @@ import {
   STARTER_PET_TYPE,
   buildProfileRecord,
   buildStarterPetRecord,
+  buildGodotFrameSrc,
   describePet,
 } from "../lib/pets";
 
@@ -24,6 +25,18 @@ test("registration inserts a profile and a desktop-active baby slime", () => {
   assert.equal(STARTER_PET_TYPE, "baby_slime");
   assert.equal(STARTER_PET_LEVEL, 1);
   assert.equal(describePet("baby_slime").name, "Baby Slime");
+});
+
+test("the desk iframe points at the equipped pet", () => {
+  assert.equal(buildGodotFrameSrc(null), "/godot-game/index.html");
+  assert.equal(
+    buildGodotFrameSrc({ pet_type: "baby_slime", level: 1 }),
+    "/godot-game/index.html?pet=baby_slime&level=1",
+  );
+  assert.equal(
+    buildGodotFrameSrc({ pet_type: "moss sprite", level: 2 }),
+    "/godot-game/index.html?pet=moss+sprite&level=2",
+  );
 });
 
 test("server headers allow SharedArrayBuffer", () => {

@@ -1,0 +1,46 @@
+{
+  "name": "aurafarm-pet",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "node ensure-apple-events.js && electron .",
+    "pack": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac zip",
+    "pack:signed": "electron-builder --mac zip"
+  },
+  "build": {
+    "appId": "app.aurafarm.pet",
+    "productName": "Aurafarm",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**"
+    ],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "target": [
+        "zip"
+      ],
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Aurafarm reads the address of the front Safari, Chrome, or Edge tab during a study session.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Aurafarm",
+            "CFBundleURLSchemes": [
+              "aurafarm"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "electron": "^35.7.5"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.0.12"
+  }
+}
