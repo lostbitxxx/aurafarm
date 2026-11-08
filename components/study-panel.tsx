@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cancelStudySession, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import {
   buildPetLaunchUrl,
   formatDuration,
@@ -41,14 +41,10 @@ export function StudyPanel({
   const [launchCode, setLaunchCode] = useState("");
   const [codeSessionId, setCodeSessionId] = useState("");
   const [localStartedAt, setLocalStartedAt] = useState("");
-  const [hiddenSessionId, setHiddenSessionId] = useState("");
 
   if (signature !== snapshot) {
     setSnapshot(signature);
     setError(studyError);
-    if (!activeSession || activeSession.id !== hiddenSessionId) {
-      setHiddenSessionId("");
-    }
     if (!activeSession) {
       setLaunchCode("");
       setCodeSessionId("");
@@ -56,12 +52,9 @@ export function StudyPanel({
     }
   }
 
-  const serverSession = activeSession && activeSession.id !== hiddenSessionId ? activeSession : null;
   const shownSession =
-    serverSession ??
-    (codeSessionId && localStartedAt && codeSessionId !== hiddenSessionId
-      ? { id: codeSessionId, startedAt: localStartedAt }
-      : null);
+    activeSession ??
+    (codeSessionId && localStartedAt ? { id: codeSessionId, startedAt: localStartedAt } : null);
   const visibleCode = shownSession && codeSessionId === shownSession.id ? launchCode : "";
   const launchUrl = visibleCode ? buildPetLaunchUrl(visibleCode) : "";
 
@@ -78,22 +71,6 @@ export function StudyPanel({
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
-  }
-
-  async function onCancel() {
-    if (pending || !shownSession) return;
-    setPending(true);
-    setError(null);
-    const result = await cancelStudySession(shownSession.id);
-    setPending(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setLaunchCode("");
-    setCodeSessionId("");
-    setLocalStartedAt("");
-    setHiddenSessionId(shownSession.id);
   }
 
   async function onToggleClose() {
@@ -159,14 +136,6 @@ export function StudyPanel({
           ) : (
             <p>The launch code was shown when this session started.</p>
           )}
-          <button
-            type="button"
-            className="button button-ghost"
-            disabled={pending}
-            onClick={onCancel}
-          >
-            Cancel session
-          </button>
         </div>
       ) : (
         <button type="button" className="button" disabled={pending} onClick={onStart}>
