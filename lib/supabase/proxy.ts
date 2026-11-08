@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { applyCrossOriginIsolation } from "@/lib/cross-origin-isolation";
+import { requiresAccount } from "@/lib/routes";
 import { isSupabaseConfigured, getSupabasePublishableKey, getSupabaseUrl } from "./env";
 
 function finish(response: NextResponse) {
@@ -30,7 +31,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!isSupabaseConfigured()) {
-    if (pathname.startsWith("/dashboard")) {
+    if (requiresAccount(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return finish(NextResponse.redirect(url));
@@ -64,7 +65,7 @@ export async function updateSession(request: NextRequest) {
   const userId = data?.claims.sub;
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
-  if (!userId && pathname.startsWith("/dashboard")) {
+  if (!userId && requiresAccount(pathname)) {
     return redirectWithSession(request, supabaseResponse, "/login");
   }
   if (userId && isAuthPage) {

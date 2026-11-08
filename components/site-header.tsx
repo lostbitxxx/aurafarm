@@ -11,9 +11,12 @@ export function SiteHeader({
   const shown = Number.isFinite(points) ? Math.trunc(points) : 0;
   return (
     <header className="topbar">
-      <Link href="/dashboard" className="wordmark">
-        Aurafarm
-      </Link>
+      <div className="topbar-nav">
+        <Link href="/dashboard" className="wordmark">
+          Aurafarm
+        </Link>
+        <Link href="/shop">Shop</Link>
+      </div>
       <div className="topbar-user">
         <span className="points-balance">
           Points <span>{shown}</span>
