@@ -86,6 +86,19 @@ test("a saved score opens the screen and a failed score keeps the token", () => 
   assert.match(rejected.message, /Try again/);
 });
 
+test("the sign-in panel can quit the pet", () => {
+  const panel = readFileSync(new URL("../desktop/panel.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
+  const preload = readFileSync(new URL("../desktop/preload.js", import.meta.url), "utf8");
+  const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(panel, /id="quit"/);
+  assert.match(panel, />Quit</);
+  assert.match(script, /getElementById\("quit"\)/);
+  assert.match(script, /window\.pet\.quit\(\)/);
+  assert.match(preload, /quit: \(\) => ipcRenderer\.send\("quit-app"\)/);
+  assert.match(main, /ipcMain\.on\("quit-app", \(\) => \{\s*app\.quit\(\);\s*\}\)/);
+});
+
 test("the pet posts the score and does not open a port", () => {
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(main, /\/api\/sessions\/\$\{current\.id\}\/score/);

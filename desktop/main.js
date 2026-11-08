@@ -186,7 +186,7 @@ function togglePanel() {
   const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 420,
+    height: 468,
     x: anchor.x + WINDOW.x + 12,
     y: anchor.y,
     resizable: false,
@@ -646,6 +646,9 @@ ipcMain.on("finish-session", () => {
 });
 ipcMain.on("open-update", () => {
   if (typeof state.updateUrl === "string" && state.updateUrl) void shell.openExternal(state.updateUrl);
+});
+ipcMain.on("quit-app", () => {
+  app.quit();
 });
 
 async function checkForUpdate() {

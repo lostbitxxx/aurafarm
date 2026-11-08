@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld("pet", {
   claim: (code) => ipcRenderer.invoke("claim", code),
   finish: () => ipcRenderer.send("finish-session"),
   openUpdate: () => ipcRenderer.send("open-update"),
+  quit: () => ipcRenderer.send("quit-app"),
 });
