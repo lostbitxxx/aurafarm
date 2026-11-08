@@ -58,6 +58,14 @@ export function shopCatalog(): ShopPet[] {
   );
 }
 
+export function shopPurchaseBlock(petType: string, ownedTypes: string[], points: number) {
+  const pet = shopCatalog().find((item) => item.pet_type === petType);
+  if (!pet) return "That pet is not for sale.";
+  if (ownedTypes.includes(petType)) return "You already own that pet.";
+  if (wholePoints(points) < pet.price) return "You do not have enough points.";
+  return "";
+}
+
 export function buildProfileRecord(userId: string, displayName: string): ProfileRecord {
   return {
     id: userId,

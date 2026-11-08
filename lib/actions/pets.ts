@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { shopPurchaseBlock } from "@/lib/pets";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -27,6 +28,44 @@ export async function equipPetToDesktop(petId: string) {
 
   if (error) return { error: error.message };
 
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function buyPet(petType: string) {
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  const userId = data?.claims.sub;
+  if (claimsError || !userId) {
+    return { error: "Sign in to buy a pet." };
+  }
+
+  const [{ data: profile }, petsResult] = await Promise.all([
+    supabase.from("profiles").select("points").eq("id", userId).maybeSingle(),
+    supabase.from("user_pets").select("pet_type").eq("user_id", userId),
+  ]);
+  if (petsResult.error) return { error: petsResult.error.message };
+
+  const ownedTypes = (petsResult.data ?? []).map((pet) => String(pet.pet_type));
+  const blocked = shopPurchaseBlock(petType, ownedTypes, Number(profile?.points));
+  if (blocked) return { error: blocked };
+
+  const { error } = await supabase.rpc("purchase_pet", {
+    target_pet_type: petType,
+  });
+  if (error) {
+    if (/already owned/i.test(error.message)) return { error: "You already own that pet." };
+    if (/not enough points/i.test(error.message)) return { error: "You do not have enough points." };
+    if (/not for sale/i.test(error.message)) return { error: "That pet is not for sale." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/shop");
+  revalidatePath("/inventory");
   revalidatePath("/dashboard");
   return { error: "" };
 }

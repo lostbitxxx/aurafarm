@@ -1,6 +1,6 @@
 # Phase 3 — Shop
 
-Status: for review. Do not build this until phases 1 and 2 are accepted.
+Status: implemented. `/shop` lists the catalog and calls `purchase_pet`. It uses the current desk cards, not the rejected restyle.
 
 Depends on: [phase 1](01-points-and-purchase.md) and [phase 2](02-points-header.md).
 

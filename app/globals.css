@@ -320,7 +320,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.15rem;
 }
 
-.score-layout {
+.score-layout, .shop-layout {
   width: min(720px, calc(100% - 8vw));
   margin: 0 auto 3rem;
 }
