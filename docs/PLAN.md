@@ -29,7 +29,7 @@ Phase 1 is in the repo: [`supabase/migrations/0002_study_sessions.sql`](../supab
 
 ## Next commit
 
-Disabling email confirmation is the remaining planned work, described in [phase 10](plans/10-disable-email-confirmation.md). It does not wait on the desktop pet. Windows packaging still waits.
+The planned phases through email confirmation are in the repo. Windows packaging still waits. Phase 10 is described in [phase 10](plans/10-disable-email-confirmation.md).
 
 ## Rules for every phase
 
