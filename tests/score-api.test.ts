@@ -62,3 +62,25 @@ test("a second submit is a different database error from a bad token", () => {
   assert.match(sql, /Score already submitted/);
   assert.match(sql, /Score rejected/);
 });
+
+test("a finished session adds its score to the wallet once", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0009_score_wallet.sql", import.meta.url),
+    "utf8",
+  );
+  const route = readFileSync(
+    new URL("../app/api/sessions/[id]/score/route.ts", import.meta.url),
+    "utf8",
+  );
+  const creditedAt = sql.indexOf("set points = points + result_points");
+  const alreadySubmittedAt = sql.indexOf("session_row.status = 'submitted'");
+  assert.ok(alreadySubmittedAt >= 0);
+  assert.ok(creditedAt > alreadySubmittedAt);
+  assert.match(sql, /where id = session_row\.user_id/);
+  assert.match(sql, /Score already submitted/);
+  assert.doesNotMatch(sql, /grant update \([^)]*points/);
+  assert.match(route, /revalidatePath\("\/dashboard"\)/);
+  assert.match(route, /revalidatePath\(`\/dashboard\/sessions\/\$\{id\}`\)/);
+  assert.match(route, /revalidatePath\("\/shop"\)/);
+  assert.match(route, /revalidatePath\("\/inventory"\)/);
+});
