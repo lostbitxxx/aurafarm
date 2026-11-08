@@ -45,16 +45,21 @@ export async function POST(
   });
 
   if (error) {
+    const session = await readScoreSession(id);
     const alreadySubmitted =
-      isAlreadySubmitted(error.message) || (await tokenMatchesSubmittedSession(id, parsed.token));
+      isAlreadySubmitted(error.message) ||
+      (session?.status === "submitted" && session.tokenHash === hashSecret(parsed.token));
     if (alreadySubmitted) {
+      console.error(`[score] ${id} already submitted`);
       return NextResponse.json({ error: "That session was already scored." }, { status: 409 });
     }
+    console.error(`[score] ${id} rejected: ${error.message} | ${session?.line ?? "status unknown"}${scoreRejectionHint(session)}`);
     return NextResponse.json({ error: "Score rejected." }, { status: 403 });
   }
 
   const row = firstScoreRow(data);
   if (!row) {
+    console.error(`[score] ${id} rejected: the database returned no score row`);
     return NextResponse.json({ error: "Score rejected." }, { status: 403 });
   }
 
@@ -70,6 +75,45 @@ function isAlreadySubmitted(message: string) {
   return /already submitted/i.test(message);
 }
 
+type ScoreSession = {
+  status: string;
+  tokenHash: string;
+  line: string;
+};
+
+function scoreRejectionHint(session: ScoreSession | null) {
+  if (!session) return "";
+  if (session.status === "cancelled") {
+    return " | Cancel session on the desk is the only writer of cancelled, and a cancelled session cannot be scored.";
+  }
+  if (session.status === "active" && session.tokenHash) {
+    return " | The token in this request does not match the claim.";
+  }
+  if (session.status === "active") {
+    return " | The session was never claimed.";
+  }
+  return "";
+}
+
+async function readScoreSession(sessionId: string): Promise<ScoreSession | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+
+  const { data, error } = await admin
+    .from("study_sessions")
+    .select("status, claimed_at, ended_at, session_token_hash")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const tokenHash = typeof data.session_token_hash === "string" ? data.session_token_hash : "";
+  return {
+    status: String(data.status),
+    tokenHash,
+    line: `status=${data.status} has_token=${tokenHash.length > 0} claimed_at=${data.claimed_at ?? "null"} ended_at=${data.ended_at ?? "null"}`,
+  };
+}
+
 function firstScoreRow(data: unknown): ScoreRow | null {
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== "object") return null;
@@ -78,16 +122,3 @@ function firstScoreRow(data: unknown): ScoreRow | null {
   return { points: record.points, distracted: record.distracted };
 }
 
-async function tokenMatchesSubmittedSession(sessionId: string, token: string) {
-  const admin = createAdminClient();
-  if (!admin) return false;
-
-  const { data, error } = await admin
-    .from("study_sessions")
-    .select("status, session_token_hash")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (error || !data) return false;
-  return data.status === "submitted" && data.session_token_hash === hashSecret(token);
-}

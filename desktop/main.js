@@ -487,6 +487,7 @@ async function finishSession() {
       body: JSON.stringify(scoreRequestBody(current, Date.now())),
     });
     const payload = await response.json().catch(() => null);
+    console.log(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || ""}`);
     if (study !== current) return;
     const result = interpretScoreResponse(response.status, payload, API_ORIGIN, current.id);
     if (!result.clearToken) {
@@ -526,8 +527,13 @@ async function studyStillActive(sessionId) {
     .select("status")
     .eq("id", sessionId)
     .maybeSingle();
-  if (error) return true;
-  return data?.status === "active";
+  if (error) {
+    console.log(`[score] status read failed for ${sessionId}: ${error.message}`);
+    return true;
+  }
+  if (data?.status === "active") return true;
+  console.log(`[score] session ${sessionId} is ${data?.status ?? "missing"}, so the pet stops watching`);
+  return false;
 }
 
 async function readCloseBlocked() {
