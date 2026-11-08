@@ -46,4 +46,13 @@ test("the shop and the desk require an account", () => {
   assert.match(action, /revalidatePath\("\/shop"\)/);
   assert.match(action, /revalidatePath\("\/inventory"\)/);
   assert.match(action, /revalidatePath\("\/dashboard"\)/);
+
+  const shop = readFileSync(new URL("../components/shop-screen.tsx", import.meta.url), "utf8");
+  const inventory = readFileSync(new URL("../components/pet-inventory.tsx", import.meta.url), "utf8");
+  const marks = readFileSync(new URL("../components/pet-mark.tsx", import.meta.url), "utf8");
+  assert.match(shop, /<PetMark petType=\{pet\.pet_type\}/);
+  assert.match(inventory, /<PetMark petType=\{pet\.pet_type\}/);
+  assert.match(marks, /petType === "lantern_moth"/);
+  assert.match(marks, /petType === "river_newt"/);
+  assert.doesNotMatch(shop, /SlimeMark/);
 });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { equipPetToDesktop } from "@/lib/actions/pets";
 import { describePet, type PetCard } from "@/lib/pets";
-import { SlimeMark } from "./slime-mark";
+import { PetMark } from "./pet-mark";
 
 export function PetInventory({
   pets,
@@ -65,7 +65,7 @@ export function PetInventory({
             const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className={pet.is_desktop_active ? "pet-card is-active" : "pet-card"}>
-                <SlimeMark className="slime-mark slime-mark-small" />
+                <PetMark petType={pet.pet_type} className="slime-mark slime-mark-small" />
                 <div className="pet-copy">
                   <h3>{copy.name}</h3>
                   <p>Level {pet.level}</p>

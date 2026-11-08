@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { buyPet } from "@/lib/actions/pets";
 import { shopCatalog, shopPurchaseBlock, type ShopPet } from "@/lib/pets";
+import { PetMark } from "./pet-mark";
 import { SiteHeader } from "./site-header";
-import { SlimeMark } from "./slime-mark";
 
 export function ShopScreen({
   displayName,
@@ -75,7 +75,7 @@ export function ShopScreen({
               const tooPoor = balance < pet.price;
               return (
                 <li key={pet.pet_type} className="pet-card">
-                  <SlimeMark className="slime-mark slime-mark-small" />
+                  <PetMark petType={pet.pet_type} className="slime-mark slime-mark-small" />
                   <div className="pet-copy">
                     <h3>{pet.name}</h3>
                     <p>{pet.price} points</p>
