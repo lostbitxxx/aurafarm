@@ -1,6 +1,6 @@
 # Phase 1 — Points and purchase
 
-Status: for review. Do not build this until phase 0 is accepted.
+Status: implemented. The migration, catalog, and tests are in the repo. Run `0008_pet_shop.sql` after `0007`.
 
 Depends on: [phase 0](00-rpg-redesign.md) for the order of work. The migration itself does not depend on the CSS.
 

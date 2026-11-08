@@ -1,6 +1,6 @@
 # Phase 0 — RPG restyle
 
-Status: for review. Do not build this until the look below is accepted.
+Status: skipped. The restyle was reverted. Later phases do not wait on it.
 
 Depends on: the current website. No schema change.
 
