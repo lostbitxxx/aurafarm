@@ -3,7 +3,12 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { isAnyDeviceFresh } from "./pet-device";
 import type { PetCard } from "./pets";
-import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "./study";
+import {
+  closeBlockedMigrationMessage,
+  type ActiveStudySession,
+  type BlocklistEntry,
+  type StudyScoreCard,
+} from "./study";
 import { createClient } from "./supabase/server";
 
 export async function loadDashboard() {
@@ -13,9 +18,17 @@ export async function loadDashboard() {
   const userId = data?.claims.sub;
   if (error || !userId) redirect("/login");
 
-  const [{ data: profile }, petsResult, blocklistResult, sessionResult, scoresResult, devicesResult] =
-    await Promise.all([
+  const [
+    { data: profile },
+    closeBlockedResult,
+    petsResult,
+    blocklistResult,
+    sessionResult,
+    scoresResult,
+    devicesResult,
+  ] = await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
         .select("id, pet_type, level, is_desktop_active")
@@ -79,6 +92,8 @@ export async function loadDashboard() {
     activeSession,
     scores,
     studyError,
+    closeBlocked: closeBlockedResult.data?.close_blocked === true,
+    closeBlockedError: closeBlockedMigrationMessage(closeBlockedResult.error?.message ?? null),
     petRunning: isAnyDeviceFresh(
       (devicesResult.data ?? []).map((device) =>
         device.last_seen_at ? String(device.last_seen_at) : null,

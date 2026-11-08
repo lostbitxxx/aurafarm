@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createLaunchCode, hashSecret } from "@/lib/scoring";
-import { startSessionDecision } from "@/lib/study";
+import { closeBlockedMigrationMessage, startSessionDecision } from "@/lib/study";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -58,6 +58,32 @@ export async function startStudySession() {
 
   revalidatePath("/dashboard");
   return { error: "", launchCode, sessionId: String(created.id) };
+}
+
+export async function setCloseBlocked(enabled: boolean) {
+  if (typeof enabled !== "boolean") {
+    return { error: "Choose whether blocked tabs close." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  const userId = data?.claims.sub;
+  if (claimsError || !userId) {
+    return { error: "Sign in to change this." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ close_blocked: enabled })
+    .eq("id", userId);
+
+  if (error) return { error: closeBlockedMigrationMessage(error.message) ?? error.message };
+
+  revalidatePath("/dashboard");
+  return { error: "" };
 }
 
 export async function cancelStudySession(sessionId: string) {

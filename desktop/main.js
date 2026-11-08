@@ -4,8 +4,16 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
-const { createFrontLog, describeFrontRead, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
-const { readFrontBrowser } = require("./front-browser");
+const {
+  createCloseWatch,
+  createFrontLog,
+  describeFrontRead,
+  deskHostFromOrigin,
+  nextCloseWatch,
+  nextFrontLog,
+  noteCloseAttempt,
+} = require("./frontmost");
+const { closeFrontTab, readFrontBrowser } = require("./front-browser");
 const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
@@ -34,6 +42,8 @@ const supabase =
 let spriteWindow = null;
 let panelWindow = null;
 let finishWindow = null;
+let bubbleWindow = null;
+let bubbleHost = "";
 let finishing = false;
 let velocity = { x: 2, y: 0 };
 let deviceToken = "";
@@ -100,7 +110,7 @@ function publish() {
     ...state,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
-  for (const win of [spriteWindow, panelWindow, finishWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
@@ -128,6 +138,7 @@ function walk() {
   velocity = next.velocity;
   spriteWindow.setPosition(next.position.x, next.position.y);
   placeFinishWindow();
+  placeBubbleWindow();
 }
 
 function createSprite() {
@@ -280,6 +291,8 @@ function beginFrontWatch(body) {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
+    closeBlocked: body.close_blocked === true,
+    closeWatch: createCloseWatch(),
     log: createFrontLog(),
     startedAt: Date.now(),
   };
@@ -305,6 +318,7 @@ function stopFrontWatch() {
   frontPoll = null;
   study = null;
   closeFinishWindow();
+  hideBubble();
 }
 
 function openFinishWindow() {
@@ -348,8 +362,69 @@ function placeFinishWindow() {
   finishWindow.setPosition(x, y + WINDOW.y + 6);
 }
 
+function openBubbleWindow() {
+  if (bubbleWindow && !bubbleWindow.isDestroyed()) {
+    placeBubbleWindow();
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 260,
+    height: 48,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  bubbleWindow = win;
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setIgnoreMouseEvents(true, { forward: true });
+  win.loadFile(path.join(__dirname, "bubble.html"));
+  win.on("closed", () => {
+    if (bubbleWindow === win) bubbleWindow = null;
+  });
+  win.webContents.once("did-finish-load", publish);
+  placeBubbleWindow();
+}
+
+function closeBubbleWindow() {
+  const win = bubbleWindow;
+  bubbleWindow = null;
+  if (win && !win.isDestroyed()) win.close();
+}
+
+function placeBubbleWindow() {
+  if (!bubbleWindow || bubbleWindow.isDestroyed() || !spriteWindow || spriteWindow.isDestroyed()) return;
+  const [x, y] = spriteWindow.getPosition();
+  bubbleWindow.setPosition(x + Math.round((WINDOW.x - 260) / 2), y - 56);
+}
+
+function showBubble(host) {
+  bubbleHost = host;
+  state = { ...state, bubble: `Closing ${host}` };
+  openBubbleWindow();
+  publish();
+}
+
+function hideBubble() {
+  bubbleHost = "";
+  if (!state.bubble && !(bubbleWindow && !bubbleWindow.isDestroyed())) return;
+  state = { ...state, bubble: "" };
+  closeBubbleWindow();
+  publish();
+}
+
 function setPetLevel(level) {
-  for (const win of [spriteWindow, panelWindow, finishWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
   }
 }
@@ -408,6 +483,20 @@ async function studyStillActive(sessionId) {
   return data?.status === "active";
 }
 
+async function readCloseBlocked() {
+  if (!supabase) return null;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("close_blocked")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.close_blocked === true;
+}
+
 async function pollFront() {
   if (!study || frontPoll) return;
   const current = study;
@@ -419,7 +508,33 @@ async function pollFront() {
     if (reading.url) {
       current.log = nextFrontLog(true, current.log, reading.url, current.blocklist, DESK_HOST);
     }
+    const preference = await readCloseBlocked();
+    if (study !== current) return;
+    if (preference !== null) current.closeBlocked = preference;
+    const decision = nextCloseWatch(current.closeWatch, {
+      enabled: current.closeBlocked,
+      rawUrl: reading.url || "",
+      blocklist: current.blocklist,
+      deskHost: DESK_HOST,
+      now: Date.now(),
+    });
+    current.closeWatch = decision;
+    let closeNote = "";
+    if (decision.close) {
+      showBubble(decision.host);
+      const closed = await closeFrontTab(reading.app);
+      if (study !== current) return;
+      current.closeWatch = noteCloseAttempt(current.closeWatch);
+      if (!closed.ok) {
+        hideBubble();
+        closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
+      }
+    } else if (bubbleHost && (!reading.url || decision.host !== bubbleHost)) {
+      hideBubble();
+    }
+    if (study !== current) return;
     publishWatch(reading);
+    if (closeNote) setStatus(closeNote);
     const active = await studyStillActive(current.id);
     if (study !== current) return;
     if (!active) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cancelStudySession, startStudySession } from "@/lib/actions/study";
+import { cancelStudySession, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import {
   buildPetLaunchUrl,
   formatDuration,
@@ -16,11 +16,15 @@ export function StudyPanel({
   activeSession,
   scores,
   studyError,
+  closeBlocked,
+  closeBlockedError,
 }: {
   blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   studyError: string | null;
+  closeBlocked: boolean;
+  closeBlockedError: string | null;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -28,6 +32,8 @@ export function StudyPanel({
     scores.map((score) => score.id).join(","),
     blocklist.map((entry) => entry.host).join(","),
     studyError ?? "",
+    closeBlocked ? "1" : "0",
+    closeBlockedError ?? "",
   ].join("|");
   const [snapshot, setSnapshot] = useState(signature);
   const [error, setError] = useState<string | null>(studyError);
@@ -72,6 +78,15 @@ export function StudyPanel({
     setLocalStartedAt(new Date().toISOString());
   }
 
+  async function onToggleClose() {
+    if (pending || closeBlockedError) return;
+    setPending(true);
+    setError(null);
+    const result = await setCloseBlocked(!closeBlocked);
+    setPending(false);
+    if (result.error) setError(result.error);
+  }
+
   async function onCancel() {
     if (pending || !shownSession) return;
     setPending(true);
@@ -91,8 +106,26 @@ export function StudyPanel({
     <section className="study-panel" aria-label="Study">
       <div className="inventory-heading">
         <h2>Study</h2>
-        <p>These sites close while a session is running.</p>
+        <p>
+          {closeBlocked
+            ? "These sites close after 8 seconds in front during a session."
+            : "The pet watches these sites during a session. Turning this on closes the front tab."}
+        </p>
       </div>
+      <button
+        type="button"
+        className={closeBlocked ? "button" : "button button-ghost"}
+        aria-pressed={closeBlocked}
+        disabled={pending || Boolean(closeBlockedError)}
+        onClick={onToggleClose}
+      >
+        Close blocked tabs: {closeBlocked ? "On" : "Off"}
+      </button>
+      {closeBlockedError ? (
+        <p className="form-error" role="alert">
+          {closeBlockedError}
+        </p>
+      ) : null}
       {blocklist.length === 0 ? (
         <p className="empty-pets">The blocklist is empty.</p>
       ) : (

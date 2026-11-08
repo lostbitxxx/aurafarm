@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildPetLaunchUrl, formatDuration, formatTimestamp, startSessionDecision } from "../lib/study";
+import {
+  buildPetLaunchUrl,
+  closeBlockedMigrationMessage,
+  formatDuration,
+  formatTimestamp,
+  startSessionDecision,
+} from "../lib/study";
 
 test("launch url carries only the session code", () => {
   const url = buildPetLaunchUrl("AB12CD34EF");
@@ -9,6 +15,15 @@ test("launch url carries only the session code", () => {
   const parsed = new URL(url);
   assert.deepEqual([...parsed.searchParams.keys()], ["code"]);
   assert.equal(parsed.searchParams.get("code"), "AB12CD34EF");
+});
+
+test("a missing close_blocked column tells the farmer to run migration 0007", () => {
+  assert.equal(closeBlockedMigrationMessage(null), null);
+  assert.match(
+    closeBlockedMigrationMessage("Could not find the 'close_blocked' column of 'profiles' in the schema cache") ?? "",
+    /migration 0007/,
+  );
+  assert.equal(closeBlockedMigrationMessage("Sign in to change this."), "Sign in to change this.");
 });
 
 test("a second start is refused while a session is active", () => {

@@ -1,12 +1,12 @@
 # Phase 7 — Frontmost site
 
-Status: the Mac pet polls the frontmost Safari, Chrome, or Edge tab while a claimed session is active. A matching host increments the in-memory blocked count once per visit. The desk host is ignored. Quitting the pet, or a signed-in pet seeing the session leave `active`, stops the poll. There is no browser extension.
+Status: the Mac pet polls the frontmost Safari, Chrome, or Edge tab while a claimed session is active. A matching host increments the in-memory blocked count once per visit. The desk host is ignored. Quitting the pet, or a signed-in pet seeing the session leave `active`, stops the poll. There is no browser extension. Closing that front tab is [phase 11](11-close-blocked-tab.md), and only when the farmer turns it on.
 
 Depends on: the Electron pet from [phase 5](05-roaming-desktop-pet.md) and a claimed session from [phase 6](06-download-pairing-wakeup.md). The pet must already have the blocklist from the claim response.
 
 ## Goal
 
-While a claimed study session is active, the Electron pet reads the address bar of the frontmost browser window and keeps the hostname. A hostname that matches the session blocklist increments `blocked_count` and is stored in `blocked_hosts`. Background tabs are unread. The pet does not close a tab.
+While a claimed study session is active, the Electron pet reads the address bar of the frontmost browser window and keeps the hostname. A hostname that matches the session blocklist increments `blocked_count` and is stored in `blocked_hosts`. Background tabs are unread. Closing a tab is not part of this phase.
 
 With no active session, the pet does not read the address bar.
 

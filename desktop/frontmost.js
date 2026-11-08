@@ -69,6 +69,43 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
+const CLOSE_AFTER_MS = 8000;
+
+function createCloseWatch() {
+  return { host: "", since: 0, attemptedHost: "", close: false };
+}
+
+function clearedCloseWatch() {
+  return createCloseWatch();
+}
+
+function nextCloseWatch(watch, input) {
+  const current = watch ?? createCloseWatch();
+  if (!input?.enabled) return clearedCloseWatch();
+
+  const host = hostnameFromUrl(input.rawUrl);
+  if (!host) return { ...current, close: false };
+
+  const desk = normalizeHost(input.deskHost);
+  const closeable = host !== desk && hostMatchesBlocklist(host, input.blocklist ?? BLOCKED);
+  if (!closeable) return clearedCloseWatch();
+
+  const same = current.host === host && current.since > 0;
+  const since = same ? current.since : input.now;
+  const attemptedHost = same ? current.attemptedHost : "";
+  const close = input.now - since >= CLOSE_AFTER_MS && attemptedHost !== host;
+  return { host, since, attemptedHost, close };
+}
+
+function noteCloseAttempt(watch) {
+  return {
+    host: watch?.host ?? "",
+    since: watch?.since ?? 0,
+    attemptedHost: watch?.host ?? "",
+    close: false,
+  };
+}
+
 function describeFrontRead(reading, log) {
   const error = reading?.error || "";
   if (error) {
@@ -93,11 +130,15 @@ function describeFrontRead(reading, log) {
 
 module.exports = {
   BLOCKED,
+  CLOSE_AFTER_MS,
+  createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,
   hostMatchesBlocklist,
   hostnameFromUrl,
   describeFrontRead,
+  nextCloseWatch,
   nextFrontLog,
+  noteCloseAttempt,
   recordFrontHost,
 };

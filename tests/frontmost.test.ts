@@ -5,14 +5,36 @@ import { hostMatchesBlocklist } from "../lib/blocklist";
 
 const require = createRequire(import.meta.url);
 const {
+  CLOSE_AFTER_MS,
+  createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,
   hostMatchesBlocklist: petMatchesBlocklist,
   hostnameFromUrl,
   describeFrontRead,
+  nextCloseWatch,
   nextFrontLog,
+  noteCloseAttempt,
   recordFrontHost,
 } = require("../desktop/frontmost.js") as {
+  CLOSE_AFTER_MS: number;
+  createCloseWatch: () => { host: string; since: number; attemptedHost: string; close: boolean };
+  nextCloseWatch: (
+    watch: { host: string; since: number; attemptedHost: string; close: boolean },
+    input: {
+      enabled: boolean;
+      rawUrl: string;
+      blocklist: readonly string[];
+      deskHost: string;
+      now: number;
+    },
+  ) => { host: string; since: number; attemptedHost: string; close: boolean };
+  noteCloseAttempt: (watch: {
+    host: string;
+    since: number;
+    attemptedHost: string;
+    close: boolean;
+  }) => { host: string; since: number; attemptedHost: string; close: boolean };
   createFrontLog: () => { blockedCount: number; blockedHosts: string[]; currentHost: string };
   deskHostFromOrigin: (origin: string) => string;
   hostMatchesBlocklist: (host: string, blockedHosts: readonly string[]) => boolean;
@@ -36,11 +58,13 @@ const {
     matches?: (host: string, blockedHosts: readonly string[]) => boolean,
   ) => { blockedCount: number; blockedHosts: string[]; currentHost: string };
 };
-const { frontAppStatement, frontUrlStatement, supportedFrontBrowser } = require("../desktop/front-browser.js") as {
-  frontAppStatement: () => string;
-  frontUrlStatement: (appName: string) => string;
-  supportedFrontBrowser: (appName: string) => boolean;
-};
+const { frontAppStatement, frontCloseStatement, frontUrlStatement, supportedFrontBrowser } =
+  require("../desktop/front-browser.js") as {
+    frontAppStatement: () => string;
+    frontCloseStatement: (appName: string) => string;
+    frontUrlStatement: (appName: string) => string;
+    supportedFrontBrowser: (appName: string) => boolean;
+  };
 
 const blocked = ["instagram.com", "tiktok.com", "youtube.com"];
 const desk = "localhost";
@@ -138,6 +162,11 @@ test("the mac reader asks only the front window of safari, chrome, or edge", () 
   assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
   assert.equal(frontUrlStatement("Firefox"), "");
   assert.doesNotMatch(frontUrlStatement("Google Chrome"), /every tab/);
+  assert.match(frontCloseStatement("Safari"), /close current tab of front window/);
+  assert.match(frontCloseStatement("Google Chrome"), /close active tab of front window/);
+  assert.match(frontCloseStatement("Microsoft Edge"), /close active tab of front window/);
+  assert.equal(frontCloseStatement("Firefox"), "");
+  assert.doesNotMatch(frontCloseStatement("Google Chrome"), /close front window/);
 });
 
 test("a failed browser read is shown instead of a clear session", () => {
@@ -155,4 +184,86 @@ test("a failed browser read is shown instead of a clear session", () => {
     describeFrontRead({ app: "Google Chrome", url: "https://www.youtube.com/", error: "" }, youtube),
     "Watching. Blocked 1: www.youtube.com",
   );
+});
+
+function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: number, enabled = true) {
+  return nextCloseWatch(watch, {
+    enabled,
+    rawUrl,
+    blocklist: blocked,
+    deskHost: desk,
+    now,
+  });
+}
+
+test("a blocked host is closed once after 8 seconds on that page", () => {
+  assert.equal(CLOSE_AFTER_MS, 8000);
+  const start = 1_000;
+  const seen = dwell(createCloseWatch(), "https://www.instagram.com/reels", start);
+  assert.equal(seen.close, false);
+  assert.equal(seen.since, start);
+
+  const still = dwell(seen, "https://www.instagram.com/explore", start + 7_999);
+  assert.equal(still.close, false);
+  assert.equal(still.since, start);
+
+  const due = dwell(still, "https://www.instagram.com/", start + 8_000);
+  assert.equal(due.close, true);
+  assert.equal(due.host, "www.instagram.com");
+
+  const counted = recordFrontHost(createFrontLog(), "https://www.instagram.com/reels", blocked, desk);
+  assert.equal(counted.blockedCount, 1);
+
+  const attempted = noteCloseAttempt(due);
+  const again = dwell(attempted, "https://www.instagram.com/reels", start + 20_000);
+  assert.equal(again.close, false);
+  assert.equal(again.since, start);
+});
+
+test("leaving, a lookalike, the desk, or switching the toggle off clears the wait", () => {
+  const start = 5_000;
+  const seen = dwell(createCloseWatch(), "https://www.instagram.com/", start);
+  const away = dwell(seen, "https://example.com", start + 4_000);
+  assert.equal(away.close, false);
+  assert.equal(away.host, "");
+
+  const back = dwell(away, "https://www.instagram.com/", start + 4_500);
+  assert.equal(back.since, start + 4_500);
+  assert.equal(back.close, false);
+
+  const lookalike = dwell(seen, "https://notinstagram.com", start + 9_000);
+  assert.equal(lookalike.host, "");
+  assert.equal(lookalike.close, false);
+
+  const deskVisit = nextCloseWatch(seen, {
+    enabled: true,
+    rawUrl: "http://localhost:3000/dashboard",
+    blocklist: ["localhost", ...blocked],
+    deskHost: desk,
+    now: start + 9_000,
+  });
+  assert.equal(deskVisit.close, false);
+  assert.equal(deskVisit.host, "");
+
+  const disabled = dwell(seen, "https://www.instagram.com/", start + 9_000, false);
+  assert.equal(disabled.close, false);
+  assert.equal(disabled.host, "");
+});
+
+test("a different blocked host starts a new 8 second wait", () => {
+  const instagram = dwell(createCloseWatch(), "https://www.instagram.com/", 1_000);
+  const youtube = dwell(instagram, "https://www.youtube.com/feed", 9_000);
+  assert.equal(youtube.host, "www.youtube.com");
+  assert.equal(youtube.since, 9_000);
+  assert.equal(youtube.close, false);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 17_000).close, true);
+});
+
+test("a missing address does not reset the wait or close on its own", () => {
+  const seen = dwell(createCloseWatch(), "https://www.tiktok.com/", 2_000);
+  const missed = dwell(seen, "", 12_000);
+  assert.equal(missed.host, "www.tiktok.com");
+  assert.equal(missed.since, 2_000);
+  assert.equal(missed.close, false);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 12_000).close, true);
 });
