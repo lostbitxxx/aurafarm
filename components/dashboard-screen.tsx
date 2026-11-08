@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { GodotFrame } from "./godot-frame";
-import { PetInventory } from "./pet-inventory";
 import { PetStatus } from "./pet-status";
 import { SiteHeader } from "./site-header";
 import { StudyPanel } from "./study-panel";
-import type { PetCard } from "@/lib/pets";
+import { describePet, type PetCard } from "@/lib/pets";
 import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "@/lib/study";
 
 export function DashboardScreen({
@@ -32,6 +32,7 @@ export function DashboardScreen({
   downloadUrl: string | null;
 }) {
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
+  const equippedName = activePet ? describePet(activePet.pet_type).name : "No pet is equipped.";
   return (
     <>
       <SiteHeader displayName={displayName} points={points} />
@@ -49,7 +50,15 @@ export function DashboardScreen({
             closeBlocked={closeBlocked}
             closeBlockedError={closeBlockedError}
           />
-          <PetInventory pets={pets} petsError={petsError} />
+          <section className="pet-status" aria-label="Equipped pet">
+            <div className="inventory-heading">
+              <h2>Equipped</h2>
+              <p>{petsError ?? equippedName}</p>
+            </div>
+            <Link href="/inventory" className="button">
+              Inventory
+            </Link>
+          </section>
         </div>
       </main>
     </>
