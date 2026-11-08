@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { PET_VERSION, petVersionPayload } from "../lib/pet-version";
 
@@ -58,9 +60,28 @@ test("the privacy page states what the pet reads", () => {
 
 test("the version route is public and the repo has no extension", () => {
   const route = readFileSync(new URL("../app/api/pet/version/route.ts", import.meta.url), "utf8");
-  assert.match(route, /export function GET/);
+  assert.match(route, /export async function GET/);
+  assert.match(route, /await connection\(\)/);
+  assert.doesNotMatch(route, /export const dynamic|export const revalidate|export const fetchCache/);
   assert.doesNotMatch(route, /getClaims|authorization/);
+  const forbidden = /export const (dynamic|revalidate|fetchCache|dynamicParams)\b/;
+  for (const file of sourceFiles(fileURLToPath(new URL("../app", import.meta.url)))) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), forbidden, file);
+  }
   assert.equal(existsSync(new URL("../extension", import.meta.url)), false);
   const builder = readFileSync(new URL("../desktop/package.json", import.meta.url), "utf8");
   assert.match(builder, /"output": "dist"/);
 });
+
+function sourceFiles(root: string): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(root)) {
+    const file = join(root, name);
+    if (statSync(file).isDirectory()) {
+      found.push(...sourceFiles(file));
+      continue;
+    }
+    if (/\.(ts|tsx|js|jsx)$/.test(name)) found.push(file);
+  }
+  return found;
+}
