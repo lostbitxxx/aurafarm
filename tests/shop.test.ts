@@ -28,6 +28,7 @@ test("the shop and the desk require an account", () => {
   assert.equal(requiresAccount("/dashboard/sessions/1"), true);
   assert.equal(requiresAccount("/"), false);
   assert.equal(requiresAccount("/login"), false);
+  assert.equal(requiresAccount("/register"), false);
   assert.equal(requiresAccount("/privacy"), false);
   assert.equal(requiresAccount("/shopping"), false);
   assert.equal(requiresAccount("/inventory"), true);

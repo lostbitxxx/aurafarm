@@ -1,6 +1,6 @@
 # Phase 6 — Tests
 
-Status: for review. This is the last check for the set. Each earlier phase already names the tests that land with it. This file is the list that must be green before the set is called done.
+Status: implemented. `npm test` covers the wallet, the purchase rules, the auth guards, and the session link.
 
 Depends on: phases [1](01-points-and-purchase.md) through [5](05-equipped-pet-on-session.md).
 
