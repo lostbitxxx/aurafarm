@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   buildPetLaunchUrl,
@@ -15,6 +16,30 @@ test("launch url carries only the session code", () => {
   const parsed = new URL(url);
   assert.deepEqual([...parsed.searchParams.keys()], ["code"]);
   assert.equal(parsed.searchParams.get("code"), "AB12CD34EF");
+  assert.equal(parsed.searchParams.get("pet"), null);
+  assert.equal(parsed.searchParams.get("user"), null);
+});
+
+test("a study link shows the equipped pet for that session's user", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0007_close_blocked.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /where user_id = session_row\.user_id\s+and is_desktop_active/);
+  assert.match(sql, /pet_type := coalesce\(equipped_type, 'baby_slime'\)/);
+
+  const desktop = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const refresh = desktop.slice(
+    desktop.indexOf("async function refreshPet"),
+    desktop.indexOf("async function signIn"),
+  );
+  assert.match(refresh, /\.eq\("is_desktop_active", true\)/);
+  assert.match(refresh, /petType: data\.pet_type/);
+  assert.doesNotMatch(refresh, /searchParams|link\.pet|body\.pet_type/);
+  assert.match(desktop, /PET_REFRESH_MS/);
+  assert.match(desktop, /void refreshPet\(\)/);
+  assert.match(desktop, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
+  assert.doesNotMatch(desktop, /SUPABASE_SECRET_KEY|SERVICE_ROLE/);
 });
 
 test("a missing close_blocked column tells the farmer to run migration 0007", () => {

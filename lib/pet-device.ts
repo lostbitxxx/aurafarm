@@ -28,6 +28,13 @@ export function parseClaimCode(
 
 export function normalizeLaunchCode(value: string) {
   const trimmed = value.trim();
-  const fromLink = /^aurafarm:\/\/session\?code=([A-Za-z0-9]+)$/i.exec(trimmed);
-  return fromLink?.[1] ?? trimmed;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === "aurafarm:" && url.hostname === "session") {
+      return url.searchParams.get("code") ?? "";
+    }
+  } catch {
+    // A pasted launch code is not a URL.
+  }
+  return trimmed;
 }
