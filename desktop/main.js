@@ -4,8 +4,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
-const { createFrontLog, describeFrontRead, deskHostFromOrigin, nextFrontLog } = require("./frontmost");
-const { readFrontBrowser } = require("./front-browser");
+const {
+  createCloseWatch,
+  createFrontLog,
+  describeCloseDebug,
+  describeFrontRead,
+  deskHostFromOrigin,
+  nextCloseWatch,
+  nextFrontLog,
+  noteCloseAttempt,
+} = require("./frontmost");
+const { closeFrontTab, readFrontBrowser } = require("./front-browser");
 const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
@@ -34,6 +43,9 @@ const supabase =
 let spriteWindow = null;
 let panelWindow = null;
 let finishWindow = null;
+let bubbleWindow = null;
+let debugWindow = null;
+let bubbleHost = "";
 let finishing = false;
 let velocity = { x: 2, y: 0 };
 let deviceToken = "";
@@ -100,13 +112,21 @@ function publish() {
     ...state,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
-  for (const win of [spriteWindow, panelWindow, finishWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
 
 function setStatus(status, extra = {}) {
   state = { ...state, ...extra, status };
+  publish();
+}
+
+function setDebug(debug) {
+  const line = String(debug || "");
+  if (state.debug === line) return;
+  state = { ...state, debug: line };
+  console.log(line);
   publish();
 }
 
@@ -128,6 +148,8 @@ function walk() {
   velocity = next.velocity;
   spriteWindow.setPosition(next.position.x, next.position.y);
   placeFinishWindow();
+  placeBubbleWindow();
+  placeDebugWindow();
 }
 
 function createSprite() {
@@ -280,6 +302,8 @@ function beginFrontWatch(body) {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
+    closeBlocked: body.close_blocked === true,
+    closeWatch: createCloseWatch(),
     log: createFrontLog(),
     startedAt: Date.now(),
   };
@@ -291,6 +315,13 @@ function beginFrontWatch(body) {
     };
   }
   state = { ...state, finishNote: "" };
+  setDebug(
+    describeCloseDebug({
+      session: true,
+      closeBlocked: study.closeBlocked,
+      preferenceError: "",
+    }),
+  );
   publishWatch();
   openFinishWindow();
   frontTimer = setInterval(() => {
@@ -305,6 +336,8 @@ function stopFrontWatch() {
   frontPoll = null;
   study = null;
   closeFinishWindow();
+  hideBubble();
+  setDebug(describeCloseDebug({ session: false }));
 }
 
 function openFinishWindow() {
@@ -348,8 +381,106 @@ function placeFinishWindow() {
   finishWindow.setPosition(x, y + WINDOW.y + 6);
 }
 
+function openBubbleWindow() {
+  if (bubbleWindow && !bubbleWindow.isDestroyed()) {
+    placeBubbleWindow();
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 260,
+    height: 48,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  bubbleWindow = win;
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setIgnoreMouseEvents(true, { forward: true });
+  win.loadFile(path.join(__dirname, "bubble.html"));
+  win.on("closed", () => {
+    if (bubbleWindow === win) bubbleWindow = null;
+  });
+  win.webContents.once("did-finish-load", publish);
+  placeBubbleWindow();
+}
+
+function closeBubbleWindow() {
+  const win = bubbleWindow;
+  bubbleWindow = null;
+  if (win && !win.isDestroyed()) win.close();
+}
+
+function placeBubbleWindow() {
+  if (!bubbleWindow || bubbleWindow.isDestroyed() || !spriteWindow || spriteWindow.isDestroyed()) return;
+  const [x, y] = spriteWindow.getPosition();
+  bubbleWindow.setPosition(x + Math.round((WINDOW.x - 260) / 2), y - 56);
+}
+
+function showBubble(host) {
+  bubbleHost = host;
+  state = { ...state, bubble: `Closing ${host}` };
+  openBubbleWindow();
+  publish();
+}
+
+function hideBubble() {
+  bubbleHost = "";
+  if (!state.bubble && !(bubbleWindow && !bubbleWindow.isDestroyed())) return;
+  state = { ...state, bubble: "" };
+  closeBubbleWindow();
+  publish();
+}
+
+function openDebugWindow() {
+  if (debugWindow && !debugWindow.isDestroyed()) return;
+  const win = new BrowserWindow({
+    width: 460,
+    height: 96,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  debugWindow = win;
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setIgnoreMouseEvents(true, { forward: true });
+  win.loadFile(path.join(__dirname, "debug.html"));
+  win.on("closed", () => {
+    if (debugWindow === win) debugWindow = null;
+  });
+  win.webContents.once("did-finish-load", publish);
+  placeDebugWindow();
+}
+
+function placeDebugWindow() {
+  if (!debugWindow || debugWindow.isDestroyed()) return;
+  const area = screen.getPrimaryDisplay().workArea;
+  debugWindow.setPosition(area.x + 16, area.y + 16);
+}
+
 function setPetLevel(level) {
-  for (const win of [spriteWindow, panelWindow, finishWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
   }
 }
@@ -408,6 +539,23 @@ async function studyStillActive(sessionId) {
   return data?.status === "active";
 }
 
+async function readCloseBlocked() {
+  if (!supabase) return { value: null, error: "Pet has no Supabase keys." };
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+  if (!userId) {
+    return { value: null, error: "Pet is not signed in, so it is using the toggle from claim." };
+  }
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("close_blocked")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) return { value: null, error: error.message };
+  if (!data) return { value: null, error: "No profile row for this sign-in." };
+  return { value: data.close_blocked === true, error: "" };
+}
+
 async function pollFront() {
   if (!study || frontPoll) return;
   const current = study;
@@ -419,7 +567,47 @@ async function pollFront() {
     if (reading.url) {
       current.log = nextFrontLog(true, current.log, reading.url, current.blocklist, DESK_HOST);
     }
+    const preference = await readCloseBlocked();
+    if (study !== current) return;
+    if (preference.value !== null) current.closeBlocked = preference.value;
+    const now = Date.now();
+    const decision = nextCloseWatch(current.closeWatch, {
+      enabled: current.closeBlocked,
+      rawUrl: reading.url || "",
+      blocklist: current.blocklist,
+      deskHost: DESK_HOST,
+      now,
+    });
+    current.closeWatch = decision;
+    let closeNote = "";
+    let closeError = "";
+    if (decision.close) {
+      showBubble(decision.host);
+      const closed = await closeFrontTab(reading.app);
+      if (study !== current) return;
+      current.closeWatch = noteCloseAttempt(current.closeWatch);
+      if (!closed.ok) {
+        hideBubble();
+        closeError = closed.error || "osascript failed";
+        closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
+      }
+    } else if (bubbleHost && (!reading.url || decision.host !== bubbleHost)) {
+      hideBubble();
+    }
+    if (study !== current) return;
+    setDebug(
+      describeCloseDebug({
+        session: true,
+        closeBlocked: current.closeBlocked,
+        preferenceError: preference.error,
+        reading,
+        decision,
+        now,
+        closeError,
+      }),
+    );
     publishWatch(reading);
+    if (closeNote) setStatus(closeNote);
     const active = await studyStillActive(current.id);
     if (study !== current) return;
     if (!active) {
@@ -525,6 +713,8 @@ if (!gotLock) {
       ]),
     );
     createSprite();
+    openDebugWindow();
+    setDebug(describeCloseDebug({ session: false }));
     deviceToken = readSecret("device-token.txt");
     await restoreSession();
     if (deviceToken) void sendHeartbeat();

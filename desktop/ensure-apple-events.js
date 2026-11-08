@@ -10,7 +10,7 @@ const app = path.join(__dirname, "node_modules", "electron", "dist", "Electron.a
 const plist = path.join(app, "Contents", "Info.plist");
 const key = "NSAppleEventsUsageDescription";
 const message =
-  "Aurafarm reads the address of the front Safari, Chrome, or Edge tab during a study session.";
+  "Aurafarm reads the address of the front Safari, Chrome, or Edge tab during a study session, and closes that tab when close blocked tabs is on.";
 
 if (!fs.existsSync(plist)) process.exit(0);
 

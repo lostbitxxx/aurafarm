@@ -19,7 +19,10 @@ export default function PrivacyPage() {
           </p>
           <ul className="steps">
             <li>It does not read background tabs, page contents, or passwords.</li>
-            <li>It does not close tabs.</li>
+            <li>
+              When close blocked tabs is on, it closes that front tab after 8 seconds on a
+              blocklist host. It does not close any other tab.
+            </li>
             <li>
               The server stores the score, the duration, the blocked count, and the blocked
               hostnames for that session.

@@ -43,7 +43,7 @@ State all of the following in normal language:
 
 - During a study session the user started, the pet reads the address bar of the frontmost browser window.
 - It does not read background tabs, page contents, or passwords.
-- It does not close tabs.
+- When close blocked tabs is on, it closes that front tab after 8 seconds on a blocklist host. It does not close any other tab.
 - The server stores the score, the duration, the blocked count, and the blocked hostnames for that session.
 - The pet heartbeats so the desk can show that it is running. The heartbeat is a timestamp, not a list of tabs.
 - Stopping the session or quitting the pet stops the address-bar check.

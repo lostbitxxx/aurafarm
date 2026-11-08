@@ -24,6 +24,15 @@ export function startSessionDecision(activeCount: number) {
   return { error: "" };
 }
 
+const CLOSE_BLOCKED_MIGRATION =
+  "Run migration 0007 before choosing whether blocked tabs close.";
+
+export function closeBlockedMigrationMessage(message: string | null) {
+  if (!message) return null;
+  if (/close_blocked|schema cache/i.test(message)) return CLOSE_BLOCKED_MIGRATION;
+  return message;
+}
+
 export function buildPetLaunchUrl(code: string) {
   const params = new URLSearchParams({ code });
   return `aurafarm://session?${params.toString()}`;

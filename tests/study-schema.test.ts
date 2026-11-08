@@ -38,6 +38,19 @@ test("older pet tables gain a created_at column", () => {
   assert.match(sql, /add column if not exists created_at/);
 });
 
+test("close blocked tabs is a profile flag returned by claim", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/0007_close_blocked.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /add column if not exists close_blocked boolean not null default false/);
+  assert.match(migration, /drop function if exists public\.claim_study_session\(text, text\)/);
+  assert.match(migration, /close_blocked boolean/);
+  assert.match(migration, /profiles\.close_blocked/);
+  assert.match(migration, /close_blocked := coalesce\(close_flag, false\)/);
+  assert.match(migration, /grant execute on function public\.claim_study_session\(text, text\) to anon/);
+});
+
 test("cancelling a session is a separate function from scoring", () => {
   assert.match(sql, /function public\.cancel_study_session/);
   assert.match(sql, /set status = 'cancelled'/);

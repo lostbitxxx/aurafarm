@@ -69,6 +69,78 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
+const CLOSE_AFTER_MS = 8000;
+
+function createCloseWatch() {
+  return { host: "", since: 0, attemptedHost: "", close: false };
+}
+
+function clearedCloseWatch() {
+  return createCloseWatch();
+}
+
+function nextCloseWatch(watch, input) {
+  const current = watch ?? createCloseWatch();
+  if (!input?.enabled) return clearedCloseWatch();
+
+  const host = hostnameFromUrl(input.rawUrl);
+  if (!host) return { ...current, close: false };
+
+  const desk = normalizeHost(input.deskHost);
+  const closeable = host !== desk && hostMatchesBlocklist(host, input.blocklist ?? BLOCKED);
+  if (!closeable) return clearedCloseWatch();
+
+  const same = current.host === host && current.since > 0;
+  const since = same ? current.since : input.now;
+  const attemptedHost = same ? current.attemptedHost : "";
+  const close = input.now - since >= CLOSE_AFTER_MS && attemptedHost !== host;
+  return { host, since, attemptedHost, close };
+}
+
+function describeCloseDebug(input) {
+  const toggle = input?.closeBlocked ? "on" : "off";
+  const note = input?.preferenceError ? ` ${input.preferenceError}` : "";
+  if (!input?.session) {
+    return `Debug: no study session, so the pet is not watching the browser.${note}`;
+  }
+  const reading = input.reading;
+  if (!reading) {
+    return `Debug: session claimed. Close blocked tabs is ${toggle}.${note}`;
+  }
+  if (reading.error) {
+    const detail = String(reading.error).split("\n")[0];
+    return `Debug: close blocked tabs is ${toggle}. Could not read the front window. ${detail}${note}`;
+  }
+  const app = reading.app || "nothing";
+  const host = hostnameFromUrl(reading.url || "");
+  if (!host) {
+    return `Debug: close blocked tabs is ${toggle}. Front app is ${app}. No page address.${note}`;
+  }
+  if (!input.closeBlocked) {
+    return `Debug: front is ${host} in ${app}. Close blocked tabs is off.${note}`;
+  }
+  const decision = input.decision;
+  if (!decision?.host) {
+    return `Debug: front is ${host} in ${app}. Not on the blocklist, so it stays open.${note}`;
+  }
+  if (input.closeError) {
+    const detail = String(input.closeError).split("\n")[0];
+    return `Debug: close failed for ${decision.host}. ${detail}${note}`;
+  }
+  if (decision.close) return `Debug: closing ${decision.host} in ${app} now.${note}`;
+  const waited = Math.max(0, Math.floor(((input.now ?? 0) - decision.since) / 1000));
+  return `Debug: ${decision.host} in ${app} for ${waited}s of 8s.${note}`;
+}
+
+function noteCloseAttempt(watch) {
+  return {
+    host: watch?.host ?? "",
+    since: watch?.since ?? 0,
+    attemptedHost: watch?.host ?? "",
+    close: false,
+  };
+}
+
 function describeFrontRead(reading, log) {
   const error = reading?.error || "";
   if (error) {
@@ -93,11 +165,16 @@ function describeFrontRead(reading, log) {
 
 module.exports = {
   BLOCKED,
+  CLOSE_AFTER_MS,
+  createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,
   hostMatchesBlocklist,
   hostnameFromUrl,
+  describeCloseDebug,
   describeFrontRead,
+  nextCloseWatch,
   nextFrontLog,
+  noteCloseAttempt,
   recordFrontHost,
 };

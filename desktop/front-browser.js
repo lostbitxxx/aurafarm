@@ -4,6 +4,7 @@ const { execFile } = require("node:child_process");
 
 const FRONT_BROWSERS = ["Safari", "Google Chrome", "Microsoft Edge"];
 const OSA_TIMEOUT_MS = 20_000;
+const CLOSE_TIMEOUT_MS = 8_000;
 
 function frontAppStatement() {
   return 'tell application "System Events" to get name of first application process whose frontmost is true';
@@ -22,16 +23,29 @@ function frontUrlStatement(appName) {
   return "";
 }
 
+function frontCloseStatement(appName) {
+  if (appName === "Safari") {
+    return 'tell application "Safari" to close current tab of front window';
+  }
+  if (appName === "Google Chrome") {
+    return 'tell application "Google Chrome" to close active tab of front window';
+  }
+  if (appName === "Microsoft Edge") {
+    return 'tell application "Microsoft Edge" to close active tab of front window';
+  }
+  return "";
+}
+
 function supportedFrontBrowser(appName) {
   return FRONT_BROWSERS.includes(appName);
 }
 
-function runOsascript(statement) {
+function runOsascript(statement, timeout = OSA_TIMEOUT_MS) {
   return new Promise((resolve) => {
     execFile(
       "osascript",
       ["-e", statement],
-      { timeout: OSA_TIMEOUT_MS },
+      { timeout },
       (error, stdout, stderr) => {
         if (error) {
           const detail = String(stderr || error.message || "osascript failed").trim();
@@ -55,9 +69,21 @@ async function readFrontBrowser() {
   return { app: app.value, url: url.value, error: "" };
 }
 
+async function closeFrontTab(appName) {
+  if (process.platform !== "darwin") return { ok: false, error: "Not macOS." };
+  const statement = frontCloseStatement(appName);
+  if (!statement) return { ok: false, error: "" };
+  const result = await runOsascript(statement, CLOSE_TIMEOUT_MS);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, error: "" };
+}
+
 module.exports = {
+  CLOSE_TIMEOUT_MS,
   FRONT_BROWSERS,
+  closeFrontTab,
   frontAppStatement,
+  frontCloseStatement,
   frontUrlStatement,
   readFrontBrowser,
   supportedFrontBrowser,

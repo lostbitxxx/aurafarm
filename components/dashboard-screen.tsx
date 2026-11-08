@@ -15,6 +15,8 @@ export function DashboardScreen({
   activeSession,
   scores,
   studyError,
+  closeBlocked,
+  closeBlockedError,
   petRunning,
   petError,
   downloadUrl,
@@ -26,6 +28,8 @@ export function DashboardScreen({
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   studyError: string | null;
+  closeBlocked: boolean;
+  closeBlockedError: string | null;
   petRunning: boolean;
   petError: string | null;
   downloadUrl: string | null;
@@ -50,6 +54,8 @@ export function DashboardScreen({
             activeSession={activeSession}
             scores={scores}
             studyError={studyError}
+            closeBlocked={closeBlocked}
+            closeBlockedError={closeBlockedError}
           />
           <PetInventory pets={pets} petsError={petsError} />
         </div>
