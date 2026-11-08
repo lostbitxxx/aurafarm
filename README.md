@@ -4,7 +4,7 @@ A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `publi
 
 ## Setup
 
-1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0006`, in the SQL editor. `0005` adds `user_pets.created_at` when an older table is missing it. `0006` adds pet devices, heartbeats, and session claim.
+1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0007`, in the SQL editor. `0005` adds `user_pets.created_at` when an older table is missing it. `0006` adds the study-session claim. `0007` adds the close-blocked toggle.
 2. Copy [`.env.example`](.env.example) to `.env.local` and fill in the project URL and publishable key. In the Supabase dashboard, turn **Confirm email** off so a new account opens the desk immediately. The signup trigger creates the profile and level 1 baby slime. `SUPABASE_SECRET_KEY` is an optional server key.
 3. Install and start the dev server:
 
@@ -23,7 +23,7 @@ npm install
 npm start
 ```
 
-The sprite walks the Mac desktop. Click it to sign in or paste a launch code. On startup the pet registers `aurafarm://` for the current user, so `aurafarm://pair?token=…` and `aurafarm://session?code=…` open this app.
+The sprite walks the Mac desktop. Click it to sign in or paste a launch code. On startup the pet registers `aurafarm://` for the current user, so `aurafarm://session?code=…` opens this app.
 
 Build a Mac zip from `desktop/` with `npm run pack`. The zip is written to `desktop/dist/` and is not committed. Host that zip outside this app and set `NEXT_PUBLIC_PET_DOWNLOAD_URL` to its address. The desk download button and `GET /api/pet/version` both use that address. A newer version there shows an update line in the pet; the pet opens the zip when asked and does not replace its own files.
 
@@ -40,4 +40,4 @@ The placeholder frame reports whether `SharedArrayBuffer` is available.
 
 ## Study sessions
 
-Study sessions, the web pet, pairing, the Mac Electron pet, the frontmost-site reader, and the Finish score action are in the repo. What the pet can see is on `/privacy`. There is no browser extension, and there is no Windows pet.
+Study sessions, the web pet, the Mac Electron pet, the frontmost-site reader, and the Finish score action are in the repo. What the pet can see is on `/privacy`. There is no browser extension, and there is no Windows pet.

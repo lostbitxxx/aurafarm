@@ -1,4 +1,3 @@
-import { HEARTBEAT_INTERVAL_MS } from "@/lib/pet-device";
 import { GodotFrame } from "./godot-frame";
 import { PetInventory } from "./pet-inventory";
 import { PetStatus } from "./pet-status";
@@ -17,8 +16,6 @@ export function DashboardScreen({
   studyError,
   closeBlocked,
   closeBlockedError,
-  petRunning,
-  petError,
   downloadUrl,
 }: {
   displayName: string;
@@ -30,8 +27,6 @@ export function DashboardScreen({
   studyError: string | null;
   closeBlocked: boolean;
   closeBlockedError: string | null;
-  petRunning: boolean;
-  petError: string | null;
   downloadUrl: string | null;
 }) {
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
@@ -43,12 +38,7 @@ export function DashboardScreen({
           pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
         />
         <div className="desk-side">
-          <PetStatus
-            downloadUrl={downloadUrl}
-            running={petRunning}
-            presenceError={petError}
-            pollMs={HEARTBEAT_INTERVAL_MS}
-          />
+          <PetStatus downloadUrl={downloadUrl} />
           <StudyPanel
             blocklist={blocklist}
             activeSession={activeSession}

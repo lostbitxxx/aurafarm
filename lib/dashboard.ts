@@ -1,7 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { isAnyDeviceFresh } from "./pet-device";
 import type { PetCard } from "./pets";
 import {
   closeBlockedMigrationMessage,
@@ -25,7 +24,6 @@ export async function loadDashboard() {
     blocklistResult,
     sessionResult,
     scoresResult,
-    devicesResult,
   ] = await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
@@ -47,7 +45,6 @@ export async function loadDashboard() {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(10),
-      supabase.from("pet_devices").select("last_seen_at").eq("user_id", userId),
     ]);
 
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => ({
@@ -94,20 +91,5 @@ export async function loadDashboard() {
     studyError,
     closeBlocked: closeBlockedResult.data?.close_blocked === true,
     closeBlockedError: closeBlockedMigrationMessage(closeBlockedResult.error?.message ?? null),
-    petRunning: isAnyDeviceFresh(
-      (devicesResult.data ?? []).map((device) =>
-        device.last_seen_at ? String(device.last_seen_at) : null,
-      ),
-      Date.now(),
-    ),
-    petError: presenceMessage(devicesResult.error?.message ?? null),
   };
-}
-
-function presenceMessage(message: string | null) {
-  if (!message) return null;
-  if (/pet_devices|schema cache/i.test(message)) {
-    return "Run migration 0006 before pairing a pet.";
-  }
-  return message;
 }

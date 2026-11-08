@@ -2,25 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import {
-  HEARTBEAT_FRESH_MS,
-  buildPairLaunchUrl,
-  isDeviceFresh,
-  normalizeLaunchCode,
-  parseClaimCode,
-  petDownloadUrl,
-  readBearerToken,
-} from "../lib/pet-device";
-
-const now = Date.parse("2026-11-05T06:00:00.000Z");
-
-test("a heartbeat from the last 30 seconds counts as running", () => {
-  assert.equal(HEARTBEAT_FRESH_MS, 30_000);
-  assert.equal(isDeviceFresh(new Date(now - 29_000).toISOString(), now), true);
-  assert.equal(isDeviceFresh(new Date(now - 30_000).toISOString(), now), true);
-  assert.equal(isDeviceFresh(new Date(now - 31_000).toISOString(), now), false);
-  assert.equal(isDeviceFresh(null, now), false);
-});
+import { normalizeLaunchCode, parseClaimCode, petDownloadUrl } from "../lib/pet-device";
 
 test("the download link is an absolute http url", () => {
   assert.equal(petDownloadUrl(undefined), null);
@@ -31,10 +13,7 @@ test("the download link is an absolute http url", () => {
   );
 });
 
-test("pairing and claim inputs stay on the aurafarm link", () => {
-  assert.equal(buildPairLaunchUrl("device-token"), "aurafarm://pair?token=device-token");
-  assert.equal(readBearerToken("Bearer device-token"), "device-token");
-  assert.equal(readBearerToken(null), "");
+test("claim inputs stay on the aurafarm session link", () => {
   assert.equal(normalizeLaunchCode("  aurafarm://session?code=ABC234  "), "ABC234");
   assert.deepEqual(parseClaimCode({ code: "ABC234" }), { ok: true, code: "ABC234" });
   assert.equal(parseClaimCode({}).ok, false);

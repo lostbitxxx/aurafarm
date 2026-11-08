@@ -24,7 +24,7 @@ loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 const WINDOW = { x: 128, y: 128 };
 const API_ORIGIN = process.env.AURAFARM_API_ORIGIN || "http://localhost:3000";
 const DESK_HOST = deskHostFromOrigin(API_ORIGIN);
-const HEARTBEAT_MS = 10_000;
+const PET_REFRESH_MS = 10_000;
 const FRONT_POLL_MS = 2_000;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -48,7 +48,6 @@ let debugWindow = null;
 let bubbleHost = "";
 let finishing = false;
 let velocity = { x: 2, y: 0 };
-let deviceToken = "";
 let study = null;
 let frontTimer = null;
 let frontPoll = null;
@@ -270,14 +269,6 @@ async function signIn(email, password) {
   );
   await refreshPet();
   return { error: "" };
-}
-
-async function sendHeartbeat() {
-  if (!deviceToken) return;
-  await fetch(`${API_ORIGIN}/api/pet/heartbeat`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${deviceToken}` },
-  }).catch(() => null);
 }
 
 async function claim(code) {
@@ -620,16 +611,8 @@ async function pollFront() {
   }
 }
 
-function rememberDevice(token) {
-  deviceToken = token;
-  writeSecret("device-token.txt", token);
-  setStatus("Paired.");
-  void sendHeartbeat();
-}
-
 async function handleLink(link) {
   if (!link) return;
-  if (link.kind === "pair") rememberDevice(link.token);
   if (link.kind === "session") {
     const result = await claim(link.code);
     if (result.error) setStatus(result.error);
@@ -715,17 +698,14 @@ if (!gotLock) {
     createSprite();
     openDebugWindow();
     setDebug(describeCloseDebug({ session: false }));
-    deviceToken = readSecret("device-token.txt");
     await restoreSession();
-    if (deviceToken) void sendHeartbeat();
     void checkForUpdate();
     for (const arg of [...process.argv, ...pendingLinks]) {
       if (arg.startsWith("aurafarm://")) await handleLink(parseAurafarmLink(arg));
     }
     setInterval(walk, 32);
     setInterval(() => {
-      void sendHeartbeat();
       void refreshPet();
-    }, HEARTBEAT_MS);
+    }, PET_REFRESH_MS);
   });
 }
