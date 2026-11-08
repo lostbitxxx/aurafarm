@@ -102,6 +102,8 @@ test("the sign-in panel can quit the pet", () => {
 test("the pet posts the score and does not open a port", () => {
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(main, /\/api\/sessions\/\$\{current\.id\}\/score/);
+  assert.match(main, /\[score\] POST \$\{current\.id\}/);
+  assert.match(main, /\[score\] session \$\{sessionId\} is/);
   assert.match(main, /openExternal/);
   assert.doesNotMatch(main, /\.listen\(/);
 });

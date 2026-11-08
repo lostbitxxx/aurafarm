@@ -83,4 +83,7 @@ test("a finished session adds its score to the wallet once", () => {
   assert.match(route, /revalidatePath\(`\/dashboard\/sessions\/\$\{id\}`\)/);
   assert.match(route, /revalidatePath\("\/shop"\)/);
   assert.match(route, /revalidatePath\("\/inventory"\)/);
+  assert.match(route, /\[score\] \$\{id\} rejected/);
+  assert.match(route, /status=\$\{data\.status\} has_token=/);
+  assert.doesNotMatch(route, /console\.error\([\s\S]*parsed\.token/);
 });

@@ -104,7 +104,11 @@ export async function cancelStudySession(sessionId: string) {
     target_session_id: sessionId,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error(`[score] cancel ${sessionId} failed: ${error.message}`);
+    return { error: error.message };
+  }
+  console.info(`[score] cancel ${sessionId} user ${data.claims.sub}`);
 
   revalidatePath("/dashboard");
   return { error: "" };
