@@ -1,6 +1,6 @@
 # Phase 0 — RPG restyle
 
-Status: for review. Do not build this until the look below is accepted.
+Status: implemented. The pages use the HUD and panel frame. Points are still not shown.
 
 Depends on: the current website. No schema change.
 

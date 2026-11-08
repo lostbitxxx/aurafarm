@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function PublicHeader() {
   return (
-    <header className="topbar">
+    <header className="hud">
       <Link href="/" className="wordmark">
         Aurafarm
       </Link>

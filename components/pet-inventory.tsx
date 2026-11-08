@@ -47,7 +47,7 @@ export function PetInventory({
   }
 
   return (
-    <section className="inventory" aria-label="Pets">
+    <section className="panel inventory" aria-label="Pets">
       <div className="inventory-heading">
         <h2>Pets</h2>
         <p>Equip to Desktop chooses who stands in the frame.</p>

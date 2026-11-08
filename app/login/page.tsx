@@ -12,13 +12,15 @@ export default function LoginPage() {
     <>
       <PublicHeader />
       <main className="auth-layout">
-        <section className="auth-aside">
-          <h1>Your desktop is still on.</h1>
-          <p>Sign in to see your pets and choose which one stands in the Godot frame.</p>
-        </section>
-        <section className="auth-card">
-          <h2>Sign in</h2>
-          <LoginForm configured={isSupabaseConfigured()} />
+        <section className="panel auth-panel">
+          <div className="auth-aside">
+            <h1>Your desktop is still on.</h1>
+            <p>Sign in to see your pets and choose which one stands in the Godot frame.</p>
+          </div>
+          <div className="auth-card">
+            <h2>Sign in</h2>
+            <LoginForm configured={isSupabaseConfigured()} />
+          </div>
         </section>
       </main>
     </>

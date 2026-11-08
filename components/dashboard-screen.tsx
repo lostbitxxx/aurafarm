@@ -57,14 +57,15 @@ export function DashboardScreen({
 export function DashboardFallback() {
   return (
     <>
-      <header className="topbar">
+      <header className="hud">
         <span className="wordmark">Aurafarm</span>
+        <div className="hud-stat" aria-hidden="true" />
       </header>
       <main className="desk" aria-busy="true">
-        <section className="monitor" aria-hidden="true">
+        <section className="viewport monitor" aria-hidden="true">
           <div className="skeleton skeleton-frame" />
         </section>
-        <section className="inventory">
+        <section className="panel inventory">
           <p>Opening your desk…</p>
         </section>
       </main>

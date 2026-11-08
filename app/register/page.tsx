@@ -13,17 +13,19 @@ export default function RegisterPage() {
     <>
       <PublicHeader />
       <main className="auth-layout">
-        <section className="auth-aside">
-          <SlimeMark />
-          <h1>Bring home a baby slime.</h1>
-          <p>
-            Signup creates your user, inserts a profile, and adds a level 1 baby slime with
-            Equip to Desktop already on.
-          </p>
-        </section>
-        <section className="auth-card">
-          <h2>Create your farm</h2>
-          <RegisterForm configured={isSupabaseConfigured()} />
+        <section className="panel auth-panel">
+          <div className="auth-aside">
+            <SlimeMark />
+            <h1>Bring home a baby slime.</h1>
+            <p>
+              Signup creates your user, inserts a profile, and adds a level 1 baby slime with
+              Equip to Desktop already on.
+            </p>
+          </div>
+          <div className="auth-card">
+            <h2>Create your farm</h2>
+            <RegisterForm configured={isSupabaseConfigured()} />
+          </div>
         </section>
       </main>
     </>

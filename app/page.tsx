@@ -28,7 +28,7 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-        <div className="hero-stage">
+        <div className="panel hero-stage">
           <SlimeMark />
           <p>baby_slime · level 1 · on the desktop</p>
         </div>

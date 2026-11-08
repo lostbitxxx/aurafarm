@@ -20,7 +20,7 @@ export default async function StudyScorePage({
     <>
       <SiteHeader displayName={score.displayName} />
       <main className="score-layout">
-        <section className="study-panel" aria-label="Score">
+        <section className="panel study-panel" aria-label="Score">
           <div className="inventory-heading">
             <h2>Score</h2>
           </div>

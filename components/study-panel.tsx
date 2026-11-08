@@ -103,7 +103,7 @@ export function StudyPanel({
   }
 
   return (
-    <section className="study-panel" aria-label="Study">
+    <section className="panel study-panel" aria-label="Study">
       <div className="inventory-heading">
         <h2>Study</h2>
         <p>
