@@ -19,11 +19,17 @@
         display: block;
         font-size: 13px;
       }
-      input {
+      input,
+      textarea {
         width: 100%;
         box-sizing: border-box;
         margin-top: 4px;
         padding: 8px;
+        font: inherit;
+      }
+      textarea {
+        min-height: 72px;
+        resize: none;
       }
       button {
         margin-top: 8px;
@@ -38,15 +44,15 @@
     </style>
   </head>
   <body>
-    <form id="claim">
-      <label>Launch code <input name="code" type="text" autocomplete="off" required /></label>
-      <button type="submit">Claim session</button>
+    <form id="session-token">
+      <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+      <button type="submit">Show pet</button>
     </form>
     <p id="update" hidden>
       <span id="update-label"></span>
       <button id="update-button" type="button">Download update</button>
     </p>
-    <p id="status">Paste the launch code from the desk.</p>
+    <p id="status">Paste a session token to show the pet.</p>
     <button id="quit" class="quit" type="button">Quit</button>
     <script src="panel.js"></script>
   </body>
