@@ -1,6 +1,6 @@
 # Phase 5 — Equipped pet on the session link
 
-Status: for review. Do not build this until phase 4 is accepted.
+Status: implemented. The launch link still carries only the code. A pasted link drops any pet or user parameter, and the desktop pet reloads `is_desktop_active`.
 
 Depends on: [phase 4](04-inventory.md), because equip has to update the same row the pet reads.
 

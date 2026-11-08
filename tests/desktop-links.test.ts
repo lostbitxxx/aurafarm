@@ -13,6 +13,12 @@ test("session links keep only the launch code", () => {
     kind: "session",
     code: "ABC234",
   });
+  const decorated = parseAurafarmLink(
+    "aurafarm://session?code=ABC234&pet=baby_slime&user=someone-else",
+  );
+  assert.deepEqual(decorated, { kind: "session", code: "ABC234" });
+  assert.equal(decorated && "pet" in decorated, false);
+  assert.equal(decorated && "user" in decorated, false);
   assert.equal(parseAurafarmLink("https://example.com"), null);
   assert.equal(parseAurafarmLink("aurafarm://session?code=no"), null);
 });

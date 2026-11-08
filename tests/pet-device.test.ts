@@ -15,7 +15,14 @@ test("the download link is an absolute http url", () => {
 
 test("claim inputs stay on the aurafarm session link", () => {
   assert.equal(normalizeLaunchCode("  aurafarm://session?code=ABC234  "), "ABC234");
-  assert.deepEqual(parseClaimCode({ code: "ABC234" }), { ok: true, code: "ABC234" });
+  assert.equal(
+    normalizeLaunchCode("aurafarm://session?pet=baby_slime&code=ABC234&user=other"),
+    "ABC234",
+  );
+  assert.deepEqual(parseClaimCode({ code: "ABC234", pet: "river_newt" }), {
+    ok: true,
+    code: "ABC234",
+  });
   assert.equal(parseClaimCode({}).ok, false);
 });
 
