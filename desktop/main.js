@@ -48,6 +48,7 @@ let debugWindow = null;
 let bubbleHost = "";
 let finishing = false;
 let velocity = { x: 2, y: 0 };
+let petShown = false;
 let study = null;
 let frontTimer = null;
 let frontPoll = null;
@@ -152,13 +153,15 @@ function placeOnScreen() {
 
 function walk() {
   if (!spriteWindow || spriteWindow.isDestroyed()) return;
+  placeFinishWindow();
+  placeBubbleWindow();
+  placeDebugWindow();
+  // A hidden always-on-top window comes back if macOS is asked to move it.
+  if (!petShown) return;
   const [x, y] = spriteWindow.getPosition();
   const next = step({ x, y }, velocity, WINDOW, usableRects());
   velocity = next.velocity;
   spriteWindow.setPosition(next.position.x, next.position.y);
-  placeFinishWindow();
-  placeBubbleWindow();
-  placeDebugWindow();
 }
 
 function createSprite() {
@@ -191,15 +194,23 @@ function createSprite() {
 
 function showPet() {
   const win = spriteWindow;
-  if (!win || win.isDestroyed() || win.isVisible()) return;
-  win.show();
+  if (!win || win.isDestroyed()) return;
+  petShown = true;
+  win.setOpacity(1);
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (!win.isVisible()) win.show();
 }
 
 function hidePet() {
   const win = spriteWindow;
-  if (!win || win.isDestroyed() || !win.isVisible()) return;
+  if (!win || win.isDestroyed()) return;
+  petShown = false;
+  // hide() is ignored on macOS while the window is visible on every workspace.
+  win.setVisibleOnAllWorkspaces(false);
+  win.setOpacity(0);
   win.hide();
-  openPanel();
+  if (!panelWindow || panelWindow.isDestroyed()) openPanel();
 }
 
 function togglePanel() {
@@ -389,15 +400,19 @@ async function cancelStudy() {
   if (!supabase) return { error: "Supabase is not configured." };
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) return { error: "Paste a session token before cancelling." };
-  const { data, error: findError } = await supabase
-    .from("study_sessions")
-    .select("id")
-    .eq("status", "active")
-    .maybeSingle();
-  if (findError) return { error: findError.message };
-  if (!data?.id) return { error: "No study session is running." };
+  let sessionId = study?.id ?? "";
+  if (!sessionId) {
+    const { data, error: findError } = await supabase
+      .from("study_sessions")
+      .select("id")
+      .eq("status", "active")
+      .maybeSingle();
+    if (findError) return { error: findError.message };
+    sessionId = data?.id ?? "";
+  }
+  if (!sessionId) return { error: "No study session is running." };
   const { error } = await supabase.rpc("cancel_study_session", {
-    target_session_id: data.id,
+    target_session_id: sessionId,
   });
   if (error) return { error: error.message };
   if (study) stopFrontWatch();

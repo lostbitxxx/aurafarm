@@ -98,6 +98,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /show: false/);
   assert.match(main, /function showPet\(\)/);
   assert.match(main, /function hidePet\(\)/);
+  assert.match(main, /petShown = false/);
+  assert.match(main, /if \(!petShown\) return/);
+  assert.match(main, /win\.setVisibleOnAllWorkspaces\(false\)/);
   assert.match(main, /openPanel\(\)/);
   assert.doesNotMatch(panel, /type="email"|type="password"|id="sign-in"/);
   assert.match(main, /signInWithPassword/);
