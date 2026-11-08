@@ -7,6 +7,7 @@ const { parseAurafarmLink } = require("./links");
 const {
   createCloseWatch,
   createFrontLog,
+  describeCloseDebug,
   describeFrontRead,
   deskHostFromOrigin,
   nextCloseWatch,
@@ -43,6 +44,7 @@ let spriteWindow = null;
 let panelWindow = null;
 let finishWindow = null;
 let bubbleWindow = null;
+let debugWindow = null;
 let bubbleHost = "";
 let finishing = false;
 let velocity = { x: 2, y: 0 };
@@ -110,13 +112,21 @@ function publish() {
     ...state,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
-  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
 
 function setStatus(status, extra = {}) {
   state = { ...state, ...extra, status };
+  publish();
+}
+
+function setDebug(debug) {
+  const line = String(debug || "");
+  if (state.debug === line) return;
+  state = { ...state, debug: line };
+  console.log(line);
   publish();
 }
 
@@ -139,6 +149,7 @@ function walk() {
   spriteWindow.setPosition(next.position.x, next.position.y);
   placeFinishWindow();
   placeBubbleWindow();
+  placeDebugWindow();
 }
 
 function createSprite() {
@@ -304,6 +315,13 @@ function beginFrontWatch(body) {
     };
   }
   state = { ...state, finishNote: "" };
+  setDebug(
+    describeCloseDebug({
+      session: true,
+      closeBlocked: study.closeBlocked,
+      preferenceError: "",
+    }),
+  );
   publishWatch();
   openFinishWindow();
   frontTimer = setInterval(() => {
@@ -319,6 +337,7 @@ function stopFrontWatch() {
   study = null;
   closeFinishWindow();
   hideBubble();
+  setDebug(describeCloseDebug({ session: false }));
 }
 
 function openFinishWindow() {
@@ -423,8 +442,45 @@ function hideBubble() {
   publish();
 }
 
+function openDebugWindow() {
+  if (debugWindow && !debugWindow.isDestroyed()) return;
+  const win = new BrowserWindow({
+    width: 460,
+    height: 96,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  debugWindow = win;
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.setIgnoreMouseEvents(true, { forward: true });
+  win.loadFile(path.join(__dirname, "debug.html"));
+  win.on("closed", () => {
+    if (debugWindow === win) debugWindow = null;
+  });
+  win.webContents.once("did-finish-load", publish);
+  placeDebugWindow();
+}
+
+function placeDebugWindow() {
+  if (!debugWindow || debugWindow.isDestroyed()) return;
+  const area = screen.getPrimaryDisplay().workArea;
+  debugWindow.setPosition(area.x + 16, area.y + 16);
+}
+
 function setPetLevel(level) {
-  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow]) {
+  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
   }
 }
@@ -484,17 +540,20 @@ async function studyStillActive(sessionId) {
 }
 
 async function readCloseBlocked() {
-  if (!supabase) return null;
+  if (!supabase) return { value: null, error: "Pet has no Supabase keys." };
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user?.id;
-  if (!userId) return null;
+  if (!userId) {
+    return { value: null, error: "Pet is not signed in, so it is using the toggle from claim." };
+  }
   const { data, error } = await supabase
     .from("profiles")
     .select("close_blocked")
     .eq("id", userId)
     .maybeSingle();
-  if (error || !data) return null;
-  return data.close_blocked === true;
+  if (error) return { value: null, error: error.message };
+  if (!data) return { value: null, error: "No profile row for this sign-in." };
+  return { value: data.close_blocked === true, error: "" };
 }
 
 async function pollFront() {
@@ -510,16 +569,18 @@ async function pollFront() {
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
-    if (preference !== null) current.closeBlocked = preference;
+    if (preference.value !== null) current.closeBlocked = preference.value;
+    const now = Date.now();
     const decision = nextCloseWatch(current.closeWatch, {
       enabled: current.closeBlocked,
       rawUrl: reading.url || "",
       blocklist: current.blocklist,
       deskHost: DESK_HOST,
-      now: Date.now(),
+      now,
     });
     current.closeWatch = decision;
     let closeNote = "";
+    let closeError = "";
     if (decision.close) {
       showBubble(decision.host);
       const closed = await closeFrontTab(reading.app);
@@ -527,12 +588,24 @@ async function pollFront() {
       current.closeWatch = noteCloseAttempt(current.closeWatch);
       if (!closed.ok) {
         hideBubble();
+        closeError = closed.error || "osascript failed";
         closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
       }
     } else if (bubbleHost && (!reading.url || decision.host !== bubbleHost)) {
       hideBubble();
     }
     if (study !== current) return;
+    setDebug(
+      describeCloseDebug({
+        session: true,
+        closeBlocked: current.closeBlocked,
+        preferenceError: preference.error,
+        reading,
+        decision,
+        now,
+        closeError,
+      }),
+    );
     publishWatch(reading);
     if (closeNote) setStatus(closeNote);
     const active = await studyStillActive(current.id);
@@ -640,6 +713,8 @@ if (!gotLock) {
       ]),
     );
     createSprite();
+    openDebugWindow();
+    setDebug(describeCloseDebug({ session: false }));
     deviceToken = readSecret("device-token.txt");
     await restoreSession();
     if (deviceToken) void sendHeartbeat();

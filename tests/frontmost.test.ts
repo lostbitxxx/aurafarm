@@ -11,6 +11,7 @@ const {
   deskHostFromOrigin,
   hostMatchesBlocklist: petMatchesBlocklist,
   hostnameFromUrl,
+  describeCloseDebug,
   describeFrontRead,
   nextCloseWatch,
   nextFrontLog,
@@ -39,6 +40,15 @@ const {
   deskHostFromOrigin: (origin: string) => string;
   hostMatchesBlocklist: (host: string, blockedHosts: readonly string[]) => boolean;
   hostnameFromUrl: (value: string) => string;
+  describeCloseDebug: (input: {
+    session?: boolean;
+    closeBlocked?: boolean;
+    preferenceError?: string;
+    reading?: { app?: string; url?: string; error?: string };
+    decision?: { host: string; since: number; close: boolean };
+    now?: number;
+    closeError?: string;
+  }) => string;
   describeFrontRead: (
     reading: { app?: string; url?: string; error?: string },
     log: { blockedCount: number; blockedHosts: string[] },
@@ -266,4 +276,34 @@ test("a missing address does not reset the wait or close on its own", () => {
   assert.equal(missed.since, 2_000);
   assert.equal(missed.close, false);
   assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 12_000).close, true);
+});
+
+test("the debug line names the reason a blocked tab stays open", () => {
+  assert.match(describeCloseDebug({ session: false }), /no study session/);
+  assert.match(
+    describeCloseDebug({
+      session: true,
+      closeBlocked: false,
+      reading: { app: "Google Chrome", url: "https://www.youtube.com/watch?v=1" },
+    }),
+    /Close blocked tabs is off/,
+  );
+  assert.match(
+    describeCloseDebug({
+      session: true,
+      closeBlocked: true,
+      reading: { app: "Google Chrome", url: "https://www.youtube.com/watch?v=1" },
+      decision: { host: "www.youtube.com", since: 1_000, close: false },
+      now: 4_000,
+    }),
+    /www.youtube.com in Google Chrome for 3s of 8s/,
+  );
+  assert.match(
+    describeCloseDebug({
+      session: true,
+      closeBlocked: true,
+      reading: { app: "Google Chrome", error: "Not authorized to send Apple events. (-1743)" },
+    }),
+    /-1743/,
+  );
 });
