@@ -8,14 +8,6 @@ export function GodotFrame({
   const src = buildGodotFrameSrc(pet);
   return (
     <section className="monitor" aria-label="Desktop">
-      <div className="monitor-caption">
-        <span>Desktop</span>
-        <span className="monitor-dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-      </div>
       <iframe
         key={src}
         className="godot-frame"
