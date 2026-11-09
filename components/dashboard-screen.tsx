@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { GodotFrame } from "./godot-frame";
-import { PetStatus } from "./pet-status";
-import { SiteHeader } from "./site-header";
 import { StudyPanel } from "./study-panel";
+import { SiteHeader } from "./site-header";
 import { describePet, type PetCard } from "@/lib/pets";
 import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "@/lib/study";
 
@@ -32,53 +30,43 @@ export function DashboardScreen({
   downloadUrl: string | null;
 }) {
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
-  const equippedName = activePet ? describePet(activePet.pet_type).name : "No pet is equipped.";
+  const described = activePet ? describePet(activePet.pet_type) : null;
   return (
-    <>
+    <div className="desk-page">
       <SiteHeader displayName={displayName} points={points} />
-      <main className="desk">
-        <GodotFrame
-          pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
-        />
-        <div className="desk-side">
-          <PetStatus downloadUrl={downloadUrl} />
-          <StudyPanel
-            blocklist={blocklist}
-            activeSession={activeSession}
-            scores={scores}
-            studyError={studyError}
-            closeBlocked={closeBlocked}
-            closeBlockedError={closeBlockedError}
-          />
-          <section className="pet-status" aria-label="Equipped pet">
-            <div className="inventory-heading">
-              <h2>Equipped</h2>
-              <p>{petsError ?? equippedName}</p>
-            </div>
-            <Link href="/inventory" className="button">
-              Inventory
-            </Link>
-          </section>
-        </div>
-      </main>
-    </>
+      <StudyPanel
+        blocklist={blocklist}
+        activeSession={activeSession}
+        scores={scores}
+        studyError={studyError}
+        closeBlocked={closeBlocked}
+        closeBlockedError={closeBlockedError}
+        petName={described?.name ?? "No pet is equipped."}
+        petLevel={activePet?.level ?? null}
+        petNote={petsError ?? described?.note ?? "Choose one from your inventory."}
+        downloadUrl={downloadUrl}
+        extras={
+          <Link href="/inventory" className="button button-ghost">
+            Inventory
+          </Link>
+        }
+      />
+    </div>
   );
 }
 
 export function DashboardFallback() {
   return (
-    <>
+    <div className="desk-page">
       <header className="topbar">
         <span className="wordmark">Aurafarm</span>
       </header>
       <main className="desk" aria-busy="true">
-        <section className="monitor" aria-hidden="true">
-          <div className="skeleton skeleton-frame" />
-        </section>
-        <section className="inventory">
-          <p>Opening your desk…</p>
+        <section className="scene">
+          <p className="scene-note">a quiet place to begin ✦</p>
+          <p className="growth-label">Opening your desk…</p>
         </section>
       </main>
-    </>
+    </div>
   );
 }
