@@ -33,7 +33,7 @@ export function DashboardScreen({
   const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
   const described = activePet ? describePet(activePet.pet_type) : null;
   return (
-    <>
+    <div className="desk-page">
       <SiteHeader displayName={displayName} points={points} />
       <StudyPanel
         blocklist={blocklist}
@@ -57,13 +57,13 @@ export function DashboardScreen({
           </Link>
         }
       />
-    </>
+    </div>
   );
 }
 
 export function DashboardFallback() {
   return (
-    <>
+    <div className="desk-page">
       <header className="topbar">
         <span className="wordmark">Aurafarm</span>
       </header>
@@ -74,6 +74,6 @@ export function DashboardFallback() {
           <p className="growth-label">Opening your desk…</p>
         </section>
       </main>
-    </>
+    </div>
   );
 }
