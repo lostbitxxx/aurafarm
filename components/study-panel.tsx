@@ -23,7 +23,6 @@ export function StudyPanel({
   petLevel,
   petNote,
   downloadUrl,
-  scene,
   extras,
 }: {
   blocklist: BlocklistEntry[];
@@ -36,7 +35,6 @@ export function StudyPanel({
   petLevel: number | null;
   petNote: string;
   downloadUrl: string | null;
-  scene: ReactNode;
   extras?: ReactNode;
 }) {
   const signature = [
@@ -58,6 +56,7 @@ export function StudyPanel({
   const [railOpen, setRailOpen] = useState(Boolean(activeSession));
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
 
   if (signature !== snapshot) {
     setSnapshot(signature);
@@ -103,6 +102,7 @@ export function StudyPanel({
       setError(result.error);
       return;
     }
+    setCancelled(false);
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
@@ -118,6 +118,7 @@ export function StudyPanel({
       setError(result.error);
       return;
     }
+    setCancelled(true);
     setLaunchCode("");
     setCodeSessionId("");
     setLocalStartedAt("");
@@ -144,7 +145,6 @@ export function StudyPanel({
             {shownSession ? "one little step at a time ✦" : "a quiet place to begin ✦"}
           </p>
         </div>
-        {scene}
         <div className="scene-foot">
           <div>
             <p className="pet-name">{petName}</p>
@@ -166,7 +166,7 @@ export function StudyPanel({
             )}
             <button
               type="button"
-              className="button button-ghost"
+              className={cancelled && !shownSession ? "button is-cancelled" : "button button-ghost"}
               disabled={pending || !shownSession}
               onClick={onCancel}
             >

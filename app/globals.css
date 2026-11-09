@@ -224,7 +224,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .scene {
   display: grid;
-  grid-template-rows: auto minmax(240px, 1fr) auto;
+  align-content: start;
   gap: 0.85rem;
   min-width: 0;
   padding: 0.25rem 1.5rem 2.5rem 6vw;
@@ -232,18 +232,13 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .desk:has(> .scene:only-child) { grid-template-columns: minmax(0, 1fr); }
 
-.scene .monitor {
-  background: transparent;
+.desk-page .button.is-cancelled,
+.desk-page .button.is-cancelled:disabled {
+  background: #d5d0c6;
+  color: #6f6a62;
   box-shadow: none;
-  padding: 0;
-  border-radius: 0;
-}
-
-.scene .godot-frame,
-.scene .skeleton-frame {
-  height: min(68vh, 760px);
-  min-height: 360px;
-  border-radius: 0;
+  opacity: 1;
+  cursor: default;
 }
 
 .scene-top {

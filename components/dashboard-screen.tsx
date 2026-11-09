@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { GodotFrame } from "./godot-frame";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { describePet, type PetCard } from "@/lib/pets";
@@ -46,11 +45,6 @@ export function DashboardScreen({
         petLevel={activePet?.level ?? null}
         petNote={petsError ?? described?.note ?? "Choose one from your inventory."}
         downloadUrl={downloadUrl}
-        scene={
-          <GodotFrame
-            pet={activePet ? { pet_type: activePet.pet_type, level: activePet.level } : null}
-          />
-        }
         extras={
           <Link href="/inventory" className="button button-ghost">
             Inventory
@@ -70,7 +64,6 @@ export function DashboardFallback() {
       <main className="desk" aria-busy="true">
         <section className="scene">
           <p className="scene-note">a quiet place to begin ✦</p>
-          <div className="skeleton skeleton-frame" />
           <p className="growth-label">Opening your desk…</p>
         </section>
       </main>
