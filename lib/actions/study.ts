@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createLaunchCode, hashSecret } from "@/lib/scoring";
-import { closeBlockedMigrationMessage, startSessionDecision } from "@/lib/study";
+import {
+  closeBlockedMigrationMessage,
+  plannedStudySeconds,
+  startSessionDecision,
+  studyTimerMigrationMessage,
+} from "@/lib/study";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,7 +16,11 @@ const sessionIdPattern =
 
 const LAUNCH_CODE_TTL_MS = 5 * 60 * 1000;
 
-export async function startStudySession() {
+export async function startStudySession(planned: number) {
+  const plannedSeconds = plannedStudySeconds(planned);
+  if (plannedSeconds === null) {
+    return { error: "Choose a study length.", launchCode: "", sessionId: "" };
+  }
   if (!isSupabaseConfigured()) {
     return { error: "Supabase is not configured.", launchCode: "", sessionId: "" };
   }
@@ -38,6 +47,13 @@ export async function startStudySession() {
     return { error: decision.error, launchCode: "", sessionId: "" };
   }
 
+  const { data: equipped } = await supabase
+    .from("user_pets")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_desktop_active", true)
+    .maybeSingle();
+
   const launchCode = createLaunchCode();
   const { data: created, error: insertError } = await supabase
     .from("study_sessions")
@@ -45,6 +61,8 @@ export async function startStudySession() {
       user_id: userId,
       launch_code_hash: hashSecret(launchCode),
       launch_code_expires_at: new Date(Date.now() + LAUNCH_CODE_TTL_MS).toISOString(),
+      planned_seconds: plannedSeconds,
+      pet_id: equipped?.id ?? null,
     })
     .select("id")
     .single();
@@ -53,7 +71,11 @@ export async function startStudySession() {
     if (insertError.code === "23505") {
       return { error: "A study session is already running.", launchCode: "", sessionId: "" };
     }
-    return { error: insertError.message, launchCode: "", sessionId: "" };
+    return {
+      error: studyTimerMigrationMessage(insertError.message) ?? insertError.message,
+      launchCode: "",
+      sessionId: "",
+    };
   }
 
   revalidatePath("/dashboard");
@@ -106,10 +128,40 @@ export async function cancelStudySession(sessionId: string) {
 
   if (error) {
     console.error(`[score] cancel ${sessionId} failed: ${error.message}`);
-    return { error: error.message };
+    return { error: studyTimerMigrationMessage(error.message) ?? error.message };
   }
   console.info(`[score] cancel ${sessionId} user ${data.claims.sub}`);
 
   revalidatePath("/dashboard");
+  revalidatePath("/inventory");
+  return { error: "" };
+}
+
+export async function completeStudyTimer(sessionId: string, devPassword = "") {
+  if (!sessionIdPattern.test(sessionId)) {
+    return { error: "That session could not be finished." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to finish a study session." };
+  }
+
+  const { error } = await supabase.rpc("complete_study_timer", {
+    target_session_id: sessionId,
+    dev_password: devPassword,
+  });
+
+  if (error) {
+    console.error(`[score] timer ${sessionId} failed: ${error.message}`);
+    return { error: studyTimerMigrationMessage(error.message) ?? error.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/inventory");
   return { error: "" };
 }

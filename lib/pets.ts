@@ -23,8 +23,13 @@ export type PetCard = {
   id: string;
   pet_type: string;
   level: number;
+  xp: number;
   is_desktop_active: boolean;
 };
+
+export function equippedPet(pets: readonly PetCard[]) {
+  return pets.find((pet) => pet.is_desktop_active) ?? null;
+}
 
 const PET_COPY: Record<string, { name: string; note: string; price?: number }> = {
   baby_slime: {

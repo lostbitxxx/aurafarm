@@ -1,13 +1,22 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { cancelStudySession, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { cancelStudySession, completeStudyTimer, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
+  DEFAULT_STUDY_SECONDS,
+  DEV_TIMER_PASSWORD,
+  devTimerPasswordMatches,
+  experienceProgress,
+  formatClock,
   formatDuration,
   formatTimestamp,
+  remainingSeconds,
+  STUDY_LENGTHS,
   type ActiveStudySession,
   type BlocklistEntry,
+  type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
 import { PetStatus } from "./pet-status";
@@ -16,11 +25,14 @@ export function StudyPanel({
   blocklist,
   activeSession,
   scores,
+  recordedSessions,
   studyError,
   closeBlocked,
   closeBlockedError,
+  pets,
   petName,
   petLevel,
+  petXp,
   petNote,
   downloadUrl,
   extras,
@@ -28,11 +40,14 @@ export function StudyPanel({
   blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
+  recordedSessions: RecordedStudySession[];
   studyError: string | null;
   closeBlocked: boolean;
   closeBlockedError: string | null;
+  pets: PetCard[];
   petName: string;
   petLevel: number | null;
+  petXp: number;
   petNote: string;
   downloadUrl: string | null;
   extras?: ReactNode;
@@ -40,8 +55,11 @@ export function StudyPanel({
   const signature = [
     activeSession?.id ?? "",
     activeSession?.startedAt ?? "",
+    activeSession?.plannedSeconds ?? "",
     scores.map((score) => score.id).join(","),
+    recordedSessions.map((session) => `${session.id}:${session.durationSeconds}`).join(","),
     blocklist.map((entry) => entry.host).join(","),
+    pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join(","),
     studyError ?? "",
     closeBlocked ? "1" : "0",
     closeBlockedError ?? "",
@@ -52,11 +70,18 @@ export function StudyPanel({
   const [launchCode, setLaunchCode] = useState("");
   const [codeSessionId, setCodeSessionId] = useState("");
   const [localStartedAt, setLocalStartedAt] = useState("");
+  const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
+  const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [railOpen, setRailOpen] = useState(Boolean(activeSession));
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [devPassword, setDevPassword] = useState("");
+  const [devUnlocked, setDevUnlocked] = useState(false);
+  const [devRejected, setDevRejected] = useState(false);
+  const [rushed, setRushed] = useState(false);
 
   if (signature !== snapshot) {
     setSnapshot(signature);
@@ -68,6 +93,7 @@ export function StudyPanel({
       setLaunchCode("");
       setCodeSessionId("");
       setLocalStartedAt("");
+      setRushed(false);
     }
   }
 
@@ -75,7 +101,7 @@ export function StudyPanel({
   const shownSession =
     serverSession ??
     (codeSessionId && localStartedAt && codeSessionId !== hiddenSessionId
-      ? { id: codeSessionId, startedAt: localStartedAt }
+      ? { id: codeSessionId, startedAt: localStartedAt, plannedSeconds: localPlanned }
       : null);
   const visibleCode = shownSession && codeSessionId === shownSession.id ? launchCode : "";
   const launchUrl = visibleCode ? buildPetLaunchUrl(visibleCode) : "";
@@ -92,20 +118,40 @@ export function StudyPanel({
     if (railError) setRailOpen(true);
   }
 
+  async function finishSession(devPasswordValue: string) {
+    if (!shownSession) return { error: "No study session is running." };
+    setPending(true);
+    setError(null);
+    const result = await completeStudyTimer(shownSession.id, devPasswordValue);
+    setPending(false);
+    if (result.error) {
+      setError(result.error);
+      return result;
+    }
+    setLaunchCode("");
+    setCodeSessionId("");
+    setLocalStartedAt("");
+    setRushed(false);
+    setHiddenSessionId(shownSession.id);
+    return result;
+  }
+
   async function onStart() {
     if (pending) return;
     setPending(true);
     setError(null);
-    const result = await startStudySession();
+    const result = await startStudySession(chosenSeconds);
     setPending(false);
     if (result.error) {
       setError(result.error);
       return;
     }
     setCancelled(false);
+    setRushed(false);
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
+    setLocalPlanned(chosenSeconds);
   }
 
   async function onCancel() {
@@ -119,6 +165,7 @@ export function StudyPanel({
       return;
     }
     setCancelled(true);
+    setRushed(false);
     setLaunchCode("");
     setCodeSessionId("");
     setLocalStartedAt("");
@@ -134,7 +181,26 @@ export function StudyPanel({
     if (result.error) setError(result.error);
   }
 
+  function onDevUnlock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!devTimerPasswordMatches(devPassword)) {
+      setDevRejected(true);
+      setDevUnlocked(false);
+      return;
+    }
+    setDevRejected(false);
+    setDevUnlocked(true);
+  }
+
+  async function onDevFinish() {
+    if (pending || !shownSession) return;
+    setRushed(true);
+    await finishSession(DEV_TIMER_PASSWORD);
+  }
+
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
+  const equipped = equippedPet(pets);
+  const selectedSeconds = shownSession?.plannedSeconds ?? chosenSeconds;
 
   return (
     <main className={railOpen ? "desk" : "desk is-rail-closed"}>
@@ -150,9 +216,64 @@ export function StudyPanel({
             <p className="pet-name">{petName}</p>
             <p className="level-label">{levelLabel}</p>
             <p className="growth-label">{petNote}</p>
-            <div className="xp-track" aria-hidden="true">
-              <span className={shownSession ? "xp-fill is-running" : "xp-fill"} />
+            <div
+              className="xp-track"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={petXp}
+              aria-label={`${petName} experience`}
+            >
+              <span className="xp-fill" style={{ width: `${petXp}%` }} />
             </div>
+            <p className="growth-label">{petXp}/100</p>
+            {shownSession ? (
+              <StudyClock session={shownSession} rushed={rushed} onFinished={() => finishSession("")} />
+            ) : null}
+            <div className="length-choices" role="group" aria-label="Study length">
+              {STUDY_LENGTHS.map((length) => (
+                <button
+                  key={length.seconds}
+                  type="button"
+                  className={
+                    selectedSeconds === length.seconds ? "button button-small" : "button button-small button-ghost"
+                  }
+                  aria-pressed={selectedSeconds === length.seconds}
+                  disabled={pending || Boolean(shownSession)}
+                  onClick={() => setChosenSeconds(length.seconds)}
+                >
+                  {length.minutes} min
+                </button>
+              ))}
+            </div>
+            {pets.length > 0 ? (
+              <ul className="desk-pets">
+                {pets.map((pet) => {
+                  const copy = describePet(pet.pet_type);
+                  const progress = experienceProgress(pet.xp);
+                  return (
+                    <li key={pet.id} className={pet.is_desktop_active ? "desk-pet is-equipped" : "desk-pet"}>
+                      <p>
+                        {copy.name}
+                        {pet.is_desktop_active ? " · Equipped" : ""}
+                      </p>
+                      <p className="level-label">Level {progress.level}</p>
+                      <div
+                        className="xp-track"
+                        role="meter"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress.intoLevel}
+                        aria-label={`${copy.name} experience`}
+                      >
+                        <span className="xp-fill" style={{ width: `${progress.intoLevel}%` }} />
+                      </div>
+                      <p className="growth-label">{progress.intoLevel}/100</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
           </div>
           <div className="scene-actions">
             {shownSession ? (
@@ -184,7 +305,7 @@ export function StudyPanel({
         onClick={() => setRailOpen((open) => !open)}
       >
         <span className="level-bar-track" aria-hidden="true">
-          <span className={shownSession ? "vertical-fill is-running" : "vertical-fill"} />
+          <span className="vertical-fill" style={{ flexBasis: `${petXp}%` }} />
         </span>
         <span className="bar-level">{petLevel === null ? "—" : `L${petLevel}`}</span>
       </button>
@@ -205,6 +326,9 @@ export function StudyPanel({
           {shownSession
             ? "Open the pet with the launch link. The code expires in 5 minutes."
             : "The pet watches the list below during a session."}
+        </p>
+        <p className="panel-hint">
+          {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
         </p>
         <button
           type="button"
@@ -239,6 +363,7 @@ export function StudyPanel({
             <p>
               Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
             </p>
+            <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
             {launchUrl ? (
               <>
                 <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
@@ -252,7 +377,56 @@ export function StudyPanel({
             )}
           </div>
         ) : null}
+        <div className="dev-finish">
+          <button type="button" className="button button-small button-ghost" onClick={() => setDevOpen(true)}>
+            Dev
+          </button>
+          {devOpen && !devUnlocked ? (
+            <form onSubmit={onDevUnlock}>
+              <label className="field">
+                Password
+                <input
+                  type="password"
+                  value={devPassword}
+                  autoComplete="off"
+                  onChange={(event) => setDevPassword(event.target.value)}
+                />
+              </label>
+              <button type="submit" className="button button-small">
+                Unlock
+              </button>
+              {devRejected ? (
+                <p className="form-error" role="alert">
+                  That password does not match.
+                </p>
+              ) : null}
+            </form>
+          ) : null}
+          {devUnlocked ? (
+            <button type="button" className="button button-small" disabled={pending || !shownSession} onClick={onDevFinish}>
+              Finish now
+            </button>
+          ) : null}
+        </div>
         <PetStatus downloadUrl={downloadUrl} />
+        <div className="score-history">
+          <h3>Sessions</h3>
+          {recordedSessions.length === 0 ? (
+            <p className="empty-pets">No study time recorded yet.</p>
+          ) : (
+            <ul className="score-list">
+              {recordedSessions.map((session) => (
+                <li key={session.id}>
+                  <span>{session.status === "cancelled" ? "Cancelled" : "Finished"}</span>
+                  <span>{formatDuration(session.durationSeconds)}</span>
+                  {session.endedAt ? (
+                    <time dateTime={session.endedAt}>{formatTimestamp(session.endedAt)}</time>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="score-history">
           <h3>Scores</h3>
           {scores.length === 0 ? (
@@ -274,5 +448,54 @@ export function StudyPanel({
         {extras}
       </aside>
     </main>
+  );
+}
+
+function StudyClock({
+  session,
+  rushed,
+  onFinished,
+}: {
+  session: ActiveStudySession;
+  rushed: boolean;
+  onFinished: () => Promise<{ error: string }>;
+}) {
+  const [now, setNow] = useState<number | null>(null);
+  const attempt = useRef<string | null>(null);
+  const onFinishedRef = useRef(onFinished);
+
+  useEffect(() => {
+    onFinishedRef.current = onFinished;
+  });
+
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, 1000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
+  }, [session.id]);
+
+  const remaining = rushed
+    ? 0
+    : now === null
+      ? null
+      : remainingSeconds(session.startedAt, session.plannedSeconds, now);
+
+  useEffect(() => {
+    if (now === null || remaining === null || remaining > 0) return;
+    if (attempt.current === session.id) return;
+    attempt.current = session.id;
+    void onFinishedRef.current().then((result) => {
+      if (result.error === "Study time has not finished") attempt.current = null;
+    });
+  }, [now, remaining, session.id]);
+
+  return (
+    <p className="study-clock" role="timer">
+      {remaining === null ? "—" : formatClock(remaining)}
+    </p>
   );
 }
