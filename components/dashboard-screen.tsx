@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
-import { describePet, type PetCard } from "@/lib/pets";
-import type { ActiveStudySession, BlocklistEntry, StudyScoreCard } from "@/lib/study";
+import { describePet, equippedPet, type PetCard } from "@/lib/pets";
+import { experienceProgress, type ActiveStudySession, type BlocklistEntry, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
 export function DashboardScreen({
   displayName,
   points,
+  totalStudySeconds,
   pets,
   petsError,
   blocklist,
   activeSession,
   scores,
+  recordedSessions,
   studyError,
   closeBlocked,
   closeBlockedError,
@@ -19,30 +21,36 @@ export function DashboardScreen({
 }: {
   displayName: string;
   points: number;
+  totalStudySeconds: number;
   pets: PetCard[];
   petsError: string | null;
   blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
+  recordedSessions: RecordedStudySession[];
   studyError: string | null;
   closeBlocked: boolean;
   closeBlockedError: string | null;
   downloadUrl: string | null;
 }) {
-  const activePet = pets.find((pet) => pet.is_desktop_active) ?? null;
+  const activePet = equippedPet(pets);
   const described = activePet ? describePet(activePet.pet_type) : null;
+  const progress = activePet ? experienceProgress(activePet.xp) : null;
   return (
     <div className="desk-page">
-      <SiteHeader displayName={displayName} points={points} />
+      <SiteHeader displayName={displayName} points={points} studySeconds={totalStudySeconds} />
       <StudyPanel
         blocklist={blocklist}
         activeSession={activeSession}
         scores={scores}
+        recordedSessions={recordedSessions}
         studyError={studyError}
         closeBlocked={closeBlocked}
         closeBlockedError={closeBlockedError}
+        pets={pets}
         petName={described?.name ?? "No pet is equipped."}
-        petLevel={activePet?.level ?? null}
+        petLevel={progress?.level ?? null}
+        petXp={progress?.intoLevel ?? 0}
         petNote={petsError ?? described?.note ?? "Choose one from your inventory."}
         downloadUrl={downloadUrl}
         extras={

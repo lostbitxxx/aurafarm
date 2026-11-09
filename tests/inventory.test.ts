@@ -16,7 +16,7 @@ test("the inventory page lists pets and the desk only names the equipped one", (
   assert.match(page, /PetInventory/);
   assert.match(loader, /getClaims/);
   assert.match(loader, /redirect\("\/login"\)/);
-  assert.match(loader, /select\("id, pet_type, level, is_desktop_active"\)/);
+  assert.match(loader, /select\("id, pet_type, level, xp, is_desktop_active"\)/);
   assert.match(loader, /\.eq\("user_id", userId\)/);
   assert.match(loader, /\.order\("id", \{ ascending: true \}\)/);
   assert.doesNotMatch(loader, /createAdminClient/);
