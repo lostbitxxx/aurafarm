@@ -1,39 +1,64 @@
 export function drawLanternMoth(context) {
   context.fillStyle = "rgba(8, 16, 12, 0.28)";
   context.beginPath();
-  context.ellipse(64, 108, 32, 7, 0, 0, Math.PI * 2);
+  context.ellipse(64, 106, 28, 6, 0, 0, Math.PI * 2);
   context.fill();
-  context.fillStyle = "rgba(227, 154, 69, 0.22)";
-  context.beginPath();
-  context.ellipse(64, 62, 42, 28, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = "#e39a45";
-  context.beginPath();
-  context.ellipse(38, 52, 24, 16, -0.5, 0, Math.PI * 2);
-  context.ellipse(90, 52, 24, 16, 0.5, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = "#c47a2c";
-  context.beginPath();
-  context.ellipse(42, 78, 18, 12, 0.4, 0, Math.PI * 2);
-  context.ellipse(86, 78, 18, 12, -0.4, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = "#14211a";
-  context.beginPath();
-  context.ellipse(64, 70, 6, 22, 0, 0, Math.PI * 2);
-  context.fill();
-  context.strokeStyle = "#14211a";
-  context.lineWidth = 2;
-  context.beginPath();
-  context.moveTo(60, 50);
-  context.quadraticCurveTo(48, 28, 54, 16);
-  context.moveTo(68, 50);
-  context.quadraticCurveTo(80, 28, 74, 16);
-  context.stroke();
-  context.fillStyle = "#f7f3e8";
-  context.beginPath();
-  context.arc(54, 16, 2.2, 0, Math.PI * 2);
-  context.arc(74, 16, 2.2, 0, Math.PI * 2);
-  context.arc(60, 64, 1.6, 0, Math.PI * 2);
-  context.arc(68, 64, 1.6, 0, Math.PI * 2);
-  context.fill();
+
+  const palette = {
+    "#": "#3a281c",
+    Y: "#f4c968",
+    W: "#e39a45",
+    d: "#c47a2c",
+    D: "#9e5e28",
+    o: "#fff1ce",
+    O: "#7a4824",
+    B: "#f6e4c4",
+    C: "#fff7e6",
+    P: "#2a1e16",
+    H: "#ffffff",
+    A: "#5c402c",
+    L: "#ffd678",
+    l: "#fff4c8",
+    F: "#5c3c28",
+  };
+  const rows = [
+    "..........##.......##...........",
+    ".........#LL#.....#LL#..........",
+    ".........#lL#.....#lL#..........",
+    "..........##.......##...........",
+    "..........#A#......#A#..........",
+    "..........#A#......#A#..........",
+    "..........#A#......#A#..........",
+    "..........#A#......#A#..........",
+    "....#######A#.####.#A#######....",
+    "...#YYYYYYYA##BBBB##AYYYYYYY#...",
+    "..#YYYYYYYYYBBBBBBBBYYYYYYYYY#..",
+    ".#YYYYYYYYYBBBBBBBBBBYYYYYYYYY#.",
+    "#YYYYYooYYYBBBBBBBBBBYYYooYYYYY#",
+    "#YYYYooOoYBBHBBBBBHBBBYoOooYYYY#",
+    "#YYYYoOOoYBBPPBBBBPPBBYoOOoYYYY#",
+    "#WWWWWoooWBBBBBBBBBBBBWoooWWWWW#",
+    "#WWWWWWWWWBBBCCCCCCBBBWWWWWWWWW#",
+    ".#WWWWWWdddBBCCCCCCBBdddWWWWWW#.",
+    "..#WWWdddddBCCCCCCCCBdddddWWW#..",
+    "...##dddddddBCCCCCCBddddddd##...",
+    "....#ddDDDDDDBCCCCBDDDDDDdd#....",
+    ".....#dDDDDDDddBBddDDDDDDd#.....",
+    "......#ddDDDd#F##F#dDDDdd#......",
+    ".......#######F##F#######.......",
+    ".............#F##F#.............",
+    "..............#..#..............",
+  ];
+  const scale = 3;
+  const originX = Math.floor((128 - rows[0].length * scale) / 2);
+  const originY = 22;
+
+  for (let y = 0; y < rows.length; y += 1) {
+    for (let x = 0; x < rows[y].length; x += 1) {
+      const color = palette[rows[y][x]];
+      if (!color) continue;
+      context.fillStyle = color;
+      context.fillRect(originX + x * scale, originY + y * scale, scale, scale);
+    }
+  }
 }
