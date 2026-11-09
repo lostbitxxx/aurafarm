@@ -1,0 +1,31 @@
+export function drawBabySlime(context) {
+  context.fillStyle = "rgba(8, 16, 12, 0.28)";
+  context.beginPath();
+  context.ellipse(64, 108, 36, 8, 0, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#c6ef4a";
+  context.beginPath();
+  context.ellipse(64, 68, 40, 32, 0, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = "#f4ffe0";
+  context.lineWidth = 6;
+  context.lineCap = "round";
+  context.beginPath();
+  context.arc(58, 52, 16, Math.PI * 1.15, Math.PI * 1.85);
+  context.stroke();
+  context.fillStyle = "#14211a";
+  context.beginPath();
+  context.arc(50, 66, 5, 0, Math.PI * 2);
+  context.arc(78, 66, 5, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#f7f3e8";
+  context.beginPath();
+  context.arc(52, 64, 1.6, 0, Math.PI * 2);
+  context.arc(80, 64, 1.6, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = "#14211a";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(64, 78, 10, 0.2, Math.PI - 0.2);
+  context.stroke();
+}
