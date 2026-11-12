@@ -30,6 +30,7 @@ export function AdminReset() {
 
   return (
     <div className="auth-form">
+      <p>This resets your pets to level 1 with 0 experience and deletes your study records. Other accounts stay as they are.</p>
       <label className="field">
         Password
         <input
@@ -40,9 +41,9 @@ export function AdminReset() {
         />
       </label>
       <button type="button" className="button" disabled={pending} onClick={onReset}>
-        Reset all pets
+        Reset my pets and study records
       </button>
-      {done ? <p>Every pet is level 1 with 0 experience. Study records are gone.</p> : null}
+      {done ? <p>Your pets are level 1 with 0 experience. Your study records are gone.</p> : null}
       {error ? (
         <p className="form-error" role="alert">
           {error}

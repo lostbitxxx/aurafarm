@@ -280,20 +280,27 @@ test("ending early records studied minutes without the finish bonus", () => {
   assert.doesNotMatch(early, /finish_bonus/);
 });
 
-test("the admin reset clears pet experience and study rows", () => {
+test("the admin reset clears only the signed-in farmer", () => {
   const sql = readFileSync(
-    new URL("../supabase/migrations/0015_admin_reset.sql", import.meta.url),
+    new URL("../supabase/migrations/0016_admin_reset_own.sql", import.meta.url),
     "utf8",
   );
   const page = readFileSync(new URL("../app/admin/page.tsx", import.meta.url), "utf8");
   const panel = readFileSync(new URL("../components/admin-reset.tsx", import.meta.url), "utf8");
+  const action = readFileSync(new URL("../lib/actions/admin.ts", import.meta.url), "utf8");
   assert.match(sql, /dev_password is distinct from 'emia'/);
-  assert.match(sql, /delete from public\.study_sessions/);
+  assert.match(sql, /farmer := auth\.uid\(\)/);
+  assert.match(sql, /delete from public\.study_sessions\s+where user_id = farmer/);
+  assert.match(sql, /where user_id = farmer/);
   assert.match(sql, /set xp = 0/);
   assert.match(sql, /level = 1/);
+  assert.doesNotMatch(sql, /delete from public\.study_sessions;/);
   assert.doesNotMatch(sql, /delete from public\.user_pets/);
   assert.doesNotMatch(sql, /delete from public\.profiles/);
+  assert.match(action, /getClaims/);
+  assert.match(action, /Sign in before resetting your pets/);
   assert.match(page, /AdminReset/);
-  assert.match(panel, /Reset all pets/);
+  assert.match(panel, /deletes your study records/);
+  assert.match(panel, /Reset my pets and study records/);
   assert.match(panel, /resetAllPets/);
 });
