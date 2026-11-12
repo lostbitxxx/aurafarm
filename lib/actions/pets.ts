@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { sampleColor, sampleHat } from "@/lib/pet-assets";
+import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { shopPurchaseBlock } from "@/lib/pets";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -119,6 +119,35 @@ export async function applyPetHat(petId: string, hatId: string | null) {
     if (/not owned/i.test(error.message)) return { error: "You do not own that hat." };
     if (/not found/i.test(error.message)) return { error: "That pet could not be found." };
     if (/not in the collection/i.test(error.message)) return { error: "That hat could not be applied." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function applyPetClothes(petId: string, clothesId: string | null) {
+  if (!petIdPattern.test(petId) || (clothesId !== null && !sampleClothes(clothesId))) {
+    return { error: "Those clothes could not be applied." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to apply clothes." };
+  }
+
+  const { error } = await supabase.rpc("apply_pet_clothes", {
+    target_pet_id: petId,
+    target_clothes: clothesId,
+  });
+  if (error) {
+    if (/not owned/i.test(error.message)) return { error: "You do not own those clothes." };
+    if (/not found/i.test(error.message)) return { error: "That pet could not be found." };
+    if (/not in the collection/i.test(error.message)) return { error: "Those clothes could not be applied." };
     return { error: error.message };
   }
 

@@ -87,6 +87,7 @@ function RoomPet({
           petType={pet.pet_type}
           color={pet.color}
           hat={pet.hat}
+          clothes={pet.clothes}
           pose={pose}
           className={String(pose).startsWith("walk") ? "is-walking" : undefined}
         />

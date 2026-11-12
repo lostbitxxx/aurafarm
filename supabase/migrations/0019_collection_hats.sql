@@ -2,6 +2,7 @@
 -- hat_c through hat_j are already in the database. Adding one of them does not
 -- need a migration. Copy the hat_a-* folders to hat_c-* (or the matching id)
 -- under each pet color for cat and bunny, then edit those SVG files.
+-- Copying hat_a-* already includes the clothes_a and clothes_b folders that sit beside that hat, so a new hat does not need a clothes migration either.
 
 insert into public.collection_items (id, kind, name)
 values

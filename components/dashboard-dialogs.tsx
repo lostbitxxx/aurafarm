@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
+import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -88,23 +88,29 @@ export function CollectionDialog({
   pets,
   ownedColorIds,
   ownedHatIds,
+  ownedClothesIds,
   onClose,
   onColorApplied,
   onHatApplied,
+  onClothesApplied,
 }: {
   pets: PetCard[];
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
+  ownedClothesIds: readonly string[];
   onClose: () => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
+  onClothesApplied: (petId: string, clothesId: string | null) => void;
 }) {
   const [tab, setTab] = useState<CollectionTab>("colors");
   const [applyColorId, setApplyColorId] = useState<string | null>(null);
   const [applyHat, setApplyHat] = useState<{ id: string | null } | null>(null);
+  const [applyClothes, setApplyClothes] = useState<{ id: string | null } | null>(null);
   const active = COLLECTION_TABS.find((entry) => entry.id === tab) ?? COLLECTION_TABS[0];
   const ownedColors = SAMPLE_COLORS.filter((color) => ownedColorIds.includes(color.id));
   const ownedHats = SAMPLE_HATS.filter((hat) => ownedHatIds.includes(hat.id));
+  const ownedClothes = SAMPLE_CLOTHES.filter((clothes) => ownedClothesIds.includes(clothes.id));
   const applyColor = ownedColors.find((color) => color.id === applyColorId) ?? null;
 
   if (applyColor) {
@@ -126,6 +132,17 @@ export function CollectionDialog({
         pets={pets}
         onClose={() => setApplyHat(null)}
         onApplied={onHatApplied}
+      />
+    );
+  }
+
+  if (applyClothes) {
+    return (
+      <ApplyClothesDialog
+        clothesId={applyClothes.id}
+        pets={pets}
+        onClose={() => setApplyClothes(null)}
+        onApplied={onClothesApplied}
       />
     );
   }
@@ -179,6 +196,27 @@ export function CollectionDialog({
                 <button type="button" className="collection-color" onClick={() => setApplyHat({ id: hat.id })}>
                   <PixelPetArt petType="baby_slime" hat={hat.id} className="dialog-pet-art" />
                   <strong>{hat.id}</strong>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : tab === "clothes" && ownedClothes.length > 0 ? (
+          <ul className="collection-color-grid">
+            <li>
+              <button type="button" className="collection-color" onClick={() => setApplyClothes({ id: null })}>
+                <PixelPetArt petType="baby_slime" className="dialog-pet-art" />
+                <strong>None</strong>
+              </button>
+            </li>
+            {ownedClothes.map((clothes) => (
+              <li key={clothes.id}>
+                <button
+                  type="button"
+                  className="collection-color"
+                  onClick={() => setApplyClothes({ id: clothes.id })}
+                >
+                  <PixelPetArt petType="baby_slime" clothes={clothes.id} className="dialog-pet-art" />
+                  <strong>{clothes.id}</strong>
                 </button>
               </li>
             ))}
@@ -240,7 +278,7 @@ function ApplyColorDialog({
             const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
-                <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} className="dialog-pet-art" />
+                <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
                   <strong>{copy.name}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
@@ -307,7 +345,7 @@ function ApplyHatDialog({
             const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
-                <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} className="dialog-pet-art" />
+                <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
                   <strong>{copy.name}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
@@ -319,6 +357,79 @@ function ApplyHatDialog({
                   onClick={() => onApply(pet.id)}
                 >
                   {pendingId === pet.id ? "…" : hatId ? "Apply" : "Remove"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </FarmDialog>
+  );
+}
+
+function ApplyClothesDialog({
+  clothesId,
+  pets,
+  onClose,
+  onApplied,
+}: {
+  clothesId: string | null;
+  pets: PetCard[];
+  onClose: () => void;
+  onApplied: (petId: string, clothesId: string | null) => void;
+}) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const label = clothesId ?? "no clothes";
+
+  async function onApply(petId: string) {
+    if (pendingId) return;
+    setError(null);
+    setPendingId(petId);
+    const result = await applyPetClothes(petId, clothesId);
+    setPendingId(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    onApplied(petId, clothesId);
+    onClose();
+  }
+
+  return (
+    <FarmDialog title={clothesId ? `Apply ${clothesId}` : "Remove clothes"} onClose={onClose} wide>
+      <p className="panel-hint">Which pet should wear {label}?</p>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {pets.length === 0 ? (
+        <p className="panel-hint">You do not own a pet yet.</p>
+      ) : (
+        <ul className="dialog-list">
+          {pets.map((pet) => {
+            const copy = describePet(pet.pet_type);
+            return (
+              <li key={pet.id} className="dialog-row">
+                <PixelPetArt
+                  petType={pet.pet_type}
+                  color={pet.color}
+                  hat={pet.hat}
+                  clothes={pet.clothes}
+                  className="dialog-pet-art"
+                />
+                <div>
+                  <strong>{copy.name}</strong>
+                  <p className="panel-hint">Level {pet.level}</p>
+                </div>
+                <button
+                  type="button"
+                  className="button button-small"
+                  disabled={pendingId !== null}
+                  onClick={() => onApply(pet.id)}
+                >
+                  {pendingId === pet.id ? "…" : clothesId ? "Apply" : "Remove"}
                 </button>
               </li>
             );
@@ -381,7 +492,7 @@ export function InventoryDialog({
           const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
           return (
             <li key={pet.id} className="dialog-row">
-              <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} className="dialog-pet-art" />
+              <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
               <div>
                 <strong>{copy.name}</strong>
                 <p className="panel-hint">

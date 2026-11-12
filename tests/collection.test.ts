@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { petAssetPath, SAMPLE_COLORS, SAMPLE_HATS, sampleColor, sampleHat } from "../lib/pet-assets";
+import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
   assert.equal(
@@ -101,5 +101,55 @@ test("hat ids are owned once per account and pets stay without a hat", () => {
   assert.match(signup, /'hat_a'/);
   assert.match(apply, /Hat not owned/);
   assert.match(apply, /set hat = target_hat/);
+  assert.match(apply, /security invoker/);
+});
+
+test("a saved outfit uses its folder and empty clothes do not", () => {
+  assert.equal(
+    petAssetPath("baby_slime", "idle", { clothes: "clothes_a" }),
+    "/pet-assets/pets/cat/sage/no-hat-clothes_a/idle.svg",
+  );
+  assert.equal(
+    petAssetPath("baby_slime", "idle", { hat: "hat_a", clothes: "clothes_a" }),
+    "/pet-assets/pets/cat/sage/hat_a-clothes_a/idle.svg",
+  );
+  assert.equal(
+    petAssetPath("baby_slime", "idle", { clothes: null }),
+    "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
+  );
+  assert.equal(sampleClothes("clothes_a"), "clothes_a");
+  assert.equal(sampleClothes("blue-vest"), null);
+  assert.deepEqual(
+    SAMPLE_CLOTHES.map((clothes) => clothes.id),
+    ["clothes_a", "clothes_b", "clothes_c", "clothes_d", "clothes_e", "clothes_f", "clothes_g", "clothes_h", "clothes_i", "clothes_j"],
+  );
+});
+
+test("clothes ids are owned once per account and pets stay without clothes", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0020_collection_clothes.sql", import.meta.url),
+    "utf8",
+  );
+  const backfill = sql.slice(
+    sql.indexOf("insert into public.user_collections"),
+    sql.indexOf("create or replace function public.handle_new_user"),
+  );
+  const signup = sql.slice(
+    sql.indexOf("function public.handle_new_user"),
+    sql.indexOf("function public.apply_pet_clothes"),
+  );
+  const apply = sql.slice(sql.indexOf("function public.apply_pet_clothes"));
+
+  for (const id of ["clothes_a", "clothes_b", "clothes_c", "clothes_d", "clothes_e", "clothes_f", "clothes_g", "clothes_h", "clothes_i", "clothes_j"]) {
+    assert.match(sql, new RegExp(`'${id}', 'clothes', '${id}'`));
+  }
+  assert.match(sql, /clothes_c through clothes_j are already in the database/);
+  assert.match(backfill, /from public\.profiles/);
+  assert.doesNotMatch(backfill, /user_pets/);
+  assert.doesNotMatch(signup, /set clothes/);
+  assert.match(signup, /'clothes_a'/);
+  assert.match(signup, /'hat_a'/);
+  assert.match(apply, /Clothes not owned/);
+  assert.match(apply, /set clothes = target_clothes/);
   assert.match(apply, /security invoker/);
 });
