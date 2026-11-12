@@ -1,8 +1,3 @@
-export type BlocklistEntry = {
-  host: string;
-  label: string;
-};
-
 export const STUDY_LENGTHS = [
   { minutes: 5, seconds: 300 },
   { minutes: 30, seconds: 1800 },

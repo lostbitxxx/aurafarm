@@ -15,14 +15,12 @@ import {
   remainingSeconds,
   STUDY_LENGTHS,
   type ActiveStudySession,
-  type BlocklistEntry,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
 import { PetStatus } from "./pet-status";
 
 export function StudyPanel({
-  blocklist,
   activeSession,
   scores,
   recordedSessions,
@@ -37,7 +35,6 @@ export function StudyPanel({
   downloadUrl,
   extras,
 }: {
-  blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   recordedSessions: RecordedStudySession[];
@@ -59,7 +56,6 @@ export function StudyPanel({
     activeSession?.useDesktopPet ? "pet" : "web",
     scores.map((score) => score.id).join(","),
     recordedSessions.map((session) => `${session.id}:${session.durationSeconds}`).join(","),
-    blocklist.map((entry) => entry.host).join(","),
     pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join(","),
     studyError ?? "",
     closeBlocked ? "1" : "0",
@@ -352,15 +348,6 @@ export function StudyPanel({
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
         </p>
-        {blocklist.length === 0 ? (
-          <p className="empty-pets">The blocklist is empty.</p>
-        ) : (
-          <ul className="blocklist">
-            {blocklist.map((entry) => (
-              <li key={entry.host}>{entry.label}</li>
-            ))}
-          </ul>
-        )}
         {error ? (
           <p className="form-error" role="alert">
             {error}

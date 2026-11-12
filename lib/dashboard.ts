@@ -9,7 +9,6 @@ import {
   storedStudySeconds,
   studyTimerMigrationMessage,
   type ActiveStudySession,
-  type BlocklistEntry,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "./study";
@@ -26,7 +25,6 @@ export async function loadDashboard() {
     { data: profile },
     closeBlockedResult,
     petsResult,
-    blocklistResult,
     sessionResult,
     scoresResult,
     recordedResult,
@@ -38,7 +36,6 @@ export async function loadDashboard() {
         .select("id, pet_type, level, xp, is_desktop_active")
         .eq("user_id", userId)
         .order("id", { ascending: true }),
-      supabase.from("blocklist_hosts").select("host, label").order("host", { ascending: true }),
       supabase
         .from("study_sessions")
         .select("id, started_at, planned_seconds, use_desktop_pet")
@@ -71,11 +68,6 @@ export async function loadDashboard() {
       is_desktop_active: Boolean(pet.is_desktop_active),
     };
   });
-
-  const blocklist: BlocklistEntry[] = (blocklistResult.data ?? []).map((entry) => ({
-    host: String(entry.host),
-    label: String(entry.label),
-  }));
 
   const activeSession: ActiveStudySession | null = sessionResult.data
     ? {
@@ -112,8 +104,7 @@ export async function loadDashboard() {
   }));
 
   const studyError = studyTimerMigrationMessage(
-    blocklistResult.error?.message ??
-      sessionResult.error?.message ??
+    sessionResult.error?.message ??
       scoresResult.error?.message ??
       recordedResult.error?.message ??
       petsResult.error?.message ??
@@ -125,7 +116,6 @@ export async function loadDashboard() {
     totalStudySeconds,
     pets,
     petsError: studyTimerMigrationMessage(petsResult.error?.message ?? null),
-    blocklist,
     activeSession,
     scores,
     recordedSessions: recordedSessions.slice(0, 10),

@@ -2,14 +2,13 @@ import Link from "next/link";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
-import { experienceProgress, type ActiveStudySession, type BlocklistEntry, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
+import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
 export function DashboardScreen({
   displayName,
   totalStudySeconds,
   pets,
   petsError,
-  blocklist,
   activeSession,
   scores,
   recordedSessions,
@@ -22,7 +21,6 @@ export function DashboardScreen({
   totalStudySeconds: number;
   pets: PetCard[];
   petsError: string | null;
-  blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   recordedSessions: RecordedStudySession[];
@@ -38,7 +36,6 @@ export function DashboardScreen({
     <div className="desk-page">
       <SiteHeader displayName={displayName} studySeconds={totalStudySeconds} />
       <StudyPanel
-        blocklist={blocklist}
         activeSession={activeSession}
         scores={scores}
         recordedSessions={recordedSessions}

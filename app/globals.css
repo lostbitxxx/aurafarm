@@ -496,7 +496,6 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   padding: 0.45rem 0.6rem;
 }
 
-.desk .blocklist li,
 .desk .score-list li { background: rgba(20, 33, 26, 0.05); }
 
 .monitor {
@@ -601,7 +600,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 .study-panel h3 { margin: 1.2rem 0 0.4rem; font-size: 1.2rem; }
 .study-panel > .button { margin: 0 0 1rem; }
 
-.blocklist, .score-list {
+.score-list {
   list-style: none;
   margin: 0 0 1rem;
   padding: 0;
@@ -609,7 +608,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.45rem;
 }
 
-.blocklist li, .score-list li {
+.score-list li {
   padding: 0.55rem 0.75rem;
   border-radius: 16px;
   background: rgba(8, 16, 12, 0.28);
