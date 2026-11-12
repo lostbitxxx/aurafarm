@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { petAssetPath, type PetPose } from "@/lib/pet-assets";
+import { petAssetPath, sampleColor, type PetPose } from "@/lib/pet-assets";
 
 export function PixelPetArt({
   petType,
   pose = "idle",
+  color = null,
   className,
   alt = "",
 }: {
   petType: string;
   pose?: PetPose;
+  color?: string | null;
   className?: string;
   alt?: string;
 }) {
@@ -18,7 +20,7 @@ export function PixelPetArt({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className ? `pixel-pet-art ${className}` : "pixel-pet-art"}
-      src={petAssetPath(petType, pose)}
+      src={petAssetPath(petType, pose, { color: sampleColor(color) ?? undefined })}
       alt={alt}
       draggable={false}
       style={{ imageRendering: "pixelated" }}

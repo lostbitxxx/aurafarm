@@ -10,6 +10,20 @@ export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "wait" | "study1" |
 
 export const PET_COLORS: readonly PetColor[] = ["honey", "lavender", "sage", "rose"];
 
+/** Colors a farmer can own once and apply to any pet. Sage stays a default only. */
+export const SAMPLE_COLORS = [
+  { id: "honey", name: "Honey" },
+  { id: "lavender", name: "Lavender" },
+  { id: "rose", name: "Rose" },
+] as const satisfies readonly { id: PetColor; name: string }[];
+
+export type SampleColorId = (typeof SAMPLE_COLORS)[number]["id"];
+
+export function sampleColor(value: unknown): SampleColorId | null {
+  if (value === "honey" || value === "lavender" || value === "rose") return value;
+  return null;
+}
+
 /** Temporary frontend artwork mapping — not a database change. */
 export const PET_TYPE_SPECIES: Record<string, PetSpecies> = {
   baby_slime: "cat",

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE } from "@/lib/pet-assets";
+import { applyPetColor, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
+import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_COLORS } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -84,14 +84,38 @@ const COLLECTION_TABS: { id: CollectionTab; label: string; emptyNoun: string }[]
   { id: "clothes", label: "Clothes", emptyNoun: "clothes" },
 ];
 
-/** Read-only Collection modal. No accessory catalog/unlock data exists yet. */
-export function CollectionDialog({ onClose }: { onClose: () => void }) {
+export function CollectionDialog({
+  pets,
+  ownedColorIds,
+  onClose,
+  onColorApplied,
+}: {
+  pets: PetCard[];
+  ownedColorIds: readonly string[];
+  onClose: () => void;
+  onColorApplied: (petId: string, colorId: string) => void;
+}) {
   const [tab, setTab] = useState<CollectionTab>("colors");
+  const [applyColorId, setApplyColorId] = useState<string | null>(null);
   const active = COLLECTION_TABS.find((entry) => entry.id === tab) ?? COLLECTION_TABS[0];
+  const ownedColors = SAMPLE_COLORS.filter((color) => ownedColorIds.includes(color.id));
+  const applyColor = ownedColors.find((color) => color.id === applyColorId) ?? null;
+
+  if (applyColor) {
+    return (
+      <ApplyColorDialog
+        colorId={applyColor.id}
+        colorName={applyColor.name}
+        pets={pets}
+        onClose={() => setApplyColorId(null)}
+        onApplied={onColorApplied}
+      />
+    );
+  }
 
   return (
     <FarmDialog title="Collection" onClose={onClose} wide>
-      <p className="panel-hint">Your companion’s wardrobe, collected through study.</p>
+      <p className="panel-hint">A color you own can be applied to any pet.</p>
       <div className="collection-tabs" role="tablist" aria-label="Collection categories">
         {COLLECTION_TABS.map((entry) => (
           <button
@@ -114,9 +138,95 @@ export function CollectionDialog({ onClose }: { onClose: () => void }) {
         id={`collection-panel-${active.id}`}
         aria-labelledby={`collection-tab-${active.id}`}
       >
-        <p className="collection-empty-title">Nothing to collect here yet.</p>
-        <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
+        {tab === "colors" && ownedColors.length > 0 ? (
+          <ul className="dialog-list">
+            {ownedColors.map((color) => (
+              <li key={color.id}>
+                <button type="button" className="dialog-row" onClick={() => setApplyColorId(color.id)}>
+                  <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
+                  <div>
+                    <strong>{color.name}</strong>
+                    <p className="panel-hint">Apply to one of your pets.</p>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <p className="collection-empty-title">Nothing to collect here yet.</p>
+            <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
+          </>
+        )}
       </div>
+    </FarmDialog>
+  );
+}
+
+function ApplyColorDialog({
+  colorId,
+  colorName,
+  pets,
+  onClose,
+  onApplied,
+}: {
+  colorId: string;
+  colorName: string;
+  pets: PetCard[];
+  onClose: () => void;
+  onApplied: (petId: string, colorId: string) => void;
+}) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onApply(petId: string) {
+    if (pendingId) return;
+    setError(null);
+    setPendingId(petId);
+    const result = await applyPetColor(petId, colorId);
+    setPendingId(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    onApplied(petId, colorId);
+    onClose();
+  }
+
+  return (
+    <FarmDialog title={`Apply ${colorName}`} onClose={onClose} wide>
+      <p className="panel-hint">Which pet should wear {colorName}?</p>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {pets.length === 0 ? (
+        <p className="panel-hint">You do not own a pet yet.</p>
+      ) : (
+        <ul className="dialog-list">
+          {pets.map((pet) => {
+            const copy = describePet(pet.pet_type);
+            return (
+              <li key={pet.id} className="dialog-row">
+                <PixelPetArt petType={pet.pet_type} color={pet.color} className="dialog-pet-art" />
+                <div>
+                  <strong>{copy.name}</strong>
+                  <p className="panel-hint">Level {pet.level}</p>
+                </div>
+                <button
+                  type="button"
+                  className="button button-small"
+                  disabled={pendingId !== null}
+                  onClick={() => onApply(pet.id)}
+                >
+                  {pendingId === pet.id ? "…" : "Apply"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </FarmDialog>
   );
 }
@@ -173,7 +283,7 @@ export function InventoryDialog({
           const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
           return (
             <li key={pet.id} className="dialog-row">
-              <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
+              <PixelPetArt petType={pet.pet_type} color={pet.color} className="dialog-pet-art" />
               <div>
                 <strong>{copy.name}</strong>
                 <p className="panel-hint">

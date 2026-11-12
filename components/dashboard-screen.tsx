@@ -35,6 +35,7 @@ export function DashboardScreen({
   displayName,
   totalStudySeconds,
   pets,
+  ownedColorIds,
   petsError,
   activeSession,
   scores,
@@ -48,6 +49,7 @@ export function DashboardScreen({
   displayName: string;
   totalStudySeconds: number;
   pets: PetCard[];
+  ownedColorIds: readonly string[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -62,7 +64,9 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
-  const petsSignature = pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join("|");
+  const petsSignature = pets
+    .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}`)
+    .join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
 
   if (petsSignature !== petsSnap) {
@@ -90,6 +94,12 @@ export function DashboardScreen({
       writeRoomPlacement(userId, next);
       return next;
     });
+  }
+
+  function onColorApplied(petId: string, colorId: string) {
+    setLocalPets((current) =>
+      current.map((pet) => (pet.id === petId ? { ...pet, color: colorId } : pet)),
+    );
   }
 
   function onEquipped(petId: string) {
@@ -130,7 +140,14 @@ export function DashboardScreen({
         onEquipped={onEquipped}
       />
       {dialog === "shop" ? <ShopDialog ownedTypes={ownedTypes} onClose={() => setDialog(null)} /> : null}
-      {dialog === "collection" ? <CollectionDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "collection" ? (
+        <CollectionDialog
+          pets={localPets}
+          ownedColorIds={ownedColorIds}
+          onClose={() => setDialog(null)}
+          onColorApplied={onColorApplied}
+        />
+      ) : null}
       {dialog === "inventory" ? (
         <InventoryDialog
           pets={localPets}

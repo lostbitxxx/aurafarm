@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sampleColor } from "@/lib/pet-assets";
 import { shopPurchaseBlock } from "@/lib/pets";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -63,6 +64,35 @@ export async function buyPet(petType: string) {
 
   revalidatePath("/shop");
   revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function applyPetColor(petId: string, colorId: string) {
+  if (!petIdPattern.test(petId) || !sampleColor(colorId)) {
+    return { error: "That color could not be applied." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to apply a color." };
+  }
+
+  const { error } = await supabase.rpc("apply_pet_color", {
+    target_pet_id: petId,
+    target_color: colorId,
+  });
+  if (error) {
+    if (/not owned/i.test(error.message)) return { error: "You do not own that color." };
+    if (/not found/i.test(error.message)) return { error: "That pet could not be found." };
+    if (/not in the collection/i.test(error.message)) return { error: "That color could not be applied." };
+    return { error: error.message };
+  }
+
   revalidatePath("/dashboard");
   return { error: "" };
 }

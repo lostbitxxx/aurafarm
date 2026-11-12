@@ -85,6 +85,7 @@ function RoomPet({
         <span className="room-pet-label">Lv.{progress.level}</span>
         <PixelPetArt
           petType={pet.pet_type}
+          color={pet.color}
           pose={pose}
           className={String(pose).startsWith("walk") ? "is-walking" : undefined}
         />
