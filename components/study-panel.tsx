@@ -231,11 +231,29 @@ export function StudyPanel({
               <span className="xp-fill" style={{ width: `${petXp}%` }} />
             </div>
             <p className="growth-label">{petXp}/100</p>
-            {shownSession ? (
+            {shownSession?.useDesktopPet ? (
+              <div className="study-active">
+                <p>
+                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                </p>
+                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+                {launchUrl ? (
+                  <>
+                    <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
+                    <a className="launch-link" href={launchUrl}>
+                      {launchUrl}
+                    </a>
+                    <p className="launch-code">{visibleCode}</p>
+                  </>
+                ) : (
+                  <p>The launch code was shown when this session started.</p>
+                )}
+              </div>
+            ) : shownSession ? (
               <StudyClock
                 session={shownSession}
-                rushed={rushed && !shownSession.useDesktopPet}
-                onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
+                rushed={rushed}
+                onFinished={() => finishSession("")}
               />
             ) : null}
             <div className="length-choices" role="group" aria-label="Study length">
@@ -359,25 +377,6 @@ export function StudyPanel({
           <p className="form-error" role="alert">
             {error}
           </p>
-        ) : null}
-        {shownSession?.useDesktopPet ? (
-          <div className="study-active">
-            <p>
-              Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-            </p>
-            <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
-            {launchUrl ? (
-              <>
-                <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                <a className="launch-link" href={launchUrl}>
-                  {launchUrl}
-                </a>
-                <p className="launch-code">{visibleCode}</p>
-              </>
-            ) : (
-              <p>The launch code was shown when this session started.</p>
-            )}
-          </div>
         ) : null}
         <div className="dev-finish">
           <button type="button" className="button button-small button-ghost" onClick={() => setDevOpen(true)}>
