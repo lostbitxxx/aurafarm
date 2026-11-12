@@ -1,4 +1,5 @@
--- Sample colors are owned once per account, then applied to any pet that account owns.
+-- Ten color ranges are owned once per account, then applied to any pet that account owns.
+-- A lighter or darker shade of one range is an SVG edit, not another row.
 
 create table if not exists public.collection_items (
   id text primary key,
@@ -9,8 +10,15 @@ create table if not exists public.collection_items (
 insert into public.collection_items (id, kind, name)
 values
   ('honey', 'color', 'Honey'),
+  ('apricot', 'color', 'Apricot'),
+  ('rose', 'color', 'Rose'),
+  ('coral', 'color', 'Coral'),
   ('lavender', 'color', 'Lavender'),
-  ('rose', 'color', 'Rose')
+  ('sage', 'color', 'Sage'),
+  ('mint', 'color', 'Mint'),
+  ('sky', 'color', 'Sky'),
+  ('lemon', 'color', 'Lemon'),
+  ('slate', 'color', 'Slate')
 on conflict (id) do nothing;
 
 create table if not exists public.user_collections (
@@ -25,7 +33,7 @@ alter table public.user_pets drop constraint if exists user_pets_color_check;
 
 alter table public.user_pets
   add constraint user_pets_color_check
-  check (color is null or color in ('honey', 'lavender', 'rose'));
+  check (color is null or color in ('honey', 'apricot', 'rose', 'coral', 'lavender', 'sage', 'mint', 'sky', 'lemon', 'slate'));
 
 comment on column public.user_pets.color is
   'Applied color id. Null keeps the pet type default. Ownership lives in user_collections, not on the pet.';
@@ -34,7 +42,7 @@ insert into public.user_collections (user_id, item_id)
 select profiles.id, samples.item_id
 from public.profiles
 cross join (
-  values ('honey'), ('lavender'), ('rose')
+  values ('honey'), ('apricot'), ('rose'), ('coral'), ('lavender'), ('sage'), ('mint'), ('sky'), ('lemon'), ('slate')
 ) as samples(item_id)
 on conflict do nothing;
 
@@ -108,7 +116,7 @@ begin
 
   insert into public.user_collections (user_id, item_id)
   select new.id, samples.item_id
-  from (values ('honey'), ('lavender'), ('rose')) as samples(item_id)
+  from (values ('honey'), ('apricot'), ('rose'), ('coral'), ('lavender'), ('sage'), ('mint'), ('sky'), ('lemon'), ('slate')) as samples(item_id)
   where not exists (
     select 1
     from public.user_collections
@@ -133,7 +141,7 @@ begin
     raise exception 'Not authenticated';
   end if;
 
-  if target_color is null or target_color not in ('honey', 'lavender', 'rose') then
+  if target_color is null or target_color not in ('honey', 'apricot', 'rose', 'coral', 'lavender', 'sage', 'mint', 'sky', 'lemon', 'slate') then
     raise exception 'Color not in the collection';
   end if;
 

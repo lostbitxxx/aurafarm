@@ -13,10 +13,11 @@ test("a saved color replaces the pet type default", () => {
     "/pet-assets/pets/cat/rose/no-hat-no-clothes/idle.svg",
   );
   assert.equal(sampleColor("rose"), "rose");
-  assert.equal(sampleColor("sage"), null);
+  assert.equal(sampleColor("sage"), "sage");
+  assert.equal(sampleColor("ink"), null);
   assert.deepEqual(
     SAMPLE_COLORS.map((color) => color.id),
-    ["honey", "lavender", "rose"],
+    ["honey", "apricot", "rose", "coral", "lavender", "sage", "mint", "sky", "lemon", "slate"],
   );
 });
 
@@ -32,9 +33,20 @@ test("sample colors are owned once per account and refused when missing", () => 
   const signup = sql.slice(sql.indexOf("function public.handle_new_user"), sql.indexOf("function public.apply_pet_color"));
   const apply = sql.slice(sql.indexOf("function public.apply_pet_color"));
 
-  assert.match(sql, /'honey', 'color', 'Honey'/);
-  assert.match(sql, /'lavender', 'color', 'Lavender'/);
-  assert.match(sql, /'rose', 'color', 'Rose'/);
+  for (const [id, name] of [
+    ["honey", "Honey"],
+    ["apricot", "Apricot"],
+    ["rose", "Rose"],
+    ["coral", "Coral"],
+    ["lavender", "Lavender"],
+    ["sage", "Sage"],
+    ["mint", "Mint"],
+    ["sky", "Sky"],
+    ["lemon", "Lemon"],
+    ["slate", "Slate"],
+  ]) {
+    assert.match(sql, new RegExp(`'${id}', 'color', '${name}'`));
+  }
   assert.match(backfill, /from public\.profiles/);
   assert.doesNotMatch(backfill, /user_pets/);
   assert.match(signup, /insert into public\.user_collections/);

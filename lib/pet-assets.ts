@@ -5,23 +5,33 @@
  */
 
 export type PetSpecies = "cat" | "bunny";
-export type PetColor = "honey" | "lavender" | "sage" | "rose";
 export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "wait" | "study1" | "study2";
 
-export const PET_COLORS: readonly PetColor[] = ["honey", "lavender", "sage", "rose"];
-
-/** Colors a farmer can own once and apply to any pet. Sage stays a default only. */
+/**
+ * One id per color range. A lighter or darker shade of the same range is an SVG
+ * fill change, not a new id and not a migration.
+ */
 export const SAMPLE_COLORS = [
   { id: "honey", name: "Honey" },
-  { id: "lavender", name: "Lavender" },
+  { id: "apricot", name: "Apricot" },
   { id: "rose", name: "Rose" },
-] as const satisfies readonly { id: PetColor; name: string }[];
+  { id: "coral", name: "Coral" },
+  { id: "lavender", name: "Lavender" },
+  { id: "sage", name: "Sage" },
+  { id: "mint", name: "Mint" },
+  { id: "sky", name: "Sky" },
+  { id: "lemon", name: "Lemon" },
+  { id: "slate", name: "Slate" },
+] as const;
 
 export type SampleColorId = (typeof SAMPLE_COLORS)[number]["id"];
+export type PetColor = SampleColorId;
+
+export const PET_COLORS: readonly PetColor[] = SAMPLE_COLORS.map((color) => color.id);
 
 export function sampleColor(value: unknown): SampleColorId | null {
-  if (value === "honey" || value === "lavender" || value === "rose") return value;
-  return null;
+  if (typeof value !== "string") return null;
+  return SAMPLE_COLORS.some((color) => color.id === value) ? (value as SampleColorId) : null;
 }
 
 /** Temporary frontend artwork mapping — not a database change. */
