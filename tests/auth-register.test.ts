@@ -11,7 +11,7 @@ test("registration no longer asks the person to confirm their email", () => {
   assert.doesNotMatch(form, /Confirm your email/);
   assert.match(auth, /still requiring email confirmation/);
   assert.match(auth, /if \(!data\.session\)/);
-  assert.match(auth, /redirect\("\/dashboard"\)/);
+  assert.match(auth, /redirect\("\/customize"\)/);
   assert.match(readme, /turn \*\*Confirm email\*\* off/);
   assert.doesNotMatch(readme, /when email confirmation is enabled/);
 });

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
+import { modeLabel, type StudyMode } from "@/lib/study-mode";
 
 function roomStorageKey(userId: string) {
   return `aurafarm.room.${userId}`;
@@ -46,6 +48,10 @@ export function DashboardScreen({
   closeBlocked,
   closeBlockedError,
   downloadUrl,
+  studyMode,
+  preferredSessionMinutes,
+  monthlySessionGoal,
+  dailySessionGoal,
 }: {
   userId: string;
   displayName: string;
@@ -62,6 +68,10 @@ export function DashboardScreen({
   closeBlocked: boolean;
   closeBlockedError: string | null;
   downloadUrl: string | null;
+  studyMode: StudyMode | null;
+  preferredSessionMinutes: number | null;
+  monthlySessionGoal: number | null;
+  dailySessionGoal: number | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<"shop" | "collection" | "inventory" | "achievements" | null>(null);
@@ -137,6 +147,15 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
       />
+      {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
+        <section className="plan-banner" aria-label="Study plan">
+          <p>
+            <strong>{modeLabel(studyMode)}</strong> study mode · {dailySessionGoal}×
+            {preferredSessionMinutes} min today · {monthlySessionGoal} sessions this month
+          </p>
+          <Link href="/customize">Edit plan</Link>
+        </section>
+      ) : null}
       <StudyPanel
         activeSession={activeSession}
         scores={scores}

@@ -76,7 +76,7 @@ export async function register(
   const saved = await saveNewFarmer(admin ?? supabase, data.user.id, displayName);
   if (saved.error) return { ...emptyState, error: saved.error };
 
-  redirect("/dashboard");
+  redirect("/customize");
 }
 
 export async function signIn(

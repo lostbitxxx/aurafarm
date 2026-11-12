@@ -27,6 +27,8 @@ test("the shop and the desk require an account", () => {
   assert.equal(requiresAccount("/shopping"), false);
   assert.equal(requiresAccount("/inventory"), true);
   assert.equal(requiresAccount("/inventory/extra"), true);
+  assert.equal(requiresAccount("/customize"), true);
+  assert.equal(requiresAccount("/customize/extra"), true);
 
   const proxy = readFileSync(new URL("../lib/supabase/proxy.ts", import.meta.url), "utf8");
   assert.match(proxy, /requiresAccount\(pathname\)/);
