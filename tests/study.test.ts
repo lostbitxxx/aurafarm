@@ -20,6 +20,8 @@ import {
   formatDuration,
   formatTimestamp,
   levelFromExperience,
+  MAX_STUDY_MINUTES,
+  MIN_STUDY_MINUTES,
   plannedStudySeconds,
   remainingSeconds,
   startSessionDecision,
@@ -102,10 +104,17 @@ test("study lengths default to 5 minutes and offer 30, 60, and 90", () => {
     STUDY_LENGTHS.map((length) => length.seconds),
     [300, 1800, 3600, 5400],
   );
+  assert.equal(MIN_STUDY_MINUTES, 1);
+  assert.equal(MAX_STUDY_MINUTES, 240);
   assert.equal(plannedStudySeconds(300), 300);
   assert.equal(plannedStudySeconds(5400), 5400);
-  assert.equal(plannedStudySeconds(1500), null);
+  assert.equal(plannedStudySeconds(2700), 2700);
+  assert.equal(plannedStudySeconds(60), 60);
+  assert.equal(plannedStudySeconds(14400), 14400);
+  assert.equal(plannedStudySeconds(1500), 1500);
   assert.equal(storedStudySeconds(1500), 1500);
+  assert.equal(plannedStudySeconds(59), null);
+  assert.equal(plannedStudySeconds(14460), null);
   assert.equal(plannedStudySeconds("300"), null);
 });
 
@@ -125,6 +134,8 @@ test("finish bonus and distracted penalty share one experience rate", () => {
   assert.equal(experienceForEarlyEnd(300, false), 10);
   assert.equal(experienceForEarlyEnd(300, true), 7);
   assert.equal(experienceForEarlyEnd(1800, false), 60);
+  assert.equal(experienceForSession(2700, false), 99);
+  assert.equal(experienceForEarlyEnd(2700, false), 90);
   assert.equal(experienceForEarlyEnd(1800, true), 42);
   assert.ok(experienceForEarlyEnd(1800, false) < experienceForSession(1800, false));
   assert.equal(levelFromExperience(0), 1);
@@ -278,6 +289,16 @@ test("ending early records studied minutes without the finish bonus", () => {
   assert.match(early, /false\s*\)/);
   assert.match(early, /Does not apply the finish bonus/);
   assert.doesNotMatch(early, /finish_bonus/);
+});
+
+test("a custom study length is any whole minute from 1 to 240", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0017_custom_study_length.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /planned_seconds >= 60/);
+  assert.match(sql, /planned_seconds <= 14400/);
+  assert.match(sql, /planned_seconds % 60 = 0/);
 });
 
 test("the admin reset clears only the signed-in farmer", () => {

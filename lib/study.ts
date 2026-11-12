@@ -8,6 +8,8 @@ export const STUDY_LENGTHS = [
 const LEGACY_STUDY_SECONDS = [1500, 3300, 5100];
 
 export const DEFAULT_STUDY_SECONDS = 300;
+export const MIN_STUDY_MINUTES = 1;
+export const MAX_STUDY_MINUTES = 240;
 export const XP_PER_LEVEL = 100;
 export const XP_PER_MINUTE = 2;
 export const FINISH_BONUS = 1.1;
@@ -84,7 +86,10 @@ export function formatDuration(seconds: number) {
 
 export function plannedStudySeconds(value: unknown) {
   const seconds = typeof value === "number" ? value : Number.NaN;
-  return STUDY_LENGTHS.some((length) => length.seconds === seconds) ? seconds : null;
+  if (!Number.isInteger(seconds) || seconds % 60 !== 0) return null;
+  const minutes = seconds / 60;
+  if (minutes < MIN_STUDY_MINUTES || minutes > MAX_STUDY_MINUTES) return null;
+  return seconds;
 }
 
 export function storedStudySeconds(value: unknown) {
@@ -162,6 +167,9 @@ export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
   if (/end_study_early/i.test(message)) {
     return "Run migration 0014 before ending a study session early.";
+  }
+  if (/study_sessions_planned_seconds_check/i.test(message)) {
+    return "Run migration 0017 before choosing a custom study length.";
   }
   if (/use_desktop_pet|xp_awarded|grant_study_experience/i.test(message)) {
     return SESSION_XP_MIGRATION;

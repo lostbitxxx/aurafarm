@@ -6,12 +6,17 @@ import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
   DEFAULT_STUDY_SECONDS,
+  MAX_STUDY_MINUTES,
+  MIN_STUDY_MINUTES,
+  plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
   experienceProgress,
   formatClock,
   formatDuration,
   formatTimestamp,
+  experienceForEarlyEnd,
+  experienceForSession,
   remainingSeconds,
   STUDY_LENGTHS,
   type ActiveStudySession,
@@ -70,6 +75,7 @@ export function StudyPanel({
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
   const [localDesktop, setLocalDesktop] = useState(false);
   const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
+  const [customMinutes, setCustomMinutes] = useState("");
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
@@ -154,8 +160,27 @@ export function StudyPanel({
     setLengthOpen(false);
   }
 
+  function onChoosePreset(seconds: number) {
+    setCustomMinutes("");
+    setChosenSeconds(seconds);
+  }
+
+  function onCustomMinutes(value: string) {
+    setCustomMinutes(value);
+    const minutes = Number(value);
+    const seconds = plannedStudySeconds(minutes * 60);
+    if (seconds !== null) setChosenSeconds(seconds);
+  }
+
+  function selectedLengthSeconds() {
+    if (customMinutes.trim() === "") return plannedStudySeconds(chosenSeconds);
+    return plannedStudySeconds(Number(customMinutes) * 60);
+  }
+
   function onConfirmLength() {
-    if (pending) return;
+    const seconds = selectedLengthSeconds();
+    if (pending || seconds === null) return;
+    setChosenSeconds(seconds);
     setLengthOpen(false);
     setTrackerChoice(null);
     setTrackerOpen(true);
@@ -252,6 +277,7 @@ export function StudyPanel({
   }
 
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
+  const lengthSeconds = selectedLengthSeconds();
   const equipped = equippedPet(pets);
   return (
     <main className={railOpen ? "desk" : "desk is-rail-closed"}>
@@ -452,20 +478,41 @@ export function StudyPanel({
                 <button
                   key={length.seconds}
                   type="button"
-                  className={chosenSeconds === length.seconds ? "button" : "button button-ghost"}
-                  aria-pressed={chosenSeconds === length.seconds}
+                  className={customMinutes.trim() === "" && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
+                  aria-pressed={customMinutes.trim() === "" && chosenSeconds === length.seconds}
                   disabled={pending}
-                  onClick={() => setChosenSeconds(length.seconds)}
+                  onClick={() => onChoosePreset(length.seconds)}
                 >
                   {length.minutes} min
                 </button>
               ))}
             </div>
+            <label className="field">
+              Custom minutes
+              <input
+                type="number"
+                inputMode="numeric"
+                min={MIN_STUDY_MINUTES}
+                max={MAX_STUDY_MINUTES}
+                step={1}
+                value={customMinutes}
+                placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
+                onChange={(event) => onCustomMinutes(event.target.value)}
+              />
+            </label>
+            {lengthSeconds === null ? (
+              <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
+            ) : (
+              <p>
+                A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
+                {experienceForEarlyEnd(lengthSeconds, false)} XP.
+              </p>
+            )}
             <div className="tracker-actions">
               <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
                 Back
               </button>
-              <button type="button" className="button" disabled={pending} onClick={onConfirmLength}>
+              <button type="button" className="button" disabled={pending || lengthSeconds === null} onClick={onConfirmLength}>
                 Next
               </button>
             </div>
