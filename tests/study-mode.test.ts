@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   adjustPlan,
+  customizationMigrationMessage,
   dailySessionsFromMonthly,
   parseBehaviorAnswers,
   parseCustomizationInput,
@@ -77,4 +79,32 @@ test("customization form data is validated before save", () => {
   assert.equal(parsed.answers.lifestyle, "steady");
 
   assert.equal(parseBehaviorAnswers({ attention: "nope" }), null);
+});
+
+test("saving a study plan needs the column grant from migration 0022", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0022_study_customization_grant.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /grant update \(/);
+  for (const column of [
+    "study_mode",
+    "preferred_session_minutes",
+    "monthly_session_goal",
+    "daily_session_goal",
+    "study_days_per_week",
+    "behavior_answers",
+    "customization_completed_at",
+  ]) {
+    assert.match(sql, new RegExp(column));
+  }
+  assert.doesNotMatch(sql.slice(sql.indexOf("grant update")), /\bpoints\b/);
+  assert.match(
+    customizationMigrationMessage("permission denied for column study_mode"),
+    /0022/,
+  );
+  assert.match(
+    customizationMigrationMessage('column "study_mode" does not exist'),
+    /0021/,
+  );
 });
