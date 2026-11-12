@@ -139,15 +139,12 @@ export function CollectionDialog({
         aria-labelledby={`collection-tab-${active.id}`}
       >
         {tab === "colors" && ownedColors.length > 0 ? (
-          <ul className="dialog-list">
+          <ul className="collection-color-grid">
             {ownedColors.map((color) => (
               <li key={color.id}>
-                <button type="button" className="dialog-row" onClick={() => setApplyColorId(color.id)}>
+                <button type="button" className="collection-color" onClick={() => setApplyColorId(color.id)}>
                   <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
-                  <div>
-                    <strong>{color.name}</strong>
-                    <p className="panel-hint">Apply to one of your pets.</p>
-                  </div>
+                  <strong>{color.name}</strong>
                 </button>
               </li>
             ))}
