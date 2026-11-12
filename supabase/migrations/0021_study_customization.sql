@@ -1,5 +1,5 @@
 -- Study mode onboarding: behavior answers, mode, and monthly/daily goals.
--- Run this after 0017_custom_study_length.sql.
+-- Run this after 0020_collection_clothes.sql.
 
 alter table public.profiles
   add column if not exists study_mode text;

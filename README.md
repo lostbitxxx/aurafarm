@@ -4,7 +4,7 @@ A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `publi
 
 ## Setup
 
-1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0018`, in the SQL editor. Later files add study sessions, shop wallet, timers, and `0018` study-mode customization (mode + monthly/daily goals).
+1. Create a Supabase project and run the SQL files in [`supabase/migrations`](supabase/migrations) in order, from `0001` through `0021`, in the SQL editor. Later files add study sessions, shop wallet, timers, collection colors, hats, and clothes, and `0021` study-mode customization (mode + monthly/daily goals).
 2. Copy [`.env.example`](.env.example) to `.env.local` and fill in the project URL and publishable key. In the Supabase dashboard, turn **Confirm email** off so a new account can continue into `/customize` immediately. The signup trigger creates the profile and level 1 baby slime. `SUPABASE_SECRET_KEY` is an optional server key.
 3. Install and start the dev server:
 

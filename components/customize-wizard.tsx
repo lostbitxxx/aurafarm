@@ -93,7 +93,7 @@ export function CustomizeWizard({
         </p>
         <p className="customize-note">
           Open the Supabase SQL editor, paste{" "}
-          <code>supabase/migrations/0018_study_customization.sql</code>, run it, then refresh
+          <code>supabase/migrations/0021_study_customization.sql</code>, run it, then refresh
           this page.
         </p>
       </section>

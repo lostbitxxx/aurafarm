@@ -206,7 +206,7 @@ export function parseCustomizationInput(formData: FormData) {
 export function customizationMigrationMessage(message: string | null) {
   if (!message) return null;
   if (/study_mode|monthly_session_goal|customization_completed|behavior_answers/i.test(message)) {
-    return "The study-mode columns are missing. Run migration 0018 in the Supabase SQL editor, then refresh.";
+    return "The study-mode columns are missing. Run migration 0021 in the Supabase SQL editor, then refresh.";
   }
   return message;
 }
