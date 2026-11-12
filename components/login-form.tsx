@@ -13,7 +13,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
     <form action={action} className="auth-form">
       <label className="field">
         <span>Email</span>
-        <input name="email" type="email" autoComplete="email" required />
+        <input name="email" type="text" inputMode="email" autoComplete="email" required />
       </label>
       <label className="field">
         <span>Password</span>

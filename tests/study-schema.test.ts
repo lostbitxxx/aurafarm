@@ -29,6 +29,18 @@ test("older profile tables gain a display name without dropping email", () => {
   assert.match(sql, /insert into public\.profiles \(id, display_name, email\)/);
 });
 
+test("profile email may be missing on older tables", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0012_profile_email_optional.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /alter column email drop not null/);
+  assert.match(sql, /contype = 'c'/);
+  assert.match(sql, /drop constraint/);
+  assert.match(sql, /values \(new\.id, chosen_name, new\.email\)/);
+  assert.doesNotMatch(sql, /values \(new\.id, chosen_name, coalesce\(new\.email/);
+});
+
 test("older pet tables gain a created_at column", () => {
   const sql = readFileSync(
     new URL("../supabase/migrations/0005_user_pets_created_at.sql", import.meta.url),

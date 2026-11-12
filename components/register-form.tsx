@@ -17,7 +17,7 @@ export function RegisterForm({ configured }: { configured: boolean }) {
       </label>
       <label className="field">
         <span>Email</span>
-        <input name="email" type="email" autoComplete="email" required />
+        <input name="email" type="text" inputMode="email" autoComplete="email" required />
       </label>
       <label className="field">
         <span>Password</span>

@@ -61,8 +61,10 @@ There is no migration runner in this repo. Paste each file into the Supabase SQL
 | `0008_pet_shop.sql` | Point balance and `purchase_pet` |
 | `0009_score_wallet.sql` | Finished study scores add points |
 | `0010_score_wallet_points.sql` | Fixes the points update inside the score function |
+| `0011_study_timer_xp.sql` | Study countdown length and pet experience |
+| `0012_profile_email_optional.sql` | Lets `profiles.email` be empty on older tables |
 
-A new project starts at `0001` and goes through `0010`. A project that already has some of these applied starts at the first file that has not been run.
+A new project starts at `0001` and goes through `0012`. A project that already has some of these applied starts at the first file that has not been run.
 
 In the same dashboard, under **Authentication**, turn **Confirm email** off so a new account opens the desk right away. Signup creates the profile and a level 1 baby slime.
 

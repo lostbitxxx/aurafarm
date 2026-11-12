@@ -23,10 +23,6 @@ function readCredentials(formData: FormData) {
   return { email, password, displayName };
 }
 
-function validateEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 export async function register(
   _prev: AuthFormState,
   formData: FormData,
@@ -36,8 +32,8 @@ export async function register(
   if (!displayName || displayName.length > 32) {
     return { ...emptyState, error: "Use a display name of 1 to 32 characters." };
   }
-  if (!validateEmail(email)) {
-    return { ...emptyState, error: "Enter a valid email address." };
+  if (!email) {
+    return { ...emptyState, error: "Enter an email address." };
   }
   if (password.length < 6 || password.length > 72) {
     return { ...emptyState, error: "Use a password of 6 to 72 characters." };
@@ -85,7 +81,7 @@ export async function signIn(
 ): Promise<AuthFormState> {
   const { email, password } = readCredentials(formData);
 
-  if (!validateEmail(email) || !password) {
+  if (!email || !password) {
     return { ...emptyState, error: "Enter the email and password for your farm." };
   }
   if (!isSupabaseConfigured()) {

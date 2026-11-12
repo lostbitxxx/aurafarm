@@ -11,7 +11,8 @@ export async function saveNewFarmer(
 ) {
   const { error: profileError } = await writer.from("profiles").upsert(
     buildProfileRecord(userId, displayName),
-    { onConflict: "id" },
+    // Older profiles keep an email column. Leave it out of this write instead of storing null.
+    { onConflict: "id", defaultToNull: false },
   );
   if (profileError) return { error: profileError.message };
   return { error: "" };
