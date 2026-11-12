@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-test("the inventory page lists pets and the desk only names the equipped one", () => {
-  const page = readFileSync(new URL("../app/inventory/page.tsx", import.meta.url), "utf8");
-  const loader = readFileSync(new URL("../lib/inventory.ts", import.meta.url), "utf8");
+test("the desk lists pets for the signed-in farmer and keeps room placement", () => {
+  const loader = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
   const equip = action.slice(
@@ -12,8 +11,6 @@ test("the inventory page lists pets and the desk only names the equipped one", (
     action.indexOf("export async function buyPet"),
   );
 
-  assert.match(page, /loadInventory/);
-  assert.match(page, /PetInventory/);
   assert.match(loader, /getClaims/);
   assert.match(loader, /redirect\("\/login"\)/);
   assert.match(loader, /select\("id, pet_type, level, xp, is_desktop_active"\)/);
