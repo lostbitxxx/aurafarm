@@ -1,13 +1,37 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { AchievementsDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
+function roomStorageKey(userId: string) {
+  return `aurafarm.room.${userId}`;
+}
+
+function readRoomPlacement(userId: string, pets: PetCard[]) {
+  const owned = new Set(pets.map((pet) => pet.id));
+  const raw = localStorage.getItem(roomStorageKey(userId));
+  if (raw === null) return { ids: owned, write: true };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ids: owned, write: true };
+  }
+  if (!Array.isArray(parsed)) return { ids: new Set<string>(), write: true };
+  const saved = parsed.filter((id): id is string => typeof id === "string" && owned.has(id));
+  return { ids: new Set(saved), write: saved.length !== parsed.length };
+}
+
+function writeRoomPlacement(userId: string, ids: Set<string>) {
+  localStorage.setItem(roomStorageKey(userId), JSON.stringify([...ids]));
+}
+
 export function DashboardScreen({
+  userId,
   displayName,
   totalStudySeconds,
   pets,
@@ -20,6 +44,7 @@ export function DashboardScreen({
   closeBlockedError,
   downloadUrl,
 }: {
+  userId: string;
   displayName: string;
   totalStudySeconds: number;
   pets: PetCard[];
@@ -34,7 +59,8 @@ export function DashboardScreen({
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<"shop" | "inventory" | "achievements" | null>(null);
-  const [placedIds, setPlacedIds] = useState(() => new Set(pets.map((pet) => pet.id)));
+  const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
+  const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
   const petsSignature = pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
@@ -42,17 +68,14 @@ export function DashboardScreen({
   if (petsSignature !== petsSnap) {
     setPetsSnap(petsSignature);
     setLocalPets(pets);
-    setPlacedIds((current) => {
-      const next = new Set<string>();
-      for (const pet of pets) {
-        if (current.size === 0 || current.has(pet.id)) next.add(pet.id);
-      }
-      if (next.size === 0) {
-        for (const pet of pets) next.add(pet.id);
-      }
-      return next;
-    });
   }
+
+  useEffect(() => {
+    const placement = readRoomPlacement(userId, pets);
+    if (placement.write) writeRoomPlacement(userId, placement.ids);
+    setPlacedIds(placement.ids);
+    setPlacementReady(true);
+  }, [userId, pets]);
 
   const activePet = equippedPet(localPets);
   const described = activePet ? describePet(activePet.pet_type) : null;
@@ -64,6 +87,7 @@ export function DashboardScreen({
       const next = new Set(current);
       if (next.has(petId)) next.delete(petId);
       else next.add(petId);
+      writeRoomPlacement(userId, next);
       return next;
     });
   }
@@ -100,6 +124,7 @@ export function DashboardScreen({
         petNote={petsError ?? described?.note ?? "Choose one from your inventory."}
         downloadUrl={downloadUrl}
         placedIds={placedIds}
+        placementReady={placementReady}
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
       />

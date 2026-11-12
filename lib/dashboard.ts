@@ -112,6 +112,7 @@ export async function loadDashboard() {
   );
 
   return {
+    userId,
     displayName: profile?.display_name?.trim() || "Farmer",
     totalStudySeconds,
     pets,

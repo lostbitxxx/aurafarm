@@ -36,7 +36,7 @@ export function SiteHeader({
             Inventory
           </button>
         ) : (
-          <Link href="/inventory">Inventory</Link>
+          <Link href="/dashboard">Inventory</Link>
         )}
         {onOpenAchievements ? (
           <button type="button" className="topbar-link" onClick={onOpenAchievements}>
