@@ -473,29 +473,31 @@ export function StudyPanel({
               </button>
             </div>
             {trackerChoice === true ? (
-              <p>
-                The desktop pet tracks the time.
-                {closeBlocked
-                  ? " It comes forward and closes a blocklist window after one minute."
-                  : " Closing blocklist windows is off."}
-              </p>
+              <>
+                <p>
+                  The desktop pet tracks the time.
+                  {closeBlocked
+                    ? " It comes forward and closes a blocklist window after one minute."
+                    : " Closing blocklist windows is off."}
+                </p>
+                <button
+                  type="button"
+                  className={closeBlocked ? "button" : "button button-ghost"}
+                  aria-pressed={closeBlocked}
+                  disabled={pending || Boolean(closeBlockedError)}
+                  onClick={onToggleClose}
+                >
+                  Close blocked tabs: {closeBlocked ? "On" : "Off"}
+                </button>
+                {closeBlockedError ? (
+                  <p className="form-error" role="alert">
+                    {closeBlockedError}
+                  </p>
+                ) : null}
+                <PetStatus downloadUrl={downloadUrl} />
+              </>
             ) : null}
             {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
-            <button
-              type="button"
-              className={closeBlocked ? "button" : "button button-ghost"}
-              aria-pressed={closeBlocked}
-              disabled={pending || Boolean(closeBlockedError)}
-              onClick={onToggleClose}
-            >
-              Close blocked tabs: {closeBlocked ? "On" : "Off"}
-            </button>
-            {closeBlockedError ? (
-              <p className="form-error" role="alert">
-                {closeBlockedError}
-              </p>
-            ) : null}
-            {trackerChoice === true ? <PetStatus downloadUrl={downloadUrl} /> : null}
             {error ? (
               <p className="form-error" role="alert">
                 {error}
