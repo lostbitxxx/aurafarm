@@ -1,29 +1,45 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { petAssetPath, sampleColor, type PetPose } from "@/lib/pet-assets";
+import { petAssetPath, sampleColor, sampleHat, type PetPose } from "@/lib/pet-assets";
 
 export function PixelPetArt({
   petType,
   pose = "idle",
   color = null,
+  hat = null,
   className,
   alt = "",
 }: {
   petType: string;
   pose?: PetPose;
   color?: string | null;
+  hat?: string | null;
   className?: string;
   alt?: string;
 }) {
+  const [artMissing, setArtMissing] = useState(false);
+  const hatId = sampleHat(hat);
+  const src = petAssetPath(petType, pose, {
+    color: sampleColor(color) ?? undefined,
+    hat: artMissing ? null : hatId,
+  });
+
+  useEffect(() => {
+    setArtMissing(false);
+  }, [petType, pose, color, hat]);
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className ? `pixel-pet-art ${className}` : "pixel-pet-art"}
-      src={petAssetPath(petType, pose, { color: sampleColor(color) ?? undefined })}
+      src={src}
       alt={alt}
       draggable={false}
       style={{ imageRendering: "pixelated" }}
+      onError={() => {
+        if (hatId) setArtMissing(true);
+      }}
     />
   );
 }

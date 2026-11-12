@@ -52,7 +52,7 @@ export function PetDetailDialog({
       <div className="pet-detail">
         <div>
           <div className="big-pet" onPointerMove={petting.onPointerMove} onPointerLeave={petting.onPointerLeave}>
-            <PixelPetArt petType={pet.pet_type} color={pet.color} pose={pose} className="big-pet-art" />
+            <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} pose={pose} className="big-pet-art" />
           </div>
           <p className="panel-hint" style={{ textAlign: "center" }}>
             Stroke left ↔ right to pet

@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { sampleColor } from "./pet-assets";
+import { sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type PetCard } from "./pets";
 import {
   closeBlockedMigrationMessage,
@@ -35,7 +35,7 @@ export async function loadDashboard() {
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
-        .select("id, pet_type, level, xp, is_desktop_active, color")
+        .select("id, pet_type, level, xp, is_desktop_active, color, hat")
         .eq("user_id", userId)
         .order("id", { ascending: true }),
       supabase.from("user_collections").select("item_id").eq("user_id", userId),
@@ -70,12 +70,17 @@ export async function loadDashboard() {
       xp,
       is_desktop_active: Boolean(pet.is_desktop_active),
       color: sampleColor(pet.color),
+      hat: sampleHat(pet.hat),
     };
   });
 
   const ownedColorIds = (collectionsResult.data ?? []).flatMap((row) => {
     const color = sampleColor(row.item_id);
     return color ? [color] : [];
+  });
+  const ownedHatIds = (collectionsResult.data ?? []).flatMap((row) => {
+    const hat = sampleHat(row.item_id);
+    return hat ? [hat] : [];
   });
 
   const activeSession: ActiveStudySession | null = sessionResult.data
@@ -127,6 +132,7 @@ export async function loadDashboard() {
     totalStudySeconds,
     pets,
     ownedColorIds,
+    ownedHatIds,
     petsError: studyTimerMigrationMessage(
       collectionsResult.error?.message ?? petsResult.error?.message ?? null,
     ),

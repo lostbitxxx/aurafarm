@@ -36,6 +36,31 @@ export function sampleColor(value: unknown): SampleColorId | null {
   return SAMPLE_COLORS.some((color) => color.id === value) ? (value as SampleColorId) : null;
 }
 
+/**
+ * hat_c through hat_j are already in the database. Adding one of them does not
+ * need a migration. Copy the hat_a-* folders to hat_c-* (or the matching id)
+ * under each pet color for cat and bunny, then edit those SVG files.
+ */
+export const SAMPLE_HATS = [
+  { id: "hat_a" },
+  { id: "hat_b" },
+  { id: "hat_c" },
+  { id: "hat_d" },
+  { id: "hat_e" },
+  { id: "hat_f" },
+  { id: "hat_g" },
+  { id: "hat_h" },
+  { id: "hat_i" },
+  { id: "hat_j" },
+] as const;
+
+export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
+
+export function sampleHat(value: unknown): SampleHatId | null {
+  if (typeof value !== "string") return null;
+  return SAMPLE_HATS.some((hat) => hat.id === value) ? (value as SampleHatId) : null;
+}
+
 /** Temporary frontend artwork mapping — not a database change. */
 export const PET_TYPE_SPECIES: Record<string, PetSpecies> = {
   baby_slime: "cat",
@@ -57,8 +82,8 @@ export function colorForPetType(petType: string): PetColor {
   return DEFAULT_PET_COLOR[petType] ?? "sage";
 }
 
-export function outfitFolder(hat: boolean, clothes: boolean) {
-  const hatPart = hat ? "forest-hat" : "no-hat";
+export function outfitFolder(hat: string | null | undefined, clothes: boolean) {
+  const hatPart = sampleHat(hat) ?? "no-hat";
   const clothesPart = clothes ? "blue-vest" : "no-clothes";
   return `${hatPart}-${clothesPart}`;
 }
@@ -66,11 +91,11 @@ export function outfitFolder(hat: boolean, clothes: boolean) {
 export function petAssetPath(
   petType: string,
   pose: PetPose,
-  options: { color?: PetColor; hat?: boolean; clothes?: boolean } = {},
+  options: { color?: PetColor; hat?: string | null; clothes?: boolean } = {},
 ) {
   const species = speciesForPetType(petType);
   const color = options.color ?? colorForPetType(petType);
-  const folder = outfitFolder(Boolean(options.hat), Boolean(options.clothes));
+  const folder = outfitFolder(options.hat, Boolean(options.clothes));
   return `/pet-assets/pets/${species}/${color}/${folder}/${pose}.svg`;
 }
 

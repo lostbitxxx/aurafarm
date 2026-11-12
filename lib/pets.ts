@@ -26,6 +26,7 @@ export type PetCard = {
   xp: number;
   is_desktop_active: boolean;
   color: string | null;
+  hat: string | null;
 };
 
 export function equippedPet(pets: readonly PetCard[]) {

@@ -86,6 +86,7 @@ function RoomPet({
         <PixelPetArt
           petType={pet.pet_type}
           color={pet.color}
+          hat={pet.hat}
           pose={pose}
           className={String(pose).startsWith("walk") ? "is-walking" : undefined}
         />

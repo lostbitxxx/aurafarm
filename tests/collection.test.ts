@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { petAssetPath, SAMPLE_COLORS, sampleColor } from "../lib/pet-assets";
+import { petAssetPath, SAMPLE_COLORS, SAMPLE_HATS, sampleColor, sampleHat } from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
   assert.equal(
@@ -56,5 +56,50 @@ test("sample colors are owned once per account and refused when missing", () => 
   assert.match(apply, /Color not owned/);
   assert.match(apply, /user_collections/);
   assert.match(apply, /set color = target_color/);
+  assert.match(apply, /security invoker/);
+});
+
+test("a saved hat uses its folder and an empty hat does not", () => {
+  assert.equal(
+    petAssetPath("baby_slime", "idle", { hat: "hat_a" }),
+    "/pet-assets/pets/cat/sage/hat_a-no-clothes/idle.svg",
+  );
+  assert.equal(
+    petAssetPath("baby_slime", "idle", { hat: null }),
+    "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
+  );
+  assert.equal(sampleHat("hat_a"), "hat_a");
+  assert.equal(sampleHat("forest"), null);
+  assert.deepEqual(
+    SAMPLE_HATS.map((hat) => hat.id),
+    ["hat_a", "hat_b", "hat_c", "hat_d", "hat_e", "hat_f", "hat_g", "hat_h", "hat_i", "hat_j"],
+  );
+});
+
+test("hat ids are owned once per account and pets stay without a hat", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0019_collection_hats.sql", import.meta.url),
+    "utf8",
+  );
+  const backfill = sql.slice(
+    sql.indexOf("insert into public.user_collections"),
+    sql.indexOf("create or replace function public.handle_new_user"),
+  );
+  const signup = sql.slice(
+    sql.indexOf("function public.handle_new_user"),
+    sql.indexOf("function public.apply_pet_hat"),
+  );
+  const apply = sql.slice(sql.indexOf("function public.apply_pet_hat"));
+
+  for (const id of ["hat_a", "hat_b", "hat_c", "hat_d", "hat_e", "hat_f", "hat_g", "hat_h", "hat_i", "hat_j"]) {
+    assert.match(sql, new RegExp(`'${id}', 'hat', '${id}'`));
+  }
+  assert.match(sql, /hat_c through hat_j are already in the database/);
+  assert.match(backfill, /from public\.profiles/);
+  assert.doesNotMatch(backfill, /user_pets/);
+  assert.doesNotMatch(signup, /set hat/);
+  assert.match(signup, /'hat_a'/);
+  assert.match(apply, /Hat not owned/);
+  assert.match(apply, /set hat = target_hat/);
   assert.match(apply, /security invoker/);
 });

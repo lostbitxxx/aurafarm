@@ -36,6 +36,7 @@ export function DashboardScreen({
   totalStudySeconds,
   pets,
   ownedColorIds,
+  ownedHatIds,
   petsError,
   activeSession,
   scores,
@@ -50,6 +51,7 @@ export function DashboardScreen({
   totalStudySeconds: number;
   pets: PetCard[];
   ownedColorIds: readonly string[];
+  ownedHatIds: readonly string[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -65,7 +67,7 @@ export function DashboardScreen({
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
   const petsSignature = pets
-    .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}`)
+    .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}`)
     .join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
 
@@ -99,6 +101,12 @@ export function DashboardScreen({
   function onColorApplied(petId: string, colorId: string) {
     setLocalPets((current) =>
       current.map((pet) => (pet.id === petId ? { ...pet, color: colorId } : pet)),
+    );
+  }
+
+  function onHatApplied(petId: string, hatId: string | null) {
+    setLocalPets((current) =>
+      current.map((pet) => (pet.id === petId ? { ...pet, hat: hatId } : pet)),
     );
   }
 
@@ -144,8 +152,10 @@ export function DashboardScreen({
         <CollectionDialog
           pets={localPets}
           ownedColorIds={ownedColorIds}
+          ownedHatIds={ownedHatIds}
           onClose={() => setDialog(null)}
           onColorApplied={onColorApplied}
+          onHatApplied={onHatApplied}
         />
       ) : null}
       {dialog === "inventory" ? (

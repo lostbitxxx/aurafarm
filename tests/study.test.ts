@@ -177,8 +177,8 @@ test("a missing timer column tells the farmer to run migration 0011", () => {
 
 test("the desk title is the equipped pet rather than the first row", () => {
   const pets: PetCard[] = [
-    { id: "slime", pet_type: "baby_slime", level: 1, xp: 0, is_desktop_active: false, color: null },
-    { id: "moth", pet_type: "lantern_moth", level: 1, xp: 25, is_desktop_active: true, color: null },
+    { id: "slime", pet_type: "baby_slime", level: 1, xp: 0, is_desktop_active: false, color: null, hat: null },
+    { id: "moth", pet_type: "lantern_moth", level: 1, xp: 25, is_desktop_active: true, color: null, hat: null },
   ];
   assert.equal(equippedPet(pets)?.pet_type, "lantern_moth");
   assert.equal(equippedPet([{ ...pets[0], is_desktop_active: true }])?.pet_type, "baby_slime");
