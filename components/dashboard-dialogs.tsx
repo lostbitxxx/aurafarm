@@ -121,25 +121,14 @@ export function CollectionDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-export type InventorySort =
-  | "name-asc"
-  | "name-desc"
-  | "level-asc"
-  | "level-desc"
-  | "equipped-earliest"
-  | "equipped-latest";
+export type InventorySort = "name-asc" | "name-desc" | "level-asc" | "level-desc";
 
-const INVENTORY_SORT_OPTIONS: { value: InventorySort; label: string; needsEquipDate: boolean }[] = [
-  { value: "name-asc", label: "Name: A–Z", needsEquipDate: false },
-  { value: "name-desc", label: "Name: Z–A", needsEquipDate: false },
-  { value: "level-asc", label: "Level: Low–High", needsEquipDate: false },
-  { value: "level-desc", label: "Level: High–Low", needsEquipDate: false },
-  { value: "equipped-earliest", label: "Equipped: Earliest first", needsEquipDate: true },
-  { value: "equipped-latest", label: "Equipped: Latest first", needsEquipDate: true },
+const INVENTORY_SORT_OPTIONS: { value: InventorySort; label: string }[] = [
+  { value: "name-asc", label: "Name: A–Z" },
+  { value: "name-desc", label: "Name: Z–A" },
+  { value: "level-asc", label: "Level: Low–High" },
+  { value: "level-desc", label: "Level: High–Low" },
 ];
-
-/** No per-pet equip timestamp exists in PetCard / user_pets / equip RPC. */
-const EQUIP_DATE_SORT_AVAILABLE = false;
 
 function comparePetId(a: string, b: string) {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -160,11 +149,7 @@ function sortInventoryPets(pets: readonly PetCard[], sort: InventorySort) {
     if (sort === "level-asc") {
       return left.pet.level - right.pet.level || byName || byId;
     }
-    if (sort === "level-desc") {
-      return right.pet.level - left.pet.level || byName || byId;
-    }
-    // Equip-date sorts are disabled until timestamps exist.
-    return byName || byId;
+    return right.pet.level - left.pet.level || byName || byId;
   });
 
   return rows.map((row) => row.pet);
@@ -231,19 +216,10 @@ export function InventoryDialog({
           <select
             value={sort}
             aria-label="Sort pets"
-            onChange={(event) => {
-              const next = event.target.value as InventorySort;
-              const option = INVENTORY_SORT_OPTIONS.find((entry) => entry.value === next);
-              if (option?.needsEquipDate && !EQUIP_DATE_SORT_AVAILABLE) return;
-              onSortChange(next);
-            }}
+            onChange={(event) => onSortChange(event.target.value as InventorySort)}
           >
             {INVENTORY_SORT_OPTIONS.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={option.needsEquipDate && !EQUIP_DATE_SORT_AVAILABLE}
-              >
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
@@ -252,9 +228,6 @@ export function InventoryDialog({
       }
     >
       <p className="inventory-count">{countLabel}</p>
-      {!EQUIP_DATE_SORT_AVAILABLE ? (
-        <p className="panel-hint inventory-sort-note">Equip-date sorting is not available yet.</p>
-      ) : null}
       {sessionActive ? <p className="panel-hint">End your session to switch companions.</p> : null}
       {error ? (
         <p className="form-error" role="alert">
