@@ -402,7 +402,7 @@ export function StudyPanel({
         </div>
         <div className="personalization-actions">
           <button type="button" className="button button-ghost" onClick={() => setHistory("dev-info")}>
-            Dev / Unlock
+            Dev tools
           </button>
           <button type="button" className="button button-ghost" onClick={() => setHistory("download")}>
             Download the Mac pet
