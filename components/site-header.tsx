@@ -9,12 +9,14 @@ export function SiteHeader({
   displayName,
   studySeconds,
   onOpenShop,
+  onOpenCollection,
   onOpenInventory,
   onOpenAchievements,
 }: {
   displayName: string;
   studySeconds?: number;
   onOpenShop?: () => void;
+  onOpenCollection?: () => void;
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
 }) {
@@ -30,6 +32,13 @@ export function SiteHeader({
           </button>
         ) : (
           <Link href="/shop">Shop</Link>
+        )}
+        {onOpenCollection ? (
+          <button type="button" className="topbar-link" onClick={onOpenCollection}>
+            Collection
+          </button>
+        ) : (
+          <Link href="/dashboard">Collection</Link>
         )}
         {onOpenInventory ? (
           <button type="button" className="topbar-link" onClick={onOpenInventory}>

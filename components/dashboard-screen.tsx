@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
-import { AchievementsDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
+import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
@@ -58,7 +58,7 @@ export function DashboardScreen({
   downloadUrl: string | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
-  const [dialog, setDialog] = useState<"shop" | "inventory" | "achievements" | null>(null);
+  const [dialog, setDialog] = useState<"shop" | "collection" | "inventory" | "achievements" | null>(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
@@ -107,6 +107,7 @@ export function DashboardScreen({
         displayName={displayName}
         studySeconds={totalStudySeconds}
         onOpenShop={() => setDialog("shop")}
+        onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
       />
@@ -129,6 +130,7 @@ export function DashboardScreen({
         onEquipped={onEquipped}
       />
       {dialog === "shop" ? <ShopDialog ownedTypes={ownedTypes} onClose={() => setDialog(null)} /> : null}
+      {dialog === "collection" ? <CollectionDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "inventory" ? (
         <InventoryDialog
           pets={localPets}

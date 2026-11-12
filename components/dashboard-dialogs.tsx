@@ -76,6 +76,51 @@ export function ShopDialog({
   );
 }
 
+type CollectionTab = "colors" | "hats" | "clothes";
+
+const COLLECTION_TABS: { id: CollectionTab; label: string; emptyNoun: string }[] = [
+  { id: "colors", label: "Colors", emptyNoun: "colors" },
+  { id: "hats", label: "Hats", emptyNoun: "hats" },
+  { id: "clothes", label: "Clothes", emptyNoun: "clothes" },
+];
+
+/** Read-only Collection modal. No accessory catalog/unlock data exists yet. */
+export function CollectionDialog({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<CollectionTab>("colors");
+  const active = COLLECTION_TABS.find((entry) => entry.id === tab) ?? COLLECTION_TABS[0];
+
+  return (
+    <FarmDialog title="Collection" onClose={onClose} wide>
+      <p className="panel-hint">Your companion’s wardrobe, collected through study.</p>
+      <div className="collection-tabs" role="tablist" aria-label="Collection categories">
+        {COLLECTION_TABS.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            role="tab"
+            id={`collection-tab-${entry.id}`}
+            aria-selected={tab === entry.id}
+            aria-controls={`collection-panel-${entry.id}`}
+            className={tab === entry.id ? "button button-small" : "button button-small button-ghost"}
+            onClick={() => setTab(entry.id)}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+      <div
+        className="collection-panel"
+        role="tabpanel"
+        id={`collection-panel-${active.id}`}
+        aria-labelledby={`collection-tab-${active.id}`}
+      >
+        <p className="collection-empty-title">Nothing to collect here yet.</p>
+        <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
+      </div>
+    </FarmDialog>
+  );
+}
+
 export function InventoryDialog({
   pets,
   placedIds,
