@@ -120,7 +120,7 @@ export function StudyPanel({
     if (sessionId && !shownSession?.useDesktopPet) setRailOpen(true);
   }
 
-  const railError = error ?? closeBlockedError;
+  const railError = error;
   if (railError !== trackedError) {
     setTrackedError(railError);
     if (railError) setRailOpen(true);
@@ -342,7 +342,9 @@ export function StudyPanel({
         </p>
         <p className="panel-hint">
           {shownSession?.useDesktopPet
-            ? "The desktop pet tracks this session. It comes forward and closes a blocklist window after one minute."
+            ? closeBlocked
+              ? "The desktop pet tracks this session. It comes forward and closes a blocklist window after one minute."
+              : "The desktop pet tracks this session. Closing blocklist windows is off."
             : shownSession
               ? "The website timer tracks this session."
               : "Choose a length, then start. The next window asks which timer to use."}
@@ -350,20 +352,6 @@ export function StudyPanel({
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
         </p>
-        <button
-          type="button"
-          className={closeBlocked ? "button" : "button button-ghost"}
-          aria-pressed={closeBlocked}
-          disabled={pending || Boolean(closeBlockedError)}
-          onClick={onToggleClose}
-        >
-          Close blocked tabs: {closeBlocked ? "On" : "Off"}
-        </button>
-        {closeBlockedError ? (
-          <p className="form-error" role="alert">
-            {closeBlockedError}
-          </p>
-        ) : null}
         {blocklist.length === 0 ? (
           <p className="empty-pets">The blocklist is empty.</p>
         ) : (
@@ -485,9 +473,28 @@ export function StudyPanel({
               </button>
             </div>
             {trackerChoice === true ? (
-              <p>The desktop pet tracks the time. It comes forward and closes a blocklist window after one minute.</p>
+              <p>
+                The desktop pet tracks the time.
+                {closeBlocked
+                  ? " It comes forward and closes a blocklist window after one minute."
+                  : " Closing blocklist windows is off."}
+              </p>
             ) : null}
             {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+            <button
+              type="button"
+              className={closeBlocked ? "button" : "button button-ghost"}
+              aria-pressed={closeBlocked}
+              disabled={pending || Boolean(closeBlockedError)}
+              onClick={onToggleClose}
+            >
+              Close blocked tabs: {closeBlocked ? "On" : "Off"}
+            </button>
+            {closeBlockedError ? (
+              <p className="form-error" role="alert">
+                {closeBlockedError}
+              </p>
+            ) : null}
             {trackerChoice === true ? <PetStatus downloadUrl={downloadUrl} /> : null}
             {error ? (
               <p className="form-error" role="alert">
