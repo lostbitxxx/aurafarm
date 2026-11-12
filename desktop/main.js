@@ -416,6 +416,35 @@ async function useToken(raw) {
   return { error: "" };
 }
 
+async function cancelStudy() {
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { error: "Paste a session token before cancelling." };
+  let sessionId = study?.id || "";
+  if (!sessionId) {
+    const { data, error: findError } = await supabase
+      .from("study_sessions")
+      .select("id")
+      .eq("status", "active")
+      .maybeSingle();
+    if (findError) return { error: findError.message };
+    sessionId = data?.id || "";
+  }
+  if (!sessionId) return { error: "No study session is running." };
+  console.log(`[score] cancel ${sessionId} stops the session and does not change experience`);
+  const { error } = await supabase.rpc("cancel_study_session", {
+    target_session_id: sessionId,
+  });
+  if (error) {
+    console.log(`[score] cancel ${sessionId} rejected: ${error.message}`);
+    return { error: error.message };
+  }
+  if (study) stopFrontWatch();
+  hidePet();
+  setStatus("Study session cancelled. No experience was added.");
+  return { error: "" };
+}
+
 function remainingStudyMs(current, now) {
   const planned = Number(current?.plannedSeconds);
   const started = Number(current?.startedAtMs);
@@ -496,8 +525,8 @@ function stopFrontWatch() {
 function openFinishWindow() {
   if (finishWindow && !finishWindow.isDestroyed()) return;
   const win = new BrowserWindow({
-    width: 240,
-    height: 72,
+    width: 280,
+    height: 120,
     frame: false,
     transparent: true,
     resizable: false,
@@ -649,10 +678,13 @@ async function finishSession() {
     return;
   }
   finishing = true;
+  const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"}`;
   try {
     const body = scoreRequestBody(current, Date.now());
+    scoreDebug(`[score] finish ${current.id} ${desk}`);
     let response = null;
     let payload = null;
+    let postError = "";
     try {
       response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
         method: "POST",
@@ -660,14 +692,15 @@ async function finishSession() {
         body: JSON.stringify(body),
       });
       payload = await response.json().catch(() => null);
-      console.log(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || ""}`);
+      scoreDebug(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || "no body"} ${desk}`);
     } catch (error) {
-      console.log(`[score] POST ${current.id} failed: ${error instanceof Error ? error.message : "network"}`);
+      postError = error instanceof Error ? error.message : "network";
+      scoreDebug(`[score] POST ${current.id} failed: ${postError} ${desk}`);
     }
     if (study !== current) return;
     const reachedScoreRoute = response && (response.status === 200 || response.status === 403 || response.status === 409);
     if (!reachedScoreRoute) {
-      const saved = await submitScoreDirect(current, body);
+      const saved = await submitScoreDirect(current, body, postError || `HTTP ${response ? response.status : "none"}`);
       if (study !== current) return;
       if (!saved.ok) {
         setStatus(saved.message, { finishNote: saved.message });
@@ -695,9 +728,17 @@ async function finishSession() {
   }
 }
 
-async function submitScoreDirect(current, body) {
+function scoreDebug(line) {
+  console.log(line);
+  setDebug(line);
+}
+
+async function submitScoreDirect(current, body, postFailure) {
+  const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"} post=${postFailure}`;
   if (!supabase) {
-    return { ok: false, url: "", message: "Could not submit the score. The desk could not be reached." };
+    const message = `Could not submit the score. ${desk}`;
+    scoreDebug(`[score] rpc skipped ${current.id} ${desk}`);
+    return { ok: false, url: "", message };
   }
   const { data, error } = await supabase.rpc("submit_study_score", {
     target_session_id: current.id,
@@ -707,7 +748,7 @@ async function submitScoreDirect(current, body) {
     blocked_hosts: body.blocked_hosts,
   });
   if (error) {
-    console.log(`[score] rpc ${current.id} rejected: ${error.message}`);
+    scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);
     if (/already submitted/i.test(error.message)) {
       return {
         ok: true,
@@ -715,14 +756,15 @@ async function submitScoreDirect(current, body) {
         message: "That session was already scored.",
       };
     }
-    return { ok: false, url: "", message: "Could not submit the score. Try again." };
+    return { ok: false, url: "", message: `Could not submit the score. ${error.message} ${desk}` };
   }
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row.xp !== "number") {
-    console.log(`[score] rpc ${current.id} returned no score row`);
-    return { ok: false, url: "", message: "Could not submit the score. Try again." };
+    const seen = row ? JSON.stringify(row) : "empty";
+    scoreDebug(`[score] rpc ${current.id} returned ${seen} ${desk}`);
+    return { ok: false, url: "", message: `Could not submit the score. Database returned ${seen}. ${desk}` };
   }
-  console.log(`[score] rpc ${current.id} saved ${row.xp} xp`);
+  scoreDebug(`[score] rpc ${current.id} saved ${row.xp} xp ${desk}`);
   return {
     ok: true,
     url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
@@ -876,6 +918,7 @@ ipcMain.on("toggle-panel", () => {
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
 ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
+ipcMain.handle("cancel-study", () => cancelStudy());
 ipcMain.on("finish-session", () => {
   void finishSession();
 });

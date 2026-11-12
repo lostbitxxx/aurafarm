@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("pet", {
   useToken: (token) => ipcRenderer.invoke("use-token", token),
   claim: (code) => ipcRenderer.invoke("claim", code),
   finish: () => ipcRenderer.send("finish-session"),
+  cancelStudy: () => ipcRenderer.invoke("cancel-study"),
   openUpdate: () => ipcRenderer.send("open-update"),
   quit: () => ipcRenderer.send("quit-app"),
 });

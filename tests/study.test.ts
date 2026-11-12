@@ -239,3 +239,16 @@ test("website and pet finishes share one experience grant", () => {
   assert.match(timer, /false,/);
   assert.match(timer, /dev_password = 'emia'/);
 });
+
+test("cancelling a session stops it without experience", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0013_cancel_without_xp.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /function public\.cancel_study_session\(target_session_id uuid\)/);
+  assert.match(sql, /set status = 'cancelled'/);
+  assert.match(sql, /Does not change pet experience or level/);
+  assert.doesNotMatch(sql, /grant_study_experience/);
+  assert.doesNotMatch(sql, /user_pets/);
+  assert.doesNotMatch(sql, /xp =/);
+});

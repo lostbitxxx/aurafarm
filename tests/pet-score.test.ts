@@ -107,11 +107,13 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /signInWithPassword/);
   assert.match(main, /ipcMain\.handle\("sign-in"/);
   assert.match(preload, /signIn: \(email, password\)/);
-  assert.doesNotMatch(panel, /id="cancel"/);
-  assert.doesNotMatch(panel, /Cancel study session/);
-  assert.doesNotMatch(script, /cancelStudy/);
-  assert.doesNotMatch(preload, /cancelStudy/);
-  assert.doesNotMatch(main, /cancel-study/);
+  assert.match(panel, /id="cancel"/);
+  assert.match(panel, /Cancel study session/);
+  assert.match(script, /cancelStudy/);
+  assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
+  assert.match(main, /ipcMain\.handle\("cancel-study"/);
+  assert.match(main, /does not change experience/);
+  assert.doesNotMatch(main, /grant_study_experience/);
   assert.match(main, /planned_seconds/);
   assert.match(main, /closeFrontWindow/);
   assert.match(main, /The study time has not finished/);
