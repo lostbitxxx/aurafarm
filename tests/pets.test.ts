@@ -113,7 +113,7 @@ test("the signed-in header shows study time and public pages do not show a balan
   assert.doesNotMatch(publicHeader, /\bpoints\b/);
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const score = readFileSync(new URL("../lib/study-score.ts", import.meta.url), "utf8");
-  assert.match(dashboard, /select\("display_name"\)/);
+  assert.match(dashboard, /display_name, study_mode, preferred_session_minutes/);
   assert.match(score, /select\("display_name"\)/);
   assert.doesNotMatch(dashboard, /study_scores/);
   assert.doesNotMatch(score, /study_scores/);

@@ -1,6 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
+import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type PetCard } from "./pets";
 import {
@@ -13,14 +13,14 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "./study";
+import { isStudyMode, type StudyMode } from "./study-mode";
 import { createClient } from "./supabase/server";
 
 export async function loadDashboard() {
   await connection();
+  const gate = await requireCustomizationComplete();
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const userId = data?.claims.sub;
-  if (error || !userId) redirect("/login");
+  const userId = gate.userId;
 
   const [
     { data: profile },
@@ -31,7 +31,13 @@ export async function loadDashboard() {
     scoresResult,
     recordedResult,
   ] = await Promise.all([
-      supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select(
+          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal",
+        )
+        .eq("id", userId)
+        .maybeSingle(),
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
@@ -60,6 +66,8 @@ export async function loadDashboard() {
         .not("duration_seconds", "is", null)
         .order("ended_at", { ascending: false }),
     ]);
+
+  const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
 
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
@@ -133,7 +141,7 @@ export async function loadDashboard() {
 
   return {
     userId,
-    displayName: profile?.display_name?.trim() || "Farmer",
+    displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
     totalStudySeconds,
     pets,
     ownedColorIds,
@@ -148,5 +156,9 @@ export async function loadDashboard() {
     studyError,
     closeBlocked: closeBlockedResult.data?.close_blocked === true,
     closeBlockedError: closeBlockedMigrationMessage(closeBlockedResult.error?.message ?? null),
+    studyMode,
+    preferredSessionMinutes: Number(profile?.preferred_session_minutes ?? 0) || null,
+    monthlySessionGoal: Number(profile?.monthly_session_goal ?? 0) || null,
+    dailySessionGoal: Number(profile?.daily_session_goal ?? 0) || null,
   };
 }

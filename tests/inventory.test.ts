@@ -11,8 +11,7 @@ test("the desk lists pets for the signed-in farmer and keeps room placement", ()
     action.indexOf("export async function buyPet"),
   );
 
-  assert.match(loader, /getClaims/);
-  assert.match(loader, /redirect\("\/login"\)/);
+  assert.match(loader, /requireCustomizationComplete/);
   assert.match(loader, /select\("id, pet_type, level, xp, is_desktop_active, color, hat, clothes"\)/);
   assert.match(loader, /\.eq\("user_id", userId\)/);
   assert.match(loader, /\.order\("id", \{ ascending: true \}\)/);
