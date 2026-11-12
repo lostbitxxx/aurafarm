@@ -17,18 +17,18 @@ const {
 } = require("./frontmost");
 const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
-const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
+const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
 const WINDOW = { x: 128, y: 128 };
-const API_ORIGIN = (
-  process.env.AURAFARM_API_ORIGIN ||
-  require("./bundled-origin") ||
-  "http://localhost:3000"
-).replace(/\/$/, "");
+const API_ORIGIN = usableApiOrigin([
+  process.env.AURAFARM_API_ORIGIN,
+  require("./bundled-origin"),
+  "http://localhost:3000",
+]);
 const DESK_HOST = deskHostFromOrigin(API_ORIGIN);
 const PET_REFRESH_MS = 10_000;
 const FRONT_POLL_MS = 2_000;
@@ -103,6 +103,7 @@ function loadPublicEnv(file) {
     ) {
       value = value.slice(1, -1);
     }
+    if (!value || value.startsWith("#")) continue;
     process.env[key] = value;
   }
 }
@@ -649,14 +650,36 @@ async function finishSession() {
   }
   finishing = true;
   try {
-    const response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(scoreRequestBody(current, Date.now())),
-    });
-    const payload = await response.json().catch(() => null);
-    console.log(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || ""}`);
+    const body = scoreRequestBody(current, Date.now());
+    let response = null;
+    let payload = null;
+    try {
+      response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      payload = await response.json().catch(() => null);
+      console.log(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || ""}`);
+    } catch (error) {
+      console.log(`[score] POST ${current.id} failed: ${error instanceof Error ? error.message : "network"}`);
+    }
     if (study !== current) return;
+    const reachedScoreRoute = response && (response.status === 200 || response.status === 403 || response.status === 409);
+    if (!reachedScoreRoute) {
+      const saved = await submitScoreDirect(current, body);
+      if (study !== current) return;
+      if (!saved.ok) {
+        setStatus(saved.message, { finishNote: saved.message });
+        return;
+      }
+      if (saved.url) await shell.openExternal(saved.url);
+      if (study !== current) return;
+      stopFrontWatch();
+      hidePet();
+      setStatus(saved.message, { finishNote: "" });
+      return;
+    }
     const result = interpretScoreResponse(response.status, payload, API_ORIGIN, current.id);
     if (!result.clearToken) {
       setStatus(result.message, { finishNote: result.message });
@@ -667,15 +690,44 @@ async function finishSession() {
     stopFrontWatch();
     hidePet();
     setStatus(result.message, { finishNote: "" });
-  } catch {
-    if (study === current) {
-      setStatus("Could not submit the score. Try again.", {
-        finishNote: "Could not submit the score. Try again.",
-      });
-    }
   } finally {
     finishing = false;
   }
+}
+
+async function submitScoreDirect(current, body) {
+  if (!supabase) {
+    return { ok: false, url: "", message: "Could not submit the score. The desk could not be reached." };
+  }
+  const { data, error } = await supabase.rpc("submit_study_score", {
+    target_session_id: current.id,
+    raw_token: body.token,
+    duration_seconds: body.duration_seconds,
+    blocked_count: body.blocked_count,
+    blocked_hosts: body.blocked_hosts,
+  });
+  if (error) {
+    console.log(`[score] rpc ${current.id} rejected: ${error.message}`);
+    if (/already submitted/i.test(error.message)) {
+      return {
+        ok: true,
+        url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
+        message: "That session was already scored.",
+      };
+    }
+    return { ok: false, url: "", message: "Could not submit the score. Try again." };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row.xp !== "number") {
+    console.log(`[score] rpc ${current.id} returned no score row`);
+    return { ok: false, url: "", message: "Could not submit the score. Try again." };
+  }
+  console.log(`[score] rpc ${current.id} saved ${row.xp} xp`);
+  return {
+    ok: true,
+    url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
+    message: "Score sent.",
+  };
 }
 
 function publishWatch(reading) {

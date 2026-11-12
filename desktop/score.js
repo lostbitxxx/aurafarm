@@ -27,6 +27,22 @@ function scorePageUrl(origin, sessionId) {
   return `${String(origin || "").replace(/\/$/, "")}/dashboard/sessions/${sessionId}`;
 }
 
+function usableApiOrigin(candidates) {
+  const list = Array.isArray(candidates) ? candidates : [candidates];
+  for (const candidate of list) {
+    const value = String(candidate ?? "").trim().replace(/\/$/, "");
+    if (!value || value.startsWith("#")) continue;
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+      return url.origin;
+    } catch {
+      continue;
+    }
+  }
+  return "http://localhost:3000";
+}
+
 function interpretScoreResponse(status, body, origin, sessionId) {
   if (status === 200 && body && typeof body.url === "string" && body.url) {
     return { ok: true, url: body.url, clearToken: true, message: "Score sent." };
@@ -52,5 +68,6 @@ module.exports = {
   interpretScoreResponse,
   scorePageUrl,
   scoreRequestBody,
+  usableApiOrigin,
   wholeSecondsSince,
 };

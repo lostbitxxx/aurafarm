@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("../desktop/score.js") as {
+const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
   interpretScoreResponse: (
     status: number,
@@ -13,6 +13,7 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("../de
     origin: string,
     sessionId: string,
   ) => { ok: boolean; url: string; clearToken: boolean; message: string };
+  usableApiOrigin: (candidates: unknown) => string;
   scoreRequestBody: (
     study: {
       token: string;
@@ -133,11 +134,20 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /ipcMain\.on\("quit-app", \(\) => \{\s*app\.quit\(\);\s*\}\)/);
 });
 
+test("a commented vercel origin falls back to the local desk", () => {
+  assert.equal(usableApiOrigin(["#https://aurafarm.vercel.app", ""]), "http://localhost:3000");
+  assert.equal(usableApiOrigin("https://aurafarm.vercel.app/"), "https://aurafarm.vercel.app");
+});
+
 test("the pet posts the score and does not open a port", () => {
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const route = readFileSync(new URL("../app/api/sessions/[id]/score/route.ts", import.meta.url), "utf8");
   assert.match(main, /\/api\/sessions\/\$\{current\.id\}\/score/);
   assert.match(main, /\[score\] POST \$\{current\.id\}/);
   assert.match(main, /\[score\] session \$\{sessionId\} is/);
+  assert.match(main, /rpc\("submit_study_score"/);
   assert.match(main, /openExternal/);
   assert.doesNotMatch(main, /\.listen\(/);
+  assert.match(route, /await connection\(\)/);
+  assert.match(route, /submit_study_score/);
 });
