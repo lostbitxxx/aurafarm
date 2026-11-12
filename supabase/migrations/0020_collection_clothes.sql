@@ -2,6 +2,8 @@
 -- clothes_c through clothes_j are already in the database. Adding one of them does not
 -- need a migration. Copy the *-clothes_a folders to *-clothes_c (or the matching id)
 -- under each pet color for cat and bunny, including no-hat, hat_a, and hat_b, then edit those SVG files.
+-- Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
+-- With a hat: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
 
 insert into public.collection_items (id, kind, name)
 values

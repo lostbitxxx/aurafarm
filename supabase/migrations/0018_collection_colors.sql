@@ -1,5 +1,7 @@
 -- Twelve color ranges are owned once per account, then applied to any pet that account owns.
 -- A lighter or darker shade of one range is an SVG edit, not another row.
+-- Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-no-clothes/{pose}.svg
+-- A worn hat or clothes replaces no-hat or no-clothes in that folder name.
 
 create table if not exists public.collection_items (
   id text primary key,

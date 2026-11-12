@@ -10,6 +10,8 @@ export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "wait" | "study1" |
 /**
  * One id per color range. A lighter or darker shade of the same range is an SVG
  * fill change, not a new id and not a migration.
+ * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-no-clothes/{pose}.svg
+ * A worn hat or clothes replaces no-hat or no-clothes in that folder name.
  */
 export const SAMPLE_COLORS = [
   { id: "honey", name: "Honey" },
@@ -42,6 +44,8 @@ export function sampleColor(value: unknown): SampleColorId | null {
  * under each pet color for cat and bunny, then edit those SVG files.
  * Copying hat_a-* already includes the clothes_a and clothes_b folders that sit
  * beside that hat, so a new hat does not need a clothes migration either.
+ * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
+ * With clothes: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
  */
 export const SAMPLE_HATS = [
   { id: "hat_a" },
@@ -67,6 +71,8 @@ export function sampleHat(value: unknown): SampleHatId | null {
  * clothes_c through clothes_j are already in the database. Adding one of them does not
  * need a migration. Copy the *-clothes_a folders to *-clothes_c (or the matching id)
  * under each pet color for cat and bunny, including no-hat, hat_a, and hat_b, then edit those SVG files.
+ * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
+ * With a hat: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
  */
 export const SAMPLE_CLOTHES = [
   { id: "clothes_a" },
@@ -115,6 +121,14 @@ export function outfitFolder(hat: string | null | undefined, clothes: string | n
   return `${hatPart}-${clothesPart}`;
 }
 
+/**
+ * Route for all three accessories:
+ * /pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
+ * The file is public/pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
+ * color is the directory. hat is no-hat or hat_a through hat_j.
+ * clothes is no-clothes or clothes_a through clothes_j.
+ * pose is idle, walk1, walk2, blush, wait, study1, or study2.
+ */
 export function petAssetPath(
   petType: string,
   pose: PetPose,
