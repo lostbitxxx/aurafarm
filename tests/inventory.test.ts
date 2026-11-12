@@ -20,6 +20,8 @@ test("the desk lists pets for the signed-in farmer and keeps room placement", ()
   assert.doesNotMatch(desk, /PetInventory/);
   assert.match(desk, /setDialog\("inventory"\)/);
   assert.match(desk, /describePet/);
+  assert.match(desk, /localStorage/);
+  assert.doesNotMatch(desk, /current\.size === 0/);
   assert.match(equip, /equip_pet_to_desktop/);
   assert.match(equip, /revalidatePath\("\/inventory"\)/);
   assert.match(equip, /revalidatePath\("\/dashboard"\)/);
