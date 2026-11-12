@@ -16,10 +16,13 @@ const sessionIdPattern =
 
 const LAUNCH_CODE_TTL_MS = 5 * 60 * 1000;
 
-export async function startStudySession(planned: number) {
+export async function startStudySession(planned: number, useDesktopPet: boolean) {
   const plannedSeconds = plannedStudySeconds(planned);
   if (plannedSeconds === null) {
     return { error: "Choose a study length.", launchCode: "", sessionId: "" };
+  }
+  if (typeof useDesktopPet !== "boolean") {
+    return { error: "Choose how this session is tracked.", launchCode: "", sessionId: "" };
   }
   if (!isSupabaseConfigured()) {
     return { error: "Supabase is not configured.", launchCode: "", sessionId: "" };
@@ -63,6 +66,7 @@ export async function startStudySession(planned: number) {
       launch_code_expires_at: new Date(Date.now() + LAUNCH_CODE_TTL_MS).toISOString(),
       planned_seconds: plannedSeconds,
       pet_id: equipped?.id ?? null,
+      use_desktop_pet: useDesktopPet,
     })
     .select("id")
     .single();
@@ -105,35 +109,6 @@ export async function setCloseBlocked(enabled: boolean) {
   if (error) return { error: closeBlockedMigrationMessage(error.message) ?? error.message };
 
   revalidatePath("/dashboard");
-  return { error: "" };
-}
-
-export async function cancelStudySession(sessionId: string) {
-  if (!sessionIdPattern.test(sessionId)) {
-    return { error: "That session could not be cancelled." };
-  }
-  if (!isSupabaseConfigured()) {
-    return { error: "Supabase is not configured." };
-  }
-
-  const supabase = await createClient();
-  const { data, error: claimsError } = await supabase.auth.getClaims();
-  if (claimsError || !data?.claims.sub) {
-    return { error: "Sign in to cancel a study session." };
-  }
-
-  const { error } = await supabase.rpc("cancel_study_session", {
-    target_session_id: sessionId,
-  });
-
-  if (error) {
-    console.error(`[score] cancel ${sessionId} failed: ${error.message}`);
-    return { error: studyTimerMigrationMessage(error.message) ?? error.message };
-  }
-  console.info(`[score] cancel ${sessionId} user ${data.claims.sub}`);
-
-  revalidatePath("/dashboard");
-  revalidatePath("/inventory");
   return { error: "" };
 }
 

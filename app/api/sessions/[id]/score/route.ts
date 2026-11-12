@@ -8,7 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 const sessionIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type ScoreRow = { points: number; distracted: boolean };
+type ScoreRow = { xp: number; distracted: boolean };
 
 export async function POST(
   request: Request,
@@ -68,7 +68,7 @@ export async function POST(
   revalidatePath("/shop");
   revalidatePath("/inventory");
   const origin = new URL(request.url).origin;
-  return NextResponse.json(buildScoreResult(origin, id, row.points, row.distracted));
+  return NextResponse.json(buildScoreResult(origin, id, row.xp, row.distracted));
 }
 
 function isAlreadySubmitted(message: string) {
@@ -117,8 +117,8 @@ async function readScoreSession(sessionId: string): Promise<ScoreSession | null>
 function firstScoreRow(data: unknown): ScoreRow | null {
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== "object") return null;
-  const record = row as { points?: unknown; distracted?: unknown };
-  if (typeof record.points !== "number" || typeof record.distracted !== "boolean") return null;
-  return { points: record.points, distracted: record.distracted };
+  const record = row as { xp?: unknown; distracted?: unknown };
+  if (typeof record.xp !== "number" || typeof record.distracted !== "boolean") return null;
+  return { xp: record.xp, distracted: record.distracted };
 }
 

@@ -69,7 +69,7 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
-const CLOSE_AFTER_MS = 8000;
+const CLOSE_AFTER_MS = 60_000;
 
 function createCloseWatch() {
   return { host: "", since: 0, attemptedHost: "", close: false };
@@ -129,7 +129,8 @@ function describeCloseDebug(input) {
   }
   if (decision.close) return `Debug: closing ${decision.host} in ${app} now.${note}`;
   const waited = Math.max(0, Math.floor(((input.now ?? 0) - decision.since) / 1000));
-  return `Debug: ${decision.host} in ${app} for ${waited}s of 8s.${note}`;
+  const limit = Math.round(CLOSE_AFTER_MS / 1000);
+  return `Debug: ${decision.host} in ${app} for ${waited}s of ${limit}s.${note}`;
 }
 
 function noteCloseAttempt(watch) {

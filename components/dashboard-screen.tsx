@@ -6,7 +6,6 @@ import { experienceProgress, type ActiveStudySession, type BlocklistEntry, type 
 
 export function DashboardScreen({
   displayName,
-  points,
   totalStudySeconds,
   pets,
   petsError,
@@ -20,7 +19,6 @@ export function DashboardScreen({
   downloadUrl,
 }: {
   displayName: string;
-  points: number;
   totalStudySeconds: number;
   pets: PetCard[];
   petsError: string | null;
@@ -38,7 +36,7 @@ export function DashboardScreen({
   const progress = activePet ? experienceProgress(activePet.xp) : null;
   return (
     <div className="desk-page">
-      <SiteHeader displayName={displayName} points={points} studySeconds={totalStudySeconds} />
+      <SiteHeader displayName={displayName} studySeconds={totalStudySeconds} />
       <StudyPanel
         blocklist={blocklist}
         activeSession={activeSession}

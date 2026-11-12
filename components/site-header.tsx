@@ -4,14 +4,11 @@ import { formatDuration } from "@/lib/study";
 
 export function SiteHeader({
   displayName,
-  points,
   studySeconds,
 }: {
   displayName: string;
-  points: number;
   studySeconds?: number;
 }) {
-  const shown = Number.isFinite(points) ? Math.trunc(points) : 0;
   return (
     <header className="topbar">
       <div className="topbar-nav">
@@ -27,9 +24,6 @@ export function SiteHeader({
             Study <span>{formatDuration(studySeconds)}</span>
           </span>
         ) : null}
-        <span className="points-balance">
-          Points <span>{shown}</span>
-        </span>
         <Link href="/privacy">Privacy</Link>
         <span>{displayName}</span>
         <form action={signOut}>

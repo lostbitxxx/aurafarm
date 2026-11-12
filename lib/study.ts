@@ -5,19 +5,29 @@ export type BlocklistEntry = {
 
 export const STUDY_LENGTHS = [
   { minutes: 5, seconds: 300 },
-  { minutes: 25, seconds: 1500 },
-  { minutes: 55, seconds: 3300 },
-  { minutes: 85, seconds: 5100 },
+  { minutes: 30, seconds: 1800 },
+  { minutes: 60, seconds: 3600 },
+  { minutes: 90, seconds: 5400 },
 ] as const;
+
+const LEGACY_STUDY_SECONDS = [1500, 3300, 5100];
 
 export const DEFAULT_STUDY_SECONDS = 300;
 export const XP_PER_LEVEL = 100;
+export const XP_PER_MINUTE = 2;
+export const FINISH_BONUS = 1.1;
+export const DISTRACTED_PENALTY = 0.7;
+export const FINISH_BONUS_NUMERATOR = 11;
+export const FINISH_BONUS_DENOMINATOR = 10;
+export const DISTRACTED_PENALTY_NUMERATOR = 7;
+export const DISTRACTED_PENALTY_DENOMINATOR = 10;
 export const DEV_TIMER_PASSWORD = "emia";
 
 export type ActiveStudySession = {
   id: string;
   startedAt: string;
   plannedSeconds: number;
+  useDesktopPet: boolean;
 };
 
 export type RecordedStudySession = {
@@ -29,7 +39,7 @@ export type RecordedStudySession = {
 
 export type StudyScoreCard = {
   id: string;
-  points: number;
+  xp: number;
   distracted: boolean;
   durationSeconds: number;
   blockedHosts: string[];
@@ -82,9 +92,25 @@ export function plannedStudySeconds(value: unknown) {
   return STUDY_LENGTHS.some((length) => length.seconds === seconds) ? seconds : null;
 }
 
+export function storedStudySeconds(value: unknown) {
+  const chosen = plannedStudySeconds(value);
+  if (chosen !== null) return chosen;
+  const seconds = typeof value === "number" ? value : Number.NaN;
+  return LEGACY_STUDY_SECONDS.includes(seconds) ? seconds : null;
+}
+
+export function experienceForSession(studiedSeconds: number, distracted: boolean) {
+  if (!Number.isFinite(studiedSeconds) || studiedSeconds < 60) return 0;
+  const minutes = Math.floor(studiedSeconds / 60);
+  let gain = Math.floor((minutes * XP_PER_MINUTE * FINISH_BONUS_NUMERATOR) / FINISH_BONUS_DENOMINATOR);
+  if (distracted) {
+    gain = Math.floor((gain * DISTRACTED_PENALTY_NUMERATOR) / DISTRACTED_PENALTY_DENOMINATOR);
+  }
+  return gain;
+}
+
 export function experienceForDuration(durationSeconds: number) {
-  if (!Number.isFinite(durationSeconds) || durationSeconds < 60) return 0;
-  return Math.floor(durationSeconds / 60);
+  return experienceForSession(durationSeconds, false);
 }
 
 export function levelFromExperience(xp: number) {
@@ -125,9 +151,13 @@ export function formatClock(seconds: number) {
 }
 
 const STUDY_TIMER_MIGRATION = "Run migration 0011 before using study timers.";
+const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session.";
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/use_desktop_pet|xp_awarded|grant_study_experience/i.test(message)) {
+    return SESSION_XP_MIGRATION;
+  }
   if (/planned_seconds|\bpet_id\b|\bxp\b|complete_study_timer/i.test(message)) {
     return STUDY_TIMER_MIGRATION;
   }

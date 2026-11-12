@@ -2,21 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { hostMatchesBlocklist } from "../lib/blocklist";
 import {
-  DISTRACTED_SCORE,
-  FOCUSED_SCORE,
   createLaunchCode,
   createSessionSecret,
   hashSecret,
-  scoreForBlockedCount,
 } from "../lib/scoring";
-
-test("a clear session scores higher than a distracted one", () => {
-  assert.equal(FOCUSED_SCORE, 100);
-  assert.equal(DISTRACTED_SCORE, 40);
-  assert.equal(scoreForBlockedCount(0), 100);
-  assert.equal(scoreForBlockedCount(1), 40);
-  assert.equal(scoreForBlockedCount(3), 40);
-});
 
 test("session secrets and launch codes are hashed as lowercase sha256 hex", () => {
   assert.equal(

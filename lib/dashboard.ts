@@ -6,7 +6,7 @@ import {
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
   levelFromExperience,
-  plannedStudySeconds,
+  storedStudySeconds,
   studyTimerMigrationMessage,
   type ActiveStudySession,
   type BlocklistEntry,
@@ -31,7 +31,7 @@ export async function loadDashboard() {
     scoresResult,
     recordedResult,
   ] = await Promise.all([
-      supabase.from("profiles").select("display_name, points").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
@@ -41,15 +41,16 @@ export async function loadDashboard() {
       supabase.from("blocklist_hosts").select("host, label").order("host", { ascending: true }),
       supabase
         .from("study_sessions")
-        .select("id, started_at, planned_seconds")
+        .select("id, started_at, planned_seconds, use_desktop_pet")
         .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle(),
       supabase
-        .from("study_scores")
-        .select("id, points, distracted, duration_seconds, blocked_hosts, created_at")
+        .from("study_sessions")
+        .select("id, xp_awarded, blocked_count, duration_seconds, blocked_hosts, ended_at")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+        .eq("status", "submitted")
+        .order("ended_at", { ascending: false })
         .limit(10),
       supabase
         .from("study_sessions")
@@ -81,7 +82,8 @@ export async function loadDashboard() {
         id: String(sessionResult.data.id),
         startedAt: String(sessionResult.data.started_at),
         plannedSeconds:
-          plannedStudySeconds(Number(sessionResult.data.planned_seconds)) ?? DEFAULT_STUDY_SECONDS,
+          storedStudySeconds(Number(sessionResult.data.planned_seconds)) ?? DEFAULT_STUDY_SECONDS,
+        useDesktopPet: sessionResult.data.use_desktop_pet === true,
       }
     : null;
 
@@ -102,11 +104,11 @@ export async function loadDashboard() {
 
   const scores: StudyScoreCard[] = (scoresResult.data ?? []).map((score) => ({
     id: String(score.id),
-    points: Number(score.points),
-    distracted: Boolean(score.distracted),
+    xp: Number(score.xp_awarded ?? 0),
+    distracted: Number(score.blocked_count) > 0,
     durationSeconds: Number(score.duration_seconds),
     blockedHosts: Array.isArray(score.blocked_hosts) ? score.blocked_hosts.map(String) : [],
-    createdAt: String(score.created_at),
+    createdAt: String(score.ended_at ?? ""),
   }));
 
   const studyError = studyTimerMigrationMessage(
@@ -120,7 +122,6 @@ export async function loadDashboard() {
 
   return {
     displayName: profile?.display_name?.trim() || "Farmer",
-    points: wholePoints(profile?.points),
     totalStudySeconds,
     pets,
     petsError: studyTimerMigrationMessage(petsResult.error?.message ?? null),

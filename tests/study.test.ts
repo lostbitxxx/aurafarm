@@ -7,8 +7,13 @@ import {
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
   devTimerPasswordMatches,
+  DISTRACTED_PENALTY,
   experienceForDuration,
+  experienceForSession,
   experienceProgress,
+  FINISH_BONUS,
+  storedStudySeconds,
+  XP_PER_MINUTE,
   focusedSeconds,
   formatClock,
   formatDuration,
@@ -90,25 +95,31 @@ test("durations stay in whole hours, minutes, and seconds", () => {
   assert.equal(formatDuration(3661), "1h 1m");
 });
 
-test("study lengths default to 5 minutes and stay on the four choices", () => {
+test("study lengths default to 5 minutes and offer 30, 60, and 90", () => {
   assert.equal(DEFAULT_STUDY_SECONDS, 300);
   assert.deepEqual(
     STUDY_LENGTHS.map((length) => length.seconds),
-    [300, 1500, 3300, 5100],
+    [300, 1800, 3600, 5400],
   );
   assert.equal(plannedStudySeconds(300), 300);
-  assert.equal(plannedStudySeconds(5100), 5100);
-  assert.equal(plannedStudySeconds(301), null);
+  assert.equal(plannedStudySeconds(5400), 5400);
+  assert.equal(plannedStudySeconds(1500), null);
+  assert.equal(storedStudySeconds(1500), 1500);
   assert.equal(plannedStudySeconds("300"), null);
 });
 
-test("one finished minute is one experience point and a level needs 100", () => {
+test("finish bonus and distracted penalty share one experience rate", () => {
+  assert.equal(XP_PER_MINUTE, 2);
+  assert.equal(FINISH_BONUS, 1.1);
+  assert.equal(DISTRACTED_PENALTY, 0.7);
   assert.equal(experienceForDuration(59), 0);
-  assert.equal(experienceForDuration(150), 2);
-  assert.equal(experienceForDuration(300), 5);
-  assert.equal(experienceForDuration(1500), 25);
-  assert.equal(experienceForDuration(3300), 55);
-  assert.equal(experienceForDuration(5100), 85);
+  assert.equal(experienceForSession(300, false), 11);
+  assert.equal(experienceForSession(300, true), 7);
+  assert.equal(experienceForSession(1800, false), 66);
+  assert.equal(experienceForSession(1800, true), 46);
+  assert.equal(experienceForSession(3600, false), 132);
+  assert.equal(experienceForSession(5400, false), 198);
+  assert.equal(experienceForSession(5400, true), 138);
   assert.equal(levelFromExperience(0), 1);
   assert.equal(levelFromExperience(99), 1);
   assert.equal(levelFromExperience(100), 2);
@@ -138,6 +149,10 @@ test("a missing timer column tells the farmer to run migration 0011", () => {
   assert.match(
     studyTimerMigrationMessage("Could not find the 'planned_seconds' column of 'study_sessions' in the schema cache") ?? "",
     /migration 0011/,
+  );
+  assert.match(
+    studyTimerMigrationMessage("Could not find the 'use_desktop_pet' column of 'study_sessions' in the schema cache") ?? "",
+    /migration 0012/,
   );
   assert.equal(studyTimerMigrationMessage("Sign in to finish a study session."), "Sign in to finish a study session.");
 });
@@ -186,4 +201,41 @@ test("cancel keeps focused minutes and the dev finish is the only skip", () => {
   assert.match(timer, /duration_seconds = session_row\.planned_seconds/);
   assert.match(timer, /Study time has not finished/);
   assert.match(timer, /dev_finish is not true/);
+});
+
+test("website and pet finishes share one experience grant", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0012_session_xp.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /planned_seconds in \(300, 1500, 1800, 3300, 3600, 5100, 5400\)/);
+  assert.match(sql, /use_desktop_pet boolean not null default false/);
+  assert.match(sql, /xp_awarded integer/);
+  assert.match(sql, /FINISH_BONUS/);
+  assert.match(sql, /DISTRACTED_PENALTY/);
+  assert.match(sql, /xp_per_minute constant integer := 2/);
+  assert.match(sql, /finish_bonus constant integer := 11/);
+  assert.match(sql, /distracted_penalty constant integer := 7/);
+  assert.match(sql, /drop table if exists public\.study_scores/);
+  assert.match(sql, /drop column if exists points/);
+  assert.match(sql, /drop function if exists public\.cancel_study_session\(uuid\)/);
+  assert.doesNotMatch(sql, /farmer\.points/);
+
+  const grant = sql.slice(sql.indexOf("function public.grant_study_experience"), sql.indexOf("function public.submit_study_score"));
+  assert.match(grant, /minutes \* xp_per_minute \* finish_bonus \/ 10/);
+  assert.match(grant, /gained \* distracted_penalty \/ 10/);
+  assert.match(grant, /level = 1 \+ \(\(user_pets\.xp \+ gained\) \/ 100\)/);
+  assert.match(grant, /duration_seconds = recorded/);
+
+  const score = sql.slice(sql.indexOf("function public.submit_study_score"), sql.indexOf("function public.complete_study_timer"));
+  assert.match(score, /use_desktop_pet is not true/);
+  assert.match(score, /grant_study_experience\(/);
+  assert.match(score, /Study time has not finished/);
+  assert.doesNotMatch(score, /profiles/);
+
+  const timer = sql.slice(sql.indexOf("function public.complete_study_timer"), sql.indexOf("function public.purchase_pet"));
+  assert.match(timer, /use_desktop_pet then/);
+  assert.match(timer, /grant_study_experience\(/);
+  assert.match(timer, /false,/);
+  assert.match(timer, /dev_password = 'emia'/);
 });

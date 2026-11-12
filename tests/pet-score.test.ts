@@ -65,7 +65,7 @@ test("the finish label follows the blocked count", () => {
 test("a saved score opens the screen and a failed score keeps the token", () => {
   const sent = interpretScoreResponse(
     200,
-    { url: "http://localhost:3000/dashboard/sessions/session-id", points: 40, distracted: true },
+    { url: "http://localhost:3000/dashboard/sessions/session-id", xp: 46, distracted: true },
     "http://localhost:3000",
     "session-id",
   );
@@ -106,21 +106,19 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /signInWithPassword/);
   assert.match(main, /ipcMain\.handle\("sign-in"/);
   assert.match(preload, /signIn: \(email, password\)/);
-  assert.match(panel, /id="cancel"/);
-  assert.match(panel, /Cancel study session/);
-  assert.match(script, /window\.pet\.cancelStudy\(\)/);
-  assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
-  assert.match(main, /\/api\/sessions\/\$\{sessionId\}\/cancel/);
-  assert.match(main, /openExternal\(url\)/);
+  assert.doesNotMatch(panel, /id="cancel"/);
+  assert.doesNotMatch(panel, /Cancel study session/);
+  assert.doesNotMatch(script, /cancelStudy/);
+  assert.doesNotMatch(preload, /cancelStudy/);
+  assert.doesNotMatch(main, /cancel-study/);
+  assert.match(main, /planned_seconds/);
+  assert.match(main, /closeFrontWindow/);
+  assert.match(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  assert.match(desk, /Cancel session/);
-  assert.match(desk, /cancelStudySession/);
-  const cancelRoute = readFileSync(
-    new URL("../app/api/sessions/[id]/cancel/route.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(cancelRoute, /cancel_study_session/);
-  assert.match(cancelRoute, /\/dashboard/);
+  assert.match(desk, /Desktop pet/);
+  assert.match(desk, /Website timer/);
+  assert.doesNotMatch(desk, /cancelStudySession/);
+  assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);

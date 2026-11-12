@@ -10,11 +10,6 @@ document.getElementById("quit").addEventListener("click", () => {
   window.pet.quit();
 });
 
-document.getElementById("cancel").addEventListener("click", async () => {
-  const result = await window.pet.cancelStudy();
-  status.textContent = result.error || "Study session cancelled.";
-});
-
 document.getElementById("session-token").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);

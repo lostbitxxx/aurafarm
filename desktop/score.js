@@ -10,7 +10,11 @@ function wholeSecondsSince(startedAt, nowMs) {
 }
 
 function scoreRequestBody(study, nowMs) {
-  const hosts = Array.isArray(study?.log?.blockedHosts) ? study.log.blockedHosts : [];
+  const hosts = Array.isArray(study?.distractedHosts)
+    ? study.distractedHosts
+    : Array.isArray(study?.log?.blockedHosts)
+      ? study.log.blockedHosts
+      : [];
   return {
     token: typeof study?.token === "string" ? study.token : "",
     duration_seconds: wholeSecondsSince(study?.startedAt, nowMs),
