@@ -21,3 +21,7 @@ Name every commit with a Conventional Commits subject:
 `type(optional scope): summary`
 
 Use `feat`, `fix`, `docs`, `test`, `refactor`, or `chore`. The summary is imperative.
+
+## Pull requests
+
+Do not create a pull request unless the user asks for one. Commit and push the branch when the work is ready, and stop there. Updating a pull request the user already asked for is fine.

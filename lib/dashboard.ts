@@ -1,6 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type PetCard } from "./pets";
 import {
   closeBlockedMigrationMessage,
@@ -25,6 +26,7 @@ export async function loadDashboard() {
     { data: profile },
     closeBlockedResult,
     petsResult,
+    collectionsResult,
     sessionResult,
     scoresResult,
     recordedResult,
@@ -33,9 +35,10 @@ export async function loadDashboard() {
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
-        .select("id, pet_type, level, xp, is_desktop_active")
+        .select("id, pet_type, level, xp, is_desktop_active, color, hat, clothes")
         .eq("user_id", userId)
         .order("id", { ascending: true }),
+      supabase.from("user_collections").select("item_id").eq("user_id", userId),
       supabase
         .from("study_sessions")
         .select("id, started_at, planned_seconds, use_desktop_pet")
@@ -66,7 +69,23 @@ export async function loadDashboard() {
       level: levelFromExperience(xp),
       xp,
       is_desktop_active: Boolean(pet.is_desktop_active),
+      color: sampleColor(pet.color),
+      hat: sampleHat(pet.hat),
+      clothes: sampleClothes(pet.clothes),
     };
+  });
+
+  const ownedColorIds = (collectionsResult.data ?? []).flatMap((row) => {
+    const color = sampleColor(row.item_id);
+    return color ? [color] : [];
+  });
+  const ownedHatIds = (collectionsResult.data ?? []).flatMap((row) => {
+    const hat = sampleHat(row.item_id);
+    return hat ? [hat] : [];
+  });
+  const ownedClothesIds = (collectionsResult.data ?? []).flatMap((row) => {
+    const clothes = sampleClothes(row.item_id);
+    return clothes ? [clothes] : [];
   });
 
   const activeSession: ActiveStudySession | null = sessionResult.data
@@ -108,6 +127,7 @@ export async function loadDashboard() {
       scoresResult.error?.message ??
       recordedResult.error?.message ??
       petsResult.error?.message ??
+      collectionsResult.error?.message ??
       null,
   );
 
@@ -116,7 +136,12 @@ export async function loadDashboard() {
     displayName: profile?.display_name?.trim() || "Farmer",
     totalStudySeconds,
     pets,
-    petsError: studyTimerMigrationMessage(petsResult.error?.message ?? null),
+    ownedColorIds,
+    ownedHatIds,
+    ownedClothesIds,
+    petsError: studyTimerMigrationMessage(
+      collectionsResult.error?.message ?? petsResult.error?.message ?? null,
+    ),
     activeSession,
     scores,
     recordedSessions: recordedSessions.slice(0, 10),

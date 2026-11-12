@@ -165,6 +165,15 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/\bclothes\b/i.test(message)) {
+    return "Run migration 0020 before using collection clothes.";
+  }
+  if (/\bhat\b/i.test(message)) {
+    return "Run migration 0019 before using collection hats.";
+  }
+  if (/user_collections|collection_items|\bcolor\b/i.test(message)) {
+    return "Run migration 0018 before using collection colors.";
+  }
   if (/end_study_early/i.test(message)) {
     return "Run migration 0014 before ending a study session early.";
   }

@@ -1,27 +1,52 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { petAssetPath, type PetPose } from "@/lib/pet-assets";
+import { petAssetPath, sampleClothes, sampleColor, sampleHat, type PetPose } from "@/lib/pet-assets";
 
 export function PixelPetArt({
   petType,
   pose = "idle",
+  color = null,
+  hat = null,
+  clothes = null,
   className,
   alt = "",
 }: {
   petType: string;
   pose?: PetPose;
+  color?: string | null;
+  hat?: string | null;
+  clothes?: string | null;
   className?: string;
   alt?: string;
 }) {
+  const [dropClothes, setDropClothes] = useState(false);
+  const [dropHat, setDropHat] = useState(false);
+  const hatId = sampleHat(hat);
+  const clothesId = sampleClothes(clothes);
+  const src = petAssetPath(petType, pose, {
+    color: sampleColor(color) ?? undefined,
+    hat: dropHat ? null : hatId,
+    clothes: dropClothes ? null : clothesId,
+  });
+
+  useEffect(() => {
+    setDropClothes(false);
+    setDropHat(false);
+  }, [petType, pose, color, hat, clothes]);
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className ? `pixel-pet-art ${className}` : "pixel-pet-art"}
-      src={petAssetPath(petType, pose)}
+      src={src}
       alt={alt}
       draggable={false}
       style={{ imageRendering: "pixelated" }}
+      onError={() => {
+        if (clothesId && !dropClothes) setDropClothes(true);
+        else if (hatId && !dropHat) setDropHat(true);
+      }}
     />
   );
 }
