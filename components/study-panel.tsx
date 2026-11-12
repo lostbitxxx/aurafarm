@@ -74,7 +74,8 @@ export function StudyPanel({
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
   const [localDesktop, setLocalDesktop] = useState(false);
   const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
-  const [useDesktopPet, setUseDesktopPet] = useState(false);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [railOpen, setRailOpen] = useState(Boolean(activeSession) && !activeSession?.useDesktopPet);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -143,23 +144,36 @@ export function StudyPanel({
     return result;
   }
 
-  async function onStart() {
+  function onAskTracker() {
+    if (pending || shownSession) return;
+    setTrackerChoice(null);
+    setError(null);
+    setTrackerOpen(true);
+  }
+
+  function onCloseTracker() {
     if (pending) return;
+    setTrackerOpen(false);
+  }
+
+  async function onConfirmTracker() {
+    if (pending || trackerChoice === null) return;
     setPending(true);
     setError(null);
-    const result = await startStudySession(chosenSeconds, useDesktopPet);
+    const result = await startStudySession(chosenSeconds, trackerChoice);
     setPending(false);
     if (result.error) {
       setError(result.error);
       return;
     }
+    setTrackerOpen(false);
     setRushed(false);
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
     setLocalPlanned(chosenSeconds);
-    setLocalDesktop(useDesktopPet);
-    if (useDesktopPet) setRailOpen(false);
+    setLocalDesktop(trackerChoice);
+    if (trackerChoice) setRailOpen(false);
   }
 
   async function onToggleClose() {
@@ -269,33 +283,13 @@ export function StudyPanel({
               </ul>
             ) : null}
           </div>
-            <div className="tracker-choices" role="group" aria-label="Session tracker">
-              <button
-                type="button"
-                className={useDesktopPet ? "button button-small" : "button button-small button-ghost"}
-                aria-pressed={useDesktopPet}
-                disabled={pending || Boolean(shownSession)}
-                onClick={() => setUseDesktopPet(true)}
-              >
-                Desktop pet
-              </button>
-              <button
-                type="button"
-                className={!useDesktopPet ? "button button-small" : "button button-small button-ghost"}
-                aria-pressed={!useDesktopPet}
-                disabled={pending || Boolean(shownSession)}
-                onClick={() => setUseDesktopPet(false)}
-              >
-                Website timer
-              </button>
-            </div>
             <div className="scene-actions">
             {shownSession ? (
               <button type="button" className="button" onClick={() => setRailOpen(true)}>
                 Visit your pet ↗
               </button>
             ) : (
-              <button type="button" className="button" disabled={pending} onClick={onStart}>
+              <button type="button" className="button" disabled={pending} onClick={onAskTracker}>
                 Start studying →
               </button>
             )}
@@ -333,9 +327,7 @@ export function StudyPanel({
             ? "The desktop pet tracks this session. It comes forward and closes a blocklist window after one minute."
             : shownSession
               ? "The website timer tracks this session."
-              : useDesktopPet
-                ? "The desktop pet will track this session."
-                : "The website timer will track this session."}
+              : "Choose a length, then start. The next window asks which timer to use."}
         </p>
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
@@ -423,9 +415,7 @@ export function StudyPanel({
             </button>
           ) : null}
         </div>
-        {shownSession?.useDesktopPet || (!shownSession && useDesktopPet) ? (
-          <PetStatus downloadUrl={downloadUrl} />
-        ) : null}
+        {shownSession?.useDesktopPet ? <PetStatus downloadUrl={downloadUrl} /> : null}
         <div className="score-history">
           <h3>Sessions</h3>
           {recordedSessions.length === 0 ? (
@@ -464,6 +454,58 @@ export function StudyPanel({
         </div>
         {extras}
       </aside>
+      {trackerOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseTracker}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tracker-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="tracker-title">How should this session be tracked?</h2>
+            <p>The session starts when you confirm.</p>
+            <div className="tracker-choices" role="group" aria-label="Session tracker">
+              <button
+                type="button"
+                className={trackerChoice === true ? "button" : "button button-ghost"}
+                aria-pressed={trackerChoice === true}
+                disabled={pending}
+                onClick={() => setTrackerChoice(true)}
+              >
+                Desktop pet
+              </button>
+              <button
+                type="button"
+                className={trackerChoice === false ? "button" : "button button-ghost"}
+                aria-pressed={trackerChoice === false}
+                disabled={pending}
+                onClick={() => setTrackerChoice(false)}
+              >
+                Website timer
+              </button>
+            </div>
+            {trackerChoice === true ? (
+              <p>The desktop pet tracks the time. It comes forward and closes a blocklist window after one minute.</p>
+            ) : null}
+            {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+            {trackerChoice === true ? <PetStatus downloadUrl={downloadUrl} /> : null}
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
+                Back
+              </button>
+              <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

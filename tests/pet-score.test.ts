@@ -115,8 +115,12 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /closeFrontWindow/);
   assert.match(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(desk, /How should this session be tracked/);
   assert.match(desk, /Desktop pet/);
   assert.match(desk, /Website timer/);
+  assert.match(desk, /Confirm/);
+  assert.match(desk, /onAskTracker/);
+  assert.match(desk, /onConfirmTracker/);
   assert.doesNotMatch(desk, /cancelStudySession/);
   assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="quit"/);

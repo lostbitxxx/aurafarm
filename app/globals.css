@@ -324,7 +324,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   line-height: 1;
 }
 
-.length-choices, .tracker-choices, .dev-finish {
+.length-choices, .dev-finish {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -340,6 +340,44 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .dev-finish .field { min-width: 10rem; }
+
+.tracker-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(16, 32, 24, 0.72);
+}
+
+.tracker-card {
+  width: min(28rem, 100%);
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+  background: var(--moss);
+  color: var(--cream);
+  box-shadow: var(--shadow);
+}
+
+.tracker-card h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+}
+
+.tracker-card p { margin: 0.7rem 0 0; }
+
+.tracker-choices, .tracker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tracker-card .pet-status { margin-top: 1rem; }
 
 .desk-pets {
   list-style: none;
