@@ -11,12 +11,16 @@ export function FarmDialog({
   children,
   wide = false,
   titleId: titleIdProp,
+  headerExtra,
+  cardClassName,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
   titleId?: string;
+  headerExtra?: ReactNode;
+  cardClassName?: string;
 }) {
   const generatedId = useId();
   const titleId = titleIdProp ?? generatedId;
@@ -67,11 +71,15 @@ export function FarmDialog({
     };
   }, [onClose]);
 
+  const cardClass = ["tracker-card", wide ? "tracker-card-wide" : "", cardClassName ?? ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="tracker-pop" role="presentation" onClick={onClose}>
       <div
         ref={cardRef}
-        className={wide ? "tracker-card tracker-card-wide" : "tracker-card"}
+        className={cardClass}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -80,9 +88,12 @@ export function FarmDialog({
       >
         <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="dialog-close" onClick={onClose} aria-label="Close dialog">
-            ×
-          </button>
+          <div className="dialog-head-actions">
+            {headerExtra}
+            <button type="button" className="dialog-close" onClick={onClose} aria-label="Close dialog">
+              ×
+            </button>
+          </div>
         </div>
         {children}
       </div>

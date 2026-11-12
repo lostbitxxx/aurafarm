@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
-import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
+import {
+  AchievementsDialog,
+  CollectionDialog,
+  InventoryDialog,
+  ShopDialog,
+  type InventorySort,
+} from "./dashboard-dialogs";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
@@ -59,6 +65,7 @@ export function DashboardScreen({
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<"shop" | "collection" | "inventory" | "achievements" | null>(null);
+  const [inventorySort, setInventorySort] = useState<InventorySort>("name-asc");
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
@@ -136,6 +143,8 @@ export function DashboardScreen({
           pets={localPets}
           placedIds={placedIds}
           sessionActive={sessionActive}
+          sort={inventorySort}
+          onSortChange={setInventorySort}
           onClose={() => setDialog(null)}
           onToggleRoom={onToggleRoom}
           onEquipped={onEquipped}

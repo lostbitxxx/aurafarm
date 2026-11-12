@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE } from "@/lib/pet-assets";
+import { EQUIP_DURING_SESSION_NOTE } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -121,10 +121,61 @@ export function CollectionDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+export type InventorySort =
+  | "name-asc"
+  | "name-desc"
+  | "level-asc"
+  | "level-desc"
+  | "equipped-earliest"
+  | "equipped-latest";
+
+const INVENTORY_SORT_OPTIONS: { value: InventorySort; label: string; needsEquipDate: boolean }[] = [
+  { value: "name-asc", label: "Name: A–Z", needsEquipDate: false },
+  { value: "name-desc", label: "Name: Z–A", needsEquipDate: false },
+  { value: "level-asc", label: "Level: Low–High", needsEquipDate: false },
+  { value: "level-desc", label: "Level: High–Low", needsEquipDate: false },
+  { value: "equipped-earliest", label: "Equipped: Earliest first", needsEquipDate: true },
+  { value: "equipped-latest", label: "Equipped: Latest first", needsEquipDate: true },
+];
+
+/** No per-pet equip timestamp exists in PetCard / user_pets / equip RPC. */
+const EQUIP_DATE_SORT_AVAILABLE = false;
+
+function comparePetId(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function sortInventoryPets(pets: readonly PetCard[], sort: InventorySort) {
+  const rows = pets.map((pet) => ({
+    pet,
+    name: describePet(pet.pet_type).name,
+  }));
+
+  rows.sort((left, right) => {
+    const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+    const byId = comparePetId(left.pet.id, right.pet.id);
+
+    if (sort === "name-asc") return byName || byId;
+    if (sort === "name-desc") return -byName || byId;
+    if (sort === "level-asc") {
+      return left.pet.level - right.pet.level || byName || byId;
+    }
+    if (sort === "level-desc") {
+      return right.pet.level - left.pet.level || byName || byId;
+    }
+    // Equip-date sorts are disabled until timestamps exist.
+    return byName || byId;
+  });
+
+  return rows.map((row) => row.pet);
+}
+
 export function InventoryDialog({
   pets,
   placedIds,
   sessionActive,
+  sort,
+  onSortChange,
   onClose,
   onToggleRoom,
   onEquipped,
@@ -132,6 +183,8 @@ export function InventoryDialog({
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
   sessionActive: boolean;
+  sort: InventorySort;
+  onSortChange: (sort: InventorySort) => void;
   onClose: () => void;
   onToggleRoom: (petId: string) => void;
   onEquipped?: (petId: string) => void;
@@ -139,6 +192,16 @@ export function InventoryDialog({
   const [items, setItems] = useState(pets);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const petsSignature = pets.map((pet) => `${pet.id}:${pet.level}:${pet.xp}:${pet.is_desktop_active}`).join("|");
+  const [snapshot, setSnapshot] = useState(petsSignature);
+
+  if (petsSignature !== snapshot) {
+    setSnapshot(petsSignature);
+    setItems(pets);
+  }
+
+  const sorted = sortInventoryPets(items, sort);
+  const countLabel = items.length === 1 ? "1 pet" : `${items.length} pets`;
 
   async function onEquip(petId: string) {
     if (pendingId || sessionActive) return;
@@ -157,48 +220,85 @@ export function InventoryDialog({
   }
 
   return (
-    <FarmDialog title="Inventory" onClose={onClose} wide>
-      <p className="panel-hint">Equip chooses the desktop companion. Room placement is separate.</p>
-      <p className="panel-hint">{ROOM_PLACEMENT_NOTE}</p>
-      {sessionActive ? <p className="panel-hint">{EQUIP_DURING_SESSION_NOTE}</p> : null}
+    <FarmDialog
+      title="Inventory"
+      onClose={onClose}
+      wide
+      cardClassName="inventory-dialog"
+      headerExtra={
+        <label className="inventory-sort">
+          <span className="inventory-sort-label">Sort</span>
+          <select
+            value={sort}
+            aria-label="Sort pets"
+            onChange={(event) => {
+              const next = event.target.value as InventorySort;
+              const option = INVENTORY_SORT_OPTIONS.find((entry) => entry.value === next);
+              if (option?.needsEquipDate && !EQUIP_DATE_SORT_AVAILABLE) return;
+              onSortChange(next);
+            }}
+          >
+            {INVENTORY_SORT_OPTIONS.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.needsEquipDate && !EQUIP_DATE_SORT_AVAILABLE}
+              >
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      }
+    >
+      <p className="inventory-count">{countLabel}</p>
+      {!EQUIP_DATE_SORT_AVAILABLE ? (
+        <p className="panel-hint inventory-sort-note">Equip-date sorting is not available yet.</p>
+      ) : null}
+      {sessionActive ? <p className="panel-hint">End your session to switch companions.</p> : null}
       {error ? (
         <p className="form-error" role="alert">
           {error}
         </p>
       ) : null}
-      <ul className="dialog-list">
-        {items.map((pet) => {
-          const copy = describePet(pet.pet_type);
-          const inRoom = placedIds.has(pet.id);
-          const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
-          return (
-            <li key={pet.id} className="dialog-row">
-              <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
-              <div>
-                <strong>{copy.name}</strong>
-                <p className="panel-hint">
-                  Level {pet.level}
-                  {pet.is_desktop_active ? " · Equipped" : ""}
-                </p>
-              </div>
-              <div className="dialog-row-actions">
-                <button type="button" className="button button-small button-ghost" onClick={() => onToggleRoom(pet.id)}>
-                  {inRoom ? "Remove from room" : "Show in room"}
-                </button>
-                <button
-                  type="button"
-                  className={pet.is_desktop_active ? "button button-small" : "button button-small button-ghost"}
-                  disabled={equipBlocked}
-                  title={sessionActive && !pet.is_desktop_active ? EQUIP_DURING_SESSION_NOTE : undefined}
-                  onClick={() => onEquip(pet.id)}
-                >
-                  {pet.is_desktop_active ? "Equipped" : sessionActive ? "Locked" : "Equip"}
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {sorted.length === 0 ? (
+        <p className="inventory-empty">No pets yet.</p>
+      ) : (
+        <ul className="inventory-list">
+          {sorted.map((pet) => {
+            const copy = describePet(pet.pet_type);
+            const inRoom = placedIds.has(pet.id);
+            const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
+            return (
+              <li key={pet.id} className="dialog-row inventory-row">
+                <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
+                <div className="inventory-row-copy">
+                  <strong>{copy.name}</strong>
+                  <p className="panel-hint">
+                    Level {pet.level}
+                    {pet.is_desktop_active ? " · Equipped" : ""}
+                  </p>
+                </div>
+                <div className="dialog-row-actions">
+                  <button type="button" className="button button-small button-ghost" onClick={() => onToggleRoom(pet.id)}>
+                    {inRoom ? "Remove from room" : "Show in room"}
+                  </button>
+                  <button
+                    type="button"
+                    className={pet.is_desktop_active ? "button button-small" : "button button-small button-ghost"}
+                    disabled={equipBlocked}
+                    title={sessionActive && !pet.is_desktop_active ? EQUIP_DURING_SESSION_NOTE : undefined}
+                    onClick={() => onEquip(pet.id)}
+                  >
+                    {pet.is_desktop_active ? "Equipped" : "Equip"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="panel-hint inventory-room-note">Room selections reset on reload.</p>
     </FarmDialog>
   );
 }
