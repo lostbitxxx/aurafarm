@@ -13,7 +13,7 @@ export async function loadInventory() {
   if (error || !userId) redirect("/login");
 
   const [{ data: profile }, petsResult] = await Promise.all([
-    supabase.from("profiles").select("display_name, points").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
     supabase
       .from("user_pets")
       .select("id, pet_type, level, xp, is_desktop_active")
@@ -34,7 +34,6 @@ export async function loadInventory() {
 
   return {
     displayName: profile?.display_name?.trim() || "Farmer",
-    points: wholePoints(profile?.points),
     pets,
     petsError: studyTimerMigrationMessage(petsResult.error?.message ?? null),
   };

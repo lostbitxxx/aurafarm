@@ -54,7 +54,7 @@ test("server headers allow SharedArrayBuffer", () => {
   assert.match(config, /_next\/hmr/);
 });
 
-test("the shop catalog sells every pet for the same price and skips the starter", () => {
+test("the shop catalog lists the sale pets and skips the starter", () => {
   assert.equal(SHOP_PRICE, 100);
   const catalog = shopCatalog();
   assert.deepEqual(
@@ -62,7 +62,7 @@ test("the shop catalog sells every pet for the same price and skips the starter"
     ["lantern_moth", "river_newt"],
   );
   for (const pet of catalog) {
-    assert.equal(pet.price, SHOP_PRICE);
+    assert.equal("price" in pet, false);
     assert.equal(describePet(pet.pet_type).name, pet.name);
   }
   assert.equal(catalog.some((pet) => pet.pet_type === STARTER_PET_TYPE), false);
@@ -96,7 +96,7 @@ test("buying a pet spends the shared price and cannot mint one", () => {
   assert.doesNotMatch(sql, /'baby_slime'/);
 });
 
-test("the signed-in header shows the wallet and public pages do not", () => {
+test("the signed-in header shows study time and public pages do not show a balance", () => {
   assert.equal(wholePoints(100), 100);
   assert.equal(wholePoints("40"), 40);
   assert.equal(wholePoints(undefined), 0);
@@ -107,15 +107,16 @@ test("the signed-in header shows the wallet and public pages do not", () => {
     new URL("../components/public-header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /points: number/);
-  assert.match(header, /\{shown\}/);
+  assert.match(header, /studySeconds\?: number/);
+  assert.match(header, /Study/);
+  assert.doesNotMatch(header, /Points/);
   assert.doesNotMatch(publicHeader, /\bpoints\b/);
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const score = readFileSync(new URL("../lib/study-score.ts", import.meta.url), "utf8");
-  assert.match(header, /Points/);
-  assert.match(header, /points/);
-  assert.match(dashboard, /select\("display_name, points"\)/);
-  assert.match(score, /select\("display_name, points"\)/);
+  assert.match(dashboard, /select\("display_name"\)/);
+  assert.match(score, /select\("display_name"\)/);
+  assert.doesNotMatch(dashboard, /study_scores/);
+  assert.doesNotMatch(score, /study_scores/);
 
   for (const file of [
     "../components/public-header.tsx",

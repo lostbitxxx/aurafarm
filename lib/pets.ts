@@ -52,22 +52,20 @@ export type ShopPet = {
   pet_type: string;
   name: string;
   note: string;
-  price: number;
 };
 
 export function shopCatalog(): ShopPet[] {
   return Object.entries(PET_COPY).flatMap(([pet_type, pet]) =>
     pet.price === undefined
       ? []
-      : [{ pet_type, name: pet.name, note: pet.note, price: pet.price }],
+      : [{ pet_type, name: pet.name, note: pet.note }],
   );
 }
 
-export function shopPurchaseBlock(petType: string, ownedTypes: string[], points: number) {
+export function shopPurchaseBlock(petType: string, ownedTypes: string[]) {
   const pet = shopCatalog().find((item) => item.pet_type === petType);
   if (!pet) return "That pet is not for sale.";
   if (ownedTypes.includes(petType)) return "You already own that pet.";
-  if (wholePoints(points) < pet.price) return "You do not have enough points.";
   return "";
 }
 

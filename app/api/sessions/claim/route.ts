@@ -10,6 +10,8 @@ type ClaimRow = {
   level: number;
   blocklist: string[];
   close_blocked: boolean;
+  planned_seconds: number;
+  started_at: string;
 };
 
 export async function POST(request: Request) {
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
     pet_type: row.pet_type,
     level: row.level,
     close_blocked: row.close_blocked,
+    planned_seconds: row.planned_seconds,
+    started_at: row.started_at,
   });
 }
 
@@ -64,9 +68,12 @@ function firstClaimRow(data: unknown): ClaimRow | null {
     level?: unknown;
     blocklist?: unknown;
     close_blocked?: unknown;
+    planned_seconds?: unknown;
+    started_at?: unknown;
   };
   if (typeof record.session_id !== "string" || typeof record.pet_type !== "string") return null;
-  if (typeof record.level !== "number") return null;
+  if (typeof record.level !== "number" || typeof record.planned_seconds !== "number") return null;
+  if (typeof record.started_at !== "string") return null;
   const blocklist = Array.isArray(record.blocklist)
     ? record.blocklist.filter((host): host is string => typeof host === "string")
     : [];
@@ -76,5 +83,7 @@ function firstClaimRow(data: unknown): ClaimRow | null {
     level: record.level,
     blocklist,
     close_blocked: record.close_blocked === true,
+    planned_seconds: record.planned_seconds,
+    started_at: record.started_at,
   };
 }

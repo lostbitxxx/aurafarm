@@ -45,14 +45,11 @@ export async function buyPet(petType: string) {
     return { error: "Sign in to buy a pet." };
   }
 
-  const [{ data: profile }, petsResult] = await Promise.all([
-    supabase.from("profiles").select("points").eq("id", userId).maybeSingle(),
-    supabase.from("user_pets").select("pet_type").eq("user_id", userId),
-  ]);
+  const petsResult = await supabase.from("user_pets").select("pet_type").eq("user_id", userId);
   if (petsResult.error) return { error: petsResult.error.message };
 
   const ownedTypes = (petsResult.data ?? []).map((pet) => String(pet.pet_type));
-  const blocked = shopPurchaseBlock(petType, ownedTypes, Number(profile?.points));
+  const blocked = shopPurchaseBlock(petType, ownedTypes);
   if (blocked) return { error: blocked };
 
   const { error } = await supabase.rpc("purchase_pet", {
@@ -60,7 +57,6 @@ export async function buyPet(petType: string) {
   });
   if (error) {
     if (/already owned/i.test(error.message)) return { error: "You already own that pet." };
-    if (/not enough points/i.test(error.message)) return { error: "You do not have enough points." };
     if (/not for sale/i.test(error.message)) return { error: "That pet is not for sale." };
     return { error: error.message };
   }

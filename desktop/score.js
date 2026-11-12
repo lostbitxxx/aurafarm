@@ -10,7 +10,11 @@ function wholeSecondsSince(startedAt, nowMs) {
 }
 
 function scoreRequestBody(study, nowMs) {
-  const hosts = Array.isArray(study?.log?.blockedHosts) ? study.log.blockedHosts : [];
+  const hosts = Array.isArray(study?.distractedHosts)
+    ? study.distractedHosts
+    : Array.isArray(study?.log?.blockedHosts)
+      ? study.log.blockedHosts
+      : [];
   return {
     token: typeof study?.token === "string" ? study.token : "",
     duration_seconds: wholeSecondsSince(study?.startedAt, nowMs),
@@ -21,6 +25,22 @@ function scoreRequestBody(study, nowMs) {
 
 function scorePageUrl(origin, sessionId) {
   return `${String(origin || "").replace(/\/$/, "")}/dashboard/sessions/${sessionId}`;
+}
+
+function usableApiOrigin(candidates) {
+  const list = Array.isArray(candidates) ? candidates : [candidates];
+  for (const candidate of list) {
+    const value = String(candidate ?? "").trim().replace(/\/$/, "");
+    if (!value || value.startsWith("#")) continue;
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+      return url.origin;
+    } catch {
+      continue;
+    }
+  }
+  return "http://localhost:3000";
 }
 
 function interpretScoreResponse(status, body, origin, sessionId) {
@@ -48,5 +68,6 @@ module.exports = {
   interpretScoreResponse,
   scorePageUrl,
   scoreRequestBody,
+  usableApiOrigin,
   wholeSecondsSince,
 };

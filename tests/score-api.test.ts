@@ -38,8 +38,8 @@ test("blocked hosts are capped before they reach the database", () => {
 });
 
 test("the score url uses the request origin and the session id", () => {
-  assert.deepEqual(buildScoreResult("http://127.0.0.1:3000", "session-id", 40, true), {
-    points: 40,
+  assert.deepEqual(buildScoreResult("http://127.0.0.1:3000", "session-id", 46, true), {
+    xp: 46,
     distracted: true,
     url: "http://127.0.0.1:3000/dashboard/sessions/session-id",
   });

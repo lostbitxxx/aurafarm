@@ -172,11 +172,11 @@ test("the mac reader asks only the front window of safari, chrome, or edge", () 
   assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
   assert.equal(frontUrlStatement("Firefox"), "");
   assert.doesNotMatch(frontUrlStatement("Google Chrome"), /every tab/);
-  assert.match(frontCloseStatement("Safari"), /close current tab of front window/);
-  assert.match(frontCloseStatement("Google Chrome"), /close active tab of front window/);
-  assert.match(frontCloseStatement("Microsoft Edge"), /close active tab of front window/);
+  assert.match(frontCloseStatement("Safari"), /close front window/);
+  assert.match(frontCloseStatement("Google Chrome"), /close front window/);
+  assert.match(frontCloseStatement("Microsoft Edge"), /close front window/);
   assert.equal(frontCloseStatement("Firefox"), "");
-  assert.doesNotMatch(frontCloseStatement("Google Chrome"), /close front window/);
+  assert.doesNotMatch(frontCloseStatement("Google Chrome"), /close active tab/);
 });
 
 test("a failed browser read is shown instead of a clear session", () => {
@@ -206,18 +206,18 @@ function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: 
   });
 }
 
-test("a blocked host is closed once after 8 seconds on that page", () => {
-  assert.equal(CLOSE_AFTER_MS, 8000);
+test("a blocked host is closed once after 60 seconds on that page", () => {
+  assert.equal(CLOSE_AFTER_MS, 60_000);
   const start = 1_000;
   const seen = dwell(createCloseWatch(), "https://www.instagram.com/reels", start);
   assert.equal(seen.close, false);
   assert.equal(seen.since, start);
 
-  const still = dwell(seen, "https://www.instagram.com/explore", start + 7_999);
+  const still = dwell(seen, "https://www.instagram.com/explore", start + 59_999);
   assert.equal(still.close, false);
   assert.equal(still.since, start);
 
-  const due = dwell(still, "https://www.instagram.com/", start + 8_000);
+  const due = dwell(still, "https://www.instagram.com/", start + 60_000);
   assert.equal(due.close, true);
   assert.equal(due.host, "www.instagram.com");
 
@@ -225,7 +225,7 @@ test("a blocked host is closed once after 8 seconds on that page", () => {
   assert.equal(counted.blockedCount, 1);
 
   const attempted = noteCloseAttempt(due);
-  const again = dwell(attempted, "https://www.instagram.com/reels", start + 20_000);
+  const again = dwell(attempted, "https://www.instagram.com/reels", start + 80_000);
   assert.equal(again.close, false);
   assert.equal(again.since, start);
 });
@@ -260,22 +260,22 @@ test("leaving, a lookalike, the desk, or switching the toggle off clears the wai
   assert.equal(disabled.host, "");
 });
 
-test("a different blocked host starts a new 8 second wait", () => {
+test("a different blocked host starts a new 60 second wait", () => {
   const instagram = dwell(createCloseWatch(), "https://www.instagram.com/", 1_000);
-  const youtube = dwell(instagram, "https://www.youtube.com/feed", 9_000);
+  const youtube = dwell(instagram, "https://www.youtube.com/feed", 61_000);
   assert.equal(youtube.host, "www.youtube.com");
-  assert.equal(youtube.since, 9_000);
+  assert.equal(youtube.since, 61_000);
   assert.equal(youtube.close, false);
-  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 17_000).close, true);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 121_000).close, true);
 });
 
 test("a missing address does not reset the wait or close on its own", () => {
   const seen = dwell(createCloseWatch(), "https://www.tiktok.com/", 2_000);
-  const missed = dwell(seen, "", 12_000);
+  const missed = dwell(seen, "", 70_000);
   assert.equal(missed.host, "www.tiktok.com");
   assert.equal(missed.since, 2_000);
   assert.equal(missed.close, false);
-  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 12_000).close, true);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 62_000).close, true);
 });
 
 test("the debug line names the reason a blocked tab stays open", () => {
@@ -296,7 +296,7 @@ test("the debug line names the reason a blocked tab stays open", () => {
       decision: { host: "www.youtube.com", since: 1_000, close: false },
       now: 4_000,
     }),
-    /www.youtube.com in Google Chrome for 3s of 8s/,
+    /www.youtube.com in Google Chrome for 3s of 60s/,
   );
   assert.match(
     describeCloseDebug({

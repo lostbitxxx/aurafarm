@@ -324,7 +324,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   line-height: 1;
 }
 
-.length-choices, .dev-finish {
+.dev-finish {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -340,6 +340,63 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .dev-finish .field { min-width: 10rem; }
+
+.tracker-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(16, 32, 24, 0.72);
+}
+
+.tracker-card {
+  width: min(28rem, 100%);
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+  background: var(--moss);
+  color: var(--cream);
+  box-shadow: var(--shadow);
+}
+
+.tracker-card > .button { margin-top: 1rem; }
+
+.tracker-card .button-ghost {
+  color: var(--cream);
+  box-shadow: inset 0 0 0 1.5px rgba(247, 243, 232, 0.4);
+}
+
+.tracker-card form { display: grid; gap: 0.8rem; margin-top: 1rem; }
+
+.motivation-quote {
+  margin: 0.9rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.tracker-card h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+}
+
+.tracker-card p { margin: 0.7rem 0 0; }
+
+.length-choices,
+.tracker-choices,
+.tracker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tracker-card .pet-status { margin-top: 1rem; }
 
 .desk-pets {
   list-style: none;
@@ -451,7 +508,6 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   padding: 0.45rem 0.6rem;
 }
 
-.desk .blocklist li,
 .desk .score-list li { background: rgba(20, 33, 26, 0.05); }
 
 .monitor {
@@ -556,7 +612,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 .study-panel h3 { margin: 1.2rem 0 0.4rem; font-size: 1.2rem; }
 .study-panel > .button { margin: 0 0 1rem; }
 
-.blocklist, .score-list {
+.score-list {
   list-style: none;
   margin: 0 0 1rem;
   padding: 0;
@@ -564,7 +620,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.45rem;
 }
 
-.blocklist li, .score-list li {
+.score-list li {
   padding: 0.55rem 0.75rem;
   border-radius: 16px;
   background: rgba(8, 16, 12, 0.28);
@@ -587,6 +643,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   line-height: 1;
 }
 
+.scene .study-active { margin-top: 0.85rem; }
 .study-active { display: grid; gap: 0.55rem; margin-bottom: 0.4rem; }
 .study-active p { margin: 0; }
 .launch-link, .launch-code { word-break: break-all; }

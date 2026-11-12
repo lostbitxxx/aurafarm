@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("../desktop/score.js") as {
+const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
   interpretScoreResponse: (
     status: number,
@@ -13,6 +13,7 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("../de
     origin: string,
     sessionId: string,
   ) => { ok: boolean; url: string; clearToken: boolean; message: string };
+  usableApiOrigin: (candidates: unknown) => string;
   scoreRequestBody: (
     study: {
       token: string;
@@ -65,7 +66,7 @@ test("the finish label follows the blocked count", () => {
 test("a saved score opens the screen and a failed score keeps the token", () => {
   const sent = interpretScoreResponse(
     200,
-    { url: "http://localhost:3000/dashboard/sessions/session-id", points: 40, distracted: true },
+    { url: "http://localhost:3000/dashboard/sessions/session-id", xp: 46, distracted: true },
     "http://localhost:3000",
     "session-id",
   );
@@ -108,19 +109,29 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(preload, /signIn: \(email, password\)/);
   assert.match(panel, /id="cancel"/);
   assert.match(panel, /Cancel study session/);
-  assert.match(script, /window\.pet\.cancelStudy\(\)/);
+  assert.match(script, /cancelStudy/);
   assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
-  assert.match(main, /\/api\/sessions\/\$\{sessionId\}\/cancel/);
-  assert.match(main, /openExternal\(url\)/);
+  assert.match(main, /ipcMain\.handle\("cancel-study"/);
+  assert.match(main, /does not change experience/);
+  assert.doesNotMatch(main, /grant_study_experience/);
+  assert.match(main, /planned_seconds/);
+  assert.match(main, /closeFrontWindow/);
+  assert.match(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  assert.match(desk, /Cancel session/);
-  assert.match(desk, /cancelStudySession/);
-  const cancelRoute = readFileSync(
-    new URL("../app/api/sessions/[id]/cancel/route.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(cancelRoute, /cancel_study_session/);
-  assert.match(cancelRoute, /\/dashboard/);
+  assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
+  assert.match(desk, /Desktop pet/);
+  assert.match(desk, /Website timer/);
+  assert.match(desk, /Confirm/);
+  assert.match(desk, /onAskTracker/);
+  assert.match(desk, /onConfirmTracker/);
+  assert.match(desk, /shownSession\?\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
+  assert.match(desk, /trackerChoice === true \? \([\s\S]*Close blocked tabs[\s\S]*trackerChoice === false/);
+  assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
+  assert.match(desk, /End session early/);
+  assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);
+  assert.doesNotMatch(desk, /Unlock/);
+  assert.doesNotMatch(desk, /cancelStudySession/);
+  assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);
@@ -129,11 +140,20 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /ipcMain\.on\("quit-app", \(\) => \{\s*app\.quit\(\);\s*\}\)/);
 });
 
+test("a commented vercel origin falls back to the local desk", () => {
+  assert.equal(usableApiOrigin(["#https://aurafarm.vercel.app", ""]), "http://localhost:3000");
+  assert.equal(usableApiOrigin("https://aurafarm.vercel.app/"), "https://aurafarm.vercel.app");
+});
+
 test("the pet posts the score and does not open a port", () => {
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const route = readFileSync(new URL("../app/api/sessions/[id]/score/route.ts", import.meta.url), "utf8");
   assert.match(main, /\/api\/sessions\/\$\{current\.id\}\/score/);
   assert.match(main, /\[score\] POST \$\{current\.id\}/);
   assert.match(main, /\[score\] session \$\{sessionId\} is/);
+  assert.match(main, /rpc\("submit_study_score"/);
   assert.match(main, /openExternal/);
   assert.doesNotMatch(main, /\.listen\(/);
+  assert.match(route, /await connection\(\)/);
+  assert.match(route, /submit_study_score/);
 });

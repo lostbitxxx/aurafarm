@@ -5,6 +5,7 @@ const path = require("node:path");
 const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
 const {
+  CLOSE_AFTER_MS,
   createCloseWatch,
   createFrontLog,
   describeCloseDebug,
@@ -14,20 +15,20 @@ const {
   nextFrontLog,
   noteCloseAttempt,
 } = require("./frontmost");
-const { closeFrontTab, readFrontBrowser } = require("./front-browser");
+const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
-const { finishLabel, interpretScoreResponse, scoreRequestBody } = require("./score");
+const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
 const WINDOW = { x: 128, y: 128 };
-const API_ORIGIN = (
-  process.env.AURAFARM_API_ORIGIN ||
-  require("./bundled-origin") ||
-  "http://localhost:3000"
-).replace(/\/$/, "");
+const API_ORIGIN = usableApiOrigin([
+  process.env.AURAFARM_API_ORIGIN,
+  require("./bundled-origin"),
+  "http://localhost:3000",
+]);
 const DESK_HOST = deskHostFromOrigin(API_ORIGIN);
 const PET_REFRESH_MS = 10_000;
 const FRONT_POLL_MS = 2_000;
@@ -68,6 +69,7 @@ let velocity = { x: 2, y: 0 };
 let petShown = false;
 let study = null;
 let frontTimer = null;
+let studyClock = null;
 let frontPoll = null;
 let appQuitting = false;
 let state = {
@@ -101,6 +103,7 @@ function loadPublicEnv(file) {
     ) {
       value = value.slice(1, -1);
     }
+    if (!value || value.startsWith("#")) continue;
     process.env[key] = value;
   }
 }
@@ -414,26 +417,54 @@ async function useToken(raw) {
 }
 
 async function cancelStudy() {
-  let sessionId = study?.id ?? "";
-  if (!sessionId && supabase) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
-      const { data, error: findError } = await supabase
-        .from("study_sessions")
-        .select("id")
-        .eq("status", "active")
-        .maybeSingle();
-      if (findError) return { error: findError.message };
-      sessionId = data?.id ?? "";
-    }
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return { error: "Paste a session token before cancelling." };
+  let sessionId = study?.id || "";
+  if (!sessionId) {
+    const { data, error: findError } = await supabase
+      .from("study_sessions")
+      .select("id")
+      .eq("status", "active")
+      .maybeSingle();
+    if (findError) return { error: findError.message };
+    sessionId = data?.id || "";
   }
   if (!sessionId) return { error: "No study session is running." };
-  const url = `${API_ORIGIN}/api/sessions/${sessionId}/cancel`;
-  await shell.openExternal(url);
+  console.log(`[score] cancel ${sessionId} stops the session and does not change experience`);
+  const { error } = await supabase.rpc("cancel_study_session", {
+    target_session_id: sessionId,
+  });
+  if (error) {
+    console.log(`[score] cancel ${sessionId} rejected: ${error.message}`);
+    return { error: error.message };
+  }
   if (study) stopFrontWatch();
   hidePet();
-  setStatus("Study session cancelled.");
+  setStatus("Study session cancelled. No experience was added.");
   return { error: "" };
+}
+
+function remainingStudyMs(current, now) {
+  const planned = Number(current?.plannedSeconds);
+  const started = Number(current?.startedAtMs);
+  if (!Number.isFinite(planned) || planned <= 0 || !Number.isFinite(started)) return null;
+  return started + planned * 1000 - now;
+}
+
+function startStudyClock() {
+  if (studyClock) clearInterval(studyClock);
+  studyClock = setInterval(() => {
+    if (!study || finishing) return;
+    const remaining = remainingStudyMs(study, Date.now());
+    if (remaining !== null && remaining <= 0) void finishSession();
+  }, 1000);
+}
+
+function stopStudyClock() {
+  if (!studyClock) return;
+  clearInterval(studyClock);
+  studyClock = null;
 }
 
 function beginFrontWatch(body) {
@@ -443,9 +474,12 @@ function beginFrontWatch(body) {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
-    closeBlocked: body.close_blocked === true,
+    closeBlocked: true,
     closeWatch: createCloseWatch(),
     log: createFrontLog(),
+    distractedHosts: [],
+    plannedSeconds: Number(body.planned_seconds),
+    startedAtMs: Number.isFinite(Date.parse(body.started_at)) ? Date.parse(body.started_at) : Date.now(),
     startedAt: Date.now(),
   };
   if (body.pet_type) {
@@ -473,12 +507,14 @@ function beginFrontWatch(body) {
   frontTimer = setInterval(() => {
     void pollFront();
   }, FRONT_POLL_MS);
+  startStudyClock();
   void pollFront();
 }
 
 function stopFrontWatch() {
   if (frontTimer) clearInterval(frontTimer);
   frontTimer = null;
+  stopStudyClock();
   frontPoll = null;
   study = null;
   closeFinishWindow();
@@ -489,8 +525,8 @@ function stopFrontWatch() {
 function openFinishWindow() {
   if (finishWindow && !finishWindow.isDestroyed()) return;
   const win = new BrowserWindow({
-    width: 240,
-    height: 72,
+    width: 280,
+    height: 120,
     frame: false,
     transparent: true,
     resizable: false,
@@ -634,16 +670,49 @@ function setPetLevel(level) {
 async function finishSession() {
   if (!study?.token || finishing) return;
   const current = study;
-  finishing = true;
-  try {
-    const response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(scoreRequestBody(current, Date.now())),
+  const remaining = remainingStudyMs(current, Date.now());
+  if (remaining !== null && remaining > 5000) {
+    setStatus("The study time has not finished.", {
+      finishNote: "The study time has not finished.",
     });
-    const payload = await response.json().catch(() => null);
-    console.log(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || ""}`);
+    return;
+  }
+  finishing = true;
+  const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"}`;
+  try {
+    const body = scoreRequestBody(current, Date.now());
+    scoreDebug(`[score] finish ${current.id} ${desk}`);
+    let response = null;
+    let payload = null;
+    let postError = "";
+    try {
+      response = await fetch(`${API_ORIGIN}/api/sessions/${current.id}/score`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      payload = await response.json().catch(() => null);
+      scoreDebug(`[score] POST ${current.id} -> ${response.status} ${payload?.error || payload?.url || "no body"} ${desk}`);
+    } catch (error) {
+      postError = error instanceof Error ? error.message : "network";
+      scoreDebug(`[score] POST ${current.id} failed: ${postError} ${desk}`);
+    }
     if (study !== current) return;
+    const reachedScoreRoute = response && (response.status === 200 || response.status === 403 || response.status === 409);
+    if (!reachedScoreRoute) {
+      const saved = await submitScoreDirect(current, body, postError || `HTTP ${response ? response.status : "none"}`);
+      if (study !== current) return;
+      if (!saved.ok) {
+        setStatus(saved.message, { finishNote: saved.message });
+        return;
+      }
+      if (saved.url) await shell.openExternal(saved.url);
+      if (study !== current) return;
+      stopFrontWatch();
+      hidePet();
+      setStatus(saved.message, { finishNote: "" });
+      return;
+    }
     const result = interpretScoreResponse(response.status, payload, API_ORIGIN, current.id);
     if (!result.clearToken) {
       setStatus(result.message, { finishNote: result.message });
@@ -654,15 +723,53 @@ async function finishSession() {
     stopFrontWatch();
     hidePet();
     setStatus(result.message, { finishNote: "" });
-  } catch {
-    if (study === current) {
-      setStatus("Could not submit the score. Try again.", {
-        finishNote: "Could not submit the score. Try again.",
-      });
-    }
   } finally {
     finishing = false;
   }
+}
+
+function scoreDebug(line) {
+  console.log(line);
+  setDebug(line);
+}
+
+async function submitScoreDirect(current, body, postFailure) {
+  const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"} post=${postFailure}`;
+  if (!supabase) {
+    const message = `Could not submit the score. ${desk}`;
+    scoreDebug(`[score] rpc skipped ${current.id} ${desk}`);
+    return { ok: false, url: "", message };
+  }
+  const { data, error } = await supabase.rpc("submit_study_score", {
+    target_session_id: current.id,
+    raw_token: body.token,
+    duration_seconds: body.duration_seconds,
+    blocked_count: body.blocked_count,
+    blocked_hosts: body.blocked_hosts,
+  });
+  if (error) {
+    scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);
+    if (/already submitted/i.test(error.message)) {
+      return {
+        ok: true,
+        url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
+        message: "That session was already scored.",
+      };
+    }
+    return { ok: false, url: "", message: `Could not submit the score. ${error.message} ${desk}` };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row.xp !== "number") {
+    const seen = row ? JSON.stringify(row) : "empty";
+    scoreDebug(`[score] rpc ${current.id} returned ${seen} ${desk}`);
+    return { ok: false, url: "", message: `Could not submit the score. Database returned ${seen}. ${desk}` };
+  }
+  scoreDebug(`[score] rpc ${current.id} saved ${row.xp} xp ${desk}`);
+  return {
+    ok: true,
+    url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
+    message: "Score sent.",
+  };
 }
 
 function publishWatch(reading) {
@@ -722,21 +829,27 @@ async function pollFront() {
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
-    if (preference.value !== null) current.closeBlocked = preference.value;
+    current.closeBlocked = true;
     const now = Date.now();
     const decision = nextCloseWatch(current.closeWatch, {
-      enabled: current.closeBlocked,
+      enabled: true,
       rawUrl: reading.url || "",
       blocklist: current.blocklist,
       deskHost: DESK_HOST,
       now,
     });
     current.closeWatch = decision;
+    if (decision.host && decision.since > 0 && now - decision.since >= CLOSE_AFTER_MS) {
+      if (!current.distractedHosts.includes(decision.host)) {
+        current.distractedHosts = [...current.distractedHosts, decision.host];
+      }
+    }
     let closeNote = "";
     let closeError = "";
     if (decision.close) {
+      showPet();
       showBubble(decision.host);
-      const closed = await closeFrontTab(reading.app);
+      const closed = await closeFrontWindow(reading.app);
       if (study !== current) return;
       current.closeWatch = noteCloseAttempt(current.closeWatch);
       if (!closed.ok) {
@@ -804,8 +917,8 @@ ipcMain.on("toggle-panel", () => {
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
 ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
-ipcMain.handle("cancel-study", () => cancelStudy());
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
+ipcMain.handle("cancel-study", () => cancelStudy());
 ipcMain.on("finish-session", () => {
   void finishSession();
 });

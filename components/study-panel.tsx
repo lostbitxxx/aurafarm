@@ -1,28 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { cancelStudySession, completeStudyTimer, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
   DEFAULT_STUDY_SECONDS,
+  MAX_STUDY_MINUTES,
+  MIN_STUDY_MINUTES,
+  plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
   experienceProgress,
   formatClock,
   formatDuration,
   formatTimestamp,
+  experienceForEarlyEnd,
+  experienceForSession,
   remainingSeconds,
   STUDY_LENGTHS,
   type ActiveStudySession,
-  type BlocklistEntry,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
 import { PetStatus } from "./pet-status";
 
 export function StudyPanel({
-  blocklist,
   activeSession,
   scores,
   recordedSessions,
@@ -37,7 +40,6 @@ export function StudyPanel({
   downloadUrl,
   extras,
 }: {
-  blocklist: BlocklistEntry[];
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   recordedSessions: RecordedStudySession[];
@@ -56,9 +58,9 @@ export function StudyPanel({
     activeSession?.id ?? "",
     activeSession?.startedAt ?? "",
     activeSession?.plannedSeconds ?? "",
+    activeSession?.useDesktopPet ? "pet" : "web",
     scores.map((score) => score.id).join(","),
     recordedSessions.map((session) => `${session.id}:${session.durationSeconds}`).join(","),
-    blocklist.map((entry) => entry.host).join(","),
     pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join(","),
     studyError ?? "",
     closeBlocked ? "1" : "0",
@@ -71,15 +73,20 @@ export function StudyPanel({
   const [codeSessionId, setCodeSessionId] = useState("");
   const [localStartedAt, setLocalStartedAt] = useState("");
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
+  const [localDesktop, setLocalDesktop] = useState(false);
   const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState("");
+  const [lengthOpen, setLengthOpen] = useState(false);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
-  const [railOpen, setRailOpen] = useState(Boolean(activeSession));
+  const [railOpen, setRailOpen] = useState(Boolean(activeSession) && !activeSession?.useDesktopPet);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
-  const [cancelled, setCancelled] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+  const [earlyOpen, setEarlyOpen] = useState(false);
   const [devPassword, setDevPassword] = useState("");
-  const [devUnlocked, setDevUnlocked] = useState(false);
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
 
@@ -101,7 +108,12 @@ export function StudyPanel({
   const shownSession =
     serverSession ??
     (codeSessionId && localStartedAt && codeSessionId !== hiddenSessionId
-      ? { id: codeSessionId, startedAt: localStartedAt, plannedSeconds: localPlanned }
+      ? {
+          id: codeSessionId,
+          startedAt: localStartedAt,
+          plannedSeconds: localPlanned,
+          useDesktopPet: localDesktop,
+        }
       : null);
   const visibleCode = shownSession && codeSessionId === shownSession.id ? launchCode : "";
   const launchUrl = visibleCode ? buildPetLaunchUrl(visibleCode) : "";
@@ -109,10 +121,10 @@ export function StudyPanel({
 
   if (sessionId !== trackedSession) {
     setTrackedSession(sessionId);
-    if (sessionId) setRailOpen(true);
+    if (sessionId && !shownSession?.useDesktopPet) setRailOpen(true);
   }
 
-  const railError = error ?? closeBlockedError;
+  const railError = error;
   if (railError !== trackedError) {
     setTrackedError(railError);
     if (railError) setRailOpen(true);
@@ -136,40 +148,75 @@ export function StudyPanel({
     return result;
   }
 
-  async function onStart() {
+  function onAskTracker() {
+    if (pending || shownSession) return;
+    setTrackerChoice(null);
+    setError(null);
+    setTrackerOpen(false);
+    setLengthOpen(true);
+  }
+
+  function onCloseLength() {
     if (pending) return;
+    setLengthOpen(false);
+  }
+
+  function onChoosePreset(seconds: number) {
+    setCustomOpen(false);
+    setCustomMinutes("");
+    setChosenSeconds(seconds);
+  }
+
+  function onChooseCustom() {
+    setCustomOpen(true);
+    setCustomMinutes("");
+  }
+
+  function onCustomMinutes(value: string) {
+    setCustomMinutes(value);
+    const minutes = Number(value);
+    const seconds = plannedStudySeconds(minutes * 60);
+    if (seconds !== null) setChosenSeconds(seconds);
+  }
+
+  function selectedLengthSeconds() {
+    if (!customOpen) return plannedStudySeconds(chosenSeconds);
+    return plannedStudySeconds(Number(customMinutes) * 60);
+  }
+
+  function onConfirmLength() {
+    const seconds = selectedLengthSeconds();
+    if (pending || seconds === null) return;
+    setChosenSeconds(seconds);
+    setLengthOpen(false);
+    setTrackerChoice(null);
+    setTrackerOpen(true);
+  }
+
+  function onCloseTracker() {
+    if (pending) return;
+    setTrackerOpen(false);
+    setLengthOpen(true);
+  }
+
+  async function onConfirmTracker() {
+    if (pending || trackerChoice === null) return;
     setPending(true);
     setError(null);
-    const result = await startStudySession(chosenSeconds);
+    const result = await startStudySession(chosenSeconds, trackerChoice);
     setPending(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setCancelled(false);
+    setTrackerOpen(false);
     setRushed(false);
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
     setLocalPlanned(chosenSeconds);
-  }
-
-  async function onCancel() {
-    if (pending || !shownSession) return;
-    setPending(true);
-    setError(null);
-    const result = await cancelStudySession(shownSession.id);
-    setPending(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setCancelled(true);
-    setRushed(false);
-    setLaunchCode("");
-    setCodeSessionId("");
-    setLocalStartedAt("");
-    setHiddenSessionId(shownSession.id);
+    setLocalDesktop(trackerChoice);
+    if (trackerChoice) setRailOpen(false);
   }
 
   async function onToggleClose() {
@@ -181,27 +228,64 @@ export function StudyPanel({
     if (result.error) setError(result.error);
   }
 
-  function onDevUnlock(event: FormEvent<HTMLFormElement>) {
+  function onOpenEarly() {
+    if (pending || !shownSession) return;
+    setEarlyOpen(true);
+  }
+
+  function onCloseEarly() {
+    if (pending) return;
+    setEarlyOpen(false);
+  }
+
+  async function onConfirmEarly() {
+    if (pending || !shownSession) return;
+    setPending(true);
+    setError(null);
+    const result = await endStudyEarly(shownSession.id);
+    setPending(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setEarlyOpen(false);
+    setLaunchCode("");
+    setCodeSessionId("");
+    setLocalStartedAt("");
+    setRushed(false);
+    setHiddenSessionId(shownSession.id);
+  }
+
+  function onOpenDev() {
+    if (pending) return;
+    setDevRejected(false);
+    setDevOpen(true);
+  }
+
+  function onCloseDev() {
+    if (pending) return;
+    setDevOpen(false);
+  }
+
+  async function onDevFinish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || !shownSession || shownSession.useDesktopPet) return;
     if (!devTimerPasswordMatches(devPassword)) {
       setDevRejected(true);
-      setDevUnlocked(false);
       return;
     }
     setDevRejected(false);
-    setDevUnlocked(true);
-  }
-
-  async function onDevFinish() {
-    if (pending || !shownSession) return;
     setRushed(true);
-    await finishSession(DEV_TIMER_PASSWORD);
+    const result = await finishSession(DEV_TIMER_PASSWORD);
+    if (!result.error) {
+      setDevPassword("");
+      setDevOpen(false);
+    }
   }
 
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
+  const lengthSeconds = selectedLengthSeconds();
   const equipped = equippedPet(pets);
-  const selectedSeconds = shownSession?.plannedSeconds ?? chosenSeconds;
-
   return (
     <main className={railOpen ? "desk" : "desk is-rail-closed"}>
       <section className="scene" aria-label="Study scene">
@@ -227,25 +311,31 @@ export function StudyPanel({
               <span className="xp-fill" style={{ width: `${petXp}%` }} />
             </div>
             <p className="growth-label">{petXp}/100</p>
-            {shownSession ? (
-              <StudyClock session={shownSession} rushed={rushed} onFinished={() => finishSession("")} />
+            {shownSession?.useDesktopPet ? (
+              <div className="study-active">
+                <p>
+                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                </p>
+                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+                {launchUrl ? (
+                  <>
+                    <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
+                    <a className="launch-link" href={launchUrl}>
+                      {launchUrl}
+                    </a>
+                    <p className="launch-code">{visibleCode}</p>
+                  </>
+                ) : (
+                  <p>The launch code was shown when this session started.</p>
+                )}
+              </div>
+            ) : shownSession ? (
+              <StudyClock
+                session={shownSession}
+                rushed={rushed}
+                onFinished={() => finishSession("")}
+              />
             ) : null}
-            <div className="length-choices" role="group" aria-label="Study length">
-              {STUDY_LENGTHS.map((length) => (
-                <button
-                  key={length.seconds}
-                  type="button"
-                  className={
-                    selectedSeconds === length.seconds ? "button button-small" : "button button-small button-ghost"
-                  }
-                  aria-pressed={selectedSeconds === length.seconds}
-                  disabled={pending || Boolean(shownSession)}
-                  onClick={() => setChosenSeconds(length.seconds)}
-                >
-                  {length.minutes} min
-                </button>
-              ))}
-            </div>
             {pets.length > 0 ? (
               <ul className="desk-pets">
                 {pets.map((pet) => {
@@ -275,24 +365,21 @@ export function StudyPanel({
               </ul>
             ) : null}
           </div>
-          <div className="scene-actions">
+            <div className="scene-actions">
             {shownSession ? (
-              <button type="button" className="button" onClick={() => setRailOpen(true)}>
-                Visit your pet ↗
-              </button>
+              <>
+                <button type="button" className="button button-ghost" disabled={pending} onClick={onOpenEarly}>
+                  End session early
+                </button>
+                <button type="button" className="button" onClick={() => setRailOpen(true)}>
+                  Visit your pet ↗
+                </button>
+              </>
             ) : (
-              <button type="button" className="button" disabled={pending} onClick={onStart}>
+              <button type="button" className="button" disabled={pending} onClick={onAskTracker}>
                 Start studying →
               </button>
             )}
-            <button
-              type="button"
-              className={cancelled && !shownSession ? "button is-cancelled" : "button button-ghost"}
-              disabled={pending || !shownSession}
-              onClick={onCancel}
-            >
-              Cancel session
-            </button>
           </div>
         </div>
       </section>
@@ -323,92 +410,28 @@ export function StudyPanel({
           {shownSession ? "Your focus helps me grow." : "A quiet place to begin."}
         </p>
         <p className="panel-hint">
-          {shownSession
-            ? "Open the pet with the launch link. The code expires in 5 minutes."
-            : "The pet watches the list below during a session."}
+          {shownSession?.useDesktopPet
+            ? closeBlocked
+              ? "The desktop pet tracks this session. It comes forward and closes a blocklist window after one minute."
+              : "The desktop pet tracks this session. Closing blocklist windows is off."
+            : shownSession
+              ? "The website timer tracks this session."
+              : "Start studying. The first window asks how long, and the next asks which timer to use."}
         </p>
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
         </p>
-        <button
-          type="button"
-          className={closeBlocked ? "button" : "button button-ghost"}
-          aria-pressed={closeBlocked}
-          disabled={pending || Boolean(closeBlockedError)}
-          onClick={onToggleClose}
-        >
-          Close blocked tabs: {closeBlocked ? "On" : "Off"}
-        </button>
-        {closeBlockedError ? (
-          <p className="form-error" role="alert">
-            {closeBlockedError}
-          </p>
-        ) : null}
-        {blocklist.length === 0 ? (
-          <p className="empty-pets">The blocklist is empty.</p>
-        ) : (
-          <ul className="blocklist">
-            {blocklist.map((entry) => (
-              <li key={entry.host}>{entry.label}</li>
-            ))}
-          </ul>
-        )}
         {error ? (
           <p className="form-error" role="alert">
             {error}
           </p>
         ) : null}
-        {shownSession ? (
-          <div className="study-active">
-            <p>
-              Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-            </p>
-            <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
-            {launchUrl ? (
-              <>
-                <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                <a className="launch-link" href={launchUrl}>
-                  {launchUrl}
-                </a>
-                <p className="launch-code">{visibleCode}</p>
-              </>
-            ) : (
-              <p>The launch code was shown when this session started.</p>
-            )}
-          </div>
-        ) : null}
         <div className="dev-finish">
-          <button type="button" className="button button-small button-ghost" onClick={() => setDevOpen(true)}>
+          <button type="button" className="button button-small button-ghost" onClick={onOpenDev}>
             Dev
           </button>
-          {devOpen && !devUnlocked ? (
-            <form onSubmit={onDevUnlock}>
-              <label className="field">
-                Password
-                <input
-                  type="password"
-                  value={devPassword}
-                  autoComplete="off"
-                  onChange={(event) => setDevPassword(event.target.value)}
-                />
-              </label>
-              <button type="submit" className="button button-small">
-                Unlock
-              </button>
-              {devRejected ? (
-                <p className="form-error" role="alert">
-                  That password does not match.
-                </p>
-              ) : null}
-            </form>
-          ) : null}
-          {devUnlocked ? (
-            <button type="button" className="button button-small" disabled={pending || !shownSession} onClick={onDevFinish}>
-              Finish now
-            </button>
-          ) : null}
         </div>
-        <PetStatus downloadUrl={downloadUrl} />
+        {shownSession?.useDesktopPet ? <PetStatus downloadUrl={downloadUrl} /> : null}
         <div className="score-history">
           <h3>Sessions</h3>
           {recordedSessions.length === 0 ? (
@@ -428,14 +451,14 @@ export function StudyPanel({
           )}
         </div>
         <div className="score-history">
-          <h3>Scores</h3>
+          <h3>Experience</h3>
           {scores.length === 0 ? (
-            <p className="empty-pets">No sessions scored yet.</p>
+            <p className="empty-pets">No experience recorded yet.</p>
           ) : (
             <ul className="score-list">
               {scores.map((score) => (
                 <li key={score.id}>
-                  <strong>{score.points}</strong>
+                  <strong>{score.xp} XP</strong>
                   <span>{score.distracted ? "Distracted" : "Focused"}</span>
                   <span>{formatDuration(score.durationSeconds)}</span>
                   <span>{score.blockedHosts.length > 0 ? score.blockedHosts.join(", ") : "No blocked sites"}</span>
@@ -447,6 +470,224 @@ export function StudyPanel({
         </div>
         {extras}
       </aside>
+      {lengthOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="length-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="length-title">How long will you study?</h2>
+            <div className="length-choices" role="group" aria-label="Study length">
+              {STUDY_LENGTHS.map((length) => (
+                <button
+                  key={length.seconds}
+                  type="button"
+                  className={!customOpen && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
+                  aria-pressed={!customOpen && chosenSeconds === length.seconds}
+                  disabled={pending}
+                  onClick={() => onChoosePreset(length.seconds)}
+                >
+                  {length.minutes} min
+                </button>
+              ))}
+              <button
+                type="button"
+                className={customOpen ? "button" : "button button-ghost"}
+                aria-pressed={customOpen}
+                disabled={pending}
+                onClick={onChooseCustom}
+              >
+                Custom
+              </button>
+            </div>
+            {customOpen ? (
+              <label className="field">
+                Custom minutes
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_STUDY_MINUTES}
+                  max={MAX_STUDY_MINUTES}
+                  step={1}
+                  value={customMinutes}
+                  placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
+                  autoFocus
+                  onChange={(event) => onCustomMinutes(event.target.value)}
+                />
+              </label>
+            ) : null}
+            {lengthSeconds === null ? (
+              <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
+            ) : (
+              <p>
+                A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
+                {experienceForEarlyEnd(lengthSeconds, false)} XP.
+              </p>
+            )}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
+                Back
+              </button>
+              <button type="button" className="button" disabled={pending || lengthSeconds === null} onClick={onConfirmLength}>
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {trackerOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseTracker}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tracker-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="tracker-title">How should this session be tracked?</h2>
+            <p>The session starts when you confirm.</p>
+            <div className="tracker-choices" role="group" aria-label="Session tracker">
+              <button
+                type="button"
+                className={trackerChoice === true ? "button" : "button button-ghost"}
+                aria-pressed={trackerChoice === true}
+                disabled={pending}
+                onClick={() => setTrackerChoice(true)}
+              >
+                Desktop pet
+              </button>
+              <button
+                type="button"
+                className={trackerChoice === false ? "button" : "button button-ghost"}
+                aria-pressed={trackerChoice === false}
+                disabled={pending}
+                onClick={() => setTrackerChoice(false)}
+              >
+                Website timer
+              </button>
+            </div>
+            {trackerChoice === true ? (
+              <>
+                <p>
+                  The desktop pet tracks the time.
+                  {closeBlocked
+                    ? " It comes forward and closes a blocklist window after one minute."
+                    : " Closing blocklist windows is off."}
+                </p>
+                <button
+                  type="button"
+                  className={closeBlocked ? "button" : "button button-ghost"}
+                  aria-pressed={closeBlocked}
+                  disabled={pending || Boolean(closeBlockedError)}
+                  onClick={onToggleClose}
+                >
+                  Close blocked tabs: {closeBlocked ? "On" : "Off"}
+                </button>
+                {closeBlockedError ? (
+                  <p className="form-error" role="alert">
+                    {closeBlockedError}
+                  </p>
+                ) : null}
+                <PetStatus downloadUrl={downloadUrl} />
+              </>
+            ) : null}
+            {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
+                Back
+              </button>
+              <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {earlyOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseEarly}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="early-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="early-title">End this session early?</h2>
+            <p>
+              The time you have already studied will be saved. Staying until the timer ends gives your pet a
+              bigger bonus.
+            </p>
+            <p className="motivation-quote">A quiet minute still grows. The full session just grows your pet more.</p>
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseEarly}>
+                Keep studying
+              </button>
+              <button type="button" className="button" disabled={pending} onClick={onConfirmEarly}>
+                End session early
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {devOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseDev}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dev-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="dev-title">Finish this session now</h2>
+            <form onSubmit={onDevFinish}>
+              <label className="field">
+                Password
+                <input
+                  type="password"
+                  value={devPassword}
+                  autoComplete="off"
+                  onChange={(event) => setDevPassword(event.target.value)}
+                />
+              </label>
+              {devRejected ? (
+                <p className="form-error" role="alert">
+                  That password does not match.
+                </p>
+              ) : null}
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <div className="tracker-actions">
+                <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseDev}>
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="button"
+                  disabled={pending || !shownSession || shownSession.useDesktopPet}
+                >
+                  Finish now
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -458,7 +699,7 @@ function StudyClock({
 }: {
   session: ActiveStudySession;
   rushed: boolean;
-  onFinished: () => Promise<{ error: string }>;
+  onFinished: (() => Promise<{ error: string }>) | null;
 }) {
   const [now, setNow] = useState<number | null>(null);
   const attempt = useRef<string | null>(null);
@@ -485,6 +726,7 @@ function StudyClock({
       : remainingSeconds(session.startedAt, session.plannedSeconds, now);
 
   useEffect(() => {
+    if (!onFinishedRef.current) return;
     if (now === null || remaining === null || remaining > 0) return;
     if (attempt.current === session.id) return;
     attempt.current = session.id;

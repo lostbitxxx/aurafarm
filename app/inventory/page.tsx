@@ -13,7 +13,7 @@ export default async function InventoryPage() {
   const inventory = await loadInventory();
   return (
     <>
-      <SiteHeader displayName={inventory.displayName} points={inventory.points} />
+      <SiteHeader displayName={inventory.displayName} />
       <main className="shop-layout">
         <PetInventory pets={inventory.pets} petsError={inventory.petsError} />
       </main>

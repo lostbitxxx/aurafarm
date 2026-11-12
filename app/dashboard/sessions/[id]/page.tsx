@@ -5,7 +5,7 @@ import { loadStudyScore } from "@/lib/study-score";
 import { formatDuration, formatTimestamp } from "@/lib/study";
 
 export const metadata: Metadata = {
-  title: "Score",
+  title: "Session",
 };
 
 export const instant = false;
@@ -20,15 +20,15 @@ export default async function StudyScorePage({
 
   return (
     <>
-      <SiteHeader displayName={score.displayName} points={score.balance} />
+      <SiteHeader displayName={score.displayName} />
       <main className="score-layout">
-        <section className="study-panel" aria-label="Score">
+        <section className="study-panel" aria-label="Session">
           <div className="inventory-heading">
-            <h2>Score</h2>
+            <h2>Experience</h2>
           </div>
-          {score.state === "scored" ? (
+          {score.state === "finished" ? (
             <>
-              <p className="score-points">{score.points}</p>
+              <p className="score-points">{score.xp} XP</p>
               <p>{score.distracted ? "Distracted" : "Focused"}</p>
               <p>{formatDuration(score.durationSeconds)}</p>
               <p>
@@ -41,9 +41,9 @@ export default async function StudyScorePage({
               </p>
             </>
           ) : null}
-          {score.state === "pending" ? <p>The pet has not submitted this session yet.</p> : null}
-          {score.state === "cancelled" ? <p>This session was stopped before it was scored.</p> : null}
-          {score.state === "missing" ? <p>That score could not be found.</p> : null}
+          {score.state === "pending" ? <p>This session is still running.</p> : null}
+          {score.state === "cancelled" ? <p>This session was stopped.</p> : null}
+          {score.state === "missing" ? <p>That session could not be found.</p> : null}
           <p>
             <Link href="/dashboard">Back to the desk</Link>
           </p>

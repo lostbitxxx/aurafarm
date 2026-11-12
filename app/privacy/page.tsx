@@ -20,12 +20,12 @@ export default function PrivacyPage() {
           <ul className="steps">
             <li>It does not read background tabs, page contents, or passwords.</li>
             <li>
-              When close blocked tabs is on, it closes that front tab after 8 seconds on a
-              blocklist host. It does not close any other tab.
+              During a desktop study session, it comes forward and closes that browser window
+              after 1 minute on a blocklist host.
             </li>
             <li>
-              The server stores the score, the duration, the blocked count, and the blocked
-              hostnames for that session.
+              The server stores the duration, the experience, and the blocked hostnames for that
+              session.
             </li>
             <li>Stopping the session or quitting the pet stops the address-bar check.</li>
           </ul>

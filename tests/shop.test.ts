@@ -4,21 +4,15 @@ import { test } from "node:test";
 import { STARTER_PET_TYPE, shopCatalog, shopPurchaseBlock } from "../lib/pets";
 import { requiresAccount } from "../lib/routes";
 
-test("shop purchases reject the starter, a second copy, and a short balance", () => {
+test("shop purchases reject the starter and a second copy", () => {
   const owned = [STARTER_PET_TYPE];
-  assert.equal(shopPurchaseBlock("lantern_moth", owned, 100), "");
-  assert.equal(shopPurchaseBlock("river_newt", owned, 100), "");
-  assert.equal(shopPurchaseBlock("baby_slime", owned, 100), "That pet is not for sale.");
-  assert.equal(shopPurchaseBlock("unknown", owned, 100), "That pet is not for sale.");
-  assert.equal(
-    shopPurchaseBlock("lantern_moth", ["lantern_moth"], 100),
-    "You already own that pet.",
-  );
-  assert.equal(
-    shopPurchaseBlock("lantern_moth", owned, 99),
-    "You do not have enough points.",
-  );
+  assert.equal(shopPurchaseBlock("lantern_moth", owned), "");
+  assert.equal(shopPurchaseBlock("river_newt", owned), "");
+  assert.equal(shopPurchaseBlock("baby_slime", owned), "That pet is not for sale.");
+  assert.equal(shopPurchaseBlock("unknown", owned), "That pet is not for sale.");
+  assert.equal(shopPurchaseBlock("lantern_moth", ["lantern_moth"]), "You already own that pet.");
   assert.equal(shopCatalog().some((pet) => pet.pet_type === "baby_slime"), false);
+  assert.equal(shopCatalog().some((pet) => "price" in pet), false);
 });
 
 test("the shop and the desk require an account", () => {
