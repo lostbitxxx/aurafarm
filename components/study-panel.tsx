@@ -75,6 +75,7 @@ export function StudyPanel({
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
   const [localDesktop, setLocalDesktop] = useState(false);
   const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
+  const [customOpen, setCustomOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
@@ -161,8 +162,14 @@ export function StudyPanel({
   }
 
   function onChoosePreset(seconds: number) {
+    setCustomOpen(false);
     setCustomMinutes("");
     setChosenSeconds(seconds);
+  }
+
+  function onChooseCustom() {
+    setCustomOpen(true);
+    setCustomMinutes("");
   }
 
   function onCustomMinutes(value: string) {
@@ -173,7 +180,7 @@ export function StudyPanel({
   }
 
   function selectedLengthSeconds() {
-    if (customMinutes.trim() === "") return plannedStudySeconds(chosenSeconds);
+    if (!customOpen) return plannedStudySeconds(chosenSeconds);
     return plannedStudySeconds(Number(customMinutes) * 60);
   }
 
@@ -478,28 +485,40 @@ export function StudyPanel({
                 <button
                   key={length.seconds}
                   type="button"
-                  className={customMinutes.trim() === "" && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
-                  aria-pressed={customMinutes.trim() === "" && chosenSeconds === length.seconds}
+                  className={!customOpen && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
+                  aria-pressed={!customOpen && chosenSeconds === length.seconds}
                   disabled={pending}
                   onClick={() => onChoosePreset(length.seconds)}
                 >
                   {length.minutes} min
                 </button>
               ))}
+              <button
+                type="button"
+                className={customOpen ? "button" : "button button-ghost"}
+                aria-pressed={customOpen}
+                disabled={pending}
+                onClick={onChooseCustom}
+              >
+                Custom
+              </button>
             </div>
-            <label className="field">
-              Custom minutes
-              <input
-                type="number"
-                inputMode="numeric"
-                min={MIN_STUDY_MINUTES}
-                max={MAX_STUDY_MINUTES}
-                step={1}
-                value={customMinutes}
-                placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
-                onChange={(event) => onCustomMinutes(event.target.value)}
-              />
-            </label>
+            {customOpen ? (
+              <label className="field">
+                Custom minutes
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_STUDY_MINUTES}
+                  max={MAX_STUDY_MINUTES}
+                  step={1}
+                  value={customMinutes}
+                  placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
+                  autoFocus
+                  onChange={(event) => onCustomMinutes(event.target.value)}
+                />
+              </label>
+            ) : null}
             {lengthSeconds === null ? (
               <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
             ) : (
