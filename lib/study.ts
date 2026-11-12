@@ -108,6 +108,16 @@ export function experienceForDuration(durationSeconds: number) {
   return experienceForSession(durationSeconds, false);
 }
 
+export function experienceForEarlyEnd(studiedSeconds: number, distracted: boolean) {
+  if (!Number.isFinite(studiedSeconds) || studiedSeconds < 60) return 0;
+  const minutes = Math.floor(studiedSeconds / 60);
+  let gain = minutes * XP_PER_MINUTE;
+  if (distracted) {
+    gain = Math.floor((gain * DISTRACTED_PENALTY_NUMERATOR) / DISTRACTED_PENALTY_DENOMINATOR);
+  }
+  return gain;
+}
+
 export function levelFromExperience(xp: number) {
   const safe = Number.isFinite(xp) ? Math.max(0, Math.floor(xp)) : 0;
   return 1 + Math.floor(safe / XP_PER_LEVEL);
@@ -150,6 +160,9 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/end_study_early/i.test(message)) {
+    return "Run migration 0014 before ending a study session early.";
+  }
   if (/use_desktop_pet|xp_awarded|grant_study_experience/i.test(message)) {
     return SESSION_XP_MIGRATION;
   }

@@ -370,6 +370,14 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .tracker-card form { display: grid; gap: 0.8rem; margin-top: 1rem; }
 
+.motivation-quote {
+  margin: 0.9rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
 .tracker-card h2 {
   margin: 0;
   font-family: var(--serif);

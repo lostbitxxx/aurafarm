@@ -9,6 +9,7 @@ import {
   devTimerPasswordMatches,
   DISTRACTED_PENALTY,
   experienceForDuration,
+  experienceForEarlyEnd,
   experienceForSession,
   experienceProgress,
   FINISH_BONUS,
@@ -120,6 +121,12 @@ test("finish bonus and distracted penalty share one experience rate", () => {
   assert.equal(experienceForSession(3600, false), 132);
   assert.equal(experienceForSession(5400, false), 198);
   assert.equal(experienceForSession(5400, true), 138);
+  assert.equal(experienceForEarlyEnd(59, false), 0);
+  assert.equal(experienceForEarlyEnd(300, false), 10);
+  assert.equal(experienceForEarlyEnd(300, true), 7);
+  assert.equal(experienceForEarlyEnd(1800, false), 60);
+  assert.equal(experienceForEarlyEnd(1800, true), 42);
+  assert.ok(experienceForEarlyEnd(1800, false) < experienceForSession(1800, false));
   assert.equal(levelFromExperience(0), 1);
   assert.equal(levelFromExperience(99), 1);
   assert.equal(levelFromExperience(100), 2);
@@ -251,4 +258,24 @@ test("cancelling a session stops it without experience", () => {
   assert.doesNotMatch(sql, /grant_study_experience/);
   assert.doesNotMatch(sql, /user_pets/);
   assert.doesNotMatch(sql, /xp =/);
+});
+
+test("ending early records studied minutes without the finish bonus", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),
+    "utf8",
+  );
+  const grant = sql.slice(sql.indexOf("function public.grant_study_experience"), sql.indexOf("function public.submit_study_score"));
+  assert.match(grant, /gained := minutes \* xp_per_minute/);
+  assert.match(grant, /if apply_finish_bonus then/);
+  assert.match(grant, /gained := gained \* finish_bonus \/ 10/);
+  assert.match(grant, /gained \* distracted_penalty \/ 10/);
+
+  const early = sql.slice(sql.indexOf("function public.end_study_early"));
+  assert.match(early, /floor\(extract\(epoch from \(now\(\) - session_row\.started_at\)\)\)/);
+  assert.match(early, /least\(\s*session_row\.planned_seconds/);
+  assert.match(early, /grant_study_experience\(/);
+  assert.match(early, /false\s*\)/);
+  assert.match(early, /Does not apply the finish bonus/);
+  assert.doesNotMatch(early, /finish_bonus/);
 });

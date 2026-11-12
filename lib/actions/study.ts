@@ -140,3 +140,31 @@ export async function completeStudyTimer(sessionId: string, devPassword = "") {
   revalidatePath("/inventory");
   return { error: "" };
 }
+
+export async function endStudyEarly(sessionId: string) {
+  if (!sessionIdPattern.test(sessionId)) {
+    return { error: "That session could not be ended." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to end a study session." };
+  }
+
+  const { error } = await supabase.rpc("end_study_early", {
+    target_session_id: sessionId,
+  });
+
+  if (error) {
+    console.error(`[score] early ${sessionId} failed: ${error.message}`);
+    return { error: studyTimerMigrationMessage(error.message) ?? error.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/inventory");
+  return { error: "" };
+}

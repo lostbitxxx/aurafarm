@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { completeStudyTimer, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
@@ -77,6 +77,7 @@ export function StudyPanel({
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
   const [devOpen, setDevOpen] = useState(false);
+  const [earlyOpen, setEarlyOpen] = useState(false);
   const [devPassword, setDevPassword] = useState("");
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
@@ -178,6 +179,34 @@ export function StudyPanel({
     const result = await setCloseBlocked(!closeBlocked);
     setPending(false);
     if (result.error) setError(result.error);
+  }
+
+  function onOpenEarly() {
+    if (pending || !shownSession) return;
+    setEarlyOpen(true);
+  }
+
+  function onCloseEarly() {
+    if (pending) return;
+    setEarlyOpen(false);
+  }
+
+  async function onConfirmEarly() {
+    if (pending || !shownSession) return;
+    setPending(true);
+    setError(null);
+    const result = await endStudyEarly(shownSession.id);
+    setPending(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setEarlyOpen(false);
+    setLaunchCode("");
+    setCodeSessionId("");
+    setLocalStartedAt("");
+    setRushed(false);
+    setHiddenSessionId(shownSession.id);
   }
 
   function onOpenDev() {
@@ -308,9 +337,14 @@ export function StudyPanel({
           </div>
             <div className="scene-actions">
             {shownSession ? (
-              <button type="button" className="button" onClick={() => setRailOpen(true)}>
-                Visit your pet ↗
-              </button>
+              <>
+                <button type="button" className="button button-ghost" disabled={pending} onClick={onOpenEarly}>
+                  End session early
+                </button>
+                <button type="button" className="button" onClick={() => setRailOpen(true)}>
+                  Visit your pet ↗
+                </button>
+              </>
             ) : (
               <button type="button" className="button" disabled={pending} onClick={onAskTracker}>
                 Start studying →
@@ -474,6 +508,37 @@ export function StudyPanel({
               </button>
               <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {earlyOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseEarly}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="early-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="early-title">End this session early?</h2>
+            <p>
+              The time you have already studied will be saved. Staying until the timer ends gives your pet a
+              bigger bonus.
+            </p>
+            <p className="motivation-quote">A quiet minute still grows. The full session just grows your pet more.</p>
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseEarly}>
+                Keep studying
+              </button>
+              <button type="button" className="button" disabled={pending} onClick={onConfirmEarly}>
+                End session early
               </button>
             </div>
           </div>
