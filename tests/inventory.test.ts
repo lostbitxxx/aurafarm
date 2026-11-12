@@ -21,7 +21,7 @@ test("the inventory page lists pets and the desk only names the equipped one", (
   assert.match(loader, /\.order\("id", \{ ascending: true \}\)/);
   assert.doesNotMatch(loader, /createAdminClient/);
   assert.doesNotMatch(desk, /PetInventory/);
-  assert.match(desk, /href="\/inventory"/);
+  assert.match(desk, /setDialog\("inventory"\)/);
   assert.match(desk, /describePet/);
   assert.match(equip, /equip_pet_to_desktop/);
   assert.match(equip, /revalidatePath\("\/inventory"\)/);
