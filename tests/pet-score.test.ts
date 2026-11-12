@@ -126,6 +126,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /onConfirmTracker/);
   assert.match(desk, /shownSession\?\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
   assert.match(desk, /trackerChoice === true \? \([\s\S]*Close blocked tabs[\s\S]*trackerChoice === false/);
+  assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
+  assert.doesNotMatch(desk, /Unlock/);
   assert.doesNotMatch(desk, /cancelStudySession/);
   assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="quit"/);

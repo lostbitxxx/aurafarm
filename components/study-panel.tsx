@@ -78,7 +78,6 @@ export function StudyPanel({
   const [trackedError, setTrackedError] = useState<string | null>(null);
   const [devOpen, setDevOpen] = useState(false);
   const [devPassword, setDevPassword] = useState("");
-  const [devUnlocked, setDevUnlocked] = useState(false);
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
 
@@ -181,21 +180,31 @@ export function StudyPanel({
     if (result.error) setError(result.error);
   }
 
-  function onDevUnlock(event: FormEvent<HTMLFormElement>) {
+  function onOpenDev() {
+    if (pending) return;
+    setDevRejected(false);
+    setDevOpen(true);
+  }
+
+  function onCloseDev() {
+    if (pending) return;
+    setDevOpen(false);
+  }
+
+  async function onDevFinish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || !shownSession || shownSession.useDesktopPet) return;
     if (!devTimerPasswordMatches(devPassword)) {
       setDevRejected(true);
-      setDevUnlocked(false);
       return;
     }
     setDevRejected(false);
-    setDevUnlocked(true);
-  }
-
-  async function onDevFinish() {
-    if (pending || !shownSession) return;
     setRushed(true);
-    await finishSession(DEV_TIMER_PASSWORD);
+    const result = await finishSession(DEV_TIMER_PASSWORD);
+    if (!result.error) {
+      setDevPassword("");
+      setDevOpen(false);
+    }
   }
 
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
@@ -354,40 +363,9 @@ export function StudyPanel({
           </p>
         ) : null}
         <div className="dev-finish">
-          <button type="button" className="button button-small button-ghost" onClick={() => setDevOpen(true)}>
+          <button type="button" className="button button-small button-ghost" onClick={onOpenDev}>
             Dev
           </button>
-          {devOpen && !devUnlocked ? (
-            <form onSubmit={onDevUnlock}>
-              <label className="field">
-                Password
-                <input
-                  type="password"
-                  value={devPassword}
-                  autoComplete="off"
-                  onChange={(event) => setDevPassword(event.target.value)}
-                />
-              </label>
-              <button type="submit" className="button button-small">
-                Unlock
-              </button>
-              {devRejected ? (
-                <p className="form-error" role="alert">
-                  That password does not match.
-                </p>
-              ) : null}
-            </form>
-          ) : null}
-          {devUnlocked ? (
-            <button
-              type="button"
-              className="button button-small"
-              disabled={pending || !shownSession || shownSession.useDesktopPet}
-              onClick={onDevFinish}
-            >
-              Finish now
-            </button>
-          ) : null}
         </div>
         {shownSession?.useDesktopPet ? <PetStatus downloadUrl={downloadUrl} /> : null}
         <div className="score-history">
@@ -498,6 +476,52 @@ export function StudyPanel({
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+      {devOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseDev}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dev-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="dev-title">Finish this session now</h2>
+            <form onSubmit={onDevFinish}>
+              <label className="field">
+                Password
+                <input
+                  type="password"
+                  value={devPassword}
+                  autoComplete="off"
+                  onChange={(event) => setDevPassword(event.target.value)}
+                />
+              </label>
+              {devRejected ? (
+                <p className="form-error" role="alert">
+                  That password does not match.
+                </p>
+              ) : null}
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <div className="tracker-actions">
+                <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseDev}>
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="button"
+                  disabled={pending || !shownSession || shownSession.useDesktopPet}
+                >
+                  Finish now
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
