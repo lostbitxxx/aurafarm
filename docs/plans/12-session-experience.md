@@ -29,7 +29,14 @@ if distracted:
   gain = floor(gain * DISTRACTED_PENALTY)
 ```
 
-SQL uses `11/10` and `7/10` so the factors stay integer. A focused 30-minute finish is 66 XP. The same session distracted is 46 XP. Level stays `1 + xp / 100`.
+SQL uses `11/10` and `7/10` so the factors stay integer. Level stays `1 + xp / 100`.
+
+| Minutes | Focused | Distracted |
+| --- | --- | --- |
+| 5 | 11 XP | 7 XP |
+| 30 | 66 XP | 46 XP |
+| 60 | 132 XP | 92 XP |
+| 90 | 198 XP | 138 XP |
 
 Both trackers call this formula. A website session passes `distracted = false`, because the page does not watch the browser. A desktop session passes `distracted = true` only after YouTube, Instagram, or another blocklist host has been the front tab for more than one minute. The first finish awards XP once. A later submit on an already finished session does not add XP or seconds.
 
@@ -39,12 +46,9 @@ Recorded time never grows past the chosen length. When the active countdown reac
 
 Before **Start studying**, the farmer picks the length and whether this session uses the desktop pet.
 
-Lengths, in [components/study-panel.tsx](../../components/study-panel.tsx):
+Lengths, in [components/study-panel.tsx](../../components/study-panel.tsx): **5, 30, 60, and 90 minutes**. There is no custom length. The default is 5 minutes.
 
-- Suggested buttons: 30, 45, and 60 minutes. The default is 30.
-- Custom: a whole number of minutes from 1 to 180.
-
-[lib/study.ts](../../lib/study.ts) replaces the 5 / 25 / 55 / 85 list. `plannedStudySeconds` accepts any whole minute in that range, including an older active session still stored at one of the old lengths.
+[lib/study.ts](../../lib/study.ts) replaces the 5 / 25 / 55 / 85 list with those four. `plannedStudySeconds` accepts 300, 1800, 3600, and 5400 seconds. An already running session keeps the length stored on its row.
 
 The tracker is a toggle on the dashboard, chosen before the session starts:
 
@@ -70,7 +74,7 @@ A finish no longer writes a score and no longer changes a point balance. Cancel 
 
 New migration [supabase/migrations/0012_session_xp.sql](../../supabase/migrations/0012_session_xp.sql). Older migration files stay as history.
 
-- Replace the `planned_seconds` allow-list with a whole-minute range from 60 to 10800 seconds.
+- Replace the `planned_seconds` allow-list with 300, 1800, 3600, and 5400 seconds. Keep 1500, 3300, and 5100 valid as well, so rows from the old 25 / 55 / 85 minute choices do not block the migration. The desk only offers 5, 30, 60, and 90.
 - Record `use_desktop_pet` and `xp_awarded` on `study_sessions`.
 - Drop `public.study_scores`.
 - Drop `profiles.points` after replacing `purchase_pet`. The shop still gives each sale pet once, and still refuses a second copy and the starter slime. It no longer shows a price or a balance.
@@ -95,4 +99,4 @@ Surfaces:
 
 ## Tests
 
-Update the study, score, shop, and pet tests for the shared constants, the 30 / 45 / 60 lengths, the tracker toggle, the 60 second close, the removed balance, and the removed cancel path. Assert that [supabase/migrations/0012_session_xp.sql](../../supabase/migrations/0012_session_xp.sql) uses `FINISH_BONUS` and `DISTRACTED_PENALTY` from one grant function, and that a website finish and a pet finish cannot both award XP. Leave the assertions on `0002`, `0008`, `0010`, and `0011` in place. Those files stay historical.
+Update the study, score, shop, and pet tests for the shared constants, the 5 / 30 / 60 / 90 lengths, the tracker toggle, the 60 second close, the removed balance, and the removed cancel path. Assert that [supabase/migrations/0012_session_xp.sql](../../supabase/migrations/0012_session_xp.sql) uses `FINISH_BONUS` and `DISTRACTED_PENALTY` from one grant function, and that a website finish and a pet finish cannot both award XP. Leave the assertions on `0002`, `0008`, `0010`, and `0011` in place. Those files stay historical.
