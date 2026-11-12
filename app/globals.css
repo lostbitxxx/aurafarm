@@ -746,6 +746,27 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   line-height: 1;
 }
 
+.collection-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.collection-panel {
+  margin-top: 1rem;
+  padding: 1rem 0 0.25rem;
+  border-top: 1px solid #d9ddcb;
+  min-height: 7rem;
+}
+
+.collection-empty-title {
+  margin: 0;
+  color: var(--dialog-ink, #23392d);
+  font-family: var(--serif);
+  font-size: 1.15rem;
+}
+
 .desk-pets {
   list-style: none;
   margin: 1rem 0 0;

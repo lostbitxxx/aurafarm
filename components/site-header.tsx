@@ -8,13 +8,13 @@ import { formatDuration } from "@/lib/study";
 export function SiteHeader({
   displayName,
   studySeconds,
-  onOpenShop,
+  onOpenCollection,
   onOpenInventory,
   onOpenAchievements,
 }: {
   displayName: string;
   studySeconds?: number;
-  onOpenShop?: () => void;
+  onOpenCollection?: () => void;
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
 }) {
@@ -24,12 +24,12 @@ export function SiteHeader({
         <Link href="/dashboard" className="wordmark">
           Aurafarm
         </Link>
-        {onOpenShop ? (
-          <button type="button" className="topbar-link" onClick={onOpenShop}>
-            Shop
+        {onOpenCollection ? (
+          <button type="button" className="topbar-link" onClick={onOpenCollection}>
+            Collection
           </button>
         ) : (
-          <Link href="/shop">Shop</Link>
+          <Link href="/shop">Collection</Link>
         )}
         {onOpenInventory ? (
           <button type="button" className="topbar-link" onClick={onOpenInventory}>
