@@ -70,6 +70,7 @@ export function StudyPanel({
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
   const [localDesktop, setLocalDesktop] = useState(false);
   const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
+  const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
@@ -144,12 +145,26 @@ export function StudyPanel({
     if (pending || shownSession) return;
     setTrackerChoice(null);
     setError(null);
+    setTrackerOpen(false);
+    setLengthOpen(true);
+  }
+
+  function onCloseLength() {
+    if (pending) return;
+    setLengthOpen(false);
+  }
+
+  function onConfirmLength() {
+    if (pending) return;
+    setLengthOpen(false);
+    setTrackerChoice(null);
     setTrackerOpen(true);
   }
 
   function onCloseTracker() {
     if (pending) return;
     setTrackerOpen(false);
+    setLengthOpen(true);
   }
 
   async function onConfirmTracker() {
@@ -238,8 +253,6 @@ export function StudyPanel({
 
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
   const equipped = equippedPet(pets);
-  const selectedSeconds = shownSession?.plannedSeconds ?? chosenSeconds;
-
   return (
     <main className={railOpen ? "desk" : "desk is-rail-closed"}>
       <section className="scene" aria-label="Study scene">
@@ -290,22 +303,6 @@ export function StudyPanel({
                 onFinished={() => finishSession("")}
               />
             ) : null}
-            <div className="length-choices" role="group" aria-label="Study length">
-              {STUDY_LENGTHS.map((length) => (
-                <button
-                  key={length.seconds}
-                  type="button"
-                  className={
-                    selectedSeconds === length.seconds ? "button button-small" : "button button-small button-ghost"
-                  }
-                  aria-pressed={selectedSeconds === length.seconds}
-                  disabled={pending || Boolean(shownSession)}
-                  onClick={() => setChosenSeconds(length.seconds)}
-                >
-                  {length.minutes} min
-                </button>
-              ))}
-            </div>
             {pets.length > 0 ? (
               <ul className="desk-pets">
                 {pets.map((pet) => {
@@ -386,7 +383,7 @@ export function StudyPanel({
               : "The desktop pet tracks this session. Closing blocklist windows is off."
             : shownSession
               ? "The website timer tracks this session."
-              : "Choose a length, then start. The next window asks which timer to use."}
+              : "Start studying. The first window asks how long, and the next asks which timer to use."}
         </p>
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
@@ -440,6 +437,41 @@ export function StudyPanel({
         </div>
         {extras}
       </aside>
+      {lengthOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
+          <div
+            className="tracker-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="length-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="length-title">How long will you study?</h2>
+            <div className="length-choices" role="group" aria-label="Study length">
+              {STUDY_LENGTHS.map((length) => (
+                <button
+                  key={length.seconds}
+                  type="button"
+                  className={chosenSeconds === length.seconds ? "button" : "button button-ghost"}
+                  aria-pressed={chosenSeconds === length.seconds}
+                  disabled={pending}
+                  onClick={() => setChosenSeconds(length.seconds)}
+                >
+                  {length.minutes} min
+                </button>
+              ))}
+            </div>
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
+                Back
+              </button>
+              <button type="button" className="button" disabled={pending} onClick={onConfirmLength}>
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {trackerOpen ? (
         <div className="tracker-pop" role="presentation" onClick={onCloseTracker}>
           <div
