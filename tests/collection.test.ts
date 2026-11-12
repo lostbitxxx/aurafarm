@@ -17,7 +17,7 @@ test("a saved color replaces the pet type default", () => {
   assert.equal(sampleColor("ink"), null);
   assert.deepEqual(
     SAMPLE_COLORS.map((color) => color.id),
-    ["honey", "apricot", "rose", "coral", "lavender", "sage", "mint", "sky", "lemon", "slate"],
+    ["honey", "apricot", "rose", "coral", "lavender", "sage", "mint", "sky", "lemon", "slate", "white", "black"],
   );
 });
 
@@ -44,6 +44,8 @@ test("sample colors are owned once per account and refused when missing", () => 
     ["sky", "Sky"],
     ["lemon", "Lemon"],
     ["slate", "Slate"],
+    ["white", "White"],
+    ["black", "Black"],
   ]) {
     assert.match(sql, new RegExp(`'${id}', 'color', '${name}'`));
   }

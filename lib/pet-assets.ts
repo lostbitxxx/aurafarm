@@ -22,6 +22,8 @@ export const SAMPLE_COLORS = [
   { id: "sky", name: "Sky" },
   { id: "lemon", name: "Lemon" },
   { id: "slate", name: "Slate" },
+  { id: "white", name: "White" },
+  { id: "black", name: "Black" },
 ] as const;
 
 export type SampleColorId = (typeof SAMPLE_COLORS)[number]["id"];
