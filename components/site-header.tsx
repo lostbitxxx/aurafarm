@@ -1,13 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import { signOut } from "@/lib/actions/auth";
+import { STREAK_LABEL } from "@/lib/pet-assets";
 import { formatDuration } from "@/lib/study";
 
 export function SiteHeader({
   displayName,
   studySeconds,
+  onOpenShop,
+  onOpenInventory,
+  onOpenAchievements,
 }: {
   displayName: string;
   studySeconds?: number;
+  onOpenShop?: () => void;
+  onOpenInventory?: () => void;
+  onOpenAchievements?: () => void;
 }) {
   return (
     <header className="topbar">
@@ -15,10 +24,32 @@ export function SiteHeader({
         <Link href="/dashboard" className="wordmark">
           Aurafarm
         </Link>
-        <Link href="/shop">Shop</Link>
-        <Link href="/inventory">Inventory</Link>
+        {onOpenShop ? (
+          <button type="button" className="topbar-link" onClick={onOpenShop}>
+            Shop
+          </button>
+        ) : (
+          <Link href="/shop">Shop</Link>
+        )}
+        {onOpenInventory ? (
+          <button type="button" className="topbar-link" onClick={onOpenInventory}>
+            Inventory
+          </button>
+        ) : (
+          <Link href="/inventory">Inventory</Link>
+        )}
+        {onOpenAchievements ? (
+          <button type="button" className="topbar-link" onClick={onOpenAchievements}>
+            Achievements
+          </button>
+        ) : (
+          <Link href="/dashboard">Achievements</Link>
+        )}
       </div>
       <div className="topbar-user">
+        <span className="streak-pill" title={STREAK_LABEL}>
+          <span aria-hidden="true">🔥</span> {STREAK_LABEL}
+        </span>
         {typeof studySeconds === "number" ? (
           <span className="points-balance">
             Study <span>{formatDuration(studySeconds)}</span>
