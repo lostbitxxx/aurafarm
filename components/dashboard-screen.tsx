@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
-import { AchievementsDialog, CollectionDialog, InventoryDialog } from "./dashboard-dialogs";
+import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 
@@ -32,7 +32,8 @@ export function DashboardScreen({
   closeBlockedError: string | null;
   downloadUrl: string | null;
 }) {
-  const [dialog, setDialog] = useState<"collection" | "inventory" | "achievements" | null>(null);
+  const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
+  const [dialog, setDialog] = useState<"shop" | "collection" | "inventory" | "achievements" | null>(null);
   const [placedIds, setPlacedIds] = useState(() => new Set(pets.map((pet) => pet.id)));
   const [localPets, setLocalPets] = useState(pets);
   const petsSignature = pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join("|");
@@ -81,6 +82,7 @@ export function DashboardScreen({
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
+        onOpenShop={() => setDialog("shop")}
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
@@ -102,6 +104,7 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
       />
+      {dialog === "shop" ? <ShopDialog ownedTypes={ownedTypes} onClose={() => setDialog(null)} /> : null}
       {dialog === "collection" ? <CollectionDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "inventory" ? (
         <InventoryDialog
