@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "description": "Original code-drawn prototype assets. No ownership or production data.",
+  "palette": {
+    "honey": "#dfb08a",
+    "lavender": "#b6a0ce",
+    "sage": "#9db68e",
+    "rose": "#e3a9b5"
+  },
+  "dimensions": {
+    "pet": [
+      42,
+      42
+    ],
+    "study": [
+      64,
+      64
+    ],
+    "room": [
+      600,
+      300
+    ]
+  },
+  "animation": {
+    "walk": {
+      "frames": [
+        "walk1",
+        "walk2"
+      ],
+      "frameMs": 250
+    },
+    "study": {
+      "frames": [
+        "study1",
+        "study2"
+      ],
+      "frameMs": 650
+    }
+  }
+}

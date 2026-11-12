@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import { describePet, equippedPet, type PetCard } from "@/lib/pets";
 import {
@@ -11,7 +11,6 @@ import {
   plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
-  experienceProgress,
   formatClock,
   formatDuration,
   formatTimestamp,
@@ -23,6 +22,10 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
+import { HistoryDialog } from "./dashboard-dialogs";
+import { FarmDialog } from "./farm-dialog";
+import { LivingRoom } from "./living-room";
+import { PetDetailDialog } from "./pet-detail-dialog";
 import { PetStatus } from "./pet-status";
 
 export function StudyPanel({
@@ -38,7 +41,9 @@ export function StudyPanel({
   petXp,
   petNote,
   downloadUrl,
-  extras,
+  placedIds,
+  onOpenInventory,
+  onEquipped,
 }: {
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -52,7 +57,9 @@ export function StudyPanel({
   petXp: number;
   petNote: string;
   downloadUrl: string | null;
-  extras?: ReactNode;
+  placedIds: ReadonlySet<string>;
+  onOpenInventory: () => void;
+  onEquipped?: (petId: string) => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -81,7 +88,7 @@ export function StudyPanel({
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
-  const [railOpen, setRailOpen] = useState(Boolean(activeSession) && !activeSession?.useDesktopPet);
+  const [railOpen, setRailOpen] = useState(false);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
   const [devOpen, setDevOpen] = useState(false);
@@ -89,6 +96,8 @@ export function StudyPanel({
   const [devPassword, setDevPassword] = useState("");
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
+  const [detailPetId, setDetailPetId] = useState<string | null>(null);
+  const [history, setHistory] = useState<"sessions" | "experience" | "download" | "dev-info" | null>(null);
 
   if (signature !== snapshot) {
     setSnapshot(signature);
@@ -121,7 +130,6 @@ export function StudyPanel({
 
   if (sessionId !== trackedSession) {
     setTrackedSession(sessionId);
-    if (sessionId && !shownSession?.useDesktopPet) setRailOpen(true);
   }
 
   const railError = error;
@@ -286,31 +294,27 @@ export function StudyPanel({
   const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
   const lengthSeconds = selectedLengthSeconds();
   const equipped = equippedPet(pets);
+  const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
+
   return (
     <main className={railOpen ? "desk" : "desk is-rail-closed"}>
       <section className="scene" aria-label="Study scene">
-        <div className="scene-top">
-          <span className={shownSession ? "status" : "status is-off"} aria-hidden="true" />
-          <p className="scene-note">
-            {shownSession ? "one little step at a time ✦" : "a quiet place to begin ✦"}
-          </p>
-        </div>
-        <div className="scene-foot">
+        <LivingRoom
+          pets={pets}
+          placedIds={placedIds}
+          onOpenPet={setDetailPetId}
+          onOpenInventory={onOpenInventory}
+        />
+        <div className="below-room">
           <div>
-            <p className="pet-name">{petName}</p>
-            <p className="level-label">{levelLabel}</p>
-            <p className="growth-label">{petNote}</p>
-            <div
-              className="xp-track"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={petXp}
-              aria-label={`${petName} experience`}
-            >
-              <span className="xp-fill" style={{ width: `${petXp}%` }} />
-            </div>
-            <p className="growth-label">{petXp}/100</p>
+            <p className="pet-name">{shownSession ? "Studying with you" : "Ready for a little focus?"}</p>
+            <p className="growth-label">
+              {shownSession
+                ? shownSession.useDesktopPet
+                  ? "Desktop pet is tracking this session."
+                  : "Website timer is tracking this session."
+                : "Choose the duration and tracker in two steps."}
+            </p>
             {shownSession?.useDesktopPet ? (
               <div className="study-active">
                 <p>
@@ -336,45 +340,17 @@ export function StudyPanel({
                 onFinished={() => finishSession("")}
               />
             ) : null}
-            {pets.length > 0 ? (
-              <ul className="desk-pets">
-                {pets.map((pet) => {
-                  const copy = describePet(pet.pet_type);
-                  const progress = experienceProgress(pet.xp);
-                  return (
-                    <li key={pet.id} className={pet.is_desktop_active ? "desk-pet is-equipped" : "desk-pet"}>
-                      <p>
-                        {copy.name}
-                        {pet.is_desktop_active ? " · Equipped" : ""}
-                      </p>
-                      <p className="level-label">Level {progress.level}</p>
-                      <div
-                        className="xp-track"
-                        role="meter"
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-valuenow={progress.intoLevel}
-                        aria-label={`${copy.name} experience`}
-                      >
-                        <span className="xp-fill" style={{ width: `${progress.intoLevel}%` }} />
-                      </div>
-                      <p className="growth-label">{progress.intoLevel}/100</p>
-                    </li>
-                  );
-                })}
-              </ul>
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
             ) : null}
           </div>
-            <div className="scene-actions">
+          <div className="scene-actions">
             {shownSession ? (
-              <>
-                <button type="button" className="button button-ghost" disabled={pending} onClick={onOpenEarly}>
-                  End session early
-                </button>
-                <button type="button" className="button" onClick={() => setRailOpen(true)}>
-                  Visit your pet ↗
-                </button>
-              </>
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onOpenEarly}>
+                End session early
+              </button>
             ) : (
               <button type="button" className="button" disabled={pending} onClick={onAskTracker}>
                 Start studying →
@@ -388,52 +364,254 @@ export function StudyPanel({
         className="level-bar"
         aria-expanded={railOpen}
         aria-controls="study-rail"
-        aria-label={railOpen ? "Hide study notes" : "Show study notes"}
+        aria-label={railOpen ? "Hide personalization" : "Show personalization"}
         onClick={() => setRailOpen((open) => !open)}
       >
+        <span className="level-bar-gear" aria-hidden="true">
+          ⚙ {railOpen ? "›" : "‹"}
+        </span>
         <span className="level-bar-track" aria-hidden="true">
           <span className="vertical-fill" style={{ flexBasis: `${petXp}%` }} />
         </span>
         <span className="bar-level">{petLevel === null ? "—" : `L${petLevel}`}</span>
       </button>
-      <aside id="study-rail" className="study-rail" aria-label="Study" hidden={!railOpen}>
+      <aside id="study-rail" className="study-rail" aria-label="Personalization" hidden={!railOpen}>
         <div className="rail-heading">
           <div>
-            <p className="panel-kicker">Study · {levelLabel}</p>
+            <p className="panel-kicker">Personalization</p>
             <h2 className="panel-name">{petName}</h2>
           </div>
           <button type="button" className="close-panel" onClick={() => setRailOpen(false)}>
             Close
           </button>
         </div>
-        <p className="panel-desc">
-          {shownSession ? "Your focus helps me grow." : "A quiet place to begin."}
-        </p>
-        <p className="panel-hint">
-          {shownSession?.useDesktopPet
-            ? closeBlocked
-              ? "The desktop pet tracks this session. It comes forward and closes a blocklist window after one minute."
-              : "The desktop pet tracks this session. Closing blocklist windows is off."
-            : shownSession
-              ? "The website timer tracks this session."
-              : "Start studying. The first window asks how long, and the next asks which timer to use."}
-        </p>
+        <p className="panel-desc">{levelLabel}</p>
+        <p className="panel-hint">{petNote}</p>
         <p className="panel-hint">
           {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
         </p>
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="dev-finish">
-          <button type="button" className="button button-small button-ghost" onClick={onOpenDev}>
-            Dev
-          </button>
+        <div
+          className="xp-track"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={petXp}
+          aria-label={`${petName} experience`}
+        >
+          <span className="xp-fill" style={{ width: `${petXp}%` }} />
         </div>
-        {shownSession?.useDesktopPet ? <PetStatus downloadUrl={downloadUrl} /> : null}
-        <div className="score-history">
-          <h3>Sessions</h3>
+        <div className="personalization-actions">
+          <button type="button" className="button button-ghost" onClick={() => setHistory("dev-info")}>
+            Dev / Unlock
+          </button>
+          <button type="button" className="button button-ghost" onClick={() => setHistory("download")}>
+            Download the Mac pet
+          </button>
+          <button type="button" className="button button-ghost" onClick={() => setHistory("sessions")}>
+            Sessions
+          </button>
+          <button type="button" className="button button-ghost" onClick={() => setHistory("experience")}>
+            Experience
+          </button>
+          {shownSession && !shownSession.useDesktopPet ? (
+            <button type="button" className="button button-small button-ghost" onClick={onOpenDev}>
+              Dev
+            </button>
+          ) : null}
+        </div>
+      </aside>
+      {lengthOpen ? (
+        <FarmDialog title="How long will you study?" titleId="length-title" onClose={onCloseLength}>
+          <div className="length-choices" role="group" aria-label="Study length">
+            {STUDY_LENGTHS.map((length) => (
+              <button
+                key={length.seconds}
+                type="button"
+                className={!customOpen && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
+                aria-pressed={!customOpen && chosenSeconds === length.seconds}
+                disabled={pending}
+                onClick={() => onChoosePreset(length.seconds)}
+              >
+                {length.minutes} min
+              </button>
+            ))}
+            <button
+              type="button"
+              className={customOpen ? "button" : "button button-ghost"}
+              aria-pressed={customOpen}
+              disabled={pending}
+              onClick={onChooseCustom}
+            >
+              Custom
+            </button>
+          </div>
+          {customOpen ? (
+            <label className="field">
+              Custom minutes
+              <input
+                type="number"
+                inputMode="numeric"
+                min={MIN_STUDY_MINUTES}
+                max={MAX_STUDY_MINUTES}
+                step={1}
+                value={customMinutes}
+                placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
+                autoFocus
+                onChange={(event) => onCustomMinutes(event.target.value)}
+              />
+            </label>
+          ) : null}
+          {lengthSeconds === null ? (
+            <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
+          ) : (
+            <p>
+              A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
+              {experienceForEarlyEnd(lengthSeconds, false)} XP.
+            </p>
+          )}
+          <div className="tracker-actions">
+            <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
+              Cancel
+            </button>
+            <button type="button" className="button" disabled={pending || lengthSeconds === null} onClick={onConfirmLength}>
+              Next
+            </button>
+          </div>
+        </FarmDialog>
+      ) : null}
+      {trackerOpen ? (
+        <FarmDialog title="How should this session be tracked?" titleId="tracker-title" onClose={onCloseTracker}>
+          <p>The session starts when you confirm.</p>
+          <div className="tracker-choices" role="group" aria-label="Session tracker">
+            <button
+              type="button"
+              className={trackerChoice === true ? "button" : "button button-ghost"}
+              aria-pressed={trackerChoice === true}
+              disabled={pending}
+              onClick={() => setTrackerChoice(true)}
+            >
+              Desktop pet
+            </button>
+            <button
+              type="button"
+              className={trackerChoice === false ? "button" : "button button-ghost"}
+              aria-pressed={trackerChoice === false}
+              disabled={pending}
+              onClick={() => setTrackerChoice(false)}
+            >
+              Website timer
+            </button>
+          </div>
+          {trackerChoice === true ? (
+            <>
+              <p>
+                The desktop pet tracks the time.
+                {closeBlocked
+                  ? " It comes forward and closes a blocklist window after one minute."
+                  : " Closing blocklist windows is off."}
+              </p>
+              <button
+                type="button"
+                className={closeBlocked ? "button" : "button button-ghost"}
+                aria-pressed={closeBlocked}
+                disabled={pending || Boolean(closeBlockedError)}
+                onClick={onToggleClose}
+              >
+                Close blocked tabs: {closeBlocked ? "On" : "Off"}
+              </button>
+              {closeBlockedError ? (
+                <p className="form-error" role="alert">
+                  {closeBlockedError}
+                </p>
+              ) : null}
+              <PetStatus downloadUrl={downloadUrl} />
+            </>
+          ) : null}
+          {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="tracker-actions">
+            <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
+              Back
+            </button>
+            <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
+              Confirm
+            </button>
+          </div>
+        </FarmDialog>
+      ) : null}
+      {earlyOpen ? (
+        <FarmDialog title="End this session early?" titleId="early-title" onClose={onCloseEarly}>
+          <p>
+            The time you have already studied will be saved. Staying until the timer ends gives your pet a bigger
+            bonus.
+          </p>
+          <p className="motivation-quote">A quiet minute still grows. The full session just grows your pet more.</p>
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="tracker-actions">
+            <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseEarly}>
+              Keep studying
+            </button>
+            <button type="button" className="button" disabled={pending} onClick={onConfirmEarly}>
+              End session early
+            </button>
+          </div>
+        </FarmDialog>
+      ) : null}
+      {devOpen ? (
+        <FarmDialog title="Finish this session now" titleId="dev-title" onClose={onCloseDev}>
+          <form onSubmit={onDevFinish}>
+            <label className="field">
+              Password
+              <input
+                type="password"
+                value={devPassword}
+                autoComplete="off"
+                onChange={(event) => setDevPassword(event.target.value)}
+              />
+            </label>
+            {devRejected ? (
+              <p className="form-error" role="alert">
+                That password does not match.
+              </p>
+            ) : null}
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="tracker-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseDev}>
+                Back
+              </button>
+              <button
+                type="submit"
+                className="button"
+                disabled={pending || !shownSession || shownSession.useDesktopPet}
+              >
+                Finish now
+              </button>
+            </div>
+          </form>
+        </FarmDialog>
+      ) : null}
+      {detailPet ? (
+        <PetDetailDialog
+          pet={detailPet}
+          sessionActive={Boolean(shownSession)}
+          onClose={() => setDetailPetId(null)}
+          onEquipped={onEquipped}
+        />
+      ) : null}
+      {history === "sessions" ? (
+        <HistoryDialog title="Sessions" onClose={() => setHistory(null)}>
           {recordedSessions.length === 0 ? (
             <p className="empty-pets">No study time recorded yet.</p>
           ) : (
@@ -449,9 +627,10 @@ export function StudyPanel({
               ))}
             </ul>
           )}
-        </div>
-        <div className="score-history">
-          <h3>Experience</h3>
+        </HistoryDialog>
+      ) : null}
+      {history === "experience" ? (
+        <HistoryDialog title="Experience" onClose={() => setHistory(null)}>
           {scores.length === 0 ? (
             <p className="empty-pets">No experience recorded yet.</p>
           ) : (
@@ -467,226 +646,24 @@ export function StudyPanel({
               ))}
             </ul>
           )}
-        </div>
-        {extras}
-      </aside>
-      {lengthOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
-          <div
-            className="tracker-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="length-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="length-title">How long will you study?</h2>
-            <div className="length-choices" role="group" aria-label="Study length">
-              {STUDY_LENGTHS.map((length) => (
-                <button
-                  key={length.seconds}
-                  type="button"
-                  className={!customOpen && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
-                  aria-pressed={!customOpen && chosenSeconds === length.seconds}
-                  disabled={pending}
-                  onClick={() => onChoosePreset(length.seconds)}
-                >
-                  {length.minutes} min
-                </button>
-              ))}
-              <button
-                type="button"
-                className={customOpen ? "button" : "button button-ghost"}
-                aria-pressed={customOpen}
-                disabled={pending}
-                onClick={onChooseCustom}
-              >
-                Custom
-              </button>
-            </div>
-            {customOpen ? (
-              <label className="field">
-                Custom minutes
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={MIN_STUDY_MINUTES}
-                  max={MAX_STUDY_MINUTES}
-                  step={1}
-                  value={customMinutes}
-                  placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
-                  autoFocus
-                  onChange={(event) => onCustomMinutes(event.target.value)}
-                />
-              </label>
-            ) : null}
-            {lengthSeconds === null ? (
-              <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
-            ) : (
-              <p>
-                A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
-                {experienceForEarlyEnd(lengthSeconds, false)} XP.
-              </p>
-            )}
-            <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
-                Back
-              </button>
-              <button type="button" className="button" disabled={pending || lengthSeconds === null} onClick={onConfirmLength}>
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
+        </HistoryDialog>
       ) : null}
-      {trackerOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseTracker}>
-          <div
-            className="tracker-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tracker-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="tracker-title">How should this session be tracked?</h2>
-            <p>The session starts when you confirm.</p>
-            <div className="tracker-choices" role="group" aria-label="Session tracker">
-              <button
-                type="button"
-                className={trackerChoice === true ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === true}
-                disabled={pending}
-                onClick={() => setTrackerChoice(true)}
-              >
-                Desktop pet
-              </button>
-              <button
-                type="button"
-                className={trackerChoice === false ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === false}
-                disabled={pending}
-                onClick={() => setTrackerChoice(false)}
-              >
-                Website timer
-              </button>
-            </div>
-            {trackerChoice === true ? (
-              <>
-                <p>
-                  The desktop pet tracks the time.
-                  {closeBlocked
-                    ? " It comes forward and closes a blocklist window after one minute."
-                    : " Closing blocklist windows is off."}
-                </p>
-                <button
-                  type="button"
-                  className={closeBlocked ? "button" : "button button-ghost"}
-                  aria-pressed={closeBlocked}
-                  disabled={pending || Boolean(closeBlockedError)}
-                  onClick={onToggleClose}
-                >
-                  Close blocked tabs: {closeBlocked ? "On" : "Off"}
-                </button>
-                {closeBlockedError ? (
-                  <p className="form-error" role="alert">
-                    {closeBlockedError}
-                  </p>
-                ) : null}
-                <PetStatus downloadUrl={downloadUrl} />
-              </>
-            ) : null}
-            {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
-                Back
-              </button>
-              <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+      {history === "download" ? (
+        <HistoryDialog title="Mac companion" onClose={() => setHistory(null)}>
+          <PetStatus downloadUrl={downloadUrl} />
+        </HistoryDialog>
       ) : null}
-      {earlyOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseEarly}>
-          <div
-            className="tracker-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="early-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="early-title">End this session early?</h2>
-            <p>
-              The time you have already studied will be saved. Staying until the timer ends gives your pet a
-              bigger bonus.
-            </p>
-            <p className="motivation-quote">A quiet minute still grows. The full session just grows your pet more.</p>
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseEarly}>
-                Keep studying
-              </button>
-              <button type="button" className="button" disabled={pending} onClick={onConfirmEarly}>
-                End session early
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {devOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseDev}>
-          <div
-            className="tracker-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dev-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="dev-title">Finish this session now</h2>
-            <form onSubmit={onDevFinish}>
-              <label className="field">
-                Password
-                <input
-                  type="password"
-                  value={devPassword}
-                  autoComplete="off"
-                  onChange={(event) => setDevPassword(event.target.value)}
-                />
-              </label>
-              {devRejected ? (
-                <p className="form-error" role="alert">
-                  That password does not match.
-                </p>
-              ) : null}
-              {error ? (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              <div className="tracker-actions">
-                <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseDev}>
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="button"
-                  disabled={pending || !shownSession || shownSession.useDesktopPet}
-                >
-                  Finish now
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {history === "dev-info" ? (
+        <HistoryDialog title="Developer tools" onClose={() => setHistory(null)}>
+          <p className="panel-hint">Use Dev during a website timer session to finish early for testing.</p>
+          {shownSession && !shownSession.useDesktopPet ? (
+            <button type="button" className="button" onClick={() => { setHistory(null); onOpenDev(); }}>
+              Open Dev finish
+            </button>
+          ) : (
+            <p className="panel-hint">Start a website timer session to unlock the finish helper.</p>
+          )}
+        </HistoryDialog>
       ) : null}
     </main>
   );

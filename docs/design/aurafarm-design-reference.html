@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aurafarm frontend design kit</title>
+<style>
+:root{--paper:#f6f2e6;--surface:#fff9ed;--ink:#23392d;--muted:#596650;--lime:#c5ef47;--line:#c5cbb9;--purple:#b4a0d1}
+*{box-sizing:border-box}
+body{margin:0;background:#e5e8df;color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #8261a7;outline-offset:3px}
+button:disabled{opacity:.55;cursor:not-allowed}
+h1,h2,h3{font-family:Georgia,serif}
+h1{font-size:27px;margin:0 0 8px}
+h2{font-size:25px;margin:0}
+p{line-height:1.6}
+.kit{max-width:1200px;margin:auto;padding:22px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.btn{border:1px solid var(--line);border-radius:22px;background:var(--surface);padding:9px 14px;font-size:12px;font-weight:650}
+.btn.primary{background:var(--lime);border-color:#b0d63f}
+.btn.danger{background:#f8e5de;border-color:#bf9585;color:#733d2c}
+.screen{position:relative;height:650px;overflow:hidden;border:1px solid #b8c1ad;border-radius:15px;background:var(--paper);box-shadow:0 15px 45px #243a2515}
+.browser{height:30px;background:#314235;color:#f7f5e8;padding:7px 15px;font-size:10px}
+.nav{height:66px;padding:0 23px;display:flex;align-items:center;gap:17px;border-bottom:1px solid #dadccd}
+.brand{font:700 24px Georgia,serif}
+.nav button{background:none;border:0;font-size:12px;padding:7px 0}
+.navstats{margin-left:auto;font-size:12px;display:flex;gap:15px;align-items:center}
+.streak{padding:7px 10px;background:#eae5d5;border-radius:20px}
+.webbody{height:calc(100% - 96px);display:flex;position:relative}
+.main{flex:1;min-width:0;padding:23px}
+.roomhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.room{height:315px;border:3px solid #a7b392;border-radius:11px;position:relative;overflow:hidden;background:#dfe1cc}
+.roomart{position:absolute;inset:0}
+.roomart svg{width:100%;height:100%;display:block}
+.pet{position:absolute;width:83px;height:100px;border:0;background:none;padding:0;z-index:2;transition:left 2s ease-in-out,top 2s ease-in-out}
+.pet svg{display:block;width:70px;height:70px;margin:auto;image-rendering:pixelated}
+.pet.walk svg{animation:bob .5s steps(2) infinite}
+@keyframes bob{50%{transform:translateY(-3px)}}
+.petlabel{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font:10px ui-monospace,monospace;background:#fff9ed;padding:4px 7px;border-radius:7px;white-space:nowrap}
+.equippedtag{display:block;width:max-content;margin:auto;background:var(--lime);padding:3px 6px;border-radius:10px;font-size:9px;font-weight:750}
+.pet.equipped svg{filter:drop-shadow(0 0 5px #b9e743)}
+.roomnote{position:absolute;bottom:9px;left:10px;padding:5px 8px;background:#fff9edec;border-radius:6px;font-size:10px;z-index:3}
+.belowroom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px}
+.sidebar{width:230px;padding:23px 17px;border-left:1px solid #d8dbcc;background:#eeecdf;overflow:auto}
+.sidebar h2{font-size:21px;margin-bottom:15px}
+.sidebar .btn{display:block;width:100%;margin:9px 0}
+.section{margin-top:20px}
+.handle{position:absolute;top:10px;right:230px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);z-index:5}
+.collapsed .sidebar{display:none}
+.collapsed .handle{right:9px}
+.overlay{position:absolute;inset:30px 0 0;background:#23392d55;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:19px;z-index:30}
+.dialog{width:600px;max-width:100%;max-height:100%;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:25px;box-shadow:0 15px 60px #182e2833}
+.dialoghead{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}
+.close{width:30px;height:30px;border:1px solid var(--line);background:#efeddf;border-radius:50%;font-size:20px;flex-shrink:0}
+.options,.actions{display:flex;flex-wrap:wrap;gap:8px;margin:17px 0}
+.choice{background:#f5f0e2;color:var(--ink);border:1px solid #9daa90;border-radius:22px;padding:10px 16px;font-size:13px}
+.choice.selected{background:var(--lime);border-color:#97b839;font-weight:750}
+.field{width:100%;padding:11px;border:1px solid #9daa90;border-radius:9px;background:#fffdf6;margin-top:7px}
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}
+.bigpet{height:210px;position:relative;display:grid;place-items:center;background:radial-gradient(ellipse,#e5e6d5,transparent 70%);border-radius:12px}
+.bigpet svg{width:176px;height:176px;image-rendering:pixelated}
+.slots{display:flex;gap:7px;margin:17px 0}
+.slot{flex:1;background:#efecdf;border:1px solid #bec6af;border-radius:10px;padding:12px 4px;font-size:11px}
+.slot b{display:block;margin-top:6px}
+.xp{height:8px;background:#dddde4;border-radius:4px;overflow:hidden;margin:10px 0}
+.xp div{height:100%;width:36%;background:var(--purple)}
+.row{display:flex;align-items:center;gap:12px;border-bottom:1px solid #d9ddcb;padding:11px 0}
+.row svg{height:48px;width:48px;flex-shrink:0}
+.row .btn{margin-left:auto}
+.heart{position:absolute;top:18%;left:48%;color:#d45d83;font-size:22px;pointer-events:none;animation:heart 1.2s forwards}
+@keyframes heart{to{transform:translateY(-35px);opacity:0}}
+.desktop{position:absolute;inset:0;background:linear-gradient(130deg,#bdd0bd,#e2d4bd 60%,#b7c4b9)}
+.macmenu{height:29px;background:#f3f3e6aa;padding:7px 16px;display:flex;justify-content:space-between;font-size:10px}
+.app{position:absolute;left:6%;top:14%;width:74%;height:65%;background:#fffaf0;border:1px solid #9fac95;border-radius:13px;box-shadow:0 20px 55px #31493030;overflow:hidden}
+.apptitle{padding:12px 15px;background:#e9edde;border-bottom:1px solid #cbd3bc;font-size:11px}
+.appcontent{padding:30px}
+.appcontent h2{margin:15px 0}
+.textline{height:9px;background:#dce3d1;border-radius:5px;margin:15px 0}
+.status{padding:7px 11px;background:#e3efd4;border-radius:20px;font-size:12px;display:inline-block}
+.status.away{background:#efddd0;color:#704a35}
+.desktopcontrols{position:absolute;bottom:17px;left:6%;right:80px;display:flex;gap:8px;flex-wrap:wrap}
+.rail{position:absolute;right:17px;top:50%;transform:translateY(-50%);z-index:10}
+.bar{width:39px;height:242px;padding:7px;display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff9ed;border:2px solid #a3b294;border-radius:10px;box-shadow:3px 3px #75876944}
+.track{flex:1;width:15px;background:#dfe6d6;border-radius:3px;overflow:hidden;position:relative}
+.fill{position:absolute;bottom:0;width:100%;height:45%;background:repeating-linear-gradient(0deg,#a28cc2 0 8px,#baa8d3 8px 11px)}
+.barlevel{font:10px ui-monospace,monospace}
+.preview{position:absolute;right:51px;top:23px;width:200px;padding:13px;background:#fff9ed;border:1px solid #a2b192;border-radius:11px;box-shadow:4px 4px #76866b33}
+.preview:after{content:"";position:absolute;left:100%;top:-25px;width:53px;height:calc(100% + 50px);pointer-events:auto}
+.studyscene{height:104px;background:#e6e3cf;border-radius:7px;margin:9px 0;display:grid;place-items:center}
+.studyscene svg{height:96px;width:96px;image-rendering:pixelated}
+.hold{height:4px;background:#dedfce;margin:9px 0;border-radius:3px;overflow:hidden}
+.hold div{height:100%;width:0;background:var(--purple)}
+.hold.running div{animation:hold 1.2s linear forwards}
+@keyframes hold{to{width:100%}}
+.lobby{position:absolute;right:76px;top:12%;width:330px;padding:17px;background:#fff9ed;border:2px solid #a5b594;border-radius:13px;box-shadow:5px 5px #7c8d7055;z-index:15}
+.lobby .room{height:190px;margin:12px 0}
+.lobby .pet{top:48%;left:43%}
+.hidden{display:none!important}
+.notice{padding:13px 16px;background:#f8f7ec;border:1px solid #cdd1bf;border-radius:10px;margin-top:16px}
+@media(max-width:760px){.kit{padding:12px}.screen{height:710px}.nav{height:95px;padding:10px 13px;gap:12px;flex-wrap:wrap}.navstats{width:100%;margin:0;justify-content:space-between}.brand{font-size:21px}.webbody{height:calc(100% - 125px)}.main{padding:20px 13px}.room{height:335px}.roomhead h2{font-size:21px}.sidebar{position:absolute;right:0;top:0;bottom:0;z-index:4;box-shadow:-10px 0 25px #23392d22}.belowroom{align-items:flex-start;flex-direction:column}.detail{grid-template-columns:1fr;gap:5px}.bigpet{height:150px}.bigpet svg{width:140px;height:140px}.dialog{padding:19px}.lobby{right:67px;width:calc(100% - 80px)}.app{left:4%;width:79%}.appcontent{padding:20px}.appcontent h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){*,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="kit">
+  <h1>Aurafarm · frontend design kit</h1>
+  <div class="small">Interactive visual reference + reusable SVG assets. All pet data and session behavior here are simulated. Download the three files below for Cursor.</div>
+  <div class="tools">
+    <button class="btn primary" id="downloadhtml">Download reference HTML</button>
+    <button class="btn" id="downloadassets">Download pet assets JSON</button>
+    <button class="btn" id="downloadspec">Download design specification</button>
+    <button class="btn" id="showweb">Website view</button>
+    <button class="btn" id="showdesktop">Desktop bar demo</button>
+  </div>
+  <div class="screen" id="screen">
+    <div id="website" class="hidden">
+      <div class="browser">● ● ● &nbsp; Aurafarm / dashboard · visual reference</div>
+      <nav class="nav"><span class="brand">Aurafarm</span><button data-modal="Shop">Shop</button><button id="inventory">Inventory</button><button data-modal="Achievements">Achievements</button><div class="navstats"><span class="streak">🔥 2 days</span><span>Study <b>35m</b></span><button data-modal="Privacy">Privacy</button><span>VT</span></div></nav>
+      <div class="webbody collapsed" id="webbody">
+        <main class="main">
+          <div class="roomhead"><div><h2>Your little living room</h2><div class="small">Your favorite companions, at home.</div></div><button class="btn" id="roominventory">Place pets</button></div>
+          <div class="room" id="mainroom"><div class="roomart" id="mainart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges"><rect width="600" height="120" fill="#dde0cb"></rect><path d="M40 0v120M80 0v120M120 0v120M160 0v120M200 0v120M240 0v120M280 0v120M320 0v120M360 0v120M400 0v120M440 0v120M480 0v120M520 0v120M560 0v120" stroke="#cdd3b8"></path><rect y="120" width="600" height="180" fill="#dfcfaa"></rect><path d="M0 150h600M0 182h600M0 214h600M0 246h600M0 278h600M80 120v30M180 150v32M320 182v32M460 214v32" stroke="#cdbb94" stroke-width="2"></path><rect y="115" width="600" height="7" fill="#9da98a"></rect><rect x="274" y="24" width="74" height="64" fill="#b8a380"></rect><rect x="279" y="29" width="64" height="54" fill="#c4dcd5"></rect><rect x="308" y="29" width="5" height="54" fill="#b8a380"></rect><rect x="279" y="51" width="64" height="4" fill="#b8a380"></rect><rect x="289" y="36" width="12" height="12" fill="#f2dfa0"></rect><rect x="44" y="110" width="128" height="44" fill="#9eaf8b"></rect><rect x="38" y="132" width="140" height="37" fill="#aabb98"></rect><rect x="33" y="124" width="16" height="47" fill="#92a57e"></rect><rect x="164" y="124" width="16" height="47" fill="#92a57e"></rect><rect x="55" y="117" width="29" height="23" fill="#bea8c8"></rect><rect x="100" y="121" width="35" height="18" fill="#e4d8af"></rect><rect x="230" y="190" width="222" height="77" fill="#b49cbb"></rect><rect x="236" y="196" width="210" height="65" fill="#cab5cf"></rect><path d="M246 206h190v45H246Z" fill="none" stroke="#e1cfe3" stroke-width="3"></path><rect x="471" y="48" width="75" height="88" fill="#aa8962"></rect><rect x="477" y="54" width="63" height="29" fill="#756c50"></rect><rect x="477" y="91" width="63" height="36" fill="#756c50"></rect><path d="M484 56v25M495 59v22M507 56v25M521 61v20M531 57v24" stroke="#d1b78a" stroke-width="6"></path><rect x="484" y="111" width="24" height="13" fill="#aeb78c"></rect><rect x="513" y="102" width="20" height="22" fill="#b5a0c4"></rect><rect x="510" y="190" width="30" height="31" fill="#b28f6b"></rect><path d="M524 190v-44" stroke="#76925f" stroke-width="6"></path><rect x="509" y="154" width="18" height="12" fill="#8ea574"></rect><rect x="525" y="139" width="19" height="16" fill="#9bb580"></rect><rect x="200" y="131" width="8" height="45" fill="#ad956a"></rect><rect x="183" y="116" width="42" height="21" fill="#ead59f"></rect></svg></div><div id="roompets"><button class="pet walk equipped" data-pet="slime-demo-1" style="left: 72.988781%; top: 49.399527%;" aria-label="View Baby Slime, level 1, equipped"><span class="petlabel">Lv.1</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges"><ellipse cx="21" cy="40" rx="15" ry="2" fill="#34452d25"></ellipse><path d="M14 10h14v4h6v5h4v13h-4v4H8v-4H4V19h4v-5h6Z" fill="#9db68e"></path><path d="M12 15h7v3h-7M9 18h3v4H9" fill="#ffffff65"></path><path d="M12 18h3v4h-3M27 18h3v4h-3" fill="#424b39"></path><path d="M19 24h4v2h-4M18 27h6v2h-6" fill="#875f54"></path><path d="M7 23h7v4H7M28 23h7v4h-7" fill="#e2b0a0"></path><path d="M8 34h8v3H8M26 35h8v3h-8" fill="#9db68e"></path></svg><span class="equippedtag">Equipped</span></button><button class="pet walk " data-pet="cat-demo-1" style="left: 74.240957%; top: 45.501831%;" aria-label="View Mochi, level 2"><span class="petlabel">Lv.2</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges"><ellipse cx="21" cy="40" rx="15" ry="2" fill="#34452d25"></ellipse><path d="M8 15V5h6v4h4v6M24 15V9h4V5h6v10" fill="#dfb08a"></path><path d="M10 7h2v4h-2M30 7h2v4h-2" fill="#e7b2a9"></path><path d="M8 13h26v4h4v13h-4v6h-8v2H14v-2H8v-6H4V17h4Z" fill="#dfb08a"></path><path d="M10 29h22v5H10" fill="#fff0d1"></path><path d="M12 18h3v4h-3M27 18h3v4h-3" fill="#424b39"></path><path d="M19 24h4v2h-4M18 27h6v2h-6" fill="#875f54"></path><path d="M7 23h7v4H7M28 23h7v4h-7" fill="#e2b0a0"></path><path d="M9 35h6v4H9M27 33h6v4h-6" fill="#dfb08a"></path></svg></button></div><div class="roomnote">Stroke left ↔ right to pet · Click to inspect</div></div>
+          <div class="belowroom"><div><b id="sessionlabel">Ready for a little focus?</b><div class="small" id="sessiondescription">Choose the duration and tracker in two steps.</div></div><button class="btn primary" id="start">Start studying →</button></div>
+          <p class="small">Responsive website EXP-bar placement remains your existing implementation; it is not redesigned by this reference.</p>
+        </main>
+        <button class="handle" id="handle" aria-label="Show personalization" aria-expanded="false">⚙ ‹</button>
+        <aside class="sidebar"><h2>Personalization</h2><div class="small">Blocking controls appear in the Desktop pet setup step, not globally.</div><div class="section"><button class="btn" data-modal="Developer tools">Dev / Unlock</button><button class="btn" data-modal="Mac companion">Download the Mac pet</button></div><div class="section"><button class="btn" data-modal="Sessions">Sessions</button><button class="btn" data-modal="Experience">Experience</button></div></aside>
+      </div>
+    </div>
+    <div class="desktop" id="desktop">
+      <div class="macmenu"><span>◈ &nbsp; Aurafarm companion</span><span>Simulated Mac desktop</span></div>
+      <div class="app"><div class="apptitle" id="apptitle">Study notes · recognized study activity</div><div class="appcontent" id="appcontent"><span class="status">Focused · demonstration only</span><h2>One quiet step at a time.</h2><p class="small">The equipped pet studies with you in the bar preview.</p><div class="textline" style="width:95%"></div><div class="textline" style="width:78%"></div><div class="textline" style="width:88%"></div><div class="textline" style="width:64%"></div><div class="textline" style="width:90%"></div></div></div>
+      <div class="rail" id="rail">
+        <button class="bar" id="bar" aria-label="Hover or focus for a pet preview"><span>✦</span><div class="track"><div class="fill"></div></div><span class="barlevel">L1</span></button>
+        <div class="preview hidden" id="preview"><b class="small" id="previewtitle">Your friend is studying too.</b><div class="studyscene" id="previewscene"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges"><path d="M2 58h60" stroke="#bdc5ac" stroke-width="2"></path><g transform="translate(11 3)"><path d="M14 10h14v4h6v5h4v13h-4v4H8v-4H4V19h4v-5h6Z" fill="#9db68e"></path><path d="M12 15h7v3h-7M9 18h3v4H9" fill="#ffffff65"></path><path d="M12 21h4v2h-4M26 21h4v2h-4" fill="#424b39"></path><path d="M19 24h4v2h-4M18 27h6v2h-6" fill="#875f54"></path><path d="M7 23h7v4H7M28 23h7v4h-7" fill="#e2b0a0"></path><path d="M8 34h8v3H8M26 35h8v3h-8" fill="#9db68e"></path></g><path d="M7 40h50v5H7M11 45h4v14h-4M49 45h4v14h-4" fill="#af9169"></path><path d="M18 34h14v8H18M33 34h14v8H33" fill="#fff0ce"></path><path d="M32 34v9M20 36h9M35 36h9M20 39h9M35 39h9" stroke="#b1b58c"></path><path d="M45 28l5 9" stroke="#8d78a5" stroke-width="2"></path></svg></div><div class="hold" id="hold"><div></div></div><span class="small" id="holdnote">Stay for 1.2 seconds…</span><button class="btn primary hidden" id="enter">Enter pet lobby →</button></div>
+      </div>
+      <section class="lobby hidden" id="lobby">
+        <div class="dialoghead"><h2>Little lobby</h2><span class="small">Pet break</span></div>
+        <div class="room"><div class="roomart" id="lobbyart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges"><rect width="600" height="120" fill="#dde0cb"></rect><path d="M40 0v120M80 0v120M120 0v120M160 0v120M200 0v120M240 0v120M280 0v120M320 0v120M360 0v120M400 0v120M440 0v120M480 0v120M520 0v120M560 0v120" stroke="#cdd3b8"></path><rect y="120" width="600" height="180" fill="#dfcfaa"></rect><path d="M0 150h600M0 182h600M0 214h600M0 246h600M0 278h600M80 120v30M180 150v32M320 182v32M460 214v32" stroke="#cdbb94" stroke-width="2"></path><rect y="115" width="600" height="7" fill="#9da98a"></rect><rect x="274" y="24" width="74" height="64" fill="#b8a380"></rect><rect x="279" y="29" width="64" height="54" fill="#c4dcd5"></rect><rect x="308" y="29" width="5" height="54" fill="#b8a380"></rect><rect x="279" y="51" width="64" height="4" fill="#b8a380"></rect><rect x="289" y="36" width="12" height="12" fill="#f2dfa0"></rect><rect x="44" y="110" width="128" height="44" fill="#9eaf8b"></rect><rect x="38" y="132" width="140" height="37" fill="#aabb98"></rect><rect x="33" y="124" width="16" height="47" fill="#92a57e"></rect><rect x="164" y="124" width="16" height="47" fill="#92a57e"></rect><rect x="55" y="117" width="29" height="23" fill="#bea8c8"></rect><rect x="100" y="121" width="35" height="18" fill="#e4d8af"></rect><rect x="230" y="190" width="222" height="77" fill="#b49cbb"></rect><rect x="236" y="196" width="210" height="65" fill="#cab5cf"></rect><path d="M246 206h190v45H246Z" fill="none" stroke="#e1cfe3" stroke-width="3"></path><rect x="471" y="48" width="75" height="88" fill="#aa8962"></rect><rect x="477" y="54" width="63" height="29" fill="#756c50"></rect><rect x="477" y="91" width="63" height="36" fill="#756c50"></rect><path d="M484 56v25M495 59v22M507 56v25M521 61v20M531 57v24" stroke="#d1b78a" stroke-width="6"></path><rect x="484" y="111" width="24" height="13" fill="#aeb78c"></rect><rect x="513" y="102" width="20" height="22" fill="#b5a0c4"></rect><rect x="510" y="190" width="30" height="31" fill="#b28f6b"></rect><path d="M524 190v-44" stroke="#76925f" stroke-width="6"></path><rect x="509" y="154" width="18" height="12" fill="#8ea574"></rect><rect x="525" y="139" width="19" height="16" fill="#9bb580"></rect><rect x="200" y="131" width="8" height="45" fill="#ad956a"></rect><rect x="183" y="116" width="42" height="21" fill="#ead59f"></rect></svg></div><button class="pet" id="lobbypet" aria-label="Pet equipped companion"></button></div>
+        <b id="lobbyname"></b><div class="xp"><div></div></div><div class="small">Illustrative EXP only. Lobby entry does not award or collect XP.</div>
+        <div class="actions"><button class="btn primary" id="resume">Back to study →</button><button class="btn danger" id="end">End session</button></div>
+        <div class="small">Break timing and XP treatment must follow the agreed backend/native-app rules.</div>
+      </section>
+      <div class="desktopcontrols"><button class="btn" id="activity">Simulate distraction</button><button class="btn" id="backwebsite">Back to website</button></div>
+    </div>
+    <div class="overlay hidden" id="overlay" role="dialog" aria-modal="true" aria-labelledby="dialogtitle"><div class="dialog"><div class="dialoghead"><h2 id="dialogtitle"></h2><button class="close" id="close" aria-label="Close dialog">×</button></div><div id="dialogbody"></div></div></div>
+  </div>
+  <div class="notice small"><b>Try:</b> Inventory → choose room pets; click a pet → pet it and change outfits; Start studying → select length → tracker. For Desktop pet, hover the right bar for 1.2 seconds, move across the gap, then enter the lobby. The invisible bridge keeps the preview open. No real monitoring occurs.</div>
+  <div class="small" style="margin-top:12px">Original code-drawn placeholder artwork for this prototype. No scores, points, purchase actions, real session timers, or account changes. The downloadable asset bundle includes three pet species, four colors, accessory combinations, pose/animation frames, and one room background.</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const palette={honey:'#dfb08a',lavender:'#b6a0ce',sage:'#9db68e',rose:'#e3a9b5'};
+const pets=[
+  {id:'slime-demo-1',species:'slime',name:'Baby Slime',level:1,color:'sage',hat:false,clothes:false},
+  {id:'cat-demo-1',species:'cat',name:'Mochi',level:2,color:'honey',hat:false,clothes:false},
+  {id:'bunny-demo-1',species:'bunny',name:'Clover',level:3,color:'lavender',hat:false,clothes:false}
+];
+let placed=new Set(['slime-demo-1','cat-demo-1']),equipped='slime-demo-1',selected=equipped;
+let duration=30,custom=false,tracker='desktop',closeBlocked=true,active=false,distracted=false;
+let holdTimer=null,leaveTimer=null,ready=false,previewFrame=0,previousFocus=null;
+function petSVG(p,pose='idle'){
+  const c=palette[p.color]||palette.honey,study=pose.startsWith('study'),blush=pose==='blush',frame=pose==='walk2'||pose==='study2';
+  const ears=p.species==='bunny'?`<path d="M10 14V1h6v13M26 14V1h6v13" fill="${c}"/><path d="M12 3h2v8h-2M28 3h2v8h-2" fill="#e7b2a9"/>`:p.species==='cat'?`<path d="M8 15V5h6v4h4v6M24 15V9h4V5h6v10" fill="${c}"/><path d="M10 7h2v4h-2M30 7h2v4h-2" fill="#e7b2a9"/>`:'';
+  const body=p.species==='slime'?`<path d="M14 10h14v4h6v5h4v13h-4v4H8v-4H4V19h4v-5h6Z" fill="${c}"/><path d="M12 15h7v3h-7M9 18h3v4H9" fill="#ffffff65"/>`:`${ears}<path d="M8 13h26v4h4v13h-4v6h-8v2H14v-2H8v-6H4V17h4Z" fill="${c}"/><path d="M10 29h22v5H10" fill="#fff0d1"/>`;
+  const face=blush?'<path d="M11 20h5M26 20h5" stroke="#424b39" stroke-width="2"/>':study?'<path d="M12 21h4v2h-4M26 21h4v2h-4" fill="#424b39"/>':'<path d="M12 18h3v4h-3M27 18h3v4h-3" fill="#424b39"/>';
+  const feet=p.species==='slime'?`<path d="${frame?'M8 35h8v3H8M26 34h8v3h-8':'M8 34h8v3H8M26 35h8v3h-8'}" fill="${c}"/>`:`<path d="${frame?'M9 33h6v4H9M27 35h6v4h-6':'M9 35h6v4H9M27 33h6v4h-6'}" fill="${c}"/>`;
+  const clothes=p.clothes?'<path d="M8 29h26v5H8" fill="#7f9fb7"/><path d="M20 29h3v5h-3" fill="#dde8df"/>':'';
+  const hat=p.hat?'<path d="M9 13V9h24v4M15 9V4h12v5" fill="#6b8a59"/><path d="M15 8h12v2H15" fill="#d6c49a"/>':'';
+  const pet=`${body}${face}<path d="M19 24h4v2h-4M18 27h6v2h-6" fill="#875f54"/><path d="M7 23h7v4H7M28 23h7v4h-7" fill="${blush?'#dc7792':'#e2b0a0'}"/>${feet}${clothes}${hat}`;
+  if(study)return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges"><path d="M2 58h60" stroke="#bdc5ac" stroke-width="2"/><g transform="translate(11 3)">${pet}</g><path d="M7 40h50v5H7M11 45h4v14h-4M49 45h4v14h-4" fill="#af9169"/><path d="M18 34h14v8H18M33 34h14v8H33" fill="#fff0ce"/><path d="M32 34v9M20 36h9M35 36h9M20 39h9M35 39h9" stroke="#b1b58c"/><path d="${frame?'M44 30l6 7':'M45 28l5 9'}" stroke="#8d78a5" stroke-width="2"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges"><ellipse cx="21" cy="40" rx="15" ry="2" fill="#34452d25"/>${pet}</svg>`;
+}
+const roomSVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges"><rect width="600" height="120" fill="#dde0cb"/><path d="M40 0v120M80 0v120M120 0v120M160 0v120M200 0v120M240 0v120M280 0v120M320 0v120M360 0v120M400 0v120M440 0v120M480 0v120M520 0v120M560 0v120" stroke="#cdd3b8"/><rect y="120" width="600" height="180" fill="#dfcfaa"/><path d="M0 150h600M0 182h600M0 214h600M0 246h600M0 278h600M80 120v30M180 150v32M320 182v32M460 214v32" stroke="#cdbb94" stroke-width="2"/><rect y="115" width="600" height="7" fill="#9da98a"/><rect x="274" y="24" width="74" height="64" fill="#b8a380"/><rect x="279" y="29" width="64" height="54" fill="#c4dcd5"/><rect x="308" y="29" width="5" height="54" fill="#b8a380"/><rect x="279" y="51" width="64" height="4" fill="#b8a380"/><rect x="289" y="36" width="12" height="12" fill="#f2dfa0"/><rect x="44" y="110" width="128" height="44" fill="#9eaf8b"/><rect x="38" y="132" width="140" height="37" fill="#aabb98"/><rect x="33" y="124" width="16" height="47" fill="#92a57e"/><rect x="164" y="124" width="16" height="47" fill="#92a57e"/><rect x="55" y="117" width="29" height="23" fill="#bea8c8"/><rect x="100" y="121" width="35" height="18" fill="#e4d8af"/><rect x="230" y="190" width="222" height="77" fill="#b49cbb"/><rect x="236" y="196" width="210" height="65" fill="#cab5cf"/><path d="M246 206h190v45H246Z" fill="none" stroke="#e1cfe3" stroke-width="3"/><rect x="471" y="48" width="75" height="88" fill="#aa8962"/><rect x="477" y="54" width="63" height="29" fill="#756c50"/><rect x="477" y="91" width="63" height="36" fill="#756c50"/><path d="M484 56v25M495 59v22M507 56v25M521 61v20M531 57v24" stroke="#d1b78a" stroke-width="6"/><rect x="484" y="111" width="24" height="13" fill="#aeb78c"/><rect x="513" y="102" width="20" height="22" fill="#b5a0c4"/><rect x="510" y="190" width="30" height="31" fill="#b28f6b"/><path d="M524 190v-44" stroke="#76925f" stroke-width="6"/><rect x="509" y="154" width="18" height="12" fill="#8ea574"/><rect x="525" y="139" width="19" height="16" fill="#9bb580"/><rect x="200" y="131" width="8" height="45" fill="#ad956a"/><rect x="183" y="116" width="42" height="21" fill="#ead59f"/></svg>`;
+function find(id){return pets.find(p=>p.id===id)}
+function renderRoom(){
+  $('roompets').innerHTML=pets.filter(p=>placed.has(p.id)).map((p,i)=>`<button class="pet walk ${p.id===equipped?'equipped':''}" data-pet="${p.id}" style="left:${20+i*25}%;top:${44+i*5}%" aria-label="View ${p.name}, level ${p.level}${p.id===equipped?', equipped':''}"><span class="petlabel">Lv.${p.level}</span>${petSVG(p)}${p.id===equipped?'<span class="equippedtag">Equipped</span>':''}</button>`).join('');
+  document.querySelectorAll('[data-pet]').forEach(el=>{const p=find(el.dataset.pet);el.onclick=()=>{selected=p.id;detail()};petting(el,p)});
+}
+function blush(el,p){
+  const s=el.querySelector('svg');if(s)s.outerHTML=petSVG(p,'blush');
+  const heart=document.createElement('span');heart.className='heart';heart.textContent='♥';el.appendChild(heart);setTimeout(()=>heart.remove(),1200);
+  setTimeout(()=>{if(el.isConnected){const svg=el.querySelector('svg');if(svg)svg.outerHTML=petSVG(p)}},1500);
+}
+function petting(el,p){
+  let x=null,dir=0,travel=0,time=0,cooldown=0;
+  el.onpointermove=e=>{const now=performance.now();if(now-time>350){dir=0;travel=0}if(x!==null){const dx=e.clientX-x;if(Math.abs(dx)>1){travel+=Math.abs(dx);const next=Math.sign(dx);if(dir&&dir!==next&&travel>16&&now>cooldown){blush(el,p);cooldown=now+700;travel=0}dir=next}}x=e.clientX;time=now};
+  el.onpointerleave=()=>{x=null;dir=0;travel=0};
+}
+function open(title,html){if($('overlay').classList.contains('hidden'))previousFocus=document.activeElement;$('dialogtitle').textContent=title;$('dialogbody').innerHTML=html;$('overlay').classList.remove('hidden');$('close').focus()}
+function close(){ $('overlay').classList.add('hidden');if(previousFocus&&previousFocus.isConnected)previousFocus.focus()}
+function detail(){
+  const p=find(selected);
+  open(p.name,`<div class="detail"><div><div class="bigpet" id="bigpet">${petSVG(p)}</div><div class="small" style="text-align:center">Stroke left ↔ right to pet</div><button class="btn" id="petbutton" style="display:block;margin:9px auto">Pet ♡</button></div><div><div class="small">UNIQUE PET INSTANCE · DEMO</div><h2>${p.name} · Lv.${p.level}</h2><div class="xp"><div></div></div><div class="small">36 / 100 XP · illustrative only</div><div class="slots"><button class="slot" id="color">Color<b>${p.color}</b></button><button class="slot" id="hat">Hat<b>${p.hat?'Forest':'None'}</b></button><button class="slot" id="clothes">Clothes<b>${p.clothes?'Blue vest':'None'}</b></button></div><div class="small">Slots cycle demo styles. Production must offer owned items only.</div><div class="actions"><button class="btn primary" id="equip">${p.id===equipped?'Equipped':'Equip pet'}</button></div>${active?'<div class="small">Active-session equipping rules need backend confirmation.</div>':''}</div></div>`);
+  petting($('bigpet'),p);$('petbutton').onclick=()=>blush($('bigpet'),p);
+  ['color','hat','clothes'].forEach(k=>$(k).onclick=()=>{if(k==='color'){const list=Object.keys(palette);p.color=list[(list.indexOf(p.color)+1)%list.length]}else p[k]=!p[k];renderRoom();detail()});
+  $('equip').onclick=()=>{equipped=p.id;renderRoom();detail()};
+}
+function inventory(){
+  open('Inventory · room companions',pets.map(p=>`<div class="row">${petSVG(p)}<div><b>${p.name}</b><div class="small">Lv.${p.level}${p.id===equipped?' · Equipped':''}</div></div><button class="btn ${placed.has(p.id)?'primary':''}" data-place="${p.id}">${placed.has(p.id)?'Remove from room':'Show in room'}</button></div>`).join('')+'<p class="small">All owned pets remain in Inventory. Room placement is separate from equipping. These controls do not delete pets.</p>');
+  document.querySelectorAll('[data-place]').forEach(b=>b.onclick=()=>{const id=b.dataset.place;placed.has(id)?placed.delete(id):placed.add(id);renderRoom();inventory()});
+}
+function setupLength(){
+  open('How long will you study?',`<div class="small">Step 1 of 2 · Session length</div><div class="options">${[5,30,60,90].map(n=>`<button class="choice ${!custom&&duration===n?'selected':''}" data-min="${n}">${n} min</button>`).join('')}<button class="choice ${custom?'selected':''}" id="custom">Custom</button></div>${custom?`<label class="small" for="minutes">Whole minutes, from 1 to 240</label><input class="field" id="minutes" type="number" min="1" max="240" step="1" value="${duration}"><div class="small" id="validation"></div>`:''}<p class="small">XP rate: 2 per minute. A full finish has a 1.1× bonus. Actual XP and rounding come from the backend.</p><div class="actions"><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="next">Next →</button></div>`);
+  document.querySelectorAll('[data-min]').forEach(b=>b.onclick=()=>{duration=+b.dataset.min;custom=false;setupLength()});
+  $('custom').onclick=()=>{custom=true;setupLength()};
+  $('cancel').onclick=close;
+  $('next').onclick=()=>{if(custom){const raw=$('minutes').value,n=Number(raw);if(raw.trim()===''||!Number.isInteger(n)||n<1||n>240){$('validation').textContent='Enter a whole number from 1 to 240.';$('minutes').focus();return}duration=n}setupTracker()};
+}
+function setupTracker(){
+  open('How should this session be tracked?',`<div class="small">Step 2 of 2 · ${duration} minutes. The session starts when you confirm.</div><div class="options"><button class="choice ${tracker==='desktop'?'selected':''}" id="pickdesktop">Desktop pet</button><button class="choice ${tracker==='website'?'selected':''}" id="pickwebsite">Website timer</button></div>${tracker==='desktop'?`<p class="small">Use the installed Mac companion and your existing supported activity tracker.</p><button class="btn ${closeBlocked?'primary':''}" id="blocked">Close blocked tabs: ${closeBlocked?'On':'Off'}</button><div class="section"><h2>Desktop pet</h2><button class="btn primary" id="downloadmac" style="margin-top:10px">Download the Mac pet</button></div>`:'<p class="small">Use the website’s existing countdown and session behavior.</p>'}<div class="actions"><button class="btn" id="back">← Back</button><button class="btn primary" id="confirm">Confirm</button></div>`);
+  $('pickdesktop').onclick=()=>{tracker='desktop';setupTracker()};$('pickwebsite').onclick=()=>{tracker='website';setupTracker()};
+  if($('blocked'))$('blocked').onclick=()=>{closeBlocked=!closeBlocked;setupTracker()};
+  if($('downloadmac'))$('downloadmac').onclick=()=>alert('Reference only: production should keep the existing download action.');
+  $('back').onclick=setupLength;$('confirm').onclick=()=>{active=true;close();$('sessionlabel').textContent='Session in progress';$('sessiondescription').textContent=tracker==='desktop'?`${duration} minutes · show real start time, launch link and launch code here`:`${duration} minutes · website countdown stays in the existing component`;$('start').textContent='View session';if(tracker==='desktop')showDesktop()};
+}
+function modal(type){
+  if(type==='Achievements')return open(type,'<p>Your future milestones will appear here.</p><p class="small">Coming soon!</p>');
+  if(type==='Sessions')return open(type,'<div class="row"><div><b>Finished · 5m 0s</b><div class="small">Sample only. Reuse the signed-in user’s actual session records.</div></div></div>');
+  if(type==='Experience')return open(type,'<div class="row"><div><b>0 XP · Focused</b><div class="small">5m 0s · No blocked sites · example from the current UI</div></div></div><p class="small">Reuse the existing XP history. Do not restore scores or shop points.</p>');
+  if(type==='Shop')return open(type,'<p>Reuse existing shop content, products, prices, and purchase actions inside this dialog.</p><p class="small">Do not invent a replacement currency or payment system.</p>');
+  open(type,'<p class="small">Keep the existing implementation and authorization. This reference does not implement this feature.</p>');
+}
+function showDesktop(){close();$('website').classList.add('hidden');$('desktop').classList.remove('hidden');renderActivity()}
+function showWebsite(){resetPreview();$('lobby').classList.add('hidden');$('rail').classList.remove('hidden');$('website').classList.remove('hidden');$('desktop').classList.add('hidden')}
+function renderActivity(){
+  $('apptitle').textContent=distracted?'Blacklisted activity · simulation':'Study notes · recognized study activity';
+  $('appcontent').innerHTML=distracted?'<span class="status away">EXP paused · demonstration only</span><h2>A quiet waiting pose.</h2><p class="small">Real distraction penalties and tab actions must follow the native app and backend. This page cannot monitor your applications.</p>':'<span class="status">Focused · demonstration only</span><h2>One quiet step at a time.</h2><p class="small">The equipped pet studies with you in the bar preview.</p>'+[95,78,88,64,90].map(w=>`<div class="textline" style="width:${w}%"></div>`).join('');
+  $('activity').textContent=distracted?'Simulate focus':'Simulate distraction';renderPreviewScene();
+}
+function renderPreviewScene(){const p=find(equipped);$('previewtitle').textContent=distracted?'Your friend is waiting quietly.':'Your friend is studying too.';$('previewscene').innerHTML=petSVG(p,distracted?'wait':previewFrame?'study2':'study1')}
+function resetPreview(){clearTimeout(holdTimer);clearTimeout(leaveTimer);ready=false;$('preview').classList.add('hidden');$('hold').classList.remove('running');$('enter').classList.add('hidden');$('holdnote').classList.remove('hidden')}
+function beginPreview(){clearTimeout(leaveTimer);if(!$('lobby').classList.contains('hidden'))return;if(!$('preview').classList.contains('hidden'))return;renderPreviewScene();$('preview').classList.remove('hidden');void $('hold').offsetWidth;$('hold').classList.add('running');holdTimer=setTimeout(()=>{ready=true;$('enter').classList.remove('hidden');$('holdnote').classList.add('hidden')},1200)}
+function showLobby(){
+  if(!ready)return;resetPreview();$('rail').classList.add('hidden');$('lobby').classList.remove('hidden');const p=find(equipped);
+  $('lobbypet').innerHTML=petSVG(p);$('lobbyname').textContent=p.name+' · Lv.'+p.level;petting($('lobbypet'),p);$('lobbypet').onclick=()=>blush($('lobbypet'),p);$('resume').focus();
+}
+function endDialog(){open('End this session early?','<p>Your already-studied time will be saved through the existing session-ending action.</p><p class="small">No full-completion bonus is assumed. Early ending does not automatically earn daily streak credit.</p><div class="actions"><button class="btn" id="keep">Keep studying</button><button class="btn danger" id="endconfirm">End session</button></div>');$('keep').onclick=()=>{close();$('resume').focus()};$('endconfirm').onclick=()=>{active=false;showWebsite();$('sessionlabel').textContent='Session ended · demo only';$('sessiondescription').textContent='Production must display the actual saved time and backend-awarded XP.';$('start').textContent='Start studying →';close()}}
+$('mainart').innerHTML=roomSVG;$('lobbyart').innerHTML=roomSVG;renderRoom();
+$('inventory').onclick=inventory;$('roominventory').onclick=inventory;
+document.querySelectorAll('[data-modal]').forEach(b=>b.onclick=()=>modal(b.dataset.modal));
+$('handle').onclick=()=>{const hidden=$('webbody').classList.toggle('collapsed');$('handle').textContent=hidden?'⚙ ‹':'⚙ ›';$('handle').setAttribute('aria-expanded',String(!hidden));$('handle').setAttribute('aria-label',hidden?'Show personalization':'Hide personalization')};
+$('start').onclick=()=>{if(!active)setupLength();else open('Current session',`<p>${duration} minutes · ${tracker==='desktop'?'Desktop pet':'Website timer'}</p><p class="small">Keep your existing active-session controls and real values here.</p>`)};
+$('close').onclick=close;$('overlay').onclick=e=>{if(e.target===$('overlay'))close()};
+$('showweb').onclick=showWebsite;$('backwebsite').onclick=showWebsite;$('showdesktop').onclick=showDesktop;
+$('activity').onclick=()=>{distracted=!distracted;renderActivity()};
+$('rail').onpointerenter=beginPreview;
+$('rail').onpointerleave=()=>{leaveTimer=setTimeout(()=>{if(!$('rail').contains(document.activeElement))resetPreview()},180)};
+$('bar').onfocus=beginPreview;$('bar').onclick=beginPreview;
+$('rail').onfocusout=e=>{if(!$('rail').contains(e.relatedTarget))resetPreview()};
+$('enter').onclick=showLobby;$('resume').onclick=()=>{$('lobby').classList.add('hidden');$('rail').classList.remove('hidden');$('bar').focus()};
+$('end').onclick=endDialog;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(!$('overlay').classList.contains('hidden'))close();else if(!$('lobby').classList.contains('hidden'))$('resume').click();else resetPreview()}
+  if(e.key==='Tab'&&!$('overlay').classList.contains('hidden')){
+    const items=[...$('overlay').querySelectorAll('button,input,[tabindex="0"]')].filter(x=>!x.disabled),first=items[0],last=items[items.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  }
+});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+setInterval(()=>{if(reduced.matches)return;previewFrame=1-previewFrame;if(!$('preview').classList.contains('hidden'))renderPreviewScene()},650);
+setInterval(()=>{if(reduced.matches||!$('overlay').classList.contains('hidden')||$('website').classList.contains('hidden'))return;document.querySelectorAll('#roompets .pet').forEach(el=>{el.style.left=(15+Math.random()*62)+'%';el.style.top=(45+Math.random()*12)+'%'})},3200);
+function download(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+const spec=`# Aurafarm frontend design specification
+## Source of truth
+Existing repository and backend/native companion contracts determine tracking, XP, persistence, purchases and authorization.
+Reference HTML is visual inspiration, not production session logic.
+## Visual tokens
+Page #F6F2E6; modal #FFF9ED; primary text #23392D; secondary #596650; lime #C5EF47; borders #C5CBB9; XP accent #B4A0D1.
+Warm cream dialogs with dark text. Ensure WCAG AA text contrast; test selected, unselected, hover, focus and disabled states.
+## Header
+Shop, Inventory and Achievements open centered dialogs without leaving dashboard.
+Preserve direct routes. Reuse real Shop and Inventory content.
+Achievements: Coming soon! No fabricated rewards.
+Daily streak: one fully completed study session per local calendar day qualifies, including 5-minute sessions. Do not count an early end as a full finish. Reuse backend streak data if available; do not fabricate it if not available.
+No scores or shop points.
+## Website room
+Cozy pixel-art room with chosen owned pets. Inventory still lists all owned pets.
+Inventory provides Show in room / Remove from room, independent of Equip.
+Duplicate pets are independent instances, with unique IDs and progress.
+Level label stays above each pet. Equipped pet has a visible badge and subtle highlight.
+Bounded walking area, pauses, no pets wandering through solid furniture. Empty room has a friendly Inventory action.
+Petting requires left-right pointer movement over pet; pause wandering briefly on interaction.
+Click/keyboard activation opens pet details. Provide a Pet button for touch/keyboard.
+## Pet details
+Enlarged pet, blurred background, real name/level/XP and threshold.
+Color, Hat and Clothes boxes open owned-item selectors, with unequip where supported.
+Use real ownership and equip actions; no free unlocks.
+Equip pet action; do not switch active-session XP recipient without confirmed backend rules.
+No database/catalog renaming to fit sample artwork.
+## Session setup
+Preserve two steps: length then tracker.
+Length: 5/30/60/90/Custom. Numeric input only after Custom.
+Custom accepts whole minutes 1-240; reject empty/fractional/out-of-range values.
+Cancel on first step; Back on second. Confirmation starts session.
+Tracker: Desktop pet or Website timer.
+Close blocked tabs appears only when Desktop pet selected.
+Keep real download action, launch code/link/start time for Desktop pet.
+Desktop hides website countdown. Website uses current website timer.
+Do not restore inline duration choices below room; Start opens existing two-step flow.
+## Personalization
+Gear+chevron toggle, accessible labels, aria-expanded, clear hit area.
+Retain relevant current Dev/download controls and authorization.
+Sessions and Experience open history dialogs. Remove duplicate Inventory entry.
+Keep existing responsive website EXP-bar placement.
+## Native desktop bar
+Right-edge vertical bar. Fix gap using a continuous hover region/pointer bridge.
+Preview opens on hover/focus; Enter pet lobby becomes available after 1.2 real seconds.
+Remains open while pointer or focus is within bar/preview; optional short close delay.
+Preview depicts only equipped pet, outfits included: study desk while focused; neutral wait while distracted.
+Lobby includes only equipped pet. No friend pets, multiplayer or leaderboard.
+Entering lobby is a break, not session end. End session action is separate, clearly labeled and confirmed.
+Lobby entry does not collect or add XP. XP goes directly to pet via existing logic.
+Break time limit, countdown pausing, XP and distraction treatment require confirmed native/backend rules.
+## XP
+Existing rate 2 XP/minute, full completion 1.1 multiplier, distraction 0.7 multiplier.
+Do not decide multiplier composition, rounding or partial-minute rules in frontend.
+Ending early saves actual studied time through existing action.
+## Backend boundaries
+No schema migrations, monitoring rewrites, currency reintroduction or admin changes without approval.
+/admin resets only signed-in account; frontend redesign must not change this.
+Missing room-placement/accessory/streak persistence must be reported, not silently replaced with localStorage.
+## Asset bundle
+aurafarm-pet-assets.json maps relative SVG paths to SVG strings.
+Placeholder species: slime, cat, bunny. Four colors; forest hat; blue vest.
+States: idle, walk1, walk2, blush, wait, study1, study2.
+Idle/walk/blush/wait use 42x42 grid; study frames use 64x64 grid with tiny desk/book.
+Animation pairs have matching viewBoxes within each state group. CSS image-rendering: pixelated; SVG shape-rendering: crispEdges.
+Treat species as visual types, not ownership IDs. Room SVG is 600x300.
+Use only approved existing catalog mappings. Missing artwork has a clear fallback.
+## Accessibility/performance
+Focus trap, Escape/backdrop close, focus restoration, dialog title and scroll locking.
+Reduced motion support, touch/keyboard fallback, stable pet IDs.
+Avoid frame-rate React state updates. Clean animation timers/listeners on unmount; pause offscreen.
+Test responsive layouts with panel expanded/collapsed and dialogs open.
+`;
+$('downloadspec').onclick=()=>download('aurafarm-design-spec.md',spec,'text/markdown');
+$('downloadassets').onclick=()=>{
+  const files={'room/living-room.svg':roomSVG};
+  for(const species of ['slime','cat','bunny'])for(const color of Object.keys(palette))for(const hat of [false,true])for(const clothes of [false,true])for(const pose of ['idle','walk1','walk2','blush','wait','study1','study2']){
+    const key=`pets/${species}/${color}/${hat?'forest-hat':'no-hat'}-${clothes?'blue-vest':'no-clothes'}/${pose}.svg`;
+    files[key]=petSVG({species,color,hat,clothes},pose);
+  }
+  download('aurafarm-pet-assets.json',JSON.stringify({version:1,description:'Original code-drawn prototype assets. No ownership or production data.',palette,dimensions:{pet:[42,42],study:[64,64],room:[600,300]},animation:{walk:{frames:['walk1','walk2'],frameMs:250},study:{frames:['study1','study2'],frameMs:650}},files},null,2),'application/json');
+};
+$('downloadhtml').onclick=()=>download('aurafarm-design-reference.html','<!DOCTYPE html>\n'+document.documentElement.outerHTML,'text/html');
+</script>
+
+</body></html>
