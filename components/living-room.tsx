@@ -105,11 +105,13 @@ function RoomPet({
 export function LivingRoom({
   pets,
   placedIds,
+  placementReady,
   onOpenPet,
   onOpenInventory,
 }: {
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
+  placementReady: boolean;
   onOpenPet: (petId: string) => void;
   onOpenInventory: () => void;
 }) {
@@ -134,16 +136,17 @@ export function LivingRoom({
             <RoomPet key={pet.id} pet={pet} spot={spotForIndex(index)} paused={false} onOpen={onOpenPet} />
           ))}
         </div>
-        {placed.length === 0 ? (
+        {placementReady && placed.length === 0 ? (
           <div className="room-empty">
             <p>No pets in the room yet.</p>
             <button type="button" className="button" onClick={onOpenInventory}>
               Open Inventory
             </button>
           </div>
-        ) : (
+        ) : null}
+        {placementReady && placed.length > 0 ? (
           <p className="room-note">Stroke left ↔ right to pet · Click to inspect</p>
-        )}
+        ) : null}
       </div>
       <p className="room-persist-note">{ROOM_PLACEMENT_NOTE}</p>
     </section>

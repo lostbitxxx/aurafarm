@@ -51,7 +51,7 @@ export function petAssetPath(
 export const ROOM_ASSET_PATH = "/pet-assets/room/living-room.svg";
 
 export const ROOM_PLACEMENT_NOTE =
-  "Room placement is temporary for this redesign and resets when you reload. Backend persistence is not wired yet.";
+  "This arrangement stays in this browser. It is not saved to your account.";
 
 export const ACCESSORY_NOTE = "Coming soon";
 

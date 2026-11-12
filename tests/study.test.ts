@@ -185,7 +185,7 @@ test("the desk title is the equipped pet rather than the first row", () => {
   assert.equal(equippedPet([]), null);
 
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
-  assert.match(desk, /equippedPet\(pets\)/);
+  assert.match(desk, /equippedPet\(localPets\)/);
   assert.match(desk, /describePet/);
   assert.doesNotMatch(desk, /pets\[0\]/);
   assert.match(desk, /No pet is equipped/);

@@ -41,6 +41,7 @@ export function StudyPanel({
   petNote,
   downloadUrl,
   placedIds,
+  placementReady,
   onOpenInventory,
   onEquipped,
 }: {
@@ -57,6 +58,7 @@ export function StudyPanel({
   petNote: string;
   downloadUrl: string | null;
   placedIds: ReadonlySet<string>;
+  placementReady: boolean;
   onOpenInventory: () => void;
   onEquipped?: (petId: string) => void;
 }) {
@@ -301,6 +303,7 @@ export function StudyPanel({
         <LivingRoom
           pets={pets}
           placedIds={placedIds}
+          placementReady={placementReady}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
         />

@@ -13,3 +13,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 `next.config.ts` sets `cacheComponents: true`. Do not export the route segment configs `dynamic`, `revalidate`, `fetchCache`, or `dynamicParams`. The build fails with: Route segment config "…" is not compatible with `nextConfig.cacheComponents`.
 
 To run a route handler or server function at request time, call `await connection()` from `next/server` inside that function. Do not add `export const dynamic = "force-dynamic"`.
+
+## Commits
+
+Name every commit with a Conventional Commits subject:
+
+`type(optional scope): summary`
+
+Use `feat`, `fix`, `docs`, `test`, `refactor`, or `chore`. The summary is imperative.
