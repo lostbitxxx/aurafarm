@@ -215,11 +215,11 @@ test("a missing timer column tells the farmer to run migration 0011", () => {
   );
   assert.match(
     studyTimerMigrationMessage("Could not find the 'streak_count' column of 'profiles' in the schema cache") ?? "",
-    /migration 0027/,
+    /0027 through 0034/,
   );
-  assert.equal(
-    studyTimerMigrationMessage("Streak day is out of range"),
-    "Streak day is out of range",
+  assert.match(
+    studyTimerMigrationMessage("Streak day is out of range") ?? "",
+    /migration 0034/,
   );
   assert.equal(studyTimerMigrationMessage("Streak day is required"), "Streak day is required");
 });
@@ -267,12 +267,14 @@ test("daily streak migration advances on full finish with a streak XP boost", ()
   assert.match(minSql, /counts_for_streak/);
 
   const shortSql = readFileSync(
-    new URL("../supabase/migrations/0031_streak_ignore_short_dev_finish.sql", import.meta.url),
+    new URL("../supabase/migrations/0034_streak_short_session_and_soft_day.sql", import.meta.url),
     "utf8",
   );
   assert.match(shortSql, /when session_row\.planned_seconds >= 300 then local_day/);
-  assert.match(shortSql, /streak_day := case/);
+  assert.match(shortSql, /local_day >= \(current_date - 1\)/);
+  assert.match(shortSql, /local_day <= \(current_date \+ 1\)/);
   assert.match(shortSql, /function public\.complete_study_timer/);
+  assert.doesNotMatch(shortSql, /function public\.submit_study_score/);
 
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   assert.match(desk, /streakBoostActive=\{liveStreakCount > 0\}/);

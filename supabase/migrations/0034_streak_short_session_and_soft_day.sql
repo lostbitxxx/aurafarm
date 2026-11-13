@@ -1,6 +1,6 @@
--- Dev password finish is a full finish path. Short custom sessions (< 5 min) must not
--- receive a streak day even if the client still sends local_day.
--- Run this after 0030_streak_min_five_minutes.sql.
+-- Short custom sessions (< 5 min) and out-of-range local_day must not move the streak.
+-- Keeps the unified pet submit from 0033_one_score_function.sql.
+-- Run this after 0033_one_score_function.sql. Safe to run again.
 
 create or replace function public.grant_study_experience(
   target_session_id uuid,
@@ -60,7 +60,11 @@ begin
   if apply_finish_bonus then
     gained := gained * finish_bonus / 10;
     streak_day := case
-      when local_day is not null and session_row.planned_seconds >= streak_min_seconds then local_day
+      when local_day is not null
+        and session_row.planned_seconds >= streak_min_seconds
+        and local_day >= (current_date - 1)
+        and local_day <= (current_date + 1)
+      then local_day
       else null
     end;
     counts_for_streak := streak_day is not null;
@@ -152,6 +156,9 @@ $$;
 
 revoke all on function public.grant_study_experience(uuid, integer, boolean, integer, text[], boolean, date) from public, anon, authenticated;
 
+comment on function public.grant_study_experience(uuid, integer, boolean, integer, text[], boolean, date) is
+  'Awards study XP. Short sessions and out-of-range streak days are skipped without failing the finish.';
+
 create or replace function public.complete_study_timer(
   target_session_id uuid,
   dev_password text,
@@ -211,98 +218,3 @@ $$;
 
 revoke all on function public.complete_study_timer(uuid, text, date) from public;
 grant execute on function public.complete_study_timer(uuid, text, date) to authenticated;
-
-create or replace function public.submit_study_score(
-  target_session_id uuid,
-  raw_token text,
-  duration_seconds integer,
-  blocked_count integer,
-  blocked_hosts text[],
-  local_day date default null
-)
-returns table (xp integer, distracted boolean)
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  token_hash text;
-  session_row public.study_sessions%rowtype;
-  filtered text[];
-  effective_count integer;
-  result_distracted boolean;
-  result_xp integer;
-  streak_day date;
-begin
-  if raw_token is null or raw_token = '' then
-    raise exception 'Score rejected';
-  end if;
-  if duration_seconds is null or duration_seconds < 0 or blocked_count is null or blocked_count < 0 then
-    raise exception 'Score rejected';
-  end if;
-
-  token_hash := encode(extensions.digest(raw_token, 'sha256'), 'hex');
-
-  select * into session_row
-  from public.study_sessions
-  where id = target_session_id
-  for update;
-
-  if not found
-    or session_row.session_token_hash is null
-    or session_row.session_token_hash <> token_hash then
-    raise exception 'Score rejected';
-  end if;
-
-  if session_row.status = 'submitted' then
-    raise exception 'Score already submitted';
-  end if;
-
-  if session_row.status <> 'active' or session_row.use_desktop_pet is not true then
-    raise exception 'The website timer finishes this session';
-  end if;
-
-  if now() + interval '5 seconds' < session_row.started_at + make_interval(secs => session_row.planned_seconds) then
-    raise exception 'Study time has not finished';
-  end if;
-
-  select coalesce(array_agg(distinct lower(candidate)), '{}')
-  into filtered
-  from unnest(coalesce(blocked_hosts, '{}'::text[])) as candidate
-  where candidate is not null
-    and candidate <> ''
-    and exists (
-      select 1
-      from public.blocklist_hosts listed
-      where lower(candidate) = listed.host
-        or (
-          length(lower(candidate)) > length(listed.host) + 1
-          and right(lower(candidate), length(listed.host) + 1) = '.' || listed.host
-        )
-    );
-
-  effective_count := greatest(blocked_count, coalesce(array_length(filtered, 1), 0));
-  result_distracted := effective_count > 0;
-  streak_day := case
-    when session_row.planned_seconds >= 300 then local_day
-    else null
-  end;
-  result_xp := public.grant_study_experience(
-    target_session_id,
-    session_row.planned_seconds,
-    result_distracted,
-    effective_count,
-    filtered,
-    true,
-    streak_day
-  );
-
-  return query select result_xp, result_distracted;
-exception
-  when unique_violation then
-    raise exception 'Score already submitted';
-end;
-$$;
-
-revoke all on function public.submit_study_score(uuid, text, integer, integer, text[], date) from public;
-grant execute on function public.submit_study_score(uuid, text, integer, integer, text[], date) to anon, authenticated;

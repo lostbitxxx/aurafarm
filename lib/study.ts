@@ -360,8 +360,11 @@ export function studyTimerMigrationMessage(message: string | null) {
   if (/end_study_early/i.test(message)) {
     return "Run migration 0014 before ending a study session early.";
   }
+  if (/Streak day is out of range/i.test(message)) {
+    return "Run migration 0034 so a bad streak day cannot block finishing a session.";
+  }
   if (/streak_count|streak_local_date|touch_daily_streak/i.test(message)) {
-    return "Run migration 0027 before using daily streaks.";
+    return "Run migrations 0027 through 0034 before using daily streaks.";
   }
   if (/study_sessions_planned_seconds_check/i.test(message)) {
     return "Run migration 0017 before choosing a custom study length.";
