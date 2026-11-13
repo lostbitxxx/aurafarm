@@ -19,6 +19,7 @@ import {
   focusedSeconds,
   formatClock,
   formatDuration,
+  formatHistoryMode,
   formatHistoryTime,
   formatHistoryXp,
   formatTimestamp,
@@ -341,6 +342,7 @@ test("study history merges session and XP rows by session id", () => {
       durationSeconds: 1500,
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: 55,
+      useDesktopPet: true,
     },
     {
       id: "session-b",
@@ -348,6 +350,7 @@ test("study history merges session and XP rows by session id", () => {
       durationSeconds: 120,
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: null,
+      useDesktopPet: false,
     },
     {
       id: "session-c",
@@ -355,6 +358,7 @@ test("study history merges session and XP rows by session id", () => {
       durationSeconds: 300,
       endedAt: "2026-01-02T12:00:00.000Z",
       xpAwarded: null,
+      useDesktopPet: null,
     },
   ];
   const scores = [
@@ -380,23 +384,37 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(cards.length, 3);
   assert.equal(cards[0]?.id, "session-a");
   assert.equal(cards[0]?.xp, 55);
+  assert.equal(cards[0]?.modeLabel, "With pet");
+  assert.equal(cards[0]?.showFocusDistraction, true);
   assert.equal(cards[0]?.focusSeconds, null);
   assert.equal(cards[0]?.distractionSeconds, null);
   assert.equal(cards[1]?.status, "cancelled");
   assert.equal(cards[1]?.xp, 0);
+  assert.equal(cards[1]?.modeLabel, "Web timer");
+  assert.equal(cards[1]?.showFocusDistraction, false);
   assert.equal(cards[2]?.xp, null);
+  assert.equal(cards[2]?.modeLabel, "Mode unknown");
+  assert.equal(cards[2]?.showFocusDistraction, false);
   assert.equal(unmatchedScores.length, 1);
   assert.equal(unmatchedScores[0]?.id, "orphan-xp");
+  assert.equal(formatHistoryMode(true), "With pet");
+  assert.equal(formatHistoryMode(false), "Web timer");
+  assert.equal(formatHistoryMode(null), "Mode unknown");
   assert.equal(formatHistoryXp(null), "Not available");
   assert.equal(formatHistoryXp(0), "0 XP");
   assert.equal(formatHistoryTime(null), "Not available");
-  assert.equal(formatHistoryTime(0), "0s");
+  assert.equal(formatHistoryTime(0), "0m");
 
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /Study history/);
   assert.match(panel, /Focus time/);
   assert.match(panel, /Distraction time/);
+  assert.match(panel, /modeLabel/);
+  assert.match(panel, /showFocusDistraction/);
   assert.match(panel, /buildStudyHistory/);
   assert.doesNotMatch(panel, /No blocked sites/);
   assert.doesNotMatch(panel, /history-sessions-title/);
+
+  const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
+  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet/);
 });

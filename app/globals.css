@@ -1025,6 +1025,26 @@ button.dialog-row {
   white-space: nowrap;
 }
 
+.study-history-mode {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #c5cbb9;
+  background: #f3f0e4;
+  color: #3d4d42;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.study-history-mode.is-unknown {
+  background: #efece3;
+  color: #6f6a62;
+  border-color: #d5d0c6;
+}
+
 .study-history-times {
   display: grid;
   gap: 0;

@@ -34,6 +34,11 @@ export type RecordedStudySession = {
   endedAt: string;
   /** Null when the row has no xp_awarded value (e.g. cancelled before grant). */
   xpAwarded: number | null;
+  /**
+   * Per-session tracker from study_sessions.use_desktop_pet.
+   * true = Desktop pet, false = Website timer, null = missing/unknown.
+   */
+  useDesktopPet: boolean | null;
 };
 
 export type StudyScoreCard = {
@@ -48,6 +53,8 @@ export type StudyScoreCard = {
 /** Display helpers: null means the duration is not recorded in existing data. */
 export type StudyHistoryTime = number | null;
 
+export type StudyHistoryModeLabel = "With pet" | "Web timer" | "Mode unknown";
+
 export type StudyHistoryCard = {
   id: string;
   status: "submitted" | "cancelled";
@@ -55,15 +62,20 @@ export type StudyHistoryCard = {
   endedAt: string;
   /** Null when XP cannot be established for this loaded session. */
   xp: number | null;
+  /** Frontend-only label from study_sessions.use_desktop_pet. */
+  modeLabel: StudyHistoryModeLabel;
+  /** True only when study_sessions.use_desktop_pet is authoritatively true. */
+  showFocusDistraction: boolean;
   focusSeconds: StudyHistoryTime;
   distractionSeconds: StudyHistoryTime;
 };
 
 /**
  * Merge recorded sessions with XP score rows by session id.
- * Focus/distraction interval lengths are not stored on study_sessions, so those
- * fields stay null (UI shows "Not available") rather than inventing values from
- * blocked_count / blocked_hosts.
+ * Focus/distraction rows are only for Desktop pet sessions (use_desktop_pet === true).
+ * Interval lengths are not stored on study_sessions, so those fields stay null
+ * (UI shows "Not available") rather than inventing values from blocked_count /
+ * blocked_hosts or total duration_seconds.
  */
 export function buildStudyHistory(
   sessions: readonly RecordedStudySession[],
@@ -86,12 +98,17 @@ export function buildStudyHistory(
       xp = 0;
     }
 
+    const showFocusDistraction = session.useDesktopPet === true;
+
     return {
       id: session.id,
       status: session.status,
       durationSeconds: session.durationSeconds,
       endedAt: session.endedAt,
       xp,
+      modeLabel: formatHistoryMode(session.useDesktopPet),
+      showFocusDistraction,
+      // Interval lengths are not stored; rows still render "Not available" for desktop.
       focusSeconds: null,
       distractionSeconds: null,
     };
@@ -101,8 +118,15 @@ export function buildStudyHistory(
   return { cards, unmatchedScores };
 }
 
+export function formatHistoryMode(useDesktopPet: boolean | null): StudyHistoryModeLabel {
+  if (useDesktopPet === true) return "With pet";
+  if (useDesktopPet === false) return "Web timer";
+  return "Mode unknown";
+}
+
 export function formatHistoryTime(seconds: StudyHistoryTime) {
   if (seconds === null) return "Not available";
+  if (seconds === 0) return "0m";
   return formatDuration(seconds);
 }
 

@@ -73,7 +73,7 @@ export async function loadDashboard() {
         .limit(10),
       supabase
         .from("study_sessions")
-        .select("id, status, duration_seconds, ended_at, xp_awarded")
+        .select("id, status, duration_seconds, ended_at, xp_awarded, use_desktop_pet")
         .eq("user_id", userId)
         .in("status", ["submitted", "cancelled"])
         .not("duration_seconds", "is", null)
@@ -143,6 +143,9 @@ export async function loadDashboard() {
         : Number.isFinite(Number(xpRaw))
           ? Math.max(0, Math.trunc(Number(xpRaw)))
           : null;
+    const modeRaw = session.use_desktop_pet;
+    const useDesktopPet =
+      modeRaw === true ? true : modeRaw === false ? false : null;
     return [
       {
         id: String(session.id),
@@ -150,6 +153,7 @@ export async function loadDashboard() {
         durationSeconds,
         endedAt: String(session.ended_at ?? ""),
         xpAwarded,
+        useDesktopPet,
       },
     ];
   });
