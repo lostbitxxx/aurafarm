@@ -5,8 +5,13 @@ import { useState, type ReactNode } from "react";
 import {
   COLLECTION_ACCESSORY_HINT,
   COLLECTION_COLOR_HINT,
+  collectionComingSoonMessage,
+  collectionCountLabel,
+  collectionNoneCard,
+  collectionProgress,
   ownedPreviewRewards,
   previewReward,
+  type CollectionKind,
   type PreviewReward,
 } from "@/lib/collection-catalog";
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
@@ -93,11 +98,13 @@ export function ShopDialog({
 
 type CollectionTab = "colors" | "hats" | "clothes";
 
-const COLLECTION_TABS: { id: CollectionTab; label: string; emptyNoun: string }[] = [
-  { id: "colors", label: "Colors", emptyNoun: "colors" },
-  { id: "hats", label: "Hats", emptyNoun: "hats" },
-  { id: "clothes", label: "Clothes", emptyNoun: "clothes" },
+const COLLECTION_TABS: { id: CollectionTab; label: string; kind: CollectionKind }[] = [
+  { id: "colors", label: "Colors", kind: "color" },
+  { id: "hats", label: "Hats", kind: "hat" },
+  { id: "clothes", label: "Clothes", kind: "clothes" },
 ];
+
+const COLLECTION_NONE = collectionNoneCard();
 
 export function CollectionDialog({
   pets,
@@ -174,6 +181,10 @@ export function CollectionDialog({
     ) : (
       <p className="panel-hint">{COLLECTION_ACCESSORY_HINT}</p>
     );
+  const ownedIdsForTab =
+    active.kind === "color" ? ownedColorIds : active.kind === "hat" ? ownedHatIds : ownedClothesIds;
+  const progress = collectionProgress(active.kind, ownedIdsForTab);
+  const equippedPet = pets.find((pet) => pet.is_desktop_active) ?? null;
 
   return (
     <FarmDialog title="Collection" onClose={onClose} wide>
@@ -185,21 +196,32 @@ export function CollectionDialog({
           </button>
         </p>
       ) : null}
-      <div className="collection-tabs" role="tablist" aria-label="Collection categories">
-        {COLLECTION_TABS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            id={`collection-tab-${entry.id}`}
-            aria-selected={tab === entry.id}
-            aria-controls={`collection-panel-${entry.id}`}
-            className={tab === entry.id ? "button button-small" : "button button-small button-ghost"}
-            onClick={() => setTab(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
+      <div className="collection-toolbar">
+        <div className="collection-tabs" role="tablist" aria-label="Collection categories">
+          {COLLECTION_TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              id={`collection-tab-${entry.id}`}
+              aria-selected={tab === entry.id}
+              aria-controls={`collection-panel-${entry.id}`}
+              className={tab === entry.id ? "button button-small" : "button button-small button-ghost"}
+              onClick={() => setTab(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+        {progress ? (
+          <p className="collection-count" aria-label={collectionCountLabel(active.kind, progress.owned, progress.total)}>
+            {progress.owned}/{progress.total}
+          </p>
+        ) : (
+          <p className="collection-count" aria-label="Collection count unavailable">
+            Collection count unavailable
+          </p>
+        )}
       </div>
       <div
         className="collection-panel"
@@ -208,38 +230,40 @@ export function CollectionDialog({
         aria-labelledby={`collection-tab-${active.id}`}
       >
         {tab === "colors" ? (
-          ownedColors.length > 0 ? (
-            <ul className="collection-color-grid">
-              {ownedColors.map((color) => (
-                <li key={color.id}>
-                  <button type="button" className="collection-color" onClick={() => setApplyColorId(color.id)}>
-                    <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
-                    <strong>{color.name}</strong>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <>
+          <>
+            {ownedColors.length > 0 ? (
+              <ul className="collection-color-grid">
+                {ownedColors.map((color) => (
+                  <li key={color.id}>
+                    <button type="button" className="collection-color" onClick={() => setApplyColorId(color.id)}>
+                      <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
+                      <strong>{color.name}</strong>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
               <p className="collection-empty-title">Nothing to collect here yet.</p>
-              <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
-            </>
-          )
+            )}
+            <p className="collection-coming-soon">{collectionComingSoonMessage("color")}</p>
+          </>
         ) : tab === "hats" ? (
           <OwnedAccessoryPanel
-            emptyNoun={active.emptyNoun}
             previewItems={ownedPreviewHats}
             legacyItems={ownedLegacyHats}
             legacyKind="hat"
+            noneSelected={equippedPet ? equippedPet.hat === null : false}
             onApply={(id) => setApplyHat({ id })}
+            onSelectNone={() => setApplyHat({ id: null })}
           />
         ) : (
           <OwnedAccessoryPanel
-            emptyNoun={active.emptyNoun}
             previewItems={ownedPreviewClothes}
             legacyItems={ownedLegacyClothes}
             legacyKind="clothes"
+            noneSelected={equippedPet ? equippedPet.clothes === null : false}
             onApply={(id) => setApplyClothes({ id })}
+            onSelectNone={() => setApplyClothes({ id: null })}
           />
         )}
       </div>
@@ -248,59 +272,77 @@ export function CollectionDialog({
 }
 
 function OwnedAccessoryPanel({
-  emptyNoun,
   previewItems,
   legacyItems,
   legacyKind,
+  noneSelected,
   onApply,
+  onSelectNone,
 }: {
-  emptyNoun: string;
   previewItems: readonly PreviewReward[];
   legacyItems: readonly { id: string }[];
   legacyKind: "hat" | "clothes";
+  noneSelected: boolean;
   onApply: (id: string) => void;
+  onSelectNone: () => void;
 }) {
-  if (previewItems.length === 0 && legacyItems.length === 0) {
-    return (
-      <>
-        <p className="collection-empty-title">Nothing to collect here yet.</p>
-        <p className="panel-hint">More {emptyNoun} are coming soon.</p>
-      </>
-    );
-  }
+  const hasOwned = previewItems.length > 0 || legacyItems.length > 0;
+  const emptyTitle = legacyKind === "hat" ? "You don't own any hats yet." : "You don't own any clothes yet.";
 
   return (
-    <ul className="collection-color-grid collection-accessory-grid">
-      {previewItems.map((item) => (
-        <li key={item.id}>
-          <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
+    <>
+      {!hasOwned ? <p className="collection-empty-title">{emptyTitle}</p> : null}
+      <ul className="collection-color-grid collection-accessory-grid">
+        <li>
+          <button
+            type="button"
+            className={noneSelected ? "collection-color is-selected" : "collection-color"}
+            aria-pressed={noneSelected}
+            onClick={onSelectNone}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="collection-accessory-art"
-              src={item.icon}
+              src={COLLECTION_NONE.icon}
               alt=""
               draggable={false}
               style={{ imageRendering: "pixelated" }}
             />
-            <strong>{item.name}</strong>
+            <strong>{COLLECTION_NONE.name}</strong>
           </button>
         </li>
-      ))}
-      {legacyItems.map((item) => (
-        <li key={item.id}>
-          <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
-            <PixelPetArt
-              petType="baby_slime"
-              hat={legacyKind === "hat" ? item.id : null}
-              clothes={legacyKind === "clothes" ? item.id : null}
-              className="dialog-pet-art"
-              alt=""
-            />
-            <strong>{item.id}</strong>
-          </button>
-        </li>
-      ))}
-    </ul>
+        {previewItems.map((item) => (
+          <li key={item.id}>
+            <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="collection-accessory-art"
+                src={item.icon}
+                alt=""
+                draggable={false}
+                style={{ imageRendering: "pixelated" }}
+              />
+              <strong>{item.name}</strong>
+            </button>
+          </li>
+        ))}
+        {legacyItems.map((item) => (
+          <li key={item.id}>
+            <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
+              <PixelPetArt
+                petType="baby_slime"
+                hat={legacyKind === "hat" ? item.id : null}
+                clothes={legacyKind === "clothes" ? item.id : null}
+                className="dialog-pet-art"
+                alt=""
+              />
+              <strong>{item.id}</strong>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="collection-coming-soon">{collectionComingSoonMessage(legacyKind)}</p>
+    </>
   );
 }
 
