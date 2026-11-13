@@ -61,6 +61,8 @@ declare
   effective_count integer;
   result_distracted boolean;
   result_xp integer;
+  finished boolean;
+  studied integer;
 begin
   if raw_token is null or raw_token = '' then
     raise exception 'Score rejected';
@@ -90,8 +92,14 @@ begin
     raise exception 'The website timer finishes this session';
   end if;
 
-  if now() + interval '5 seconds' < session_row.started_at + make_interval(secs => session_row.planned_seconds) then
-    raise exception 'Study time has not finished';
+  finished := now() + interval '5 seconds' >= session_row.started_at + make_interval(secs => session_row.planned_seconds);
+  if finished then
+    studied := session_row.planned_seconds;
+  else
+    studied := least(
+      session_row.planned_seconds,
+      greatest(0, floor(extract(epoch from (now() - session_row.started_at)))::integer)
+    );
   end if;
 
   select coalesce(array_agg(distinct lower(candidate)), '{}')
@@ -113,11 +121,11 @@ begin
   result_distracted := effective_count > 0;
   result_xp := public.grant_study_experience(
     target_session_id,
-    session_row.planned_seconds,
+    studied,
     result_distracted,
     effective_count,
     filtered,
-    true
+    finished
   );
 
   return query select result_xp, result_distracted;
@@ -131,7 +139,7 @@ revoke all on function public.submit_study_score(uuid, text, integer, integer, t
 grant execute on function public.submit_study_score(uuid, text, integer, integer, text[]) to anon, authenticated;
 
 comment on function public.submit_study_score(uuid, text, integer, integer, text[]) is
-  'Scores a finished desktop pet session from started_at. Does not store distraction time.';
+  'Scores a desktop pet Finish click from started_at. A full session gets the 1.1 finish bonus. An earlier click counts whole minutes only.';
 
 drop function if exists public.cancel_study_session(uuid, integer);
 drop function if exists public.cancel_study_session(uuid);
