@@ -207,7 +207,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
 }
 
-/* Cream public pages (/login, /privacy, /register). Scoped so / stays on the dark canopy. */
+/* Cream public pages (/, /login, /privacy, /register). Body canopy stays for any unscoped routes. */
 .paper-shell {
   --dialog-ink: #23392d;
   --dialog-muted: #596650;
@@ -245,8 +245,74 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .paper-shell .auth-aside h1,
-.paper-shell .paper-main h1 {
+.paper-shell .paper-main h1,
+.paper-shell .hero h1 {
   color: var(--ink);
+}
+
+.paper-shell .hero {
+  flex: 1;
+  width: min(1120px, calc(100% - 8vw));
+  margin: 0 auto;
+  align-content: center;
+  padding: 2rem 0 3.5rem;
+}
+
+.paper-shell .hero-copy {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.paper-shell .hero-copy .lede {
+  margin: 0;
+}
+
+.paper-shell .hero-actions {
+  margin-top: 0.6rem;
+}
+
+.paper-shell .hero-actions .button {
+  background: var(--dialog-lime);
+  color: var(--dialog-ink);
+  border: 1px solid #97b839;
+  box-shadow: none;
+}
+
+.paper-shell .hero-actions .button-ghost {
+  background: #f5f0e2;
+  color: var(--dialog-ink);
+  box-shadow: none;
+  border: 1px solid #9daa90;
+}
+
+.paper-shell .hero-actions .button:focus-visible,
+.paper-shell .hero-actions a:focus-visible {
+  outline: 3px solid #8261a7;
+  outline-offset: 3px;
+}
+
+.paper-shell .hero-stage {
+  min-height: 280px;
+  padding: 1.6rem 1.2rem 1.3rem;
+  border: 1px solid var(--dialog-line);
+  border-radius: 1.15rem;
+  background: var(--dialog-surface);
+  box-shadow: 0 15px 60px rgba(24, 46, 40, 0.12);
+}
+
+.paper-shell .hero-stage p {
+  margin: 0.85rem 0 0;
+  color: var(--dialog-muted);
+  text-align: center;
+}
+
+.paper-shell .hero-stage .pixel-pet-art.hero-pet-art {
+  width: min(220px, 72%);
+  height: auto;
+  max-width: 220px;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
 }
 
 .paper-main {
@@ -1692,12 +1758,14 @@ button.dialog-row {
     width: min(40rem, calc(100% - 2.5rem));
     padding: 1.25rem 0 3rem;
   }
-  .paper-shell .auth-layout {
+  .paper-shell .auth-layout,
+  .paper-shell .hero {
     width: min(1120px, calc(100% - 2.5rem));
     padding: 0.5rem 0 3rem;
   }
   .paper-shell .auth-aside h1,
-  .paper-shell .paper-main h1 {
+  .paper-shell .paper-main h1,
+  .paper-shell .hero h1 {
     font-size: clamp(2.4rem, 10vw, 3.6rem);
   }
   .skeleton-frame { min-height: 280px; height: 46vh; }
