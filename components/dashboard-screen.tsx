@@ -12,6 +12,7 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { FriendsDialog } from "./friends-dialog";
+import { LeaderboardDialog } from "./leaderboard-dialog";
 import { SocialPresence } from "./social-presence";
 import { SocialSettingsDialog } from "./social-settings-dialog";
 import { type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
@@ -105,7 +106,15 @@ export function DashboardScreen({
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<
-    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | "social-settings" | null
+    | "shop"
+    | "collection"
+    | "inventory"
+    | "achievements"
+    | "edit-plan"
+    | "friends"
+    | "social-settings"
+    | "leaderboard"
+    | null
   >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
@@ -260,6 +269,7 @@ export function DashboardScreen({
         onOpenAchievements={() => setDialog("achievements")}
         onOpenFriends={() => setDialog("friends")}
         onOpenSocialSettings={() => setDialog("social-settings")}
+        onOpenLeaderboard={() => setDialog("leaderboard")}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -321,6 +331,9 @@ export function DashboardScreen({
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "friends" ? (
         <FriendsDialog friends={friends} friendsError={friendsError} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === "leaderboard" ? (
+        <LeaderboardDialog userId={userId} onClose={() => setDialog(null)} />
       ) : null}
       {dialog === "social-settings" ? (
         <SocialSettingsDialog
