@@ -782,22 +782,33 @@ function StudyHistoryDialog({
                     </div>
                     <span className="study-history-xp">{formatHistoryXp(card.xp)}</span>
                   </div>
-                  <div className="study-history-times">
-                    <div className="study-history-time-row">
-                      <span>Focus time</span>
-                      <span>{formatHistoryTime(card.focusSeconds)}</span>
+                  <span
+                    className={
+                      card.modeLabel === "Mode unknown"
+                        ? "study-history-mode is-unknown"
+                        : "study-history-mode"
+                    }
+                  >
+                    {card.modeLabel}
+                  </span>
+                  {card.showFocusDistraction ? (
+                    <div className="study-history-times">
+                      <div className="study-history-time-row">
+                        <span>Focus time</span>
+                        <span>{formatHistoryTime(card.focusSeconds)}</span>
+                      </div>
+                      <div
+                        className={
+                          distractionKnown
+                            ? "study-history-time-row is-distracted"
+                            : "study-history-time-row"
+                        }
+                      >
+                        <span>Distraction time</span>
+                        <span>{formatHistoryTime(card.distractionSeconds)}</span>
+                      </div>
                     </div>
-                    <div
-                      className={
-                        distractionKnown
-                          ? "study-history-time-row is-distracted"
-                          : "study-history-time-row"
-                      }
-                    >
-                      <span>Distraction time</span>
-                      <span>{formatHistoryTime(card.distractionSeconds)}</span>
-                    </div>
-                  </div>
+                  ) : null}
                   {card.endedAt ? (
                     <time className="study-history-date" dateTime={card.endedAt}>
                       {formatTimestamp(card.endedAt)}
