@@ -22,6 +22,7 @@ import {
   formatHistoryMode,
   formatHistoryTime,
   formatHistoryXp,
+  historyFocusDistraction,
   formatTimestamp,
   levelFromExperience,
   MAX_STUDY_MINUTES,
@@ -294,6 +295,20 @@ test("a pet finish scores the minutes already studied before the clock ends", ()
   assert.match(sql, /An earlier finish records the minutes already studied/);
 });
 
+test("a pet score stores blocklist seconds capped at the studied length", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0028_distraction_seconds.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /add column if not exists distraction_seconds integer/);
+  assert.match(sql, /distraction_seconds integer default null/);
+  assert.match(sql, /least\(studied, distraction_seconds\)/);
+  assert.match(sql, /function public\.cancel_study_session/);
+  assert.match(sql, /least\(elapsed, distraction_seconds\)/);
+  assert.match(sql, /Does not change pet experience or level/);
+  assert.doesNotMatch(sql, /grant_study_experience\(\s*target_session_id,\s*studied,\s*result_distracted,\s*effective_count,\s*filtered,\s*finished,\s*distraction_seconds/);
+});
+
 test("ending early records studied minutes without the finish bonus", () => {
   const sql = readFileSync(
     new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),
@@ -358,6 +373,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: 55,
       useDesktopPet: true,
+      distractionSeconds: 90,
     },
     {
       id: "session-b",
@@ -366,6 +382,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: null,
       useDesktopPet: false,
+      distractionSeconds: null,
     },
     {
       id: "session-c",
@@ -374,6 +391,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-02T12:00:00.000Z",
       xpAwarded: null,
       useDesktopPet: null,
+      distractionSeconds: null,
     },
   ];
   const scores = [
@@ -401,8 +419,8 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(cards[0]?.xp, 55);
   assert.equal(cards[0]?.modeLabel, "With pet");
   assert.equal(cards[0]?.showFocusDistraction, true);
-  assert.equal(cards[0]?.focusSeconds, null);
-  assert.equal(cards[0]?.distractionSeconds, null);
+  assert.equal(cards[0]?.focusSeconds, 1410);
+  assert.equal(cards[0]?.distractionSeconds, 90);
   assert.equal(cards[1]?.status, "cancelled");
   assert.equal(cards[1]?.xp, 0);
   assert.equal(cards[1]?.modeLabel, "Web timer");
@@ -419,6 +437,26 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(formatHistoryXp(0), "0 XP");
   assert.equal(formatHistoryTime(null), "Not available");
   assert.equal(formatHistoryTime(0), "0m");
+  assert.deepEqual(historyFocusDistraction(1500, null, true), {
+    focusSeconds: null,
+    distractionSeconds: null,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 0, true), {
+    focusSeconds: 100,
+    distractionSeconds: 0,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 250, true), {
+    focusSeconds: 0,
+    distractionSeconds: 100,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 40, false), {
+    focusSeconds: null,
+    distractionSeconds: null,
+  });
+  assert.equal(
+    studyTimerMigrationMessage("column study_sessions.distraction_seconds does not exist"),
+    "Run migration 0028 before reading focus and distraction time.",
+  );
 
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /Study history/);
@@ -431,5 +469,5 @@ test("study history merges session and XP rows by session id", () => {
   assert.doesNotMatch(panel, /history-sessions-title/);
 
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
-  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet/);
+  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet, distraction_seconds/);
 });

@@ -19,6 +19,7 @@ test("the sample score body parses", () => {
   assert.equal(parsed.durationSeconds, 1200);
   assert.equal(parsed.blockedCount, 1);
   assert.deepEqual(parsed.blockedHosts, ["www.instagram.com"]);
+  assert.equal(parsed.distractionSeconds, null);
 });
 
 test("a score body needs a token, a whole duration, and a list of hosts", () => {
@@ -27,6 +28,8 @@ test("a score body needs a token, a whole duration, and a list of hosts", () => 
   assert.equal(parseScoreRequest({ ...exampleBody, duration_seconds: "1200" }).ok, false);
   assert.equal(parseScoreRequest({ ...exampleBody, blocked_hosts: "www.instagram.com" }).ok, false);
   assert.equal(parseScoreRequest({ ...exampleBody, blocked_hosts: [1] }).ok, false);
+  assert.equal(parseScoreRequest({ ...exampleBody, distraction_seconds: -1 }).ok, false);
+  assert.equal(parseScoreRequest({ ...exampleBody, distraction_seconds: 1.5 }).ok, false);
 });
 
 test("blocked hosts are capped before they reach the database", () => {
@@ -35,6 +38,23 @@ test("blocked hosts are capped before they reach the database", () => {
   assert.equal(parsed.ok, true);
   if (!parsed.ok) return;
   assert.equal(parsed.blockedHosts.length, 20);
+});
+
+test("distraction time is capped at the session length", () => {
+  const missing = parseScoreRequest(exampleBody);
+  assert.equal(missing.ok, true);
+  if (!missing.ok) return;
+  assert.equal(missing.distractionSeconds, null);
+
+  const recorded = parseScoreRequest({ ...exampleBody, distraction_seconds: 90 });
+  assert.equal(recorded.ok, true);
+  if (!recorded.ok) return;
+  assert.equal(recorded.distractionSeconds, 90);
+
+  const capped = parseScoreRequest({ ...exampleBody, distraction_seconds: 5000 });
+  assert.equal(capped.ok, true);
+  if (!capped.ok) return;
+  assert.equal(capped.distractionSeconds, 1200);
 });
 
 test("the score url uses the request origin and the session id", () => {

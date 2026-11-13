@@ -39,6 +39,10 @@ export type RecordedStudySession = {
    * true = Desktop pet, false = Website timer, null = missing/unknown.
    */
   useDesktopPet: boolean | null;
+  /**
+   * Seconds on a blocklist host. Null when the pet did not record the interval.
+   */
+  distractionSeconds: number | null;
 };
 
 export type StudyScoreCard = {
@@ -72,11 +76,23 @@ export type StudyHistoryCard = {
 
 /**
  * Merge recorded sessions with XP score rows by session id.
- * Focus/distraction rows are only for Desktop pet sessions (use_desktop_pet === true).
- * Interval lengths are not stored on study_sessions, so those fields stay null
- * (UI shows "Not available") rather than inventing values from blocked_count /
- * blocked_hosts or total duration_seconds.
+ * Focus and distraction are shown for desktop pet sessions that stored
+ * distraction_seconds. Focus is the session length minus that distraction time.
+ * A missing interval stays null so the card says "Not available".
  */
+export function historyFocusDistraction(
+  durationSeconds: number,
+  distractionSeconds: number | null,
+  showFocusDistraction: boolean,
+): { focusSeconds: StudyHistoryTime; distractionSeconds: StudyHistoryTime } {
+  if (!showFocusDistraction || distractionSeconds === null || !Number.isFinite(distractionSeconds)) {
+    return { focusSeconds: null, distractionSeconds: null };
+  }
+  const duration = Math.max(0, Math.trunc(durationSeconds));
+  const distraction = Math.min(duration, Math.max(0, Math.trunc(distractionSeconds)));
+  return { focusSeconds: duration - distraction, distractionSeconds: distraction };
+}
+
 export function buildStudyHistory(
   sessions: readonly RecordedStudySession[],
   scores: readonly StudyScoreCard[],
@@ -99,6 +115,11 @@ export function buildStudyHistory(
     }
 
     const showFocusDistraction = session.useDesktopPet === true;
+    const times = historyFocusDistraction(
+      session.durationSeconds,
+      session.distractionSeconds,
+      showFocusDistraction,
+    );
 
     return {
       id: session.id,
@@ -108,9 +129,8 @@ export function buildStudyHistory(
       xp,
       modeLabel: formatHistoryMode(session.useDesktopPet),
       showFocusDistraction,
-      // Interval lengths are not stored; rows still render "Not available" for desktop.
-      focusSeconds: null,
-      distractionSeconds: null,
+      focusSeconds: times.focusSeconds,
+      distractionSeconds: times.distractionSeconds,
     };
   });
 
@@ -257,6 +277,9 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/distraction_seconds/i.test(message)) {
+    return "Run migration 0028 before reading focus and distraction time.";
+  }
   if (/collection_rewards|claim_collection_reward/i.test(message)) {
     return "Run migration 0024 before choosing a level reward.";
   }

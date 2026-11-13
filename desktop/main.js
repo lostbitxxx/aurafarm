@@ -17,7 +17,7 @@ const {
 } = require("./frontmost");
 const { closeFrontTab, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
-const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
+const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
@@ -432,8 +432,10 @@ async function cancelStudy() {
   }
   if (!sessionId) return { error: "No study session is running." };
   console.log(`[score] cancel ${sessionId} stops the session and does not change experience`);
+  const watched = study && study.id === sessionId ? distractionSeconds(study, Date.now()) : null;
   const { error } = await supabase.rpc("cancel_study_session", {
     target_session_id: sessionId,
+    distraction_seconds: watched,
   });
   if (error) {
     console.log(`[score] cancel ${sessionId} rejected: ${error.message}`);
@@ -743,6 +745,7 @@ async function submitScoreDirect(current, body, postFailure) {
     duration_seconds: body.duration_seconds,
     blocked_count: body.blocked_count,
     blocked_hosts: body.blocked_hosts,
+    distraction_seconds: body.distraction_seconds,
   });
   if (error) {
     scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);
@@ -758,6 +761,13 @@ async function submitScoreDirect(current, body, postFailure) {
         ok: false,
         url: "",
         message: "Run migration 0027 in Supabase, then click Finish again.",
+      };
+    }
+    if (/distraction_seconds/i.test(error.message)) {
+      return {
+        ok: false,
+        url: "",
+        message: "Run migration 0028 in Supabase, then click Finish again.",
       };
     }
     return { ok: false, url: "", message: `Could not submit the score. ${error.message} ${desk}` };
@@ -828,13 +838,13 @@ async function pollFront() {
     setPetLevel("floating");
     const reading = await readFrontBrowser();
     if (study !== current) return;
+    const now = Date.now();
     if (reading.url) {
-      current.log = nextFrontLog(true, current.log, reading.url, current.blocklist, DESK_HOST);
+      current.log = nextFrontLog(true, current.log, reading.url, current.blocklist, DESK_HOST, now);
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
     current.closeBlocked = true;
-    const now = Date.now();
     const decision = nextCloseWatch(current.closeWatch, {
       enabled: true,
       rawUrl: reading.url || "",

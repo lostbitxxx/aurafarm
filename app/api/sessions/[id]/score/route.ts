@@ -37,13 +37,17 @@ export async function POST(
   }
 
   const supabase = createAnonClient();
-  const { data, error } = await supabase.rpc("submit_study_score", {
+  const scoreArgs = {
     target_session_id: id,
     raw_token: parsed.token,
     duration_seconds: parsed.durationSeconds,
     blocked_count: parsed.blockedCount,
     blocked_hosts: parsed.blockedHosts,
-  });
+    ...(parsed.distractionSeconds === null
+      ? {}
+      : { distraction_seconds: parsed.distractionSeconds }),
+  };
+  const { data, error } = await supabase.rpc("submit_study_score", scoreArgs);
 
   if (error) {
     const session = await readScoreSession(id);

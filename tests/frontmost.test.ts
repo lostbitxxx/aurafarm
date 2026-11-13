@@ -5,6 +5,7 @@ import { hostMatchesBlocklist } from "../lib/blocklist";
 
 const require = createRequire(import.meta.url);
 const {
+  advanceFrontLog,
   CLOSE_AFTER_MS,
   createCloseWatch,
   createFrontLog,
@@ -19,6 +20,27 @@ const {
   recordFrontHost,
 } = require("../desktop/frontmost.js") as {
   CLOSE_AFTER_MS: number;
+  advanceFrontLog: (
+    log: {
+      blockedCount: number;
+      blockedHosts: string[];
+      currentHost: string;
+      distractionMs?: number;
+      sampledAt?: number;
+      onBlocklist?: boolean;
+    },
+    rawUrl: string,
+    blocklist: readonly string[],
+    deskHost: string,
+    nowMs: number,
+  ) => {
+    blockedCount: number;
+    blockedHosts: string[];
+    currentHost: string;
+    distractionMs: number;
+    sampledAt: number;
+    onBlocklist: boolean;
+  };
   createCloseWatch: () => { host: string; since: number; attemptedHost: string; close: boolean };
   nextCloseWatch: (
     watch: { host: string; since: number; attemptedHost: string; close: boolean },
@@ -151,6 +173,47 @@ test("an idle pet does not apply a front url, including after the session ends",
   const ended = nextFrontLog(false, seen, "https://www.instagram.com/reels", blocked, desk);
   assert.equal(ended, seen);
   assert.equal(ended.blockedCount, 1);
+});
+
+test("time on a blocklist host adds up while that tab stays in front", () => {
+  const start = 10_000;
+  const seen = advanceFrontLog(
+    createFrontLog(),
+    "https://www.instagram.com/reels",
+    blocked,
+    desk,
+    start,
+  );
+  assert.equal(seen.blockedCount, 1);
+  assert.equal(seen.distractionMs, 0);
+  assert.equal(seen.onBlocklist, true);
+
+  const still = advanceFrontLog(seen, "https://www.instagram.com/explore", blocked, desk, start + 2_500);
+  assert.equal(still.blockedCount, 1);
+  assert.equal(still.distractionMs, 2_500);
+
+  const away = advanceFrontLog(still, "https://example.com", blocked, desk, start + 4_000);
+  assert.equal(away.blockedCount, 1);
+  assert.equal(away.distractionMs, 2_500);
+  assert.equal(away.onBlocklist, false);
+
+  const deskVisit = advanceFrontLog(
+    createFrontLog(),
+    "http://localhost:3000/dashboard",
+    ["localhost", ...blocked],
+    desk,
+    start,
+  );
+  const stillDesk = advanceFrontLog(
+    deskVisit,
+    "http://localhost:3000/study",
+    ["localhost", ...blocked],
+    desk,
+    start + 5_000,
+  );
+  assert.equal(stillDesk.blockedCount, 0);
+  assert.equal(stillDesk.distractionMs, 0);
+  assert.equal(stillDesk.onBlocklist, false);
 });
 
 test("a missing browser url does not clear the current visit", () => {
