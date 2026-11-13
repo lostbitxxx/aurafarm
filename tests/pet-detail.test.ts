@@ -22,6 +22,9 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /setPicker\("hat"\)/);
   assert.match(detail, /setPicker\("clothes"\)/);
   assert.match(detail, /onChoose\(null\)/);
+  assert.match(detail, /title=\{copy\.name\}/);
+  assert.match(detail, /Lv\.\{progress\.level\}/);
+  assert.doesNotMatch(detail, /\{copy\.name\} · Lv\./);
   assert.doesNotMatch(detail, /ACCESSORY_NOTE/);
   assert.doesNotMatch(detail, /Coming soon/);
   assert.doesNotMatch(detail, /Used by/);

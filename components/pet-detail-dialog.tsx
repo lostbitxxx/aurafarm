@@ -156,9 +156,7 @@ export function PetDetailDialog({
         </div>
         <div>
           <p className="panel-kicker">Unique pet instance</p>
-          <h3 className="panel-name">
-            {copy.name} · Lv.{progress.level}
-          </h3>
+          <h3 className="panel-name">Lv.{progress.level}</h3>
           <div
             className="xp-track xp-track-purple"
             role="meter"
