@@ -17,7 +17,6 @@ import {
   formatHistoryTime,
   formatHistoryXp,
   formatTimestamp,
-  experienceForEarlyEnd,
   experienceForSession,
   farmerLocalDay,
   remainingSeconds,
@@ -565,8 +564,7 @@ export function StudyPanel({
                 {streakBoostActive && sessionCountsForStreak(lengthSeconds)
                   ? " with streak boost"
                   : ""}
-                . Ending early is {experienceForEarlyEnd(lengthSeconds, false)} XP and does not count
-                for the streak
+                . Ending early does not count for the streak
                 {!sessionCountsForStreak(lengthSeconds)
                   ? ". Custom sessions need at least 5 minutes to count for the streak"
                   : streakQualifiedToday
