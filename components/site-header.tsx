@@ -42,10 +42,10 @@ export function SiteHeader({
         )}
         {onOpenInventory ? (
           <button type="button" className="topbar-link" onClick={onOpenInventory}>
-            Inventory
+            Pets
           </button>
         ) : (
-          <Link href="/dashboard">Inventory</Link>
+          <Link href="/dashboard">Pets</Link>
         )}
         {onOpenAchievements ? (
           <button type="button" className="topbar-link" onClick={onOpenAchievements}>
