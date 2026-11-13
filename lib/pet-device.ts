@@ -26,6 +26,53 @@ export function parseClaimCode(
   return { ok: true, code: normalized };
 }
 
+export type ClaimSession = {
+  sessionId: string;
+  petType: string;
+  level: number;
+  blocklist: string[];
+  closeBlocked: boolean;
+  plannedSeconds: number;
+  startedAt: string;
+};
+
+function wholeNumber(value: unknown) {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+export function describeClaimPayload(data: unknown) {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object") return "no row";
+  return Object.entries(row as Record<string, unknown>)
+    .map(([key, value]) => `${key}:${value === null ? "null" : typeof value}`)
+    .join(", ");
+}
+
+export function claimRowFromRpc(data: unknown): ClaimSession | null {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  const level = wholeNumber(record.level);
+  const plannedSeconds = wholeNumber(record.planned_seconds);
+  if (typeof record.session_id !== "string" || typeof record.pet_type !== "string") return null;
+  if (level === null || plannedSeconds === null) return null;
+  if (typeof record.started_at !== "string") return null;
+  const blocklist = Array.isArray(record.blocklist)
+    ? record.blocklist.filter((host): host is string => typeof host === "string")
+    : [];
+  return {
+    sessionId: record.session_id,
+    petType: record.pet_type,
+    level,
+    blocklist,
+    closeBlocked: record.close_blocked === true,
+    plannedSeconds,
+    startedAt: record.started_at,
+  };
+}
+
 export function normalizeLaunchCode(value: string) {
   const trimmed = value.trim();
   try {

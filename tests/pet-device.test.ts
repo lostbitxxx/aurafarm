@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { normalizeLaunchCode, parseClaimCode, petDownloadUrl } from "../lib/pet-device";
+import { claimRowFromRpc, describeClaimPayload, normalizeLaunchCode, parseClaimCode, petDownloadUrl } from "../lib/pet-device";
 
 test("the download link is an absolute http url", () => {
   assert.equal(petDownloadUrl(undefined), null);
@@ -24,6 +24,35 @@ test("claim inputs stay on the aurafarm session link", () => {
     code: "ABC234",
   });
   assert.equal(parseClaimCode({}).ok, false);
+});
+
+test("a claim row accepts the database numbers even when claimed_at is extra", () => {
+  const row = claimRowFromRpc([
+    {
+      session_id: "session-id",
+      pet_type: "lantern_moth",
+      level: "1",
+      blocklist: ["instagram.com"],
+      close_blocked: true,
+      planned_seconds: 300,
+      started_at: "2026-11-13T09:00:00.000Z",
+      claimed_at: "2026-11-13T09:00:05.000Z",
+    },
+  ]);
+  assert.equal(row?.sessionId, "session-id");
+  assert.equal(row?.level, 1);
+  assert.equal(row?.plannedSeconds, 300);
+  assert.equal(claimRowFromRpc({ pet_type: "lantern_moth" }), null);
+  assert.equal(describeClaimPayload({ level: "1", planned_seconds: null }), "level:string, planned_seconds:null");
+
+  const sql = readFileSync(new URL("../supabase/migrations/0031_repair_claim.sql", import.meta.url), "utf8");
+  const route = readFileSync(new URL("../app/api/sessions/claim/route.ts", import.meta.url), "utf8");
+  assert.match(sql, /drop function if exists public\.claim_study_session\(text, text\)/);
+  assert.match(sql, /session\.claimed_at is null/);
+  assert.match(sql, /session\.use_desktop_pet is true/);
+  assert.match(sql, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(sql, /claimed_at timestamptz/);
+  assert.match(route, /error\.message/);
 });
 
 test("the desk source does not call the pet over loopback", () => {
