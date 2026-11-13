@@ -12,6 +12,7 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { FriendsDialog } from "./friends-dialog";
+import { previewReward } from "@/lib/collection-catalog";
 import { type FriendCard } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
@@ -220,8 +221,9 @@ export function DashboardScreen({
 
   function onRewardClaimed(itemId: string) {
     const color = sampleColor(itemId);
-    const hat = sampleHat(itemId);
-    const clothes = sampleClothes(itemId);
+    const preview = previewReward(itemId);
+    const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
+    const clothes = sampleClothes(itemId) ?? (preview?.kind === "clothes" ? preview.id : null);
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
@@ -336,8 +338,11 @@ export function DashboardScreen({
           onDismiss={dismissCelebration}
         />
       ) : null}
-      {pickerOpen ? (
+      {pickerOpen && rewards[0] ? (
         <RewardPicker
+          key={rewards[0].id}
+          rewardId={rewards[0].id}
+          userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}
           ownedColorIds={ownedColors}

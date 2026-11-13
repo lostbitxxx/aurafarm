@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { previewReward } from "@/lib/collection-catalog";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { highestPetLevel, shopPurchaseBlock, wholePoints } from "@/lib/pets";
 import { levelFromExperience } from "@/lib/study";
@@ -103,7 +104,7 @@ export async function applyPetColor(petId: string, colorId: string) {
 }
 
 export async function applyPetHat(petId: string, hatId: string | null) {
-  if (!petIdPattern.test(petId) || (hatId !== null && !sampleHat(hatId))) {
+  if (!petIdPattern.test(petId) || (hatId !== null && !sampleHat(hatId) && previewReward(hatId)?.kind !== "hat")) {
     return { error: "That hat could not be applied." };
   }
   if (!isSupabaseConfigured()) {
@@ -132,7 +133,7 @@ export async function applyPetHat(petId: string, hatId: string | null) {
 }
 
 export async function applyPetClothes(petId: string, clothesId: string | null) {
-  if (!petIdPattern.test(petId) || (clothesId !== null && !sampleClothes(clothesId))) {
+  if (!petIdPattern.test(petId) || (clothesId !== null && !sampleClothes(clothesId) && previewReward(clothesId)?.kind !== "clothes")) {
     return { error: "Those clothes could not be applied." };
   }
   if (!isSupabaseConfigured()) {
@@ -161,7 +162,7 @@ export async function applyPetClothes(petId: string, clothesId: string | null) {
 }
 
 export async function claimCollectionReward(itemId: string) {
-  if (!sampleColor(itemId) && !sampleHat(itemId) && !sampleClothes(itemId)) {
+  if (!sampleColor(itemId) && !sampleHat(itemId) && !sampleClothes(itemId) && !previewReward(itemId)) {
     return { error: "That item could not be chosen." };
   }
   if (!isSupabaseConfigured()) {
