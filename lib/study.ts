@@ -32,6 +32,8 @@ export type RecordedStudySession = {
   status: "submitted" | "cancelled";
   durationSeconds: number;
   endedAt: string;
+  /** Null when the row has no xp_awarded value (e.g. cancelled before grant). */
+  xpAwarded: number | null;
 };
 
 export type StudyScoreCard = {
@@ -42,6 +44,72 @@ export type StudyScoreCard = {
   blockedHosts: string[];
   createdAt: string;
 };
+
+/** Display helpers: null means the duration is not recorded in existing data. */
+export type StudyHistoryTime = number | null;
+
+export type StudyHistoryCard = {
+  id: string;
+  status: "submitted" | "cancelled";
+  durationSeconds: number;
+  endedAt: string;
+  /** Null when XP cannot be established for this loaded session. */
+  xp: number | null;
+  focusSeconds: StudyHistoryTime;
+  distractionSeconds: StudyHistoryTime;
+};
+
+/**
+ * Merge recorded sessions with XP score rows by session id.
+ * Focus/distraction interval lengths are not stored on study_sessions, so those
+ * fields stay null (UI shows "Not available") rather than inventing values from
+ * blocked_count / blocked_hosts.
+ */
+export function buildStudyHistory(
+  sessions: readonly RecordedStudySession[],
+  scores: readonly StudyScoreCard[],
+): { cards: StudyHistoryCard[]; unmatchedScores: StudyScoreCard[] } {
+  const scoreById = new Map(scores.map((score) => [score.id, score]));
+  const usedScoreIds = new Set<string>();
+
+  const cards = sessions.map((session) => {
+    const score = scoreById.get(session.id);
+    if (score) usedScoreIds.add(session.id);
+
+    let xp: number | null = null;
+    if (session.xpAwarded !== null && Number.isFinite(session.xpAwarded)) {
+      xp = Math.max(0, Math.trunc(session.xpAwarded));
+    } else if (score && Number.isFinite(score.xp)) {
+      xp = Math.max(0, Math.trunc(score.xp));
+    } else if (session.status === "cancelled") {
+      // cancel_study_session never sets xp_awarded and never grants experience.
+      xp = 0;
+    }
+
+    return {
+      id: session.id,
+      status: session.status,
+      durationSeconds: session.durationSeconds,
+      endedAt: session.endedAt,
+      xp,
+      focusSeconds: null,
+      distractionSeconds: null,
+    };
+  });
+
+  const unmatchedScores = scores.filter((score) => !usedScoreIds.has(score.id));
+  return { cards, unmatchedScores };
+}
+
+export function formatHistoryTime(seconds: StudyHistoryTime) {
+  if (seconds === null) return "Not available";
+  return formatDuration(seconds);
+}
+
+export function formatHistoryXp(xp: number | null) {
+  if (xp === null) return "Not available";
+  return `${xp} XP`;
+}
 
 const ACTIVE_SESSION_ERROR = "A study session is already running.";
 

@@ -73,7 +73,7 @@ export async function loadDashboard() {
         .limit(10),
       supabase
         .from("study_sessions")
-        .select("id, status, duration_seconds, ended_at")
+        .select("id, status, duration_seconds, ended_at, xp_awarded")
         .eq("user_id", userId)
         .in("status", ["submitted", "cancelled"])
         .not("duration_seconds", "is", null)
@@ -136,12 +136,20 @@ export async function loadDashboard() {
     if (session.status !== "submitted" && session.status !== "cancelled") return [];
     const durationSeconds = Number(session.duration_seconds);
     if (!Number.isFinite(durationSeconds)) return [];
+    const xpRaw = session.xp_awarded;
+    const xpAwarded =
+      xpRaw === null || xpRaw === undefined
+        ? null
+        : Number.isFinite(Number(xpRaw))
+          ? Math.max(0, Math.trunc(Number(xpRaw)))
+          : null;
     return [
       {
         id: String(session.id),
         status: session.status,
         durationSeconds,
         endedAt: String(session.ended_at ?? ""),
+        xpAwarded,
       },
     ];
   });
