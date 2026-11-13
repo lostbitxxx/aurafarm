@@ -123,13 +123,8 @@ export function LivingRoom({
   return (
     <section className="living-room-block" aria-label="Your little living room">
       <div className="room-head">
-        <div>
-          <h2 className="room-title">Your little living room</h2>
-          <p className="room-subtitle">Your favorite companions, at home.</p>
-        </div>
-        <button type="button" className="button button-ghost" onClick={onOpenInventory}>
-          Place pets
-        </button>
+        <h2 className="room-title">Your little living room</h2>
+        <p className="room-subtitle">Your favorite companions, at home.</p>
       </div>
       <div className="living-room">
         {/* eslint-disable-next-line @next/next/no-img-element */}

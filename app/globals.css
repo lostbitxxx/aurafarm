@@ -614,10 +614,6 @@ button.dialog-row {
 .living-room-block { margin-bottom: 0.5rem; }
 
 .room-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
