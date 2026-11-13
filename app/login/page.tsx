@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <>
+    <div className="paper-shell">
       <PublicHeader />
       <main className="auth-layout">
         <section className="auth-aside">
@@ -21,6 +21,6 @@ export default function LoginPage() {
           <LoginForm configured={isSupabaseConfigured()} />
         </section>
       </main>
-    </>
+    </div>
   );
 }
