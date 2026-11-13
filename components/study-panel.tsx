@@ -390,7 +390,7 @@ export function StudyPanel({
                     <a className="launch-link" href={launchUrl}>
                       {launchUrl}
                     </a>
-                    <p className="launch-code">{visibleCode}</p>
+                    <CopySessionCode code={visibleCode} />
                   </>
                 ) : (
                   <p>The launch code was shown when this session started.</p>
@@ -887,6 +887,42 @@ function StudyHistoryDialog({
         </section>
       ) : null}
     </HistoryDialog>
+  );
+}
+
+function CopySessionCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
+    };
+  }, []);
+
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="launch-code-row">
+      <p className="launch-code">{code}</p>
+      <button
+        type="button"
+        className="button button-small"
+        aria-label="Copy session code"
+        onClick={() => void onCopy()}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
   );
 }
 

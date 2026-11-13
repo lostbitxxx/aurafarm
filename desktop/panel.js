@@ -1,6 +1,31 @@
 const status = document.getElementById("status");
 const update = document.getElementById("update");
 const updateLabel = document.getElementById("update-label");
+const tokenField = document.querySelector("#session-token textarea");
+
+function fillSessionCode(text) {
+  if (!(tokenField instanceof HTMLTextAreaElement)) return;
+  const code = text.trim();
+  if (!code) return;
+  tokenField.value = code;
+  tokenField.focus();
+}
+
+document.addEventListener("paste", (event) => {
+  if (document.activeElement === tokenField) return;
+  const text = event.clipboardData?.getData("text") ?? "";
+  if (!text.trim()) return;
+  event.preventDefault();
+  fillSessionCode(text);
+});
+
+document.addEventListener("keydown", (event) => {
+  const shortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "v";
+  if (!shortcut || document.activeElement === tokenField) return;
+  if (!navigator.clipboard?.readText) return;
+  event.preventDefault();
+  void navigator.clipboard.readText().then(fillSessionCode).catch(() => {});
+});
 
 document.getElementById("update-button").addEventListener("click", () => {
   window.pet.openUpdate();

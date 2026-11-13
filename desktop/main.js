@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen, shell } = require("electron");
+const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -242,6 +242,18 @@ function togglePanel() {
   openPanel();
 }
 
+function pasteSessionCode(win) {
+  const text = clipboard.readText().trim();
+  if (!text || !win || win.isDestroyed()) return;
+  const script = `(() => {
+    const field = document.querySelector("#session-token textarea");
+    if (!field) return;
+    field.value = ${JSON.stringify(text)};
+    field.focus();
+  })()`;
+  void win.webContents.executeJavaScript(script);
+}
+
 function openPanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
     panelWindow.show();
@@ -263,6 +275,20 @@ function openPanel() {
     },
   });
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
+  panelWindow.webContents.on("context-menu", (_event, params) => {
+    const win = panelWindow;
+    if (!win || win.isDestroyed()) return;
+    const inField = params.isEditable;
+    Menu.buildFromTemplate([
+      { role: "cut", enabled: inField && params.editFlags.canCut },
+      { role: "copy", enabled: inField && params.editFlags.canCopy },
+      inField
+        ? { role: "paste", enabled: params.editFlags.canPaste }
+        : { label: "Paste", click: () => pasteSessionCode(win) },
+      { type: "separator" },
+      { role: "selectAll" },
+    ]).popup({ window: win });
+  });
   panelWindow.on("closed", () => {
     panelWindow = null;
     if (!appQuitting && spriteWindow && !spriteWindow.isDestroyed() && !spriteWindow.isVisible()) {
@@ -989,6 +1015,18 @@ if (!gotLock) {
         {
           label: "Aurafarm",
           submenu: [{ role: "quit" }],
+        },
+        {
+          label: "Edit",
+          submenu: [
+            { role: "undo" },
+            { role: "redo" },
+            { type: "separator" },
+            { role: "cut" },
+            { role: "copy" },
+            { role: "paste" },
+            { role: "selectAll" },
+          ],
         },
       ]),
     );

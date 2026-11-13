@@ -1929,6 +1929,13 @@ button.dialog-row {
 .study-active { display: grid; gap: 0.55rem; margin-bottom: 0.4rem; }
 .study-active p { margin: 0; }
 .launch-link, .launch-code { word-break: break-all; }
+.launch-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.launch-code-row .launch-code { flex: 1; }
+.launch-code-row .button { flex: none; }
 .launch-code {
   margin: 0;
   font-family: ui-monospace, "Cascadia Code", monospace;
