@@ -55,10 +55,12 @@ test("friend leaderboard sums study time and pet levels for accepted friends", (
   assert.match(sql, /friendship\.status = 'accepted'/);
   assert.match(sql, /grant execute on function public\.list_friend_leaderboard\(text\) to authenticated/);
 
-  assert.match(modes, /Cumulative study time between friends/);
-  assert.match(modes, /Study time this month between friends/);
-  assert.match(modes, /Study time this week between friends/);
-  assert.match(modes, /Total levels of pets owned between friends/);
+  assert.match(modes, /Cumulative Study Duration - Total/);
+  assert.match(modes, /Cumulative Study Duration - This Month/);
+  assert.match(modes, /Cumulative Study Duration - This Week/);
+  assert.match(modes, /Total Pet Levels/);
+  assert.match(dialog, /board-picker/);
+  assert.match(dialog, /aria-label="Leaderboard mode"/);
   assert.match(dialog, /leaderboard-grid/);
   assert.match(dialog, /loadFriendLeaderboard\(mode\)/);
 });

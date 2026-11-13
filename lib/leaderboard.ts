@@ -1,10 +1,10 @@
 import { formatDuration } from "./study";
 
 export const LEADERBOARD_MODES = [
-  { id: "all_time", label: "Cumulative study time between friends" },
-  { id: "month", label: "Study time this month between friends" },
-  { id: "week", label: "Study time this week between friends" },
-  { id: "pet_levels", label: "Total levels of pets owned between friends" },
+  { id: "all_time", label: "Cumulative Study Duration - Total" },
+  { id: "month", label: "Cumulative Study Duration - This Month" },
+  { id: "week", label: "Cumulative Study Duration - This Week" },
+  { id: "pet_levels", label: "Total Pet Levels" },
 ] as const;
 
 export type LeaderboardMode = (typeof LEADERBOARD_MODES)[number]["id"];
