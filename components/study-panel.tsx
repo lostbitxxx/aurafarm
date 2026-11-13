@@ -14,6 +14,7 @@ import {
   buildStudyHistory,
   formatClock,
   formatDuration,
+  formatHistoryTime,
   formatHistoryXp,
   formatTimestamp,
   experienceForEarlyEnd,
@@ -791,7 +792,9 @@ function StudyHistoryDialog({
           <p className="empty-pets">No study time recorded yet.</p>
         ) : (
           <ul className="study-history">
-            {cards.map((card) => (
+            {cards.map((card) => {
+              const distractionKnown = card.distractionSeconds !== null && card.distractionSeconds > 0;
+              return (
                 <li key={card.id} className="study-history-card">
                   <div className="study-history-top">
                     <div className="study-history-status">
@@ -811,13 +814,32 @@ function StudyHistoryDialog({
                   >
                     {card.modeLabel}
                   </span>
+                  {card.showFocusDistraction ? (
+                    <div className="study-history-times">
+                      <div className="study-history-time-row">
+                        <span>Focus time</span>
+                        <span>{formatHistoryTime(card.focusSeconds)}</span>
+                      </div>
+                      <div
+                        className={
+                          distractionKnown
+                            ? "study-history-time-row is-distracted"
+                            : "study-history-time-row"
+                        }
+                      >
+                        <span>Distraction time</span>
+                        <span>{formatHistoryTime(card.distractionSeconds)}</span>
+                      </div>
+                    </div>
+                  ) : null}
                   {card.endedAt ? (
                     <time className="study-history-date" dateTime={card.endedAt}>
                       {formatTimestamp(card.endedAt)}
                     </time>
                   ) : null}
                 </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

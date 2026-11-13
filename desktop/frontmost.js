@@ -47,6 +47,9 @@ function createFrontLog() {
     blockedCount: 0,
     blockedHosts: [],
     currentHost: "",
+    distractionMs: 0,
+    sampledAt: 0,
+    onBlocklist: false,
   };
 }
 
@@ -68,8 +71,31 @@ function recordFrontHost(log, rawUrl, blocklist, deskHost, matches = hostMatches
   return next;
 }
 
-function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
+function advanceFrontLog(log, rawUrl, blocklist, deskHost, nowMs) {
+  const now = typeof nowMs === "number" && Number.isFinite(nowMs) ? nowMs : 0;
+  const host = hostnameFromUrl(rawUrl);
+  const rules = blocklist ?? BLOCKED;
+  const desk = normalizeHost(deskHost);
+  const blockedNow = Boolean(host) && host !== desk && hostMatchesBlocklist(host, rules);
+  const sampledAt = Number(log?.sampledAt) || 0;
+  let distractionMs = Number.isFinite(log?.distractionMs) ? Math.max(0, log.distractionMs) : 0;
+  if (log?.onBlocklist && host && host === log.currentHost && sampledAt > 0 && now >= sampledAt) {
+    distractionMs += now - sampledAt;
+  }
+  const next = recordFrontHost(log, rawUrl, rules, deskHost);
+  return {
+    blockedCount: next.blockedCount,
+    blockedHosts: next.blockedHosts.slice(),
+    currentHost: next.currentHost,
+    distractionMs,
+    sampledAt: host ? now : sampledAt,
+    onBlocklist: host ? blockedNow : Boolean(log?.onBlocklist),
+  };
+}
+
+function nextFrontLog(active, log, rawUrl, blocklist, deskHost, nowMs) {
   if (!active) return log;
+  if (typeof nowMs === "number") return advanceFrontLog(log, rawUrl, blocklist, deskHost, nowMs);
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
@@ -171,6 +197,7 @@ function describeFrontRead(reading, log) {
 module.exports = {
   BLOCKED,
   CLOSE_AFTER_MS,
+  advanceFrontLog,
   createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,

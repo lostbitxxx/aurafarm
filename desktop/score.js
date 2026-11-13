@@ -9,11 +9,19 @@ function wholeSecondsSince(startedAt, nowMs) {
   return Math.max(0, Math.floor((nowMs - startedAt) / 1000));
 }
 
-function studiedSeconds(study, nowMs) {
-  const elapsed = wholeSecondsSince(study?.startedAt, nowMs);
-  const planned = Number(study?.plannedSeconds);
-  if (!Number.isFinite(planned) || planned < 0) return elapsed;
-  return Math.min(Math.floor(planned), elapsed);
+function openDistractionMs(log, nowMs) {
+  const base = Number.isFinite(log?.distractionMs) ? Math.max(0, log.distractionMs) : 0;
+  const sampledAt = log?.sampledAt;
+  if (log?.onBlocklist && typeof sampledAt === "number" && typeof nowMs === "number" && nowMs >= sampledAt) {
+    return base + (nowMs - sampledAt);
+  }
+  return base;
+}
+
+function distractionSeconds(study, nowMs) {
+  const duration = wholeSecondsSince(study?.startedAt, nowMs);
+  const seconds = Math.floor(openDistractionMs(study?.log, nowMs) / 1000);
+  return Math.min(duration, Math.max(0, seconds));
 }
 
 function scoreRequestBody(study, nowMs) {
@@ -24,9 +32,10 @@ function scoreRequestBody(study, nowMs) {
       : [];
   return {
     token: typeof study?.token === "string" ? study.token : "",
-    duration_seconds: studiedSeconds(study, nowMs),
+    duration_seconds: wholeSecondsSince(study?.startedAt, nowMs),
     blocked_count: Number.isInteger(study?.log?.blockedCount) ? study.log.blockedCount : 0,
     blocked_hosts: hosts.filter((host) => typeof host === "string").slice(0, 20),
+    distraction_seconds: distractionSeconds(study, nowMs),
   };
 }
 
@@ -71,6 +80,7 @@ function interpretScoreResponse(status, body, origin, sessionId) {
 }
 
 module.exports = {
+  distractionSeconds,
   finishLabel,
   interpretScoreResponse,
   scorePageUrl,

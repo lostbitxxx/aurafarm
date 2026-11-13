@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { acceptedClaimRow, normalizeLaunchCode, parseClaimCode, petDownloadUrl } from "../lib/pet-device";
+import { normalizeLaunchCode, parseClaimCode, petDownloadUrl } from "../lib/pet-device";
 
 test("the download link is an absolute http url", () => {
   assert.equal(petDownloadUrl(undefined), null);
@@ -24,41 +24,6 @@ test("claim inputs stay on the aurafarm session link", () => {
     code: "ABC234",
   });
   assert.equal(parseClaimCode({}).ok, false);
-});
-
-test("a claim without claimed_at still starts the session", () => {
-  const now = new Date("2026-11-13T09:00:00.000Z");
-  const older = acceptedClaimRow(
-    [
-      {
-        session_id: "session-id",
-        pet_type: "lantern_moth",
-        level: 1,
-        blocklist: ["instagram.com"],
-        close_blocked: true,
-        planned_seconds: 300,
-        started_at: "2026-11-13T08:59:00.000Z",
-      },
-    ],
-    now,
-  );
-  assert.equal(older?.sessionId, "session-id");
-  assert.equal(older?.plannedSeconds, 300);
-  assert.equal(older?.claimedAt, "2026-11-13T09:00:00.000Z");
-
-  const current = acceptedClaimRow({
-    session_id: "session-id",
-    pet_type: "lantern_moth",
-    level: "2",
-    blocklist: [],
-    planned_seconds: "20",
-    started_at: "2026-11-13T08:59:00.000Z",
-    claimed_at: "2026-11-13T09:00:05.000Z",
-  });
-  assert.equal(current?.level, 2);
-  assert.equal(current?.plannedSeconds, 20);
-  assert.equal(current?.claimedAt, "2026-11-13T09:00:05.000Z");
-  assert.equal(acceptedClaimRow({ pet_type: "lantern_moth" }), null);
 });
 
 test("the desk source does not call the pet over loopback", () => {

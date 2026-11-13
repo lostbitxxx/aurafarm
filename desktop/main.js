@@ -17,7 +17,7 @@ const {
 } = require("./frontmost");
 const { closeFrontTab, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
-const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
+const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
@@ -450,8 +450,10 @@ async function cancelStudy() {
   }
   if (!sessionId) return { error: "No study session is running." };
   console.log(`[score] cancel ${sessionId} stops the session and does not change experience`);
+  const watched = study && study.id === sessionId ? distractionSeconds(study, Date.now()) : null;
   const { error } = await supabase.rpc("cancel_study_session", {
     target_session_id: sessionId,
+    distraction_seconds: watched,
   });
   if (error) {
     console.log(`[score] cancel ${sessionId} rejected: ${error.message}`);
@@ -485,14 +487,8 @@ function stopStudyClock() {
   studyClock = null;
 }
 
-function claimClockMs(body) {
-  const claimed = Date.parse(body?.claimed_at);
-  return Number.isFinite(claimed) ? claimed : Date.now();
-}
-
 function beginFrontWatch(body) {
   stopFrontWatch();
-  const claimedAt = claimClockMs(body);
   study = {
     id: String(body.session_id),
     // Held in memory for the later score submit. It is not written to disk.
@@ -503,8 +499,8 @@ function beginFrontWatch(body) {
     log: createFrontLog(),
     distractedHosts: [],
     plannedSeconds: Number(body.planned_seconds),
-    startedAtMs: claimedAt,
-    startedAt: claimedAt,
+    startedAtMs: Number.isFinite(Date.parse(body.started_at)) ? Date.parse(body.started_at) : Date.now(),
+    startedAt: Date.now(),
   };
   if (body.pet_type) {
     petLog(
@@ -767,6 +763,7 @@ async function submitScoreDirect(current, body, postFailure) {
     duration_seconds: body.duration_seconds,
     blocked_count: body.blocked_count,
     blocked_hosts: body.blocked_hosts,
+    distraction_seconds: body.distraction_seconds,
   });
   if (error) {
     scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);
@@ -782,6 +779,13 @@ async function submitScoreDirect(current, body, postFailure) {
         ok: false,
         url: "",
         message: "Run migration 0027 in Supabase, then click Finish again.",
+      };
+    }
+    if (/distraction_seconds/i.test(error.message)) {
+      return {
+        ok: false,
+        url: "",
+        message: "Run migration 0028 in Supabase, then click Finish again.",
       };
     }
     return { ok: false, url: "", message: `Could not submit the score. ${error.message} ${desk}` };

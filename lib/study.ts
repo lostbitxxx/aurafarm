@@ -39,6 +39,10 @@ export type RecordedStudySession = {
    * true = Desktop pet, false = Website timer, null = missing/unknown.
    */
   useDesktopPet: boolean | null;
+  /**
+   * Seconds on a blocklist host. Null when the pet did not record the interval.
+   */
+  distractionSeconds: number | null;
 };
 
 export type StudyScoreCard = {
@@ -49,6 +53,9 @@ export type StudyScoreCard = {
   blockedHosts: string[];
   createdAt: string;
 };
+
+/** Display helpers: null means the duration is not recorded in existing data. */
+export type StudyHistoryTime = number | null;
 
 export type StudyHistoryModeLabel = "With pet" | "Web timer" | "Mode unknown";
 
@@ -61,11 +68,30 @@ export type StudyHistoryCard = {
   xp: number | null;
   /** Frontend-only label from study_sessions.use_desktop_pet. */
   modeLabel: StudyHistoryModeLabel;
+  /** True only when study_sessions.use_desktop_pet is authoritatively true. */
+  showFocusDistraction: boolean;
+  focusSeconds: StudyHistoryTime;
+  distractionSeconds: StudyHistoryTime;
 };
 
 /**
  * Merge recorded sessions with XP score rows by session id.
+ * Focus and distraction are shown for desktop pet sessions that stored
+ * distraction_seconds. Focus is the session length minus that distraction time.
+ * A missing interval stays null so the card says "Not available".
  */
+export function historyFocusDistraction(
+  durationSeconds: number,
+  distractionSeconds: number | null,
+  showFocusDistraction: boolean,
+): { focusSeconds: StudyHistoryTime; distractionSeconds: StudyHistoryTime } {
+  if (!showFocusDistraction || distractionSeconds === null || !Number.isFinite(distractionSeconds)) {
+    return { focusSeconds: null, distractionSeconds: null };
+  }
+  const duration = Math.max(0, Math.trunc(durationSeconds));
+  const distraction = Math.min(duration, Math.max(0, Math.trunc(distractionSeconds)));
+  return { focusSeconds: duration - distraction, distractionSeconds: distraction };
+}
 
 export function buildStudyHistory(
   sessions: readonly RecordedStudySession[],
@@ -88,6 +114,13 @@ export function buildStudyHistory(
       xp = 0;
     }
 
+    const showFocusDistraction = session.useDesktopPet === true;
+    const times = historyFocusDistraction(
+      session.durationSeconds,
+      session.distractionSeconds,
+      showFocusDistraction,
+    );
+
     return {
       id: session.id,
       status: session.status,
@@ -95,6 +128,9 @@ export function buildStudyHistory(
       endedAt: session.endedAt,
       xp,
       modeLabel: formatHistoryMode(session.useDesktopPet),
+      showFocusDistraction,
+      focusSeconds: times.focusSeconds,
+      distractionSeconds: times.distractionSeconds,
     };
   });
 
@@ -106,6 +142,12 @@ export function formatHistoryMode(useDesktopPet: boolean | null): StudyHistoryMo
   if (useDesktopPet === true) return "With pet";
   if (useDesktopPet === false) return "Web timer";
   return "Mode unknown";
+}
+
+export function formatHistoryTime(seconds: StudyHistoryTime) {
+  if (seconds === null) return "Not available";
+  if (seconds === 0) return "0m";
+  return formatDuration(seconds);
 }
 
 export function formatHistoryXp(xp: number | null) {
@@ -235,6 +277,9 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/distraction_seconds/i.test(message)) {
+    return "Run migration 0028 before reading focus and distraction time.";
+  }
   if (/collection_rewards|claim_collection_reward/i.test(message)) {
     return "Run migration 0024 before choosing a level reward.";
   }

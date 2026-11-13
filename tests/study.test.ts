@@ -20,7 +20,9 @@ import {
   formatClock,
   formatDuration,
   formatHistoryMode,
+  formatHistoryTime,
   formatHistoryXp,
+  historyFocusDistraction,
   formatTimestamp,
   levelFromExperience,
   MAX_STUDY_MINUTES,
@@ -307,55 +309,6 @@ test("a pet score stores blocklist seconds capped at the studied length", () => 
   assert.doesNotMatch(sql, /grant_study_experience\(\s*target_session_id,\s*studied,\s*result_distracted,\s*effective_count,\s*filtered,\s*finished,\s*distraction_seconds/);
 });
 
-test("a desktop finish is measured from the claim and cut to the planned length", () => {
-  const sql = readFileSync(
-    new URL("../supabase/migrations/0029_claim_clock.sql", import.meta.url),
-    "utf8",
-  );
-  const score = sql.slice(sql.indexOf("function public.submit_study_score"), sql.indexOf("function public.cancel_study_session"));
-  assert.match(score, /session_row\.claimed_at is null/);
-  assert.match(score, /finished := now\(\) \+ interval '5 seconds' >= session_row\.claimed_at \+/);
-  assert.match(score, /studied := session_row\.planned_seconds/);
-  assert.match(score, /floor\(extract\(epoch from \(now\(\) - session_row\.claimed_at\)\)\)/);
-  assert.match(score, /least\(\s*studied,\s*distraction_seconds\s*\)/);
-  assert.doesNotMatch(score, /now\(\) - session_row\.started_at/);
-
-  const cancel = sql.slice(sql.indexOf("function public.cancel_study_session"), sql.indexOf("function public.claim_study_session"));
-  assert.match(cancel, /coalesce\(session_row\.claimed_at, session_row\.started_at\)/);
-  assert.match(cancel, /least\(\s*session_row\.planned_seconds/);
-
-  assert.match(sql, /claimed_at timestamptz/);
-  assert.match(sql, /claimed_at := claim_time/);
-});
-
-test("focus time and distraction time are removed from the desktop session", () => {
-  const sql = readFileSync(
-    new URL("../supabase/migrations/0030_undo_distraction_time.sql", import.meta.url),
-    "utf8",
-  );
-  assert.match(sql, /drop column if exists distraction_seconds/);
-  assert.match(sql, /drop function if exists public\.submit_study_score\(uuid, text, integer, integer, text\[\], integer\)/);
-  assert.match(sql, /drop function if exists public\.cancel_study_session\(uuid, integer\)/);
-  assert.match(sql, /function public\.submit_study_score\(\s*target_session_id uuid/);
-  assert.match(sql, /function public\.cancel_study_session\(target_session_id uuid\)/);
-  assert.match(sql, /session_row\.claimed_at is null/);
-  assert.match(sql, /coalesce\(session_row\.claimed_at, session_row\.started_at\)/);
-  assert.match(sql, /claimed_at := claim_time/);
-  assert.match(sql, /notify pgrst, 'reload schema'/);
-  assert.doesNotMatch(sql, /least\(\s*studied,\s*distraction_seconds\s*\)/);
-  assert.doesNotMatch(sql, /new\.distraction_seconds/);
-
-  const score = readFileSync(new URL("../lib/scoring.ts", import.meta.url), "utf8");
-  const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
-  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  const pet = readFileSync(new URL("../desktop/score.js", import.meta.url), "utf8");
-  assert.doesNotMatch(score, /distraction_seconds/);
-  assert.doesNotMatch(dashboard, /distraction_seconds/);
-  assert.doesNotMatch(panel, /Focus time/);
-  assert.doesNotMatch(panel, /Distraction time/);
-  assert.doesNotMatch(pet, /distraction_seconds/);
-});
-
 test("ending early records studied minutes without the finish bonus", () => {
   const sql = readFileSync(
     new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),
@@ -420,6 +373,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: 55,
       useDesktopPet: true,
+      distractionSeconds: 90,
     },
     {
       id: "session-b",
@@ -428,6 +382,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-01T12:00:00.000Z",
       xpAwarded: null,
       useDesktopPet: false,
+      distractionSeconds: null,
     },
     {
       id: "session-c",
@@ -436,14 +391,7 @@ test("study history merges session and XP rows by session id", () => {
       endedAt: "2026-01-02T12:00:00.000Z",
       xpAwarded: null,
       useDesktopPet: null,
-    },
-    {
-      id: "session-focused",
-      status: "submitted" as const,
-      durationSeconds: 20,
-      endedAt: "2026-01-04T12:00:00.000Z",
-      xpAwarded: 0,
-      useDesktopPet: true,
+      distractionSeconds: null,
     },
   ];
   const scores = [
@@ -466,16 +414,20 @@ test("study history merges session and XP rows by session id", () => {
   ];
 
   const { cards, unmatchedScores } = buildStudyHistory(sessions, scores);
-  assert.equal(cards.length, 4);
+  assert.equal(cards.length, 3);
   assert.equal(cards[0]?.id, "session-a");
   assert.equal(cards[0]?.xp, 55);
   assert.equal(cards[0]?.modeLabel, "With pet");
+  assert.equal(cards[0]?.showFocusDistraction, true);
+  assert.equal(cards[0]?.focusSeconds, 1410);
+  assert.equal(cards[0]?.distractionSeconds, 90);
   assert.equal(cards[1]?.status, "cancelled");
   assert.equal(cards[1]?.xp, 0);
   assert.equal(cards[1]?.modeLabel, "Web timer");
+  assert.equal(cards[1]?.showFocusDistraction, false);
   assert.equal(cards[2]?.xp, null);
   assert.equal(cards[2]?.modeLabel, "Mode unknown");
-  assert.equal(cards[3]?.id, "session-focused");
+  assert.equal(cards[2]?.showFocusDistraction, false);
   assert.equal(unmatchedScores.length, 1);
   assert.equal(unmatchedScores[0]?.id, "orphan-xp");
   assert.equal(formatHistoryMode(true), "With pet");
@@ -483,19 +435,41 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(formatHistoryMode(null), "Mode unknown");
   assert.equal(formatHistoryXp(null), "Not available");
   assert.equal(formatHistoryXp(0), "0 XP");
+  assert.equal(formatHistoryTime(null), "Not available");
+  assert.equal(formatHistoryTime(0), "0m");
+  assert.deepEqual(historyFocusDistraction(1500, null, true), {
+    focusSeconds: null,
+    distractionSeconds: null,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 0, true), {
+    focusSeconds: 100,
+    distractionSeconds: 0,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 250, true), {
+    focusSeconds: 0,
+    distractionSeconds: 100,
+  });
+  assert.deepEqual(historyFocusDistraction(100, 40, false), {
+    focusSeconds: null,
+    distractionSeconds: null,
+  });
+  assert.equal(
+    studyTimerMigrationMessage("column study_sessions.distraction_seconds does not exist"),
+    "Run migration 0028 before reading focus and distraction time.",
+  );
 
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /Study history/);
+  assert.match(panel, /Focus time/);
+  assert.match(panel, /Distraction time/);
   assert.match(panel, /modeLabel/);
+  assert.match(panel, /showFocusDistraction/);
   assert.match(panel, /buildStudyHistory/);
-  assert.doesNotMatch(panel, /Focus time/);
-  assert.doesNotMatch(panel, /Distraction time/);
   assert.match(panel, /Copy session/);
   assert.match(panel, /navigator\.clipboard\.writeText\(code\)/);
   assert.doesNotMatch(panel, /No blocked sites/);
   assert.doesNotMatch(panel, /history-sessions-title/);
 
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
-  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet/);
-  assert.doesNotMatch(dashboard, /distraction_seconds/);
+  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet, distraction_seconds/);
 });

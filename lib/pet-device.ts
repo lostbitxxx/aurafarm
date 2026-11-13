@@ -26,53 +26,6 @@ export function parseClaimCode(
   return { ok: true, code: normalized };
 }
 
-export type AcceptedClaim = {
-  sessionId: string;
-  petType: string;
-  level: number;
-  blocklist: string[];
-  closeBlocked: boolean;
-  plannedSeconds: number;
-  startedAt: string;
-  claimedAt: string;
-};
-
-function wholeNumber(value: unknown) {
-  if (typeof value === "number" && Number.isInteger(value)) return value;
-  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
-  return null;
-}
-
-/**
- * A claim is usable when the session id and pet come back.
- * claimed_at is only present after migration 0029. Older functions still
- * claim the code, so a missing timestamp uses the moment this response is read.
- */
-export function acceptedClaimRow(data: unknown, now = new Date()): AcceptedClaim | null {
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== "object") return null;
-  const record = row as Record<string, unknown>;
-  const level = wholeNumber(record.level);
-  const plannedSeconds = wholeNumber(record.planned_seconds);
-  if (typeof record.session_id !== "string" || typeof record.pet_type !== "string") return null;
-  if (level === null || plannedSeconds === null) return null;
-  if (typeof record.started_at !== "string") return null;
-  const claimedAt = typeof record.claimed_at === "string" ? record.claimed_at : now.toISOString();
-  const blocklist = Array.isArray(record.blocklist)
-    ? record.blocklist.filter((host): host is string => typeof host === "string")
-    : [];
-  return {
-    sessionId: record.session_id,
-    petType: record.pet_type,
-    level,
-    blocklist,
-    closeBlocked: record.close_blocked === true,
-    plannedSeconds,
-    startedAt: record.started_at,
-    claimedAt,
-  };
-}
-
 export function normalizeLaunchCode(value: string) {
   const trimmed = value.trim();
   try {
