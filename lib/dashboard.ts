@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
-import { wholePoints, type PetCard } from "./pets";
+import { wholePoints, type CollectionReward, type PetCard } from "./pets";
 import {
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
@@ -27,6 +27,7 @@ export async function loadDashboard() {
     closeBlockedResult,
     petsResult,
     collectionsResult,
+    rewardsResult,
     sessionResult,
     scoresResult,
     recordedResult,
@@ -45,6 +46,13 @@ export async function loadDashboard() {
         .eq("user_id", userId)
         .order("id", { ascending: true }),
       supabase.from("user_collections").select("item_id").eq("user_id", userId),
+      supabase
+        .from("collection_rewards")
+        .select("id, pet_id, level_reached")
+        .eq("user_id", userId)
+        .is("item_id", null)
+        .order("level_reached", { ascending: true })
+        .order("id", { ascending: true }),
       supabase
         .from("study_sessions")
         .select("id, started_at, planned_seconds, use_desktop_pet")
@@ -96,6 +104,18 @@ export async function loadDashboard() {
     return clothes ? [clothes] : [];
   });
 
+  const pendingRewards: CollectionReward[] = (rewardsResult.data ?? []).flatMap((row) => {
+    const levelReached = Number(row.level_reached);
+    if (!Number.isInteger(levelReached) || levelReached < 2) return [];
+    return [
+      {
+        id: String(row.id),
+        petId: String(row.pet_id),
+        levelReached,
+      },
+    ];
+  });
+
   const activeSession: ActiveStudySession | null = sessionResult.data
     ? {
         id: String(sessionResult.data.id),
@@ -131,7 +151,8 @@ export async function loadDashboard() {
   }));
 
   const studyError = studyTimerMigrationMessage(
-    sessionResult.error?.message ??
+    rewardsResult.error?.message ??
+      sessionResult.error?.message ??
       scoresResult.error?.message ??
       recordedResult.error?.message ??
       petsResult.error?.message ??
@@ -147,8 +168,12 @@ export async function loadDashboard() {
     ownedColorIds,
     ownedHatIds,
     ownedClothesIds,
+    pendingRewards,
     petsError: studyTimerMigrationMessage(
-      collectionsResult.error?.message ?? petsResult.error?.message ?? null,
+      rewardsResult.error?.message ??
+        collectionsResult.error?.message ??
+        petsResult.error?.message ??
+        null,
     ),
     activeSession,
     scores,

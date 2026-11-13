@@ -810,6 +810,122 @@ button.dialog-row {
   font-size: 1.15rem;
 }
 
+.collection-reward-entry {
+  margin: 0 0 0.85rem;
+}
+
+.level-up {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(16, 32, 24, 0.72);
+}
+
+.level-up-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  width: min(100%, 26rem);
+  min-height: 22rem;
+  padding: 2.4rem 1rem 1.4rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.level-up-light,
+.level-up-rays,
+.level-up-confetti {
+  position: absolute;
+  pointer-events: none;
+}
+
+.level-up-light {
+  top: 2.2rem;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 210, 0.95) 0%, rgba(227, 154, 69, 0.42) 42%, transparent 70%);
+  animation: level-up-glow 1.6s ease-in-out infinite;
+}
+
+.level-up-rays {
+  top: 0.4rem;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  translate: -50% 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 236, 180, 0.5) 0 8deg, transparent 8deg 24deg);
+  mask-image: radial-gradient(circle, transparent 18%, #000 48%, transparent 72%);
+  animation: level-up-spin 9s linear infinite;
+}
+
+.level-up-confetti {
+  inset: 0;
+  overflow: hidden;
+}
+
+.level-up-bit {
+  position: absolute;
+  top: -16px;
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  animation-name: level-up-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+.level-up-pet {
+  position: relative;
+  z-index: 1;
+  width: 168px;
+  height: 168px;
+}
+
+.level-up-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.level-up-kicker,
+.level-up-title {
+  margin: 0;
+  color: #fff8e8;
+}
+
+.level-up-kicker {
+  letter-spacing: 0.04em;
+}
+
+.level-up-title {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  line-height: 0.95;
+}
+
+.level-up-stage .button {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes level-up-glow {
+  50% { transform: scale(1.08); opacity: 0.82; }
+}
+
+@keyframes level-up-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes level-up-fall {
+  to { transform: translateY(70vh) rotate(220deg); opacity: 0.15; }
+}
+
 .desk-pets {
   list-style: none;
   margin: 1rem 0 0;
@@ -1331,6 +1447,7 @@ button.dialog-row {
   .pet-detail { grid-template-columns: 1fr; }
   .big-pet { min-height: 140px; }
   .big-pet-art { width: 120px; height: 120px; }
+  .level-up-pet { width: 132px; height: 132px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1346,7 +1463,10 @@ button.dialog-row {
   .slime-mark,
   .pixel-pet-art.is-walking,
   .room-heart,
-  .room-pet-wrap {
+  .room-pet-wrap,
+  .level-up-light,
+  .level-up-rays,
+  .level-up-bit {
     animation: none !important;
     transition: none !important;
   }

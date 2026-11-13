@@ -31,6 +31,12 @@ export type PetCard = {
   clothes: string | null;
 };
 
+export type CollectionReward = {
+  id: string;
+  petId: string;
+  levelReached: number;
+};
+
 export function equippedPet(pets: readonly PetCard[]) {
   return pets.find((pet) => pet.is_desktop_active) ?? null;
 }

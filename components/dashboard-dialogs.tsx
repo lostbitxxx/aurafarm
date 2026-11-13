@@ -94,6 +94,8 @@ export function CollectionDialog({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  rewardCount,
+  onChooseReward,
   onClose,
   onColorApplied,
   onHatApplied,
@@ -103,6 +105,8 @@ export function CollectionDialog({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  rewardCount: number;
+  onChooseReward: () => void;
   onClose: () => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
@@ -155,6 +159,13 @@ export function CollectionDialog({
   return (
     <FarmDialog title="Collection" onClose={onClose} wide>
       <p className="panel-hint">A color you own can be applied to any pet.</p>
+      {rewardCount > 0 ? (
+        <p className="collection-reward-entry">
+          <button type="button" className="button button-small" onClick={onChooseReward}>
+            {rewardCount === 1 ? "Choose a reward" : `Choose a reward (${rewardCount})`}
+          </button>
+        </p>
+      ) : null}
       <div className="collection-tabs" role="tablist" aria-label="Collection categories">
         {COLLECTION_TABS.map((entry) => (
           <button

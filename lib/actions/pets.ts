@@ -159,3 +159,35 @@ export async function applyPetClothes(petId: string, clothesId: string | null) {
   revalidatePath("/dashboard");
   return { error: "" };
 }
+
+export async function claimCollectionReward(itemId: string) {
+  if (!sampleColor(itemId) && !sampleHat(itemId) && !sampleClothes(itemId)) {
+    return { error: "That item could not be chosen." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to choose a reward." };
+  }
+
+  const { error } = await supabase.rpc("claim_collection_reward", {
+    target_item: itemId,
+  });
+  if (error) {
+    if (/collection_rewards|claim_collection_reward/i.test(error.message)) {
+      return { error: "Run migration 0024 before choosing a level reward." };
+    }
+    if (/already owned/i.test(error.message)) return { error: "You already own that item." };
+    if (/no reward to claim/i.test(error.message)) return { error: "You do not have a reward to choose." };
+    if (/not in the collection/i.test(error.message)) return { error: "That item could not be chosen." };
+    if (/not authenticated/i.test(error.message)) return { error: "Sign in to choose a reward." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
