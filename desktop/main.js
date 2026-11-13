@@ -682,13 +682,6 @@ function setPetLevel(level) {
 async function finishSession() {
   if (!study?.token || finishing) return;
   const current = study;
-  const remaining = remainingStudyMs(current, Date.now());
-  if (remaining !== null && remaining > 5000) {
-    setStatus("The study time has not finished.", {
-      finishNote: "The study time has not finished.",
-    });
-    return;
-  }
   finishing = true;
   const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"}`;
   try {
