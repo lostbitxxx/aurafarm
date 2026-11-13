@@ -760,14 +760,22 @@ button.dialog-row {
   padding: 0.7rem 0.35rem;
   background: #efecdf;
   color: var(--dialog-ink);
+  font: inherit;
   font-size: 0.72rem;
-  cursor: not-allowed;
+  cursor: pointer;
+  text-align: center;
+}
+
+.accessory-slot:hover:not(:disabled) {
+  background: #f7f4e8;
 }
 
 .accessory-slot b {
   display: block;
   margin-top: 0.35rem;
   font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .xp-track-purple .xp-fill { background: #b4a0d1; }
