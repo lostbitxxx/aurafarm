@@ -12,6 +12,7 @@ export function SiteHeader({
   onOpenCollection,
   onOpenInventory,
   onOpenAchievements,
+  onOpenFriends,
 }: {
   displayName: string;
   studySeconds?: number;
@@ -19,6 +20,7 @@ export function SiteHeader({
   onOpenCollection?: () => void;
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
+  onOpenFriends?: () => void;
 }) {
   return (
     <header className="topbar">
@@ -54,6 +56,21 @@ export function SiteHeader({
         ) : (
           <Link href="/dashboard">Achievements</Link>
         )}
+        {onOpenFriends ? (
+          <div className="topbar-menu">
+            <button type="button" className="topbar-link" aria-haspopup="menu">
+              Social
+            </button>
+            <div className="topbar-menu-list" role="menu">
+              <button type="button" role="menuitem" onClick={onOpenFriends}>
+                Friends
+              </button>
+              <button type="button" role="menuitem">
+                Leaderboard
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
       <div className="topbar-user">
         <span className="streak-pill" title={STREAK_LABEL}>

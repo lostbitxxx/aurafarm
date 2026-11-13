@@ -781,6 +781,87 @@ button.dialog-row {
   padding: 0;
 }
 
+.topbar-menu {
+  position: relative;
+}
+
+.topbar-menu::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 9.5rem;
+  height: 0.45rem;
+}
+
+.topbar-menu-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  left: 0;
+  z-index: 30;
+  min-width: 9.5rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(20, 33, 26, 0.12);
+  border-radius: 12px;
+  background: #fff9ed;
+  box-shadow: var(--shadow);
+}
+
+.topbar-menu:hover .topbar-menu-list,
+.topbar-menu:focus-within .topbar-menu-list {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.topbar-menu-list button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.topbar-menu-list button:hover,
+.topbar-menu-list button:focus-visible {
+  background: #efe8d4;
+}
+
+.tracker-card form.friend-add-form {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.tracker-card .friend-code-field {
+  flex: 1;
+  margin: 0;
+}
+
+.tracker-card .friend-code {
+  letter-spacing: 0.08em;
+}
+
+.tracker-card .button-accept {
+  background: #3f7d3a;
+  color: #f7f3e8;
+  border-color: #2f5e2c;
+}
+
+.tracker-card .button-decline {
+  background: #b42318;
+  color: #f7f3e8;
+  border-color: #8c1b13;
+}
+
+.friend-pet-missing {
+  border-radius: 10px;
+  background: #efecdf;
+}
+
 .desk-page .streak-pill {
   display: inline-flex;
   align-items: center;
