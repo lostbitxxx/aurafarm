@@ -5,18 +5,7 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
-  distractionSeconds: (
-    study: {
-      startedAt: number;
-      log: {
-        distractionMs?: number;
-        sampledAt?: number;
-        onBlocklist?: boolean;
-      };
-    },
-    nowMs: number,
-  ) => number;
+const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
   interpretScoreResponse: (
     status: number,
@@ -33,10 +22,6 @@ const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBod
       log: {
         blockedCount: number;
         blockedHosts: string[];
-        distractionMs?: number;
-        sampledAt?: number;
-        onBlocklist?: boolean;
-        currentHost?: string;
       };
     },
     nowMs: number,
@@ -45,7 +30,6 @@ const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBod
     duration_seconds: number;
     blocked_count: number;
     blocked_hosts: string[];
-    distraction_seconds: number;
   };
 };
 
@@ -54,7 +38,6 @@ const exampleBody = {
   duration_seconds: 1200,
   blocked_count: 1,
   blocked_hosts: ["www.instagram.com"],
-  distraction_seconds: 0,
 };
 
 test("the pet score body is the phase 3 example", () => {
@@ -82,7 +65,6 @@ test("the finish label follows the blocked count", () => {
   assert.equal(clear.blocked_count, 0);
   assert.deepEqual(clear.blocked_hosts, []);
   assert.equal(clear.duration_seconds, 0);
-  assert.equal(clear.distraction_seconds, 0);
 
   const capped = scoreRequestBody(
     {
@@ -94,36 +76,6 @@ test("the finish label follows the blocked count", () => {
     1_000 + 45_000,
   );
   assert.equal(capped.duration_seconds, 20);
-  assert.equal(capped.distraction_seconds, 0);
-
-  const startedAt = 1_000_000;
-  const distracted = scoreRequestBody(
-    {
-      token: "session-secret",
-      startedAt,
-      log: {
-        blockedCount: 1,
-        blockedHosts: ["www.instagram.com"],
-        distractionMs: 90_000,
-        onBlocklist: true,
-        sampledAt: startedAt + 30_000,
-        currentHost: "www.instagram.com",
-      },
-    },
-    startedAt + 40_000,
-  );
-  assert.equal(distracted.duration_seconds, 40);
-  assert.equal(distracted.distraction_seconds, 40);
-  assert.equal(
-    distractionSeconds(
-      {
-        startedAt,
-        log: { distractionMs: 15_000, onBlocklist: false, sampledAt: startedAt },
-      },
-      startedAt + 120_000,
-    ),
-    15,
-  );
 });
 
 test("a saved score opens the screen and a failed score keeps the token", () => {
@@ -179,8 +131,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(script, /cancelStudy/);
   assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
   assert.match(main, /ipcMain\.handle\("cancel-study"/);
-  assert.match(main, /distraction_seconds: watched/);
   assert.match(main, /does not change experience/);
+  assert.doesNotMatch(main, /distraction_seconds/);
   assert.doesNotMatch(main, /grant_study_experience/);
   assert.match(main, /planned_seconds/);
   assert.match(main, /function claimClockMs/);

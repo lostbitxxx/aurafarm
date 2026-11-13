@@ -26,8 +26,6 @@ export type ScoreRequest = {
   durationSeconds: number;
   blockedCount: number;
   blockedHosts: string[];
-  /** Null when the pet did not send a recorded interval. */
-  distractionSeconds: number | null;
 };
 
 export function parseScoreRequest(
@@ -41,7 +39,6 @@ export function parseScoreRequest(
   const durationSeconds = record.duration_seconds;
   const blockedCount = record.blocked_count;
   const blockedHosts = record.blocked_hosts;
-  const distractionSeconds = record.distraction_seconds;
   if (typeof record.token !== "string" || record.token.length === 0) {
     return { ok: false, error: "A session token is required." };
   }
@@ -54,16 +51,6 @@ export function parseScoreRequest(
   if (!Array.isArray(blockedHosts) || blockedHosts.some((host) => typeof host !== "string")) {
     return { ok: false, error: "Blocked hosts must be a list of names." };
   }
-  if (
-    distractionSeconds !== undefined &&
-    distractionSeconds !== null &&
-    (typeof distractionSeconds !== "number" || !Number.isInteger(distractionSeconds) || distractionSeconds < 0)
-  ) {
-    return { ok: false, error: "Distraction time must be a whole number of seconds." };
-  }
-
-  const recordedDistraction =
-    typeof distractionSeconds === "number" ? Math.min(durationSeconds, distractionSeconds) : null;
 
   return {
     ok: true,
@@ -71,7 +58,6 @@ export function parseScoreRequest(
     durationSeconds,
     blockedCount,
     blockedHosts: blockedHosts.slice(0, MAX_BLOCKED_HOSTS),
-    distractionSeconds: recordedDistraction,
   };
 }
 

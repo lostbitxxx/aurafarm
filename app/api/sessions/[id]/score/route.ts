@@ -43,9 +43,6 @@ export async function POST(
     duration_seconds: parsed.durationSeconds,
     blocked_count: parsed.blockedCount,
     blocked_hosts: parsed.blockedHosts,
-    ...(parsed.distractionSeconds === null
-      ? {}
-      : { distraction_seconds: parsed.distractionSeconds }),
   };
   const { data, error } = await supabase.rpc("submit_study_score", scoreArgs);
 
