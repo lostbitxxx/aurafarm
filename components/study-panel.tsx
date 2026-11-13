@@ -95,6 +95,8 @@ export function StudyPanel({
   const [chosenSeconds, setChosenSeconds] = useState(() =>
     preferredStudySeconds(preferredSessionMinutes),
   );
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState("");
   const preferredSeconds = preferredStudySeconds(preferredSessionMinutes);
   const [preferredSnap, setPreferredSnap] = useState(preferredSeconds);
   if (preferredSeconds !== preferredSnap) {
@@ -103,8 +105,6 @@ export function StudyPanel({
     setCustomOpen(false);
     setCustomMinutes("");
   }
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState("");
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
