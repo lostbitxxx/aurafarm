@@ -84,6 +84,13 @@ export async function loadDashboard() {
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
   const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
 
+  function wornItem(value: unknown, kind: "hat" | "clothes") {
+    const legacy = kind === "hat" ? sampleHat(value) : sampleClothes(value);
+    if (legacy) return legacy;
+    const preview = typeof value === "string" ? previewReward(value) : null;
+    return preview?.kind === kind ? preview.id : null;
+  }
+
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
     return {
@@ -93,8 +100,8 @@ export async function loadDashboard() {
       xp,
       is_desktop_active: Boolean(pet.is_desktop_active),
       color: sampleColor(pet.color),
-      hat: sampleHat(pet.hat),
-      clothes: sampleClothes(pet.clothes),
+      hat: wornItem(pet.hat, "hat"),
+      clothes: wornItem(pet.clothes, "clothes"),
     };
   });
 

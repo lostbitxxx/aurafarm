@@ -1,7 +1,7 @@
 /**
  * Hats and clothes shown in Collection and the level-up reward picker.
  * Kept separate from SAMPLE_HATS / SAMPLE_CLOTHES. The eight approved designs
- * can be owned as a reward. Equipping them is not supported yet.
+ * can be owned as a reward and applied to a pet.
  */
 
 export const COLLECTION_ACCESSORY_HINT =

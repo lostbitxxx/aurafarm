@@ -104,7 +104,7 @@ export async function applyPetColor(petId: string, colorId: string) {
 }
 
 export async function applyPetHat(petId: string, hatId: string | null) {
-  if (!petIdPattern.test(petId) || (hatId !== null && !sampleHat(hatId))) {
+  if (!petIdPattern.test(petId) || (hatId !== null && !sampleHat(hatId) && previewReward(hatId)?.kind !== "hat")) {
     return { error: "That hat could not be applied." };
   }
   if (!isSupabaseConfigured()) {
@@ -133,7 +133,7 @@ export async function applyPetHat(petId: string, hatId: string | null) {
 }
 
 export async function applyPetClothes(petId: string, clothesId: string | null) {
-  if (!petIdPattern.test(petId) || (clothesId !== null && !sampleClothes(clothesId))) {
+  if (!petIdPattern.test(petId) || (clothesId !== null && !sampleClothes(clothesId) && previewReward(clothesId)?.kind !== "clothes")) {
     return { error: "Those clothes could not be applied." };
   }
   if (!isSupabaseConfigured()) {

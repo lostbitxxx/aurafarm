@@ -82,6 +82,8 @@ test("collection dialog shows only owned hats and clothes", () => {
   assert.match(source, /ownedPreviewRewards\("clothes", ownedClothesIds\)/);
   assert.match(source, /SAMPLE_HATS.filter/);
   assert.match(source, /SAMPLE_CLOTHES.filter/);
+  assert.match(source, /onApply\(item\.id\)/);
+  assert.doesNotMatch(source, /aria-disabled/);
   assert.doesNotMatch(source, /COLLECTION_HAT_CARDS/);
   assert.doesNotMatch(source, /COLLECTION_CLOTHES_CARDS/);
   assert.doesNotMatch(source, /collection-color-soon/);

@@ -216,3 +216,29 @@ test("approved hats and clothes can be chosen as a level reward", () => {
   assert.match(picker, /previewRewards\("clothes"\)/);
   assert.match(picker, /collection-accessory-art/);
 });
+
+test("an owned approved hat or outfit can be applied to a pet", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0026_apply_accessory_rewards.sql", import.meta.url),
+    "utf8",
+  );
+  const actions = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
+  const hatCheck = sql.slice(sql.indexOf("user_pets_hat_check"), sql.indexOf("user_pets_clothes_check"));
+  const clothesCheck = sql.slice(sql.indexOf("user_pets_clothes_check"), sql.indexOf("function public.apply_pet_hat"));
+  const applyHat = sql.slice(sql.indexOf("function public.apply_pet_hat"), sql.indexOf("function public.apply_pet_clothes"));
+  const applyClothes = sql.slice(sql.indexOf("function public.apply_pet_clothes"));
+  for (const item of previewRewards("hat")) {
+    assert.match(hatCheck, new RegExp(`'${item.id}'`));
+  }
+  for (const item of previewRewards("clothes")) {
+    assert.match(clothesCheck, new RegExp(`'${item.id}'`));
+  }
+  assert.match(applyHat, /kind = 'hat'/);
+  assert.match(applyHat, /Hat not owned/);
+  assert.match(applyHat, /set hat = target_hat/);
+  assert.match(applyClothes, /kind = 'clothes'/);
+  assert.match(applyClothes, /Clothes not owned/);
+  assert.match(applyClothes, /set clothes = target_clothes/);
+  assert.match(actions, /previewReward\(hatId\)\?\.kind !== "hat"/);
+  assert.match(actions, /previewReward\(clothesId\)\?\.kind !== "clothes"/);
+});

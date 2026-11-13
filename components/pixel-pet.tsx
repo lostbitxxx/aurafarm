@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { previewReward } from "@/lib/collection-catalog";
 import { petAssetPath, sampleClothes, sampleColor, sampleHat, type PetPose } from "@/lib/pet-assets";
 
 export function PixelPetArt({
@@ -24,21 +25,26 @@ export function PixelPetArt({
   const [dropHat, setDropHat] = useState(false);
   const hatId = sampleHat(hat);
   const clothesId = sampleClothes(clothes);
+  const wornHat = !hatId && hat ? previewReward(hat) : null;
+  const wornClothes = !clothesId && clothes ? previewReward(clothes) : null;
+  const hatIcon = wornHat?.kind === "hat" ? wornHat.icon : null;
+  const clothesIcon = wornClothes?.kind === "clothes" ? wornClothes.icon : null;
   const src = petAssetPath(petType, pose, {
     color: sampleColor(color) ?? undefined,
     hat: dropHat ? null : hatId,
     clothes: dropClothes ? null : clothesId,
   });
+  const frameClass = ["pixel-pet-art", className].filter(Boolean).join(" ");
 
   useEffect(() => {
     setDropClothes(false);
     setDropHat(false);
   }, [petType, pose, color, hat, clothes]);
 
-  return (
+  const body = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      className={className ? `pixel-pet-art ${className}` : "pixel-pet-art"}
+      className={hatIcon || clothesIcon ? "pixel-pet-body" : frameClass}
       src={src}
       alt={alt}
       draggable={false}
@@ -48,6 +54,22 @@ export function PixelPetArt({
         else if (hatId && !dropHat) setDropHat(true);
       }}
     />
+  );
+
+  if (!hatIcon && !clothesIcon) return body;
+
+  return (
+    <span className={`pixel-pet ${frameClass}`}>
+      {body}
+      {clothesIcon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="pixel-pet-accessory is-clothes" src={clothesIcon} alt="" draggable={false} />
+      ) : null}
+      {hatIcon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="pixel-pet-accessory is-hat" src={hatIcon} alt="" draggable={false} />
+      ) : null}
+    </span>
   );
 }
 
