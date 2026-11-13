@@ -52,8 +52,14 @@ export function StudyPanel({
   placedIds,
   placementReady,
   preferredSessionMinutes,
+  ownedColorIds,
+  ownedHatIds,
+  ownedClothesIds,
   onOpenInventory,
   onEquipped,
+  onColorApplied,
+  onHatApplied,
+  onClothesApplied,
 }: {
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -70,8 +76,14 @@ export function StudyPanel({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   preferredSessionMinutes?: number | null;
+  ownedColorIds: readonly string[];
+  ownedHatIds: readonly string[];
+  ownedClothesIds: readonly string[];
   onOpenInventory: () => void;
   onEquipped?: (petId: string) => void;
+  onColorApplied: (petId: string, colorId: string) => void;
+  onHatApplied: (petId: string, hatId: string | null) => void;
+  onClothesApplied: (petId: string, clothesId: string | null) => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -80,7 +92,12 @@ export function StudyPanel({
     activeSession?.useDesktopPet ? "pet" : "web",
     scores.map((score) => score.id).join(","),
     recordedSessions.map((session) => `${session.id}:${session.durationSeconds}`).join(","),
-    pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join(","),
+    pets
+      .map(
+        (pet) =>
+          `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`,
+      )
+      .join(","),
     studyError ?? "",
     closeBlocked ? "1" : "0",
     closeBlockedError ?? "",
@@ -715,9 +732,15 @@ export function StudyPanel({
       {detailPet ? (
         <PetDetailDialog
           pet={detailPet}
+          ownedColorIds={ownedColorIds}
+          ownedHatIds={ownedHatIds}
+          ownedClothesIds={ownedClothesIds}
           sessionActive={Boolean(shownSession)}
           onClose={() => setDetailPetId(null)}
           onEquipped={onEquipped}
+          onColorApplied={onColorApplied}
+          onHatApplied={onHatApplied}
+          onClothesApplied={onClothesApplied}
         />
       ) : null}
       {history === "activity" ? (

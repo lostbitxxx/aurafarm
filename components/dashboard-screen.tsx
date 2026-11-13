@@ -282,8 +282,14 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        ownedColorIds={ownedColors}
+        ownedHatIds={ownedHats}
+        ownedClothesIds={ownedClothes}
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
+        onColorApplied={onColorApplied}
+        onHatApplied={onHatApplied}
+        onClothesApplied={onClothesApplied}
       />
       {dialog === "shop" ? (
         <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
