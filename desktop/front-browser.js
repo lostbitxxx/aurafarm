@@ -25,13 +25,13 @@ function frontUrlStatement(appName) {
 
 function frontCloseStatement(appName) {
   if (appName === "Safari") {
-    return 'tell application "Safari" to close front window';
+    return 'tell application "Safari" to close current tab of front window';
   }
   if (appName === "Google Chrome") {
-    return 'tell application "Google Chrome" to close front window';
+    return 'tell application "Google Chrome" to close active tab of front window';
   }
   if (appName === "Microsoft Edge") {
-    return 'tell application "Microsoft Edge" to close front window';
+    return 'tell application "Microsoft Edge" to close active tab of front window';
   }
   return "";
 }
@@ -69,7 +69,7 @@ async function readFrontBrowser() {
   return { app: app.value, url: url.value, error: "" };
 }
 
-async function closeFrontWindow(appName) {
+async function closeFrontTab(appName) {
   if (process.platform !== "darwin") return { ok: false, error: "Not macOS." };
   const statement = frontCloseStatement(appName);
   if (!statement) return { ok: false, error: "" };
@@ -81,7 +81,7 @@ async function closeFrontWindow(appName) {
 module.exports = {
   CLOSE_TIMEOUT_MS,
   FRONT_BROWSERS,
-  closeFrontWindow,
+  closeFrontTab,
   frontAppStatement,
   frontCloseStatement,
   frontUrlStatement,

@@ -15,7 +15,7 @@ const {
   nextFrontLog,
   noteCloseAttempt,
 } = require("./frontmost");
-const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
+const { closeFrontTab, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { updateOffer } = require("./version");
@@ -849,7 +849,7 @@ async function pollFront() {
     if (decision.close) {
       showPet();
       showBubble(decision.host);
-      const closed = await closeFrontWindow(reading.app);
+      const closed = await closeFrontTab(reading.app);
       if (study !== current) return;
       current.closeWatch = noteCloseAttempt(current.closeWatch);
       if (!closed.ok) {
