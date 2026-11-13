@@ -161,3 +161,8 @@ export function previewRewards(kind: "hat" | "clothes"): PreviewReward[] {
 export function previewReward(id: string): PreviewReward | null {
   return previewRewards("hat").find((item) => item.id === id) ?? previewRewards("clothes").find((item) => item.id === id) ?? null;
 }
+
+export function ownedPreviewRewards(kind: "hat" | "clothes", ownedIds: readonly string[]): PreviewReward[] {
+  const owned = new Set(ownedIds);
+  return previewRewards(kind).filter((item) => owned.has(item.id));
+}
