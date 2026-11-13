@@ -2,8 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import {
+  COLLECTION_ACCESSORY_HINT,
+  COLLECTION_ACCESSORY_PREVIEW_NOTE,
+  COLLECTION_CLOTHES_CARDS,
+  COLLECTION_COLOR_HINT,
+  COLLECTION_HAT_CARDS,
+  type CollectionAccessoryCard,
+} from "@/lib/collection-catalog";
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_COLORS } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
@@ -95,8 +103,6 @@ const COLLECTION_TABS: { id: CollectionTab; label: string; emptyNoun: string }[]
 export function CollectionDialog({
   pets,
   ownedColorIds,
-  ownedHatIds,
-  ownedClothesIds,
   rewardCount,
   onChooseReward,
   onClose,
@@ -106,7 +112,9 @@ export function CollectionDialog({
 }: {
   pets: PetCard[];
   ownedColorIds: readonly string[];
+  /** Kept for callers; hats grid is preview-only and does not use ownership yet. */
   ownedHatIds: readonly string[];
+  /** Kept for callers; clothes grid is preview-only and does not use ownership yet. */
   ownedClothesIds: readonly string[];
   rewardCount: number;
   onChooseReward: () => void;
@@ -121,8 +129,6 @@ export function CollectionDialog({
   const [applyClothes, setApplyClothes] = useState<{ id: string | null } | null>(null);
   const active = COLLECTION_TABS.find((entry) => entry.id === tab) ?? COLLECTION_TABS[0];
   const ownedColors = SAMPLE_COLORS.filter((color) => ownedColorIds.includes(color.id));
-  const ownedHats = SAMPLE_HATS.filter((hat) => ownedHatIds.includes(hat.id));
-  const ownedClothes = SAMPLE_CLOTHES.filter((clothes) => ownedClothesIds.includes(clothes.id));
   const applyColor = ownedColors.find((color) => color.id === applyColorId) ?? null;
 
   if (applyColor) {
@@ -159,9 +165,19 @@ export function CollectionDialog({
     );
   }
 
+  const accessoryHint =
+    tab === "colors" ? (
+      <p className="panel-hint">{COLLECTION_COLOR_HINT}</p>
+    ) : (
+      <>
+        <p className="panel-hint">{COLLECTION_ACCESSORY_HINT}</p>
+        <p className="panel-hint">{COLLECTION_ACCESSORY_PREVIEW_NOTE}</p>
+      </>
+    );
+
   return (
     <FarmDialog title="Collection" onClose={onClose} wide>
-      <p className="panel-hint">A color you own can be applied to any pet.</p>
+      {accessoryHint}
       {rewardCount > 0 ? (
         <p className="collection-reward-entry">
           <button type="button" className="button button-small" onClick={onChooseReward}>
@@ -191,63 +207,101 @@ export function CollectionDialog({
         id={`collection-panel-${active.id}`}
         aria-labelledby={`collection-tab-${active.id}`}
       >
-        {tab === "colors" && ownedColors.length > 0 ? (
-          <ul className="collection-color-grid">
-            {ownedColors.map((color) => (
-              <li key={color.id}>
-                <button type="button" className="collection-color" onClick={() => setApplyColorId(color.id)}>
-                  <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
-                  <strong>{color.name}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : tab === "hats" && ownedHats.length > 0 ? (
-          <ul className="collection-color-grid">
-            <li>
-              <button type="button" className="collection-color" onClick={() => setApplyHat({ id: null })}>
-                <PixelPetArt petType="baby_slime" className="dialog-pet-art" />
-                <strong>None</strong>
-              </button>
-            </li>
-            {ownedHats.map((hat) => (
-              <li key={hat.id}>
-                <button type="button" className="collection-color" onClick={() => setApplyHat({ id: hat.id })}>
-                  <PixelPetArt petType="baby_slime" hat={hat.id} className="dialog-pet-art" />
-                  <strong>{hat.id}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : tab === "clothes" && ownedClothes.length > 0 ? (
-          <ul className="collection-color-grid">
-            <li>
-              <button type="button" className="collection-color" onClick={() => setApplyClothes({ id: null })}>
-                <PixelPetArt petType="baby_slime" className="dialog-pet-art" />
-                <strong>None</strong>
-              </button>
-            </li>
-            {ownedClothes.map((clothes) => (
-              <li key={clothes.id}>
-                <button
-                  type="button"
-                  className="collection-color"
-                  onClick={() => setApplyClothes({ id: clothes.id })}
-                >
-                  <PixelPetArt petType="baby_slime" clothes={clothes.id} className="dialog-pet-art" />
-                  <strong>{clothes.id}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
+        {tab === "colors" ? (
+          ownedColors.length > 0 ? (
+            <ul className="collection-color-grid">
+              {ownedColors.map((color) => (
+                <li key={color.id}>
+                  <button type="button" className="collection-color" onClick={() => setApplyColorId(color.id)}>
+                    <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" />
+                    <strong>{color.name}</strong>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <>
+              <p className="collection-empty-title">Nothing to collect here yet.</p>
+              <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
+            </>
+          )
+        ) : tab === "hats" ? (
+          <AccessoryCatalogGrid
+            cards={COLLECTION_HAT_CARDS}
+            onSelectNone={() => setApplyHat({ id: null })}
+          />
         ) : (
-          <>
-            <p className="collection-empty-title">Nothing to collect here yet.</p>
-            <p className="panel-hint">More {active.emptyNoun} are coming soon.</p>
-          </>
+          <AccessoryCatalogGrid
+            cards={COLLECTION_CLOTHES_CARDS}
+            onSelectNone={() => setApplyClothes({ id: null })}
+          />
         )}
       </div>
     </FarmDialog>
+  );
+}
+
+function AccessoryCatalogGrid({
+  cards,
+  onSelectNone,
+}: {
+  cards: readonly CollectionAccessoryCard[];
+  onSelectNone: () => void;
+}) {
+  return (
+    <ul className="collection-color-grid collection-accessory-grid">
+      {cards.map((card) => {
+        if (card.kind === "none") {
+          return (
+            <li key={card.id}>
+              <button type="button" className="collection-color" onClick={onSelectNone}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="collection-accessory-art"
+                  src={card.icon}
+                  alt=""
+                  draggable={false}
+                  style={{ imageRendering: "pixelated" }}
+                />
+                <strong>{card.name}</strong>
+              </button>
+            </li>
+          );
+        }
+        if (card.kind === "coming_soon") {
+          return (
+            <li key={card.id}>
+              <div className="collection-color collection-color-soon" aria-disabled="true">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="collection-accessory-art"
+                  src={card.icon}
+                  alt=""
+                  draggable={false}
+                  style={{ imageRendering: "pixelated" }}
+                />
+                <strong>{card.name}</strong>
+              </div>
+            </li>
+          );
+        }
+        return (
+          <li key={card.id}>
+            <div className="collection-color collection-color-preview" aria-disabled="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="collection-accessory-art"
+                src={card.icon}
+                alt=""
+                draggable={false}
+                style={{ imageRendering: "pixelated" }}
+              />
+              <strong>{card.name}</strong>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
