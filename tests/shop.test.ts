@@ -37,8 +37,12 @@ test("the shop and the desk require an account", () => {
     new URL("../components/public-header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /href="\/shop"/);
+  assert.doesNotMatch(header, /\bShop\b/);
+  assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
+  assert.match(header, /Collection/);
+  assert.match(header, /Inventory/);
+  assert.match(header, /Achievements/);
   assert.doesNotMatch(publicHeader, /\/shop/);
   assert.doesNotMatch(publicHeader, /\/inventory/);
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
