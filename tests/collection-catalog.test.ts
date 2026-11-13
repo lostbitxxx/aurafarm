@@ -61,7 +61,7 @@ test("clothes collection shows None, eight approved designs, and three coming so
 });
 
 test("presentation catalogs stay separate from equippable legacy ids", () => {
-  const legacy = new Set([...SAMPLE_HATS, ...SAMPLE_CLOTHES].map((item) => item.id));
+  const legacy = new Set<string>([...SAMPLE_HATS, ...SAMPLE_CLOTHES].map((item) => item.id));
   for (const card of [...COLLECTION_HAT_CARDS, ...COLLECTION_CLOTHES_CARDS]) {
     assert.equal(legacy.has(card.id), false);
     assert.doesNotMatch(card.id, /^hat_[a-j]$/);
