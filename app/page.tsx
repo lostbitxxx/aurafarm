@@ -1,24 +1,16 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/public-header";
-import { SlimeMark } from "@/components/slime-mark";
+import { PixelPetArt } from "@/components/pixel-pet";
 
 export default function HomePage() {
   return (
-    <>
+    <div className="paper-shell">
       <PublicHeader />
       <main className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Desktop terrarium</p>
-          <h1>A baby slime moves in when you do.</h1>
-          <p className="lede">
-            Create an account and Aurafarm saves your profile, then places a level 1 baby
-            slime on the desktop with the slot already switched on.
-          </p>
-          <ol className="steps">
-            <li>Sign up with your email.</li>
-            <li>A baby slime joins your inventory at level 1.</li>
-            <li>Equip to Desktop whenever you want a different pet in the frame.</li>
-          </ol>
+          <p className="eyebrow">Your study companion</p>
+          <h1>A little companion for your study time.</h1>
+          <p className="lede">Make time to focus with a cozy companion by your side.</p>
           <div className="hero-actions">
             <Link href="/register" className="button">
               Create account
@@ -29,10 +21,10 @@ export default function HomePage() {
           </div>
         </div>
         <div className="hero-stage">
-          <SlimeMark />
-          <p>baby_slime · level 1 · on the desktop</p>
+          <PixelPetArt petType="baby_slime" className="hero-pet-art" alt="" />
+          <p>Your future study buddy</p>
         </div>
       </main>
-    </>
+    </div>
   );
 }
