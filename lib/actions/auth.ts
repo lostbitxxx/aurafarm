@@ -106,6 +106,7 @@ export async function signIn(
 export async function signOut() {
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
+    await supabase.rpc("touch_social_presence", { source: "desk", present: false });
     await supabase.auth.signOut();
   }
   redirect("/login");

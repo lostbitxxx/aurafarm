@@ -9,6 +9,7 @@ import {
   type StudyMode,
   type StudyPlan,
 } from "./study-mode";
+import { touchSocialPresence } from "./actions/friends";
 import { createClient } from "./supabase/server";
 
 export type SavedStudyPlan = StudyPlan & {
@@ -45,6 +46,7 @@ export async function loadCustomizationGate() {
 
   const profile = profileResult.data;
   const completed = Boolean(profile?.customization_completed_at);
+  await touchSocialPresence(true);
   const mode = profile?.study_mode;
   const answers = parseBehaviorAnswers(profile?.behavior_answers);
   const plan =

@@ -9,6 +9,7 @@ import {
   startSessionDecision,
   studyTimerMigrationMessage,
 } from "@/lib/study";
+import { touchSocialPresence } from "@/lib/actions/friends";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -147,6 +148,7 @@ export async function completeStudyTimer(
     return { error: studyTimerMigrationMessage(error.message) ?? error.message };
   }
 
+  await touchSocialPresence(true);
   revalidatePath("/dashboard");
   revalidatePath("/inventory");
   return { error: "" };
@@ -175,6 +177,7 @@ export async function endStudyEarly(sessionId: string) {
     return { error: studyTimerMigrationMessage(error.message) ?? error.message };
   }
 
+  await touchSocialPresence(true);
   revalidatePath("/dashboard");
   revalidatePath("/inventory");
   return { error: "" };

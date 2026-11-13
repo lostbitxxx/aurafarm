@@ -12,8 +12,10 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { FriendsDialog } from "./friends-dialog";
+import { SocialPresence } from "./social-presence";
+import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
-import { type FriendCard } from "@/lib/friends";
+import { type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -76,6 +78,8 @@ export function DashboardScreen({
   dailySessionGoal,
   studyPlan,
   friendCode,
+  friendInvite,
+  allowStatusSeen,
   friends,
   friendsError,
 }: {
@@ -107,12 +111,14 @@ export function DashboardScreen({
     answers: BehaviorAnswers | null;
   } | null;
   friendCode: string;
+  friendInvite: FriendInvite;
+  allowStatusSeen: StatusSeen;
   friends: readonly FriendCard[];
   friendsError: string | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<
-    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | null
+    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | "social-settings" | null
   >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
@@ -266,6 +272,7 @@ export function DashboardScreen({
 
   return (
     <div className="desk-page">
+      <SocialPresence />
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
@@ -275,6 +282,7 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
         onOpenFriends={() => setDialog("friends")}
+        onOpenSocialSettings={() => setDialog("social-settings")}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -343,9 +351,13 @@ export function DashboardScreen({
       ) : null}
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "friends" ? (
-        <FriendsDialog
+        <FriendsDialog friends={friends} friendsError={friendsError} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === "social-settings" ? (
+        <SocialSettingsDialog
           friendCode={friendCode}
-          friends={friends}
+          friendInvite={friendInvite}
+          allowStatusSeen={allowStatusSeen}
           friendsError={friendsError}
           onClose={() => setDialog(null)}
         />

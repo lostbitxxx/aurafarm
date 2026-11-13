@@ -14,6 +14,7 @@ export function SiteHeader({
   onOpenInventory,
   onOpenAchievements,
   onOpenFriends,
+  onOpenSocialSettings,
 }: {
   displayName: string;
   studySeconds?: number;
@@ -23,6 +24,7 @@ export function SiteHeader({
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
   onOpenFriends?: () => void;
+  onOpenSocialSettings?: () => void;
 }) {
   const streakLabel = streakPillLabel(streakCount);
   return (
@@ -68,6 +70,11 @@ export function SiteHeader({
               <button type="button" role="menuitem" onClick={onOpenFriends}>
                 Friends
               </button>
+              {onOpenSocialSettings ? (
+                <button type="button" role="menuitem" onClick={onOpenSocialSettings}>
+                  Social Settings
+                </button>
+              ) : null}
               <button type="button" role="menuitem">
                 Leaderboard
               </button>

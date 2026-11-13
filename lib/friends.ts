@@ -2,6 +2,23 @@ import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 
 export const FRIEND_CODE_PATTERN = /^[ABCDEFGHIJKLMNPQRSTUVWXYZ23456789]{8}$/;
 
+export const FRIEND_INVITE_OPTIONS = [
+  { id: "open", label: "Anyone with my code" },
+  { id: "manual", label: "I accept each request" },
+  { id: "disabled", label: "Not taking requests" },
+] as const;
+
+export const STATUS_SEEN_OPTIONS = [
+  { id: "friend_and_group", label: "Friends and groups" },
+  { id: "friend_only", label: "Friends only" },
+  { id: "group_only", label: "Groups only" },
+  { id: "none", label: "No one" },
+] as const;
+
+export type FriendInvite = (typeof FRIEND_INVITE_OPTIONS)[number]["id"];
+export type StatusSeen = (typeof STATUS_SEEN_OPTIONS)[number]["id"];
+export type FriendPresence = "online" | "aurafarming" | "offline" | "invisible";
+
 export type FriendCard = {
   friendId: string;
   displayName: string;
@@ -11,15 +28,42 @@ export type FriendCard = {
   color: string | null;
   hat: string | null;
   clothes: string | null;
+  presence: FriendPresence;
 };
 
 const FRIEND_MIGRATION = "Run migration 0025 before adding friends.";
+const STATUS_MIGRATION = "Run migration 0026 before using social status.";
+
+export function isFriendInvite(value: unknown): value is FriendInvite {
+  return FRIEND_INVITE_OPTIONS.some((option) => option.id === value);
+}
+
+export function isStatusSeen(value: unknown): value is StatusSeen {
+  return STATUS_SEEN_OPTIONS.some((option) => option.id === value);
+}
+
+export function friendPresence(value: unknown): FriendPresence {
+  if (value === "online" || value === "aurafarming" || value === "offline" || value === "invisible") {
+    return value;
+  }
+  return "invisible";
+}
+
+export function socialStatusLabel(presence: FriendPresence) {
+  if (presence === "online") return "Online";
+  if (presence === "aurafarming") return "Aurafarming";
+  if (presence === "invisible") return "Invisible";
+  return "Offline";
+}
 
 export function normalizeFriendCode(value: string) {
   return value.trim().toUpperCase();
 }
 
 export function friendRequestMessage(message: string) {
+  if (/allow_status_seen|current_status|touch_social_presence|update_social_settings/i.test(message)) {
+    return STATUS_MIGRATION;
+  }
   if (/your friend code/i.test(message)) return "That is your friend code.";
   if (/already friends/i.test(message)) return "You are already friends.";
   if (/already sent/i.test(message)) return "You already sent that request.";
@@ -48,6 +92,7 @@ type FriendRpcRow = {
   color?: unknown;
   hat?: unknown;
   clothes?: unknown;
+  presence?: unknown;
 };
 
 export function friendCardsFromRows(rows: readonly FriendRpcRow[]) {
@@ -74,5 +119,6 @@ function friendCard(row: FriendRpcRow): FriendCard | null {
     color: sampleColor(row.color),
     hat: sampleHat(row.hat),
     clothes: sampleClothes(row.clothes),
+    presence: friendPresence(row.presence),
   };
 }
