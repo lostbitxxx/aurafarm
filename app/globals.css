@@ -1122,11 +1122,29 @@ button.dialog-row {
 }
 
 
+.collection-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+  margin-top: 1rem;
+}
+
 .collection-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-top: 1rem;
+  min-width: 0;
+}
+
+.collection-count {
+  margin: 0;
+  margin-left: auto;
+  color: var(--dialog-muted, #596650);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .collection-panel {
@@ -1177,6 +1195,11 @@ button.dialog-row {
   text-align: center;
 }
 
+.collection-color.is-selected {
+  box-shadow: inset 0 0 0 2px var(--slime-deep, #2f4a38);
+  background: rgba(198, 239, 74, 0.18);
+}
+
 .collection-color strong {
   display: block;
   max-width: 100%;
@@ -1219,10 +1242,16 @@ button.dialog-row {
 }
 
 .collection-empty-title {
-  margin: 0;
+  margin: 0 0 0.85rem;
   color: var(--dialog-ink, #23392d);
   font-family: var(--serif);
   font-size: 1.15rem;
+}
+
+.collection-coming-soon {
+  margin: 1rem 0 0;
+  color: var(--dialog-muted, #596650);
+  font-size: 0.9rem;
 }
 
 .collection-reward-entry {

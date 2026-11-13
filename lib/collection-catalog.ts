@@ -4,12 +4,16 @@
  * can be owned as a reward and applied to a pet.
  */
 
+import { SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "./pet-assets";
+
 export const COLLECTION_ACCESSORY_HINT =
   "Mix and match hats and clothes to create your own look.";
 
 export const COLLECTION_ACCESSORY_PREVIEW_NOTE = "Preview only · Equipping coming soon";
 
 export const COLLECTION_COLOR_HINT = "A color you own can be applied to any pet.";
+
+export type CollectionKind = "color" | "hat" | "clothes";
 
 export type CollectionAccessoryCard =
   | {
@@ -165,4 +169,56 @@ export function previewReward(id: string): PreviewReward | null {
 export function ownedPreviewRewards(kind: "hat" | "clothes", ownedIds: readonly string[]): PreviewReward[] {
   const owned = new Set(ownedIds);
   return previewRewards(kind).filter((item) => owned.has(item.id));
+}
+
+/** Shared None card from the accessory catalogs (hats and clothes use the same asset). */
+export function collectionNoneCard(): Extract<CollectionAccessoryCard, { kind: "none" }> {
+  const card = COLLECTION_HAT_CARDS.find((entry) => entry.kind === "none");
+  if (!card || card.kind !== "none") {
+    throw new Error("Collection None card is missing.");
+  }
+  return card;
+}
+
+/**
+ * Authoritative collectible ids for the current product catalogs.
+ * Excludes None and Coming soon presentation placeholders.
+ * Hats/clothes include legacy SAMPLE_* ids plus the eight approved reward designs.
+ */
+export function collectibleCatalogIds(kind: CollectionKind): readonly string[] {
+  if (kind === "color") return SAMPLE_COLORS.map((color) => color.id);
+  if (kind === "hat") {
+    return [...SAMPLE_HATS.map((hat) => hat.id), ...previewRewards("hat").map((item) => item.id)];
+  }
+  return [...SAMPLE_CLOTHES.map((item) => item.id), ...previewRewards("clothes").map((item) => item.id)];
+}
+
+/**
+ * Owned / total progress for a Collection tab.
+ * Numerator counts distinct owned ids that belong to the current collectible catalog.
+ * Denominator is that catalog's size (never inferred from the owned list alone).
+ */
+export function collectionProgress(
+  kind: CollectionKind,
+  ownedIds: readonly string[],
+): { owned: number; total: number } | null {
+  const catalog = collectibleCatalogIds(kind);
+  if (catalog.length === 0) return null;
+  const catalogSet = new Set(catalog);
+  const owned = new Set<string>();
+  for (const id of ownedIds) {
+    if (catalogSet.has(id)) owned.add(id);
+  }
+  return { owned: owned.size, total: catalog.length };
+}
+
+export function collectionComingSoonMessage(kind: CollectionKind) {
+  if (kind === "color") return "More colors are coming soon.";
+  if (kind === "hat") return "More hats are coming soon.";
+  return "More clothes are coming soon.";
+}
+
+export function collectionCountLabel(kind: CollectionKind, owned: number, total: number) {
+  const noun = kind === "color" ? "colors" : kind === "hat" ? "hats" : "clothes";
+  return `${owned} of ${total} ${noun} collected`;
 }
