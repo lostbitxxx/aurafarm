@@ -13,7 +13,12 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "./study";
-import { isStudyMode, type StudyMode } from "./study-mode";
+import {
+  isStudyMode,
+  parseBehaviorAnswers,
+  type BehaviorAnswers,
+  type StudyMode,
+} from "./study-mode";
 import { createClient } from "./supabase/server";
 
 export async function loadDashboard() {
@@ -34,7 +39,7 @@ export async function loadDashboard() {
       supabase
         .from("profiles")
         .select(
-          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal",
+          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers",
         )
         .eq("id", userId)
         .maybeSingle(),
@@ -68,6 +73,7 @@ export async function loadDashboard() {
     ]);
 
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
+  const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
 
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
@@ -160,5 +166,13 @@ export async function loadDashboard() {
     preferredSessionMinutes: Number(profile?.preferred_session_minutes ?? 0) || null,
     monthlySessionGoal: Number(profile?.monthly_session_goal ?? 0) || null,
     dailySessionGoal: Number(profile?.daily_session_goal ?? 0) || null,
+    studyPlan:
+      studyMode && Number(profile?.monthly_session_goal ?? 0) > 0
+        ? {
+            mode: studyMode,
+            monthlySessions: Number(profile?.monthly_session_goal ?? 1),
+            answers: behaviorAnswers,
+          }
+        : null,
   };
 }

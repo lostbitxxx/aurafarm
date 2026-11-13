@@ -29,8 +29,8 @@ export const BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
     prompt: "How long can you usually focus before you want to switch?",
     hint: "Your honest attention span — not your ideal one.",
     options: [
-      { value: "short", label: "Under 15 minutes", detail: "Quick bursts fit you best." },
-      { value: "medium", label: "About 30–60 minutes", detail: "A normal study block." },
+      { value: "short", label: "Under 30 minutes", detail: "Quick bursts fit you best." },
+      { value: "medium", label: "About 30 to 60 minutes", detail: "A normal study block." },
       { value: "long", label: "Over an hour", detail: "You can settle into deep work." },
     ],
   },
@@ -63,7 +63,7 @@ const MODE_META: Record<
   assassin: {
     name: "Assassin",
     tagline: "Short strikes for heavy distractors.",
-    sessionMinutes: 15,
+    sessionMinutes: 30,
     baseMonthly: 40,
   },
   knight: {
@@ -208,10 +208,10 @@ export function customizationMigrationMessage(message: string | null) {
   if (/permission denied/i.test(message)) {
     return "The study plan could not be saved. Run migration 0022 in the Supabase SQL editor, then try again.";
   }
-  if (/study_mode|monthly_session_goal|customization_completed|behavior_answers/i.test(message)) {
+  if (/study_mode|monthly_session_goal|customization_completed|behavior_answers|schema cache/i.test(message)) {
     return "The study-mode columns are missing. Run migration 0021 in the Supabase SQL editor, then refresh.";
   }
-  return message;
+  return null;
 }
 
 export function describeDailyBreakdown(plan: StudyPlan) {

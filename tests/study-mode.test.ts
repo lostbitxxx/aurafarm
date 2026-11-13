@@ -43,7 +43,7 @@ test("each study mode suggests its own session length and monthly goal", () => {
   const knight = planForMode("knight", "steady");
   const lord = planForMode("lord", "steady");
 
-  assert.equal(assassin.sessionMinutes, 15);
+  assert.equal(assassin.sessionMinutes, 30);
   assert.equal(assassin.monthlySessions, 40);
   assert.equal(assassin.dailySessions, dailySessionsFromMonthly(40, 5));
 

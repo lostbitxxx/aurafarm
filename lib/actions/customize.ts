@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { customizationMigrationMessage, parseCustomizationInput } from "@/lib/study-mode";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -7,29 +8,30 @@ import { createClient } from "@/lib/supabase/server";
 
 export type CustomizeFormState = {
   error: string;
+  saved: boolean;
 };
 
-const emptyState: CustomizeFormState = { error: "" };
+const emptyState: CustomizeFormState = { error: "", saved: false };
 
 export async function saveCustomization(
   _prev: CustomizeFormState,
   formData: FormData,
 ): Promise<CustomizeFormState> {
   const parsed = parseCustomizationInput(formData);
-  if (parsed.error) return { error: parsed.error };
+  if (parsed.error) return { ...emptyState, error: parsed.error };
 
   if (!isSupabaseConfigured()) {
-    return { error: "Add Supabase keys before saving your study plan." };
+    return { ...emptyState, error: "Add Supabase keys before saving your study plan." };
   }
 
   const supabase = await createClient();
   const { data, error: claimsError } = await supabase.auth.getClaims();
   const userId = data?.claims.sub;
   if (claimsError || !userId) {
-    return { error: "Sign in to save your study mode." };
+    return { ...emptyState, error: "Sign in to save your study mode." };
   }
 
-  const { error } = await supabase
+  const { data: saved, error } = await supabase
     .from("profiles")
     .update({
       study_mode: parsed.plan.mode,
@@ -40,12 +42,24 @@ export async function saveCustomization(
       behavior_answers: parsed.answers,
       customization_completed_at: new Date().toISOString(),
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
+      ...emptyState,
       error: customizationMigrationMessage(error.message) ?? error.message,
     };
+  }
+  if (!saved) {
+    return { ...emptyState, error: "Could not find your profile to save the study plan." };
+  }
+
+  const embedded = String(formData.get("embedded") ?? "") === "1";
+  if (embedded) {
+    revalidatePath("/dashboard");
+    return { error: "", saved: true };
   }
 
   redirect("/dashboard");

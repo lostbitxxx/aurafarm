@@ -12,8 +12,8 @@ export const instant = false;
 export default async function CustomizePage() {
   const gate = await loadCustomizationGate();
   return (
-    <>
-      <PublicHeader />
+    <div className="desk-page customize-page">
+      <PublicHeader account={{ displayName: gate.displayName }} />
       <main className="customize-layout">
         <CustomizeWizard
           displayName={gate.displayName}
@@ -21,6 +21,6 @@ export default async function CustomizePage() {
           initialPlan={gate.plan}
         />
       </main>
-    </>
+    </div>
   );
 }
