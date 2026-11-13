@@ -26,6 +26,7 @@ export type ScoreRequest = {
   durationSeconds: number;
   blockedCount: number;
   blockedHosts: string[];
+  localDay: string | null;
 };
 
 export function parseScoreRequest(
@@ -39,6 +40,7 @@ export function parseScoreRequest(
   const durationSeconds = record.duration_seconds;
   const blockedCount = record.blocked_count;
   const blockedHosts = record.blocked_hosts;
+  const localDay = record.local_day;
   if (typeof record.token !== "string" || record.token.length === 0) {
     return { ok: false, error: "A session token is required." };
   }
@@ -51,6 +53,13 @@ export function parseScoreRequest(
   if (!Array.isArray(blockedHosts) || blockedHosts.some((host) => typeof host !== "string")) {
     return { ok: false, error: "Blocked hosts must be a list of names." };
   }
+  if (
+    localDay !== undefined &&
+    localDay !== null &&
+    (typeof localDay !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(localDay))
+  ) {
+    return { ok: false, error: "Local day must be YYYY-MM-DD." };
+  }
 
   return {
     ok: true,
@@ -58,6 +67,7 @@ export function parseScoreRequest(
     durationSeconds,
     blockedCount,
     blockedHosts: blockedHosts.slice(0, MAX_BLOCKED_HOSTS),
+    localDay: typeof localDay === "string" ? localDay : null,
   };
 }
 

@@ -26,14 +26,18 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin }
     duration_seconds: number;
     blocked_count: number;
     blocked_hosts: string[];
+    local_day: string;
   };
 };
 
+const scoredAt = 1_700_000_000_000 + 1200 * 1000 + 400;
+const scoredDate = new Date(scoredAt);
 const exampleBody = {
   token: "session-secret",
   duration_seconds: 1200,
   blocked_count: 1,
   blocked_hosts: ["www.instagram.com"],
+  local_day: `${scoredDate.getFullYear()}-${String(scoredDate.getMonth() + 1).padStart(2, "0")}-${String(scoredDate.getDate()).padStart(2, "0")}`,
 };
 
 test("the pet score body is the phase 3 example", () => {
@@ -44,7 +48,7 @@ test("the pet score body is the phase 3 example", () => {
       startedAt,
       log: { blockedCount: 1, blockedHosts: ["www.instagram.com"] },
     },
-    startedAt + 1200 * 1000 + 400,
+    scoredAt,
   );
   assert.deepEqual(body, exampleBody);
   const parsed = parseScoreRequest(body);

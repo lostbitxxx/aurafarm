@@ -43,6 +43,7 @@ export async function POST(
     duration_seconds: parsed.durationSeconds,
     blocked_count: parsed.blockedCount,
     blocked_hosts: parsed.blockedHosts,
+    local_day: parsed.localDay,
   });
 
   if (error) {

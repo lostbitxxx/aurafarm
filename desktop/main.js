@@ -739,6 +739,7 @@ async function submitScoreDirect(current, body, postFailure) {
     duration_seconds: body.duration_seconds,
     blocked_count: body.blocked_count,
     blocked_hosts: body.blocked_hosts,
+    local_day: body.local_day,
   });
   if (error) {
     scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);

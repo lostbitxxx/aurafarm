@@ -42,3 +42,14 @@ test("an early pet finish counts minutes and a full finish keeps the bonus", () 
   assert.doesNotMatch(finish, /claimed_at/);
   assert.doesNotMatch(finish, /distraction_seconds/);
 });
+
+test("one score function accepts the streak day and an early finish", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0033_one_score_function.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /drop function if exists public\.submit_study_score\(uuid, text, integer, integer, text\[\]\)/);
+  assert.match(sql, /local_day date default null/);
+  assert.match(sql, /finished := now\(\) \+ interval '5 seconds'/);
+  assert.doesNotMatch(sql, /Study time has not finished/);
+});
