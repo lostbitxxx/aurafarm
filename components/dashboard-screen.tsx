@@ -143,7 +143,6 @@ export function DashboardScreen({
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
-        onOpenShop={() => setDialog("shop")}
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}

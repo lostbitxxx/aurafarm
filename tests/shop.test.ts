@@ -52,6 +52,9 @@ test("the desk requires an account and the old shop page is gone", () => {
   assert.match(header, /Shop/);
   assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
+  assert.match(header, /Collection/);
+  assert.match(header, /Inventory/);
+  assert.match(header, /Achievements/);
   assert.doesNotMatch(publicHeader, /\/shop/);
   assert.doesNotMatch(publicHeader, /\/inventory/);
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
