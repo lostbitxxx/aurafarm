@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
+import { LevelUpCelebration, RewardPicker } from "./level-up-reward";
 import {
   AchievementsDialog,
   CollectionDialog,
@@ -10,7 +11,9 @@ import {
   InventoryDialog,
   ShopDialog,
 } from "./dashboard-dialogs";
-import { describePet, equippedPet, type PetCard } from "@/lib/pets";
+import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
+import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
+import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 
@@ -45,6 +48,7 @@ export function DashboardScreen({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  pendingRewards,
   petsError,
   activeSession,
   scores,
@@ -66,6 +70,7 @@ export function DashboardScreen({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  pendingRewards: readonly CollectionReward[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -91,14 +96,38 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
+  const [ownedColors, setOwnedColors] = useState(ownedColorIds);
+  const [ownedHats, setOwnedHats] = useState(ownedHatIds);
+  const [ownedClothes, setOwnedClothes] = useState(ownedClothesIds);
+  const [rewards, setRewards] = useState(pendingRewards);
+  const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTotal, setPickerTotal] = useState(0);
+  const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
     .join("|");
+  const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
+  const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
+  const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
+  const [rewardSnap, setRewardSnap] = useState(rewardSignature);
 
   if (petsSignature !== petsSnap) {
     setPetsSnap(petsSignature);
     setLocalPets(pets);
+  }
+
+  if (ownedSignature !== ownedSnap) {
+    setOwnedSnap(ownedSignature);
+    setOwnedColors(ownedColorIds);
+    setOwnedHats(ownedHatIds);
+    setOwnedClothes(ownedClothesIds);
+  }
+
+  if (rewardSignature !== rewardSnap) {
+    setRewardSnap(rewardSignature);
+    setRewards(pendingRewards);
   }
 
   useEffect(() => {
@@ -107,6 +136,27 @@ export function DashboardScreen({
     setPlacedIds(placement.ids);
     setPlacementReady(true);
   }, [userId, pets]);
+
+  const seenRaw = useSyncExternalStore(
+    subscribeSeenRewards,
+    () => readSeenSnapshot(userId),
+    readServerSeenSnapshot,
+  );
+  const seenIds = useMemo(() => parseSeenRewards(seenRaw), [seenRaw]);
+  const unseen = rewards.filter((reward) => !seenIds.has(reward.id));
+  const featured = unseen.reduce<CollectionReward | null>((best, reward) => {
+    if (!best || reward.levelReached >= best.levelReached) return reward;
+    return best;
+  }, null);
+  const seenReady = seenRaw !== null;
+
+  if (display && !rewards.some((reward) => reward.id === display.id)) {
+    setDisplay(null);
+  } else if (seenReady && !pickerOpen && featured && display === null) {
+    setDisplay({ id: featured.id, markIds: unseen.map((reward) => reward.id).join("|") });
+  }
+
+  const celebration = display ? rewards.find((reward) => reward.id === display.id) ?? null : null;
 
   const activePet = equippedPet(localPets);
   const described = activePet ? describePet(activePet.pet_type) : null;
@@ -150,6 +200,40 @@ export function DashboardScreen({
     );
   }
 
+  const openRewardPicker = useCallback(() => {
+    if (rewards.length === 0) return;
+    setPickerTotal(rewards.length);
+    setPickerOpen(true);
+    setDisplay(null);
+    setDialog(null);
+  }, [rewards.length]);
+
+  const dismissCelebration = useCallback(() => setDisplay(null), []);
+
+  function onRewardClaimed(itemId: string) {
+    const color = sampleColor(itemId);
+    const hat = sampleHat(itemId);
+    const clothes = sampleClothes(itemId);
+    if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
+    if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
+    if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
+    setRewards((current) => current.slice(1));
+    if (rewards.length <= 1) setPickerOpen(false);
+  }
+
+  const celebrationPet = celebration
+    ? localPets.find((pet) => pet.id === celebration.petId) ?? {
+        id: celebration.petId,
+        pet_type: "baby_slime",
+        level: celebration.levelReached,
+        xp: 0,
+        is_desktop_active: false,
+        color: null,
+        hat: null,
+        clothes: null,
+      }
+    : null;
+
   return (
     <div className="desk-page">
       <SiteHeader
@@ -190,13 +274,17 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
       />
-      {dialog === "shop" ? <ShopDialog ownedTypes={ownedTypes} onClose={() => setDialog(null)} /> : null}
+      {dialog === "shop" ? (
+        <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
+      ) : null}
       {dialog === "collection" ? (
         <CollectionDialog
           pets={localPets}
-          ownedColorIds={ownedColorIds}
-          ownedHatIds={ownedHatIds}
-          ownedClothesIds={ownedClothesIds}
+          ownedColorIds={ownedColors}
+          ownedHatIds={ownedHats}
+          ownedClothesIds={ownedClothes}
+          rewardCount={rewards.length}
+          onChooseReward={openRewardPicker}
           onClose={() => setDialog(null)}
           onColorApplied={onColorApplied}
           onHatApplied={onHatApplied}
@@ -219,6 +307,27 @@ export function DashboardScreen({
           displayName={displayName}
           initialPlan={studyPlan}
           onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {celebration && celebrationPet && display ? (
+        <LevelUpCelebration
+          reward={celebration}
+          pet={celebrationPet}
+          userId={userId}
+          markIds={display.markIds}
+          onContinue={openRewardPicker}
+          onDismiss={dismissCelebration}
+        />
+      ) : null}
+      {pickerOpen ? (
+        <RewardPicker
+          choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
+          choiceTotal={Math.max(pickerTotal, rewards.length)}
+          ownedColorIds={ownedColors}
+          ownedHatIds={ownedHats}
+          ownedClothesIds={ownedClothes}
+          onClaimed={onRewardClaimed}
+          onClose={() => setPickerOpen(false)}
         />
       ) : null}
     </div>

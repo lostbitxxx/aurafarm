@@ -435,11 +435,6 @@ export function StudyPanel({
           <button type="button" className="button button-ghost" onClick={() => setHistory("experience")}>
             Experience
           </button>
-          {shownSession && !shownSession.useDesktopPet ? (
-            <button type="button" className="button button-small button-ghost" onClick={onOpenDev}>
-              Dev
-            </button>
-          ) : null}
         </div>
       </aside>
       {lengthOpen ? (
@@ -733,7 +728,7 @@ export function StudyPanel({
       ) : null}
       {history === "dev-info" ? (
         <HistoryDialog title="Developer tools" onClose={() => setHistory(null)}>
-          <p className="panel-hint">Use Dev during a website timer session to finish early for testing.</p>
+          <p className="panel-hint">Finish a website timer early for testing.</p>
           {shownSession && !shownSession.useDesktopPet ? (
             <button type="button" className="button" onClick={() => { setHistory(null); onOpenDev(); }}>
               Open Dev finish

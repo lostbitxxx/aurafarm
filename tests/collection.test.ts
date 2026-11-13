@@ -153,3 +153,50 @@ test("clothes ids are owned once per account and pets stay without clothes", () 
   assert.match(apply, /set clothes = target_clothes/);
   assert.match(apply, /security invoker/);
 });
+
+test("a new pet level banks one unspent collection choice", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0024_collection_level_rewards.sql", import.meta.url),
+    "utf8",
+  );
+  const grant = sql.slice(
+    sql.indexOf("function public.grant_study_experience"),
+    sql.indexOf("function public.claim_collection_reward"),
+  );
+  const claim = sql.slice(
+    sql.indexOf("function public.claim_collection_reward"),
+    sql.indexOf("function public.handle_new_user"),
+  );
+  const signup = sql.slice(
+    sql.indexOf("function public.handle_new_user"),
+    sql.indexOf("function public.reset_study_world"),
+  );
+  const reset = sql.slice(sql.indexOf("function public.reset_study_world"));
+
+  assert.match(sql, /unique \(user_id, pet_id, level_reached\)/);
+  assert.match(sql, /level_reached >= 2/);
+  assert.match(sql, /item_id is null/);
+  assert.match(grant, /select xp into previous_xp/);
+  assert.match(grant, /level = 1 \+ \(\(user_pets\.xp \+ gained\) \/ 100\)/);
+  assert.match(grant, /insert into public\.collection_rewards/);
+  assert.match(grant, /on conflict \(user_id, pet_id, level_reached\) do nothing/);
+  assert.match(grant, /gained := minutes \* xp_per_minute/);
+  assert.match(grant, /if apply_finish_bonus then/);
+  assert.match(grant, /security definer/);
+  assert.match(claim, /Item not in the collection/);
+  assert.match(claim, /Item already owned/);
+  assert.match(claim, /No reward to claim/);
+  assert.match(claim, /insert into public\.user_collections/);
+  assert.match(claim, /set item_id = target_item/);
+  assert.match(claim, /for update/);
+  assert.match(claim, /security definer/);
+  assert.match(signup, /'baby_slime'/);
+  assert.doesNotMatch(signup, /user_collections/);
+  assert.doesNotMatch(signup, /collection_rewards/);
+  assert.match(reset, /delete from public\.collection_rewards/);
+  assert.match(reset, /delete from public\.user_collections/);
+  assert.match(reset, /color = null/);
+  assert.match(reset, /hat = null/);
+  assert.match(reset, /clothes = null/);
+  assert.match(reset, /level = 1/);
+});

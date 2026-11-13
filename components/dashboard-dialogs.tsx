@@ -12,9 +12,11 @@ import { PixelPetArt } from "./pixel-pet";
 
 export function ShopDialog({
   ownedTypes,
+  farmerLevel,
   onClose,
 }: {
   ownedTypes: string[];
+  farmerLevel: number;
   onClose: () => void;
 }) {
   const catalog = shopCatalog();
@@ -22,9 +24,9 @@ export function ShopDialog({
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function onBuy(pet: ShopPet) {
+  async function onUnlock(pet: ShopPet) {
     if (pending) return;
-    const blocked = shopPurchaseBlock(pet.pet_type, owned);
+    const blocked = shopPurchaseBlock(pet.pet_type, owned, farmerLevel);
     if (blocked) {
       setError(blocked);
       return;
@@ -43,7 +45,7 @@ export function ShopDialog({
 
   return (
     <FarmDialog title="Shop" onClose={onClose} wide>
-      <p className="panel-hint">Take a pet home. The starter Baby Slime is not for sale.</p>
+      <p className="panel-hint">Every two levels unlocks the next pet.</p>
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -52,6 +54,7 @@ export function ShopDialog({
       <ul className="dialog-list">
         {catalog.map((pet) => {
           const isOwned = owned.includes(pet.pet_type);
+          const locked = farmerLevel < pet.unlockLevel;
           return (
             <li key={pet.pet_type} className="dialog-row">
               <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
@@ -61,14 +64,16 @@ export function ShopDialog({
               </div>
               {isOwned ? (
                 <span className="equipped-flag">Owned</span>
+              ) : locked ? (
+                <span className="shop-lock">Unlocks at level {pet.unlockLevel}</span>
               ) : (
                 <button
                   type="button"
                   className="button button-small"
                   disabled={pending !== null}
-                  onClick={() => onBuy(pet)}
+                  onClick={() => onUnlock(pet)}
                 >
-                  {pending === pet.pet_type ? "…" : "Buy"}
+                  {pending === pet.pet_type ? "…" : "Unlock"}
                 </button>
               )}
             </li>
@@ -92,6 +97,8 @@ export function CollectionDialog({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  rewardCount,
+  onChooseReward,
   onClose,
   onColorApplied,
   onHatApplied,
@@ -101,6 +108,8 @@ export function CollectionDialog({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  rewardCount: number;
+  onChooseReward: () => void;
   onClose: () => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
@@ -153,6 +162,13 @@ export function CollectionDialog({
   return (
     <FarmDialog title="Collection" onClose={onClose} wide>
       <p className="panel-hint">A color you own can be applied to any pet.</p>
+      {rewardCount > 0 ? (
+        <p className="collection-reward-entry">
+          <button type="button" className="button button-small" onClick={onChooseReward}>
+            {rewardCount === 1 ? "Choose a reward" : `Choose a reward (${rewardCount})`}
+          </button>
+        </p>
+      ) : null}
       <div className="collection-tabs" role="tablist" aria-label="Collection categories">
         {COLLECTION_TABS.map((entry) => (
           <button

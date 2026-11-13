@@ -173,6 +173,10 @@ test("a missing timer column tells the farmer to run migration 0011", () => {
     /migration 0012/,
   );
   assert.equal(studyTimerMigrationMessage("Sign in to finish a study session."), "Sign in to finish a study session.");
+  assert.match(
+    studyTimerMigrationMessage("Could not find the table 'public.collection_rewards' in the schema cache") ?? "",
+    /migration 0024/,
+  );
 });
 
 test("the desk title is the equipped pet rather than the first row", () => {

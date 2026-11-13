@@ -99,12 +99,14 @@ test("saving a study plan needs the column grant from migration 0022", () => {
     assert.match(sql, new RegExp(column));
   }
   assert.doesNotMatch(sql.slice(sql.indexOf("grant update")), /\bpoints\b/);
-  assert.match(
-    customizationMigrationMessage("permission denied for column study_mode"),
-    /0022/,
+  const permissionDenied = customizationMigrationMessage(
+    "permission denied for column study_mode",
   );
-  assert.match(
-    customizationMigrationMessage('column "study_mode" does not exist'),
-    /0021/,
+  assert.ok(permissionDenied);
+  assert.match(permissionDenied, /0022/);
+  const missingColumn = customizationMigrationMessage(
+    'column "study_mode" does not exist',
   );
+  assert.ok(missingColumn);
+  assert.match(missingColumn, /0021/);
 });

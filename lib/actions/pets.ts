@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
-import { shopPurchaseBlock } from "@/lib/pets";
+import { highestPetLevel, shopPurchaseBlock, wholePoints } from "@/lib/pets";
+import { levelFromExperience } from "@/lib/study";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,11 +47,14 @@ export async function buyPet(petType: string) {
     return { error: "Sign in to buy a pet." };
   }
 
-  const petsResult = await supabase.from("user_pets").select("pet_type").eq("user_id", userId);
+  const petsResult = await supabase.from("user_pets").select("pet_type, xp").eq("user_id", userId);
   if (petsResult.error) return { error: petsResult.error.message };
 
   const ownedTypes = (petsResult.data ?? []).map((pet) => String(pet.pet_type));
-  const blocked = shopPurchaseBlock(petType, ownedTypes);
+  const reachedLevel = highestPetLevel(
+    (petsResult.data ?? []).map((pet) => levelFromExperience(wholePoints(pet.xp))),
+  );
+  const blocked = shopPurchaseBlock(petType, ownedTypes, reachedLevel);
   if (blocked) return { error: blocked };
 
   const { error } = await supabase.rpc("purchase_pet", {
@@ -59,10 +63,11 @@ export async function buyPet(petType: string) {
   if (error) {
     if (/already owned/i.test(error.message)) return { error: "You already own that pet." };
     if (/not for sale/i.test(error.message)) return { error: "That pet is not for sale." };
+    const locked = error.message.match(/reach level (\d+)/i);
+    if (locked) return { error: `Reach level ${locked[1]} to unlock this pet.` };
     return { error: error.message };
   }
 
-  revalidatePath("/shop");
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
   return { error: "" };
@@ -148,6 +153,38 @@ export async function applyPetClothes(petId: string, clothesId: string | null) {
     if (/not owned/i.test(error.message)) return { error: "You do not own those clothes." };
     if (/not found/i.test(error.message)) return { error: "That pet could not be found." };
     if (/not in the collection/i.test(error.message)) return { error: "Those clothes could not be applied." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function claimCollectionReward(itemId: string) {
+  if (!sampleColor(itemId) && !sampleHat(itemId) && !sampleClothes(itemId)) {
+    return { error: "That item could not be chosen." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to choose a reward." };
+  }
+
+  const { error } = await supabase.rpc("claim_collection_reward", {
+    target_item: itemId,
+  });
+  if (error) {
+    if (/collection_rewards|claim_collection_reward/i.test(error.message)) {
+      return { error: "Run migration 0024 before choosing a level reward." };
+    }
+    if (/already owned/i.test(error.message)) return { error: "You already own that item." };
+    if (/no reward to claim/i.test(error.message)) return { error: "You do not have a reward to choose." };
+    if (/not in the collection/i.test(error.message)) return { error: "That item could not be chosen." };
+    if (/not authenticated/i.test(error.message)) return { error: "Sign in to choose a reward." };
     return { error: error.message };
   }
 

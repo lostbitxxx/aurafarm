@@ -10,9 +10,8 @@ const nextConfig: NextConfig = {
       key: header.key,
       value: header.value,
     }));
-    // Dotted public files (the Godot export) need these headers. The dev
-    // HMR socket at /_next/hmr must not receive them, or the upgrade fails
-    // and the dev page never hydrates.
+    // Public files receive these headers. The dev HMR socket at /_next/hmr
+    // must not, or the upgrade fails and the dev page never hydrates.
     return [
       {
         source: "/((?!_next/hmr|_next/webpack-hmr).*)",

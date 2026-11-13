@@ -207,6 +207,121 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
 }
 
+/* Cream public pages (/login, /privacy). Scoped so / and /register stay on the dark canopy. */
+.paper-shell {
+  --dialog-ink: #23392d;
+  --dialog-muted: #596650;
+  --dialog-surface: #fff9ed;
+  --dialog-line: #c5cbb9;
+  --dialog-lime: #c5ef47;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.paper-shell .topbar,
+.paper-shell .wordmark,
+.paper-shell .topbar a {
+  color: var(--ink);
+}
+
+.paper-shell .button-ghost {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
+}
+
+.paper-shell .eyebrow {
+  color: var(--slime-deep);
+}
+
+.paper-shell .lede,
+.paper-shell .auth-aside p,
+.paper-shell .steps {
+  color: var(--ink-soft);
+}
+
+.paper-shell .auth-aside h1,
+.paper-shell .paper-main h1 {
+  color: var(--ink);
+}
+
+.paper-main {
+  width: min(40rem, calc(100% - 8vw));
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.paper-main .lede {
+  max-width: none;
+}
+
+.paper-main .steps {
+  max-width: 38rem;
+}
+
+.paper-shell .auth-layout {
+  flex: 1;
+  width: min(1120px, calc(100% - 8vw));
+  margin: 0 auto;
+  align-content: center;
+}
+
+.paper-shell .auth-card {
+  background: var(--dialog-surface);
+  color: var(--dialog-ink);
+  border: 1px solid var(--dialog-line);
+  border-radius: 1.15rem;
+  box-shadow: 0 15px 60px rgba(24, 46, 40, 0.12);
+  padding: 1.4rem;
+}
+
+.paper-shell .auth-card h2 {
+  color: var(--dialog-ink);
+  font-size: 1.7rem;
+}
+
+.paper-shell .auth-card .field {
+  color: var(--dialog-ink);
+}
+
+.paper-shell .auth-card .field input {
+  border: 1px solid #9daa90;
+  background: #fffdf6;
+  color: var(--dialog-ink);
+}
+
+.paper-shell .auth-card .button {
+  background: var(--dialog-lime);
+  color: var(--dialog-ink);
+}
+
+.paper-shell .auth-card .form-switch {
+  color: var(--dialog-muted);
+}
+
+.paper-shell .auth-card .form-switch a {
+  color: var(--dialog-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.paper-shell .auth-card .form-error {
+  color: #733d2c;
+}
+
+.paper-shell .auth-card .field input:focus,
+.paper-shell .auth-card .button:focus-visible,
+.paper-shell .topbar a:focus-visible,
+.paper-shell .form-switch a:focus-visible {
+  outline: 3px solid #8261a7;
+  outline-offset: 3px;
+}
+
 .desk {
   flex: 1;
   width: 100%;
@@ -530,6 +645,12 @@ button.dialog-row {
   margin-left: auto;
 }
 
+.shop-lock {
+  font-size: 0.85rem;
+  color: var(--dialog-muted);
+  white-space: nowrap;
+}
+
 .dialog-pet-art {
   width: 48px;
   height: 48px;
@@ -614,10 +735,6 @@ button.dialog-row {
 .living-room-block { margin-bottom: 0.5rem; }
 
 .room-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
@@ -627,8 +744,7 @@ button.dialog-row {
   font-size: clamp(1.5rem, 3vw, 2rem);
 }
 
-.room-subtitle,
-.room-persist-note {
+.room-subtitle {
   margin: 0.25rem 0 0;
   color: var(--ink-soft);
   font-size: 0.9rem;
@@ -707,7 +823,6 @@ button.dialog-row {
   cursor: pointer;
 }
 
-.room-note,
 .room-empty {
   position: absolute;
   z-index: 3;
@@ -812,6 +927,122 @@ button.dialog-row {
   color: var(--dialog-ink, #23392d);
   font-family: var(--serif);
   font-size: 1.15rem;
+}
+
+.collection-reward-entry {
+  margin: 0 0 0.85rem;
+}
+
+.level-up {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(16, 32, 24, 0.72);
+}
+
+.level-up-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  width: min(100%, 26rem);
+  min-height: 22rem;
+  padding: 2.4rem 1rem 1.4rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.level-up-light,
+.level-up-rays,
+.level-up-confetti {
+  position: absolute;
+  pointer-events: none;
+}
+
+.level-up-light {
+  top: 2.2rem;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 210, 0.95) 0%, rgba(227, 154, 69, 0.42) 42%, transparent 70%);
+  animation: level-up-glow 1.6s ease-in-out infinite;
+}
+
+.level-up-rays {
+  top: 0.4rem;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  translate: -50% 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 236, 180, 0.5) 0 8deg, transparent 8deg 24deg);
+  mask-image: radial-gradient(circle, transparent 18%, #000 48%, transparent 72%);
+  animation: level-up-spin 9s linear infinite;
+}
+
+.level-up-confetti {
+  inset: 0;
+  overflow: hidden;
+}
+
+.level-up-bit {
+  position: absolute;
+  top: -16px;
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  animation-name: level-up-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+.level-up-pet {
+  position: relative;
+  z-index: 1;
+  width: 168px;
+  height: 168px;
+}
+
+.level-up-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.level-up-kicker,
+.level-up-title {
+  margin: 0;
+  color: #fff8e8;
+}
+
+.level-up-kicker {
+  letter-spacing: 0.04em;
+}
+
+.level-up-title {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  line-height: 0.95;
+}
+
+.level-up-stage .button {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes level-up-glow {
+  50% { transform: scale(1.08); opacity: 0.82; }
+}
+
+@keyframes level-up-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes level-up-fall {
+  to { transform: translateY(70vh) rotate(220deg); opacity: 0.15; }
 }
 
 .desk-pets {
@@ -954,7 +1185,7 @@ button.dialog-row {
 .monitor-dots i:nth-child(2) { background: var(--amber); }
 .monitor-dots i:nth-child(3) { background: #d4685a; }
 
-.godot-frame, .skeleton-frame {
+.skeleton-frame {
   display: block;
   width: 100%;
   height: min(68vh, 640px);
@@ -1047,7 +1278,7 @@ button.dialog-row {
   gap: 0.15rem;
 }
 
-.score-layout, .shop-layout {
+.score-layout {
   width: min(720px, calc(100% - 8vw));
   margin: 0 auto 3rem;
 }
@@ -1394,7 +1625,25 @@ button.dialog-row {
 @media (max-width: 860px) {
   .hero, .auth-layout, .desk, .desk.is-rail-closed { grid-template-columns: 1fr; }
   .hero { padding-top: 1rem; }
-  .godot-frame, .skeleton-frame { min-height: 280px; height: 46vh; }
+  .paper-shell .topbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    row-gap: 0.55rem;
+  }
+  .paper-main {
+    width: min(40rem, calc(100% - 2.5rem));
+    padding: 1.25rem 0 3rem;
+  }
+  .paper-shell .auth-layout {
+    width: min(1120px, calc(100% - 2.5rem));
+    padding: 0.5rem 0 3rem;
+  }
+  .paper-shell .auth-aside h1,
+  .paper-shell .paper-main h1 {
+    font-size: clamp(2.4rem, 10vw, 3.6rem);
+  }
+  .skeleton-frame { min-height: 280px; height: 46vh; }
   .scene-foot { flex-direction: column; align-items: start; }
   .scene-actions { justify-content: flex-start; }
   .level-bar {
@@ -1427,6 +1676,7 @@ button.dialog-row {
   .pet-detail { grid-template-columns: 1fr; }
   .big-pet { min-height: 140px; }
   .big-pet-art { width: 120px; height: 120px; }
+  .level-up-pet { width: 132px; height: 132px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1442,7 +1692,10 @@ button.dialog-row {
   .slime-mark,
   .pixel-pet-art.is-walking,
   .room-heart,
-  .room-pet-wrap {
+  .room-pet-wrap,
+  .level-up-light,
+  .level-up-rays,
+  .level-up-bit {
     animation: none !important;
     transition: none !important;
   }

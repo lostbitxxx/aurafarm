@@ -66,7 +66,6 @@ export async function POST(
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/sessions/${id}`);
-  revalidatePath("/shop");
   revalidatePath("/inventory");
   const origin = new URL(request.url).origin;
   return NextResponse.json(buildScoreResult(origin, id, row.xp, row.distracted));
