@@ -11,7 +11,9 @@ import {
   InventoryDialog,
   ShopDialog,
 } from "./dashboard-dialogs";
+import { FriendsDialog } from "./friends-dialog";
 import { previewReward } from "@/lib/collection-catalog";
+import { type FriendCard } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -63,6 +65,9 @@ export function DashboardScreen({
   monthlySessionGoal,
   dailySessionGoal,
   studyPlan,
+  friendCode,
+  friends,
+  friendsError,
 }: {
   userId: string;
   displayName: string;
@@ -89,10 +94,13 @@ export function DashboardScreen({
     monthlySessions: number;
     answers: BehaviorAnswers | null;
   } | null;
+  friendCode: string;
+  friends: readonly FriendCard[];
+  friendsError: string | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<
-    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | null
+    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | null
   >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
@@ -245,6 +253,7 @@ export function DashboardScreen({
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
+        onOpenFriends={() => setDialog("friends")}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -310,6 +319,14 @@ export function DashboardScreen({
         />
       ) : null}
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "friends" ? (
+        <FriendsDialog
+          friendCode={friendCode}
+          friends={friends}
+          friendsError={friendsError}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {dialog === "edit-plan" && studyPlan ? (
         <EditPlanDialog
           displayName={displayName}
