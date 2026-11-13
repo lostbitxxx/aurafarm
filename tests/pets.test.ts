@@ -58,8 +58,11 @@ test("the shop catalog lists the sale pets and skips the starter", () => {
   assert.equal(SHOP_PRICE, 100);
   const catalog = shopCatalog();
   assert.deepEqual(
-    catalog.map((pet) => pet.pet_type),
-    ["lantern_moth", "river_newt"],
+    catalog.map((pet) => [pet.pet_type, pet.unlockLevel]),
+    [
+      ["lantern_moth", 2],
+      ["river_newt", 4],
+    ],
   );
   for (const pet of catalog) {
     assert.equal("price" in pet, false);

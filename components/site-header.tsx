@@ -24,6 +24,13 @@ export function SiteHeader({
         <Link href="/dashboard" className="wordmark">
           Aurafarm
         </Link>
+        {onOpenShop ? (
+          <button type="button" className="topbar-link" onClick={onOpenShop}>
+            Shop
+          </button>
+        ) : (
+          <Link href="/dashboard">Shop</Link>
+        )}
         {onOpenCollection ? (
           <button type="button" className="topbar-link" onClick={onOpenCollection}>
             Collection

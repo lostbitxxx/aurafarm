@@ -1,6 +1,7 @@
 export const STARTER_PET_TYPE = "baby_slime";
 export const STARTER_PET_LEVEL = 1;
 export const SHOP_PRICE = 100;
+export const SHOP_LEVELS_PER_UNLOCK = 2;
 
 export function wholePoints(value: unknown) {
   const points = Number(value);
@@ -55,20 +56,38 @@ export type ShopPet = {
   pet_type: string;
   name: string;
   note: string;
+  unlockLevel: number;
 };
 
 export function shopCatalog(): ShopPet[] {
-  return Object.entries(PET_COPY).flatMap(([pet_type, pet]) =>
+  const sale = Object.entries(PET_COPY).flatMap(([pet_type, pet]) =>
     pet.price === undefined
       ? []
       : [{ pet_type, name: pet.name, note: pet.note }],
   );
+  return sale.map((pet, index) => ({
+    ...pet,
+    unlockLevel: (index + 1) * SHOP_LEVELS_PER_UNLOCK,
+  }));
 }
 
-export function shopPurchaseBlock(petType: string, ownedTypes: string[]) {
+export function highestPetLevel(levels: readonly number[]) {
+  let highest = STARTER_PET_LEVEL;
+  for (const level of levels) {
+    if (!Number.isFinite(level)) continue;
+    const whole = Math.floor(level);
+    if (whole > highest) highest = whole;
+  }
+  return highest;
+}
+
+export function shopPurchaseBlock(petType: string, ownedTypes: readonly string[], reachedLevel: number) {
   const pet = shopCatalog().find((item) => item.pet_type === petType);
   if (!pet) return "That pet is not for sale.";
   if (ownedTypes.includes(petType)) return "You already own that pet.";
+  if (highestPetLevel([reachedLevel]) < pet.unlockLevel) {
+    return `Reach level ${pet.unlockLevel} to unlock this pet.`;
+  }
   return "";
 }
 
