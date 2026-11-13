@@ -35,7 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Godot editor cache. The web export in public/godot-game is committed.
+# Editor cache next to godot/. The export in public/godot-game is committed.
 godot/.godot/
 godot/.import/
 

@@ -23,7 +23,7 @@ create unique index if not exists user_pets_one_desktop_active
   where is_desktop_active;
 
 comment on column public.user_pets.is_desktop_active is
-  'True for the single pet currently shown in the desktop Godot frame.';
+  'True for the single pet equipped on the desktop.';
 
 alter table public.profiles enable row level security;
 alter table public.user_pets enable row level security;

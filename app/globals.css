@@ -954,7 +954,7 @@ button.dialog-row {
 .monitor-dots i:nth-child(2) { background: var(--amber); }
 .monitor-dots i:nth-child(3) { background: #d4685a; }
 
-.godot-frame, .skeleton-frame {
+.skeleton-frame {
   display: block;
   width: 100%;
   height: min(68vh, 640px);
@@ -1302,7 +1302,7 @@ button.dialog-row {
 @media (max-width: 860px) {
   .hero, .auth-layout, .desk, .desk.is-rail-closed { grid-template-columns: 1fr; }
   .hero { padding-top: 1rem; }
-  .godot-frame, .skeleton-frame { min-height: 280px; height: 46vh; }
+  .skeleton-frame { min-height: 280px; height: 46vh; }
   .scene-foot { flex-direction: column; align-items: start; }
   .scene-actions { justify-content: flex-start; }
   .level-bar {

@@ -1,6 +1,6 @@
 # Aurafarm
 
-A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `public.profiles` row, and a level 1 `baby_slime` in `public.user_pets` with `is_desktop_active` set. The dashboard lists those pets and equips one to the desktop iframe at `/godot-game/index.html`.
+A Next.js desk for a desktop pet. Registration creates a Supabase user, a `public.profiles` row, and a level 1 `baby_slime` in `public.user_pets` with `is_desktop_active` set. The dashboard lists those pets and shows the ones placed in the living room.
 
 ## Setup
 
@@ -12,8 +12,6 @@ A Next.js desk for a Godot 4 pet. Registration creates a Supabase user, a `publi
 npm install
 npm run dev
 ```
-
-4. The desk already loads the committed Godot 4.5.2 export in [`public/godot-game`](public/godot-game). Rebuild that folder from [`godot`](godot) with the same editor when the scene changes, and leave thread support off.
 
 The desktop pet is a Mac Electron app. Windows is not built yet. From the repo root, with the public Supabase keys in `.env.local`:
 
@@ -29,15 +27,13 @@ Build a Mac zip from `desktop/` with `npm run pack`. The zip is written to `desk
 
 `npm run pack` skips code signing. Sign a release with `npm run pack:signed` on a Mac that has `CSC_LINK` and `CSC_KEY_PASSWORD` in the environment. Do not commit the certificate or the password. Until that signed zip is the download URL, the desk says to right-click the app and choose Open.
 
-## SharedArrayBuffer
+## Cross-origin isolation
 
-`next.config.ts` sends these headers on every dev and production response, including the Godot files:
+`next.config.ts` sends these headers on every dev and production response, except the dev HMR socket:
 
 - `Cross-Origin-Opener-Policy: same-origin`
 - `Cross-Origin-Embedder-Policy: require-corp`
 
-The placeholder frame reports whether `SharedArrayBuffer` is available.
-
 ## Study sessions
 
-Study sessions, the web pet, the Mac Electron pet, the frontmost-site reader, and the Finish score action are in the repo. What the pet can see is on `/privacy`. There is no browser extension, and there is no Windows pet.
+Study sessions, the living-room pets, the Mac Electron pet, the frontmost-site reader, and the Finish score action are in the repo. What the pet can see is on `/privacy`. There is no browser extension, and there is no Windows pet.
