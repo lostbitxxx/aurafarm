@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { describePet, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
-import { ROOM_ASSET_PATH, ROOM_PLACEMENT_NOTE } from "@/lib/pet-assets";
+import { ROOM_ASSET_PATH } from "@/lib/pet-assets";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Spot = { left: number; top: number };
@@ -142,11 +142,7 @@ export function LivingRoom({
             </button>
           </div>
         ) : null}
-        {placementReady && placed.length > 0 ? (
-          <p className="room-note">Stroke left ↔ right to pet · Click to inspect</p>
-        ) : null}
       </div>
-      <p className="room-persist-note">{ROOM_PLACEMENT_NOTE}</p>
     </section>
   );
 }
