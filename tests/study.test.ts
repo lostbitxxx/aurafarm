@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { equippedPet, type PetCard } from "../lib/pets";
 import {
   buildPetLaunchUrl,
+  buildStudyHistory,
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
   devTimerPasswordMatches,
@@ -18,6 +19,8 @@ import {
   focusedSeconds,
   formatClock,
   formatDuration,
+  formatHistoryTime,
+  formatHistoryXp,
   formatTimestamp,
   levelFromExperience,
   MAX_STUDY_MINUTES,
@@ -328,4 +331,72 @@ test("the admin reset clears only the signed-in farmer", () => {
   assert.match(panel, /deletes your study records/);
   assert.match(panel, /Reset my pets and study records/);
   assert.match(panel, /resetAllPets/);
+});
+
+test("study history merges session and XP rows by session id", () => {
+  const sessions = [
+    {
+      id: "session-a",
+      status: "submitted" as const,
+      durationSeconds: 1500,
+      endedAt: "2026-01-01T12:00:00.000Z",
+      xpAwarded: 55,
+    },
+    {
+      id: "session-b",
+      status: "cancelled" as const,
+      durationSeconds: 120,
+      endedAt: "2026-01-01T12:00:00.000Z",
+      xpAwarded: null,
+    },
+    {
+      id: "session-c",
+      status: "submitted" as const,
+      durationSeconds: 300,
+      endedAt: "2026-01-02T12:00:00.000Z",
+      xpAwarded: null,
+    },
+  ];
+  const scores = [
+    {
+      id: "session-a",
+      xp: 55,
+      distracted: false,
+      durationSeconds: 1500,
+      blockedHosts: [],
+      createdAt: "2026-01-01T12:00:00.000Z",
+    },
+    {
+      id: "orphan-xp",
+      xp: 12,
+      distracted: true,
+      durationSeconds: 600,
+      blockedHosts: ["example.com"],
+      createdAt: "2026-01-03T12:00:00.000Z",
+    },
+  ];
+
+  const { cards, unmatchedScores } = buildStudyHistory(sessions, scores);
+  assert.equal(cards.length, 3);
+  assert.equal(cards[0]?.id, "session-a");
+  assert.equal(cards[0]?.xp, 55);
+  assert.equal(cards[0]?.focusSeconds, null);
+  assert.equal(cards[0]?.distractionSeconds, null);
+  assert.equal(cards[1]?.status, "cancelled");
+  assert.equal(cards[1]?.xp, 0);
+  assert.equal(cards[2]?.xp, null);
+  assert.equal(unmatchedScores.length, 1);
+  assert.equal(unmatchedScores[0]?.id, "orphan-xp");
+  assert.equal(formatHistoryXp(null), "Not available");
+  assert.equal(formatHistoryXp(0), "0 XP");
+  assert.equal(formatHistoryTime(null), "Not available");
+  assert.equal(formatHistoryTime(0), "0s");
+
+  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /Study history/);
+  assert.match(panel, /Focus time/);
+  assert.match(panel, /Distraction time/);
+  assert.match(panel, /buildStudyHistory/);
+  assert.doesNotMatch(panel, /No blocked sites/);
+  assert.doesNotMatch(panel, /history-sessions-title/);
 });
