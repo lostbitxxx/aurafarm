@@ -74,7 +74,7 @@ export async function loadDashboard() {
         .limit(10),
       supabase
         .from("study_sessions")
-        .select("id, status, duration_seconds, ended_at, xp_awarded, use_desktop_pet, distraction_seconds")
+        .select("id, status, duration_seconds, ended_at, xp_awarded, use_desktop_pet, distraction_seconds, blocked_count")
         .eq("user_id", userId)
         .in("status", ["submitted", "cancelled"])
         .not("duration_seconds", "is", null)
@@ -165,6 +165,11 @@ export async function loadDashboard() {
         : Number.isFinite(Number(distractionRaw))
           ? Math.max(0, Math.trunc(Number(distractionRaw)))
           : null;
+    const blockedRaw = session.blocked_count;
+    const blockedCount =
+      blockedRaw === null || blockedRaw === undefined || !Number.isFinite(Number(blockedRaw))
+        ? null
+        : Math.max(0, Math.trunc(Number(blockedRaw)));
     return [
       {
         id: String(session.id),
@@ -174,6 +179,7 @@ export async function loadDashboard() {
         xpAwarded,
         useDesktopPet,
         distractionSeconds,
+        blockedCount,
       },
     ];
   });

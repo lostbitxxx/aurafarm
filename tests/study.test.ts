@@ -374,6 +374,7 @@ test("study history merges session and XP rows by session id", () => {
       xpAwarded: 55,
       useDesktopPet: true,
       distractionSeconds: 90,
+      blockedCount: 1,
     },
     {
       id: "session-b",
@@ -383,6 +384,7 @@ test("study history merges session and XP rows by session id", () => {
       xpAwarded: null,
       useDesktopPet: false,
       distractionSeconds: null,
+      blockedCount: 0,
     },
     {
       id: "session-c",
@@ -392,6 +394,17 @@ test("study history merges session and XP rows by session id", () => {
       xpAwarded: null,
       useDesktopPet: null,
       distractionSeconds: null,
+      blockedCount: 0,
+    },
+    {
+      id: "session-focused",
+      status: "submitted" as const,
+      durationSeconds: 20,
+      endedAt: "2026-01-04T12:00:00.000Z",
+      xpAwarded: 0,
+      useDesktopPet: true,
+      distractionSeconds: null,
+      blockedCount: 0,
     },
   ];
   const scores = [
@@ -414,7 +427,7 @@ test("study history merges session and XP rows by session id", () => {
   ];
 
   const { cards, unmatchedScores } = buildStudyHistory(sessions, scores);
-  assert.equal(cards.length, 3);
+  assert.equal(cards.length, 4);
   assert.equal(cards[0]?.id, "session-a");
   assert.equal(cards[0]?.xp, 55);
   assert.equal(cards[0]?.modeLabel, "With pet");
@@ -428,6 +441,10 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(cards[2]?.xp, null);
   assert.equal(cards[2]?.modeLabel, "Mode unknown");
   assert.equal(cards[2]?.showFocusDistraction, false);
+  assert.equal(cards[3]?.id, "session-focused");
+  assert.equal(cards[3]?.focusSeconds, 20);
+  assert.equal(cards[3]?.distractionSeconds, 0);
+  assert.equal(formatHistoryTime(cards[3]?.focusSeconds ?? null), "20s");
   assert.equal(unmatchedScores.length, 1);
   assert.equal(unmatchedScores[0]?.id, "orphan-xp");
   assert.equal(formatHistoryMode(true), "With pet");
@@ -440,6 +457,10 @@ test("study history merges session and XP rows by session id", () => {
   assert.deepEqual(historyFocusDistraction(1500, null, true), {
     focusSeconds: null,
     distractionSeconds: null,
+  });
+  assert.deepEqual(historyFocusDistraction(20, null, true, true), {
+    focusSeconds: 20,
+    distractionSeconds: 0,
   });
   assert.deepEqual(historyFocusDistraction(100, 0, true), {
     focusSeconds: 100,
@@ -471,5 +492,5 @@ test("study history merges session and XP rows by session id", () => {
   assert.doesNotMatch(panel, /history-sessions-title/);
 
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
-  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet, distraction_seconds/);
+  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet, distraction_seconds, blocked_count/);
 });
