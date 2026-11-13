@@ -93,6 +93,9 @@ test("the sign-in panel can quit the pet", () => {
   const preload = readFileSync(new URL("../desktop/preload.js", import.meta.url), "utf8");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(panel, /Session token/);
+  assert.match(script, /document\.addEventListener\("paste"/);
+  assert.match(main, /role: "paste"/);
+  assert.match(main, /context-menu/);
   assert.match(panel, /id="session-token"/);
   assert.match(script, /window\.pet\.useToken\(/);
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);
@@ -118,6 +121,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /closeFrontWindow/);
   assert.doesNotMatch(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(desk, /Copy session code/);
+  assert.match(desk, /navigator\.clipboard\.writeText\(code\)/);
   assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
   assert.match(desk, /Desktop pet/);
   assert.match(desk, /Website timer/);
