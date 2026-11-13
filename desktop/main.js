@@ -487,8 +487,14 @@ function stopStudyClock() {
   studyClock = null;
 }
 
+function claimClockMs(body) {
+  const claimed = Date.parse(body?.claimed_at);
+  return Number.isFinite(claimed) ? claimed : Date.now();
+}
+
 function beginFrontWatch(body) {
   stopFrontWatch();
+  const claimedAt = claimClockMs(body);
   study = {
     id: String(body.session_id),
     // Held in memory for the later score submit. It is not written to disk.
@@ -499,8 +505,8 @@ function beginFrontWatch(body) {
     log: createFrontLog(),
     distractedHosts: [],
     plannedSeconds: Number(body.planned_seconds),
-    startedAtMs: Number.isFinite(Date.parse(body.started_at)) ? Date.parse(body.started_at) : Date.now(),
-    startedAt: Date.now(),
+    startedAtMs: claimedAt,
+    startedAt: claimedAt,
   };
   if (body.pet_type) {
     petLog(

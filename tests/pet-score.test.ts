@@ -29,6 +29,7 @@ const { distractionSeconds, finishLabel, interpretScoreResponse, scoreRequestBod
     study: {
       token: string;
       startedAt: number;
+      plannedSeconds?: number;
       log: {
         blockedCount: number;
         blockedHosts: string[];
@@ -82,6 +83,18 @@ test("the finish label follows the blocked count", () => {
   assert.deepEqual(clear.blocked_hosts, []);
   assert.equal(clear.duration_seconds, 0);
   assert.equal(clear.distraction_seconds, 0);
+
+  const capped = scoreRequestBody(
+    {
+      token: "session-secret",
+      startedAt: 1_000,
+      plannedSeconds: 20,
+      log: { blockedCount: 0, blockedHosts: [] },
+    },
+    1_000 + 45_000,
+  );
+  assert.equal(capped.duration_seconds, 20);
+  assert.equal(capped.distraction_seconds, 0);
 
   const startedAt = 1_000_000;
   const distracted = scoreRequestBody(
@@ -170,6 +183,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /does not change experience/);
   assert.doesNotMatch(main, /grant_study_experience/);
   assert.match(main, /planned_seconds/);
+  assert.match(main, /function claimClockMs/);
+  assert.match(main, /startedAtMs: claimedAt/);
+  assert.doesNotMatch(main, /Date\.parse\(body\.started_at\)/);
   assert.match(main, /closeFrontTab/);
   assert.match(main, /remaining <= 0\) void finishSession/);
   assert.match(main, /response\.status === 200 \|\| response\.status === 409/);

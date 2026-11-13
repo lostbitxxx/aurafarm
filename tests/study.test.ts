@@ -309,6 +309,27 @@ test("a pet score stores blocklist seconds capped at the studied length", () => 
   assert.doesNotMatch(sql, /grant_study_experience\(\s*target_session_id,\s*studied,\s*result_distracted,\s*effective_count,\s*filtered,\s*finished,\s*distraction_seconds/);
 });
 
+test("a desktop finish is measured from the claim and cut to the planned length", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0029_claim_clock.sql", import.meta.url),
+    "utf8",
+  );
+  const score = sql.slice(sql.indexOf("function public.submit_study_score"), sql.indexOf("function public.cancel_study_session"));
+  assert.match(score, /session_row\.claimed_at is null/);
+  assert.match(score, /finished := now\(\) \+ interval '5 seconds' >= session_row\.claimed_at \+/);
+  assert.match(score, /studied := session_row\.planned_seconds/);
+  assert.match(score, /floor\(extract\(epoch from \(now\(\) - session_row\.claimed_at\)\)\)/);
+  assert.match(score, /least\(\s*studied,\s*distraction_seconds\s*\)/);
+  assert.doesNotMatch(score, /now\(\) - session_row\.started_at/);
+
+  const cancel = sql.slice(sql.indexOf("function public.cancel_study_session"), sql.indexOf("function public.claim_study_session"));
+  assert.match(cancel, /coalesce\(session_row\.claimed_at, session_row\.started_at\)/);
+  assert.match(cancel, /least\(\s*session_row\.planned_seconds/);
+
+  assert.match(sql, /claimed_at timestamptz/);
+  assert.match(sql, /claimed_at := claim_time/);
+});
+
 test("ending early records studied minutes without the finish bonus", () => {
   const sql = readFileSync(
     new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),
