@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { SocialPresence } from "@/components/social-presence";
 import { loadStudyScore } from "@/lib/study-score";
 import { formatDuration, formatTimestamp } from "@/lib/study";
 
@@ -20,6 +21,7 @@ export default async function StudyScorePage({
 
   return (
     <>
+      <SocialPresence />
       <SiteHeader displayName={score.displayName} />
       <main className="score-layout">
         <section className="study-panel" aria-label="Session">

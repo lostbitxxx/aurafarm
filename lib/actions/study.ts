@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createLaunchCode, hashSecret } from "@/lib/scoring";
 import {
   closeBlockedMigrationMessage,
+  parseLocalDay,
   plannedStudySeconds,
   startSessionDecision,
   studyTimerMigrationMessage,
 } from "@/lib/study";
+import { touchSocialPresence } from "@/lib/actions/friends";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -112,9 +114,17 @@ export async function setCloseBlocked(enabled: boolean) {
   return { error: "" };
 }
 
-export async function completeStudyTimer(sessionId: string, devPassword = "") {
+export async function completeStudyTimer(
+  sessionId: string,
+  devPassword = "",
+  localDay = "",
+) {
   if (!sessionIdPattern.test(sessionId)) {
     return { error: "That session could not be finished." };
+  }
+  const day = parseLocalDay(localDay);
+  if (!day) {
+    return { error: "Choose a valid local day for your streak." };
   }
   if (!isSupabaseConfigured()) {
     return { error: "Supabase is not configured." };
@@ -126,9 +136,11 @@ export async function completeStudyTimer(sessionId: string, devPassword = "") {
     return { error: "Sign in to finish a study session." };
   }
 
+  // Server strips local_day for planned sessions under 5 minutes.
   const { error } = await supabase.rpc("complete_study_timer", {
     target_session_id: sessionId,
     dev_password: devPassword,
+    local_day: day,
   });
 
   if (error) {
@@ -136,6 +148,7 @@ export async function completeStudyTimer(sessionId: string, devPassword = "") {
     return { error: studyTimerMigrationMessage(error.message) ?? error.message };
   }
 
+  await touchSocialPresence(true);
   revalidatePath("/dashboard");
   revalidatePath("/inventory");
   return { error: "" };
@@ -164,6 +177,7 @@ export async function endStudyEarly(sessionId: string) {
     return { error: studyTimerMigrationMessage(error.message) ?? error.message };
   }
 
+  await touchSocialPresence(true);
   revalidatePath("/dashboard");
   revalidatePath("/inventory");
   return { error: "" };

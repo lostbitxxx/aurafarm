@@ -19,7 +19,9 @@ import {
   formatTimestamp,
   experienceForEarlyEnd,
   experienceForSession,
+  farmerLocalDay,
   remainingSeconds,
+  sessionCountsForStreak,
   STUDY_LENGTHS,
   type ActiveStudySession,
   type RecordedStudySession,
@@ -52,6 +54,8 @@ export function StudyPanel({
   placedIds,
   placementReady,
   preferredSessionMinutes,
+  streakBoostActive = false,
+  streakQualifiedToday = false,
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
@@ -76,6 +80,8 @@ export function StudyPanel({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   preferredSessionMinutes?: number | null;
+  streakBoostActive?: boolean;
+  streakQualifiedToday?: boolean;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
@@ -183,7 +189,7 @@ export function StudyPanel({
     if (!shownSession) return { error: "No study session is running." };
     setPending(true);
     setError(null);
-    const result = await completeStudyTimer(shownSession.id, devPasswordValue);
+    const result = await completeStudyTimer(shownSession.id, devPasswordValue, farmerLocalDay());
     setPending(false);
     if (result.error) {
       setError(result.error);
@@ -549,8 +555,24 @@ export function StudyPanel({
               <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
             ) : (
               <p>
-                A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
-                {experienceForEarlyEnd(lengthSeconds, false)} XP.
+                A full finish is{" "}
+                {experienceForSession(
+                  lengthSeconds,
+                  false,
+                  streakBoostActive && sessionCountsForStreak(lengthSeconds),
+                )}{" "}
+                XP
+                {streakBoostActive && sessionCountsForStreak(lengthSeconds)
+                  ? " with streak boost"
+                  : ""}
+                . Ending early is {experienceForEarlyEnd(lengthSeconds, false)} XP and does not count
+                for the streak
+                {!sessionCountsForStreak(lengthSeconds)
+                  ? ". Custom sessions need at least 5 minutes to count for the streak"
+                  : streakQualifiedToday
+                    ? ". Today already counts"
+                    : ""}
+                .
               </p>
             )}
             <div className="tracker-actions">

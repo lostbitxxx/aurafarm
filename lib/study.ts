@@ -8,14 +8,18 @@ export const STUDY_LENGTHS = [
 const LEGACY_STUDY_SECONDS = [1500, 3300, 5100];
 
 export const DEFAULT_STUDY_SECONDS = 300;
+export const STREAK_MIN_SECONDS = 300;
 export const MIN_STUDY_MINUTES = 1;
 export const MAX_STUDY_MINUTES = 240;
 export const XP_PER_LEVEL = 100;
 export const XP_PER_MINUTE = 2;
 export const FINISH_BONUS = 1.1;
+export const STREAK_BONUS = 1.1;
 export const DISTRACTED_PENALTY = 0.7;
 export const FINISH_BONUS_NUMERATOR = 11;
 export const FINISH_BONUS_DENOMINATOR = 10;
+export const STREAK_BONUS_NUMERATOR = 11;
+export const STREAK_BONUS_DENOMINATOR = 10;
 export const DISTRACTED_PENALTY_NUMERATOR = 7;
 export const DISTRACTED_PENALTY_DENOMINATOR = 10;
 export const DEV_TIMER_PASSWORD = "emia";
@@ -191,10 +195,17 @@ export function storedStudySeconds(value: unknown) {
   return LEGACY_STUDY_SECONDS.includes(seconds) ? seconds : null;
 }
 
-export function experienceForSession(studiedSeconds: number, distracted: boolean) {
+export function experienceForSession(
+  studiedSeconds: number,
+  distracted: boolean,
+  streakActive = false,
+) {
   if (!Number.isFinite(studiedSeconds) || studiedSeconds < 60) return 0;
   const minutes = Math.floor(studiedSeconds / 60);
   let gain = Math.floor((minutes * XP_PER_MINUTE * FINISH_BONUS_NUMERATOR) / FINISH_BONUS_DENOMINATOR);
+  if (streakActive) {
+    gain = Math.floor((gain * STREAK_BONUS_NUMERATOR) / STREAK_BONUS_DENOMINATOR);
+  }
   if (distracted) {
     gain = Math.floor((gain * DISTRACTED_PENALTY_NUMERATOR) / DISTRACTED_PENALTY_DENOMINATOR);
   }
@@ -202,7 +213,84 @@ export function experienceForSession(studiedSeconds: number, distracted: boolean
 }
 
 export function experienceForDuration(durationSeconds: number) {
-  return experienceForSession(durationSeconds, false);
+  return experienceForSession(durationSeconds, false, false);
+}
+
+export function farmerLocalDay(now: Date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** Re-render after local midnight so live streak display can drop when a day is skipped. */
+export function subscribeFarmerLocalDay(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const msUntilNextLocalMidnight = () => {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return Math.max(1000, next.getTime() - now.getTime());
+  };
+
+  let timeoutId = window.setTimeout(function onLocalMidnight() {
+    onStoreChange();
+    timeoutId = window.setTimeout(onLocalMidnight, msUntilNextLocalMidnight());
+  }, msUntilNextLocalMidnight());
+
+  return () => window.clearTimeout(timeoutId);
+}
+
+export function parseLocalDay(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return value;
+}
+
+export function shiftLocalDay(day: string, deltaDays: number) {
+  const parsed = parseLocalDay(day);
+  if (!parsed || !Number.isInteger(deltaDays)) return null;
+  const year = Number(parsed.slice(0, 4));
+  const month = Number(parsed.slice(5, 7));
+  const dayOfMonth = Number(parsed.slice(8, 10));
+  const utc = new Date(Date.UTC(year, month - 1, dayOfMonth + deltaDays));
+  const nextYear = utc.getUTCFullYear();
+  const nextMonth = String(utc.getUTCMonth() + 1).padStart(2, "0");
+  const nextDay = String(utc.getUTCDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
+export function displayStreakCount(
+  streakCount: number,
+  streakLocalDate: string | null,
+  todayLocal: string,
+) {
+  const safe = Number.isFinite(streakCount) ? Math.max(0, Math.floor(streakCount)) : 0;
+  if (safe <= 0 || !streakLocalDate) return 0;
+  const yesterday = shiftLocalDay(todayLocal, -1);
+  if (streakLocalDate === todayLocal || streakLocalDate === yesterday) return safe;
+  return 0;
+}
+
+export function formatStreakLabel(streakCount: number) {
+  const safe = Number.isFinite(streakCount) ? Math.max(0, Math.floor(streakCount)) : 0;
+  return safe === 1 ? "1 day" : `${safe} days`;
+}
+
+export function sessionCountsForStreak(plannedSeconds: number) {
+  return Number.isFinite(plannedSeconds) && plannedSeconds >= STREAK_MIN_SECONDS;
 }
 
 export function experienceForEarlyEnd(studiedSeconds: number, distracted: boolean) {
@@ -271,6 +359,9 @@ export function studyTimerMigrationMessage(message: string | null) {
   }
   if (/end_study_early/i.test(message)) {
     return "Run migration 0014 before ending a study session early.";
+  }
+  if (/streak_count|streak_local_date|touch_daily_streak/i.test(message)) {
+    return "Run migration 0027 before using daily streaks.";
   }
   if (/study_sessions_planned_seconds_check/i.test(message)) {
     return "Run migration 0017 before choosing a custom study length.";

@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { acceptFriend, declineFriend, sendFriendRequest } from "@/lib/actions/friends";
-import { acceptedFriends, incomingFriendRequests, type FriendCard } from "@/lib/friends";
+import { useEffect, useState, type FormEvent } from "react";
+import { acceptFriend, declineFriend, refreshFriendList, sendFriendRequest } from "@/lib/actions/friends";
+import { acceptedFriends, incomingFriendRequests, socialStatusLabel, type FriendCard } from "@/lib/friends";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
 
 type FriendsTab = "list" | "add";
 
 export function FriendsDialog({
-  friendCode,
   friends,
   friendsError,
   onClose,
 }: {
-  friendCode: string;
   friends: readonly FriendCard[];
   friendsError: string | null;
   onClose: () => void;
@@ -26,7 +24,7 @@ export function FriendsDialog({
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const signature = friends
-    .map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}:${friend.petType ?? ""}`)
+    .map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}:${friend.presence}:${friend.petType ?? ""}`)
     .join("|");
   const [snap, setSnap] = useState(signature);
   const [errorSnap, setErrorSnap] = useState(friendsError);
@@ -42,6 +40,38 @@ export function FriendsDialog({
 
   const accepted = acceptedFriends(rows);
   const incoming = incomingFriendRequests(rows);
+
+  async function loadFriends() {
+    const result = await refreshFriendList();
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setRows(result.friends);
+  }
+
+  function openFriendList() {
+    setTab("list");
+    void loadFriends();
+  }
+
+  useEffect(() => {
+    let stopped = false;
+    async function load() {
+      const result = await refreshFriendList();
+      if (stopped) return;
+      if (result.error) setError(result.error);
+      else setRows(result.friends);
+    }
+    void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 10_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   async function onSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,7 +131,7 @@ export function FriendsDialog({
           aria-selected={tab === "list"}
           aria-controls="friends-panel-list"
           className={tab === "list" ? "button button-small" : "button button-small button-ghost"}
-          onClick={() => setTab("list")}
+          onClick={openFriendList}
         >
           Friend List
         </button>
@@ -134,7 +164,12 @@ export function FriendsDialog({
               {accepted.map((friend) => (
                 <li key={friend.friendId} className="dialog-row">
                   <FriendAppearance friend={friend} />
-                  <strong>{friend.displayName}</strong>
+                  <div>
+                    <strong>{friend.displayName}</strong>
+                    <span className={`friend-presence friend-presence-${friend.presence}`}>
+                      {socialStatusLabel(friend.presence)}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -143,11 +178,6 @@ export function FriendsDialog({
           )
         ) : (
           <>
-            {friendCode ? (
-              <p className="panel-hint">
-                Your friend code <strong className="friend-code">{friendCode}</strong>
-              </p>
-            ) : null}
             <form className="friend-add-form" onSubmit={onSend}>
               <label className="field friend-code-field">
                 <input

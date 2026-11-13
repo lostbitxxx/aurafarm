@@ -297,6 +297,17 @@ async function restoreSession() {
   }
 }
 
+async function touchPetPresence(present) {
+  if (!supabase) return;
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return;
+  const { error } = await supabase.rpc("touch_social_presence", {
+    source: "pet",
+    present,
+  });
+  if (error) petLog(`[pet] presence update failed: ${error.message}`);
+}
+
 async function refreshPet() {
   if (!supabase) {
     petLog("[pet] no Supabase client. .env.local needs NEXT_PUBLIC_SUPABASE_URL and the publishable key.");
@@ -307,6 +318,7 @@ async function refreshPet() {
     petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
     return;
   }
+  await touchPetPresence(true);
   const { data, error } = await supabase
     .from("user_pets")
     .select("pet_type, level")
@@ -739,7 +751,7 @@ async function submitScoreDirect(current, body, postFailure) {
     duration_seconds: body.duration_seconds,
     blocked_count: body.blocked_count,
     blocked_hosts: body.blocked_hosts,
-    local_day: body.local_day,
+    local_day: body.local_day ?? null,
   });
   if (error) {
     scoreDebug(`[score] rpc ${current.id} rejected: ${error.message} ${desk}`);
@@ -950,9 +962,18 @@ if (!gotLock) {
     }
   });
 
-  app.on("before-quit", () => {
+  let petPresenceReleased = false;
+  app.on("before-quit", (event) => {
     appQuitting = true;
     stopFrontWatch();
+    if (petPresenceReleased) return;
+    event.preventDefault();
+    const release = touchPetPresence(false);
+    const timeout = new Promise((resolve) => setTimeout(resolve, 1500));
+    void Promise.race([release, timeout]).finally(() => {
+      petPresenceReleased = true;
+      app.quit();
+    });
   });
 
   app.on("open-url", (event, url) => {

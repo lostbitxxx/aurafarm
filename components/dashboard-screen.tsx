@@ -12,12 +12,22 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { FriendsDialog } from "./friends-dialog";
+import { SocialPresence } from "./social-presence";
+import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
-import { type FriendCard } from "@/lib/friends";
+import { type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
-import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
+import {
+  displayStreakCount,
+  farmerLocalDay,
+  subscribeFarmerLocalDay,
+  experienceProgress,
+  type ActiveStudySession,
+  type RecordedStudySession,
+  type StudyScoreCard,
+} from "@/lib/study";
 import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 
 function roomStorageKey(userId: string) {
@@ -47,6 +57,8 @@ export function DashboardScreen({
   userId,
   displayName,
   totalStudySeconds,
+  streakCount,
+  streakLocalDate,
   pets,
   ownedColorIds,
   ownedHatIds,
@@ -66,12 +78,16 @@ export function DashboardScreen({
   dailySessionGoal,
   studyPlan,
   friendCode,
+  friendInvite,
+  allowStatusSeen,
   friends,
   friendsError,
 }: {
   userId: string;
   displayName: string;
   totalStudySeconds: number;
+  streakCount: number;
+  streakLocalDate: string | null;
   pets: PetCard[];
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
@@ -95,12 +111,14 @@ export function DashboardScreen({
     answers: BehaviorAnswers | null;
   } | null;
   friendCode: string;
+  friendInvite: FriendInvite;
+  allowStatusSeen: StatusSeen;
   friends: readonly FriendCard[];
   friendsError: string | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<
-    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | null
+    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | "friends" | "social-settings" | null
   >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
@@ -112,6 +130,14 @@ export function DashboardScreen({
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTotal, setPickerTotal] = useState(0);
+  // Server snapshot stays at epoch so a broken streak is never shown as live before the farmer day is known.
+  const todayLocal = useSyncExternalStore(
+    subscribeFarmerLocalDay,
+    farmerLocalDay,
+    () => "1970-01-01",
+  );
+  const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
+  const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
@@ -246,14 +272,17 @@ export function DashboardScreen({
 
   return (
     <div className="desk-page">
+      <SocialPresence />
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
+        streakCount={liveStreakCount}
         onOpenShop={() => setDialog("shop")}
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
         onOpenFriends={() => setDialog("friends")}
+        onOpenSocialSettings={() => setDialog("social-settings")}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -282,6 +311,8 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        streakBoostActive={liveStreakCount > 0}
+        streakQualifiedToday={streakQualifiedToday}
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
@@ -320,9 +351,13 @@ export function DashboardScreen({
       ) : null}
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "friends" ? (
-        <FriendsDialog
+        <FriendsDialog friends={friends} friendsError={friendsError} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === "social-settings" ? (
+        <SocialSettingsDialog
           friendCode={friendCode}
-          friends={friends}
+          friendInvite={friendInvite}
+          allowStatusSeen={allowStatusSeen}
           friendsError={friendsError}
           onClose={() => setDialog(null)}
         />

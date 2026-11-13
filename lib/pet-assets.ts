@@ -173,5 +173,13 @@ export const ACCESSORY_NOTE = "Coming soon";
 
 export const STREAK_LABEL = "Streak coming soon";
 
+export function streakPillLabel(streakCount: number | null | undefined) {
+  if (typeof streakCount !== "number" || !Number.isFinite(streakCount)) {
+    return STREAK_LABEL;
+  }
+  const safe = Math.max(0, Math.floor(streakCount));
+  return safe === 1 ? "1 day" : `${safe} days`;
+}
+
 export const EQUIP_DURING_SESSION_NOTE =
   "You cannot switch the equipped pet while a study session is running. XP stays with the pet chosen when the session started.";

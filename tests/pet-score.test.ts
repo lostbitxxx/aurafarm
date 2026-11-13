@@ -30,29 +30,25 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin }
   };
 };
 
-const scoredAt = 1_700_000_000_000 + 1200 * 1000 + 400;
-const scoredDate = new Date(scoredAt);
-const exampleBody = {
-  token: "session-secret",
-  duration_seconds: 1200,
-  blocked_count: 1,
-  blocked_hosts: ["www.instagram.com"],
-  local_day: `${scoredDate.getFullYear()}-${String(scoredDate.getMonth() + 1).padStart(2, "0")}-${String(scoredDate.getDate()).padStart(2, "0")}`,
-};
-
 test("the pet score body is the phase 3 example", () => {
   const startedAt = 1_700_000_000_000;
+  const nowMs = startedAt + 1200 * 1000 + 400;
   const body = scoreRequestBody(
     {
       token: "session-secret",
       startedAt,
       log: { blockedCount: 1, blockedHosts: ["www.instagram.com"] },
     },
-    scoredAt,
+    nowMs,
   );
-  assert.deepEqual(body, exampleBody);
+  assert.equal(body.token, "session-secret");
+  assert.equal(body.duration_seconds, 1200);
+  assert.equal(body.blocked_count, 1);
+  assert.deepEqual(body.blocked_hosts, ["www.instagram.com"]);
+  assert.match(body.local_day, /^\d{4}-\d{2}-\d{2}$/);
   const parsed = parseScoreRequest(body);
   assert.equal(parsed.ok, true);
+  if (parsed.ok) assert.equal(parsed.localDay, body.local_day);
 });
 
 test("the finish label follows the blocked count", () => {

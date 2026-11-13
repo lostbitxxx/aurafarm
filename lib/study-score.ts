@@ -2,6 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { labelForBlockedHost } from "./blocklist";
+import { touchSocialPresence } from "./actions/friends";
 import { createClient } from "./supabase/server";
 
 const sessionIdPattern =
