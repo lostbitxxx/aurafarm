@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type CollectionReward, type PetCard } from "./pets";
@@ -103,11 +104,15 @@ export async function loadDashboard() {
   });
   const ownedHatIds = (collectionsResult.data ?? []).flatMap((row) => {
     const hat = sampleHat(row.item_id);
-    return hat ? [hat] : [];
+    if (hat) return [hat];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "hat" ? [preview.id] : [];
   });
   const ownedClothesIds = (collectionsResult.data ?? []).flatMap((row) => {
     const clothes = sampleClothes(row.item_id);
-    return clothes ? [clothes] : [];
+    if (clothes) return [clothes];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "clothes" ? [preview.id] : [];
   });
 
   const pendingRewards: CollectionReward[] = (rewardsResult.data ?? []).flatMap((row) => {

@@ -11,6 +11,7 @@ import {
   InventoryDialog,
   ShopDialog,
 } from "./dashboard-dialogs";
+import { previewReward } from "@/lib/collection-catalog";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -212,8 +213,9 @@ export function DashboardScreen({
 
   function onRewardClaimed(itemId: string) {
     const color = sampleColor(itemId);
-    const hat = sampleHat(itemId);
-    const clothes = sampleClothes(itemId);
+    const preview = previewReward(itemId);
+    const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
+    const clothes = sampleClothes(itemId) ?? (preview?.kind === "clothes" ? preview.id : null);
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { previewRewards } from "../lib/collection-catalog";
 import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
@@ -199,4 +200,19 @@ test("a new pet level banks one unspent collection choice", () => {
   assert.match(reset, /hat = null/);
   assert.match(reset, /clothes = null/);
   assert.match(reset, /level = 1/);
+});
+
+test("approved hats and clothes can be chosen as a level reward", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0025_collection_accessory_rewards.sql", import.meta.url),
+    "utf8",
+  );
+  const picker = readFileSync(new URL("../components/level-up-reward.tsx", import.meta.url), "utf8");
+  for (const item of [...previewRewards("hat"), ...previewRewards("clothes")]) {
+    assert.ok(item.name.length <= 32);
+    assert.match(sql, new RegExp(`'${item.id}', '${item.kind}', '${item.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+  }
+  assert.match(picker, /previewRewards\("hat"\)/);
+  assert.match(picker, /previewRewards\("clothes"\)/);
+  assert.match(picker, /collection-accessory-art/);
 });
