@@ -29,7 +29,7 @@ export async function loadDashboard() {
   const userId = gate.userId;
 
   const [
-    { data: profile },
+    profileResult,
     closeBlockedResult,
     petsResult,
     collectionsResult,
@@ -41,7 +41,7 @@ export async function loadDashboard() {
       supabase
         .from("profiles")
         .select(
-          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers",
+          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date",
         )
         .eq("id", userId)
         .maybeSingle(),
@@ -81,6 +81,7 @@ export async function loadDashboard() {
         .order("ended_at", { ascending: false }),
     ]);
 
+  const profile = profileResult.data;
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
   const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
 
@@ -187,13 +188,22 @@ export async function loadDashboard() {
       recordedResult.error?.message ??
       petsResult.error?.message ??
       collectionsResult.error?.message ??
+      profileResult.error?.message ??
       null,
   );
+
+  const streakCount = Number.isFinite(Number(profile?.streak_count))
+    ? Math.max(0, Math.floor(Number(profile?.streak_count)))
+    : 0;
+  const streakLocalDate =
+    typeof profile?.streak_local_date === "string" ? profile.streak_local_date : null;
 
   return {
     userId,
     displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
     totalStudySeconds,
+    streakCount,
+    streakLocalDate,
     pets,
     ownedColorIds,
     ownedHatIds,

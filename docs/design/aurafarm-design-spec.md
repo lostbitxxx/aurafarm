@@ -9,7 +9,7 @@ Warm cream dialogs with dark text. Ensure WCAG AA text contrast; test selected, 
 Shop, Inventory and Achievements open centered dialogs without leaving dashboard.
 Preserve direct routes. Reuse real Shop and Inventory content.
 Achievements: Coming soon! No fabricated rewards.
-Daily streak: show “Streak coming soon” with no number until records can reliably mark full completions. Do not fabricate a streak or use localStorage.
+Daily streak: show the persisted day count from the backend. One full finish per local calendar day qualifies when planned length is at least 5 minutes (presets and custom). Custom sessions under 5 minutes do not count for streak or the streak boost. Early ends do not count. A +10% XP boost after the finish bonus applies only while a live streak already exists; starting or restarting a streak does not get the boost on that first finish. Preview copy matches that rule. Do not fabricate a streak or use localStorage.
 No scores or shop points.
 ## Website room
 Cozy pixel-art room with chosen owned pets. Inventory still lists all owned pets.
