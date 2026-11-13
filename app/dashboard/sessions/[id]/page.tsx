@@ -36,19 +36,19 @@ export default async function StudyScorePage({
             {score.state === "finished" ? (
               <>
                 <p className="score-points">{score.xp} XP</p>
-                <p>{score.distracted ? "Distracted" : "Focused"}</p>
-                <p>{formatDuration(score.durationSeconds)}</p>
-                <p>
+                <p className="session-fact">{score.distracted ? "Distracted" : "Focused"}</p>
+                <p className="session-fact">{formatDuration(score.durationSeconds)}</p>
+                <p className="session-fact">
                   {score.blockedLabels.length > 0
                     ? score.blockedLabels.join(", ")
                     : "No blocked sites"}
                 </p>
-                <p>
+                <p className="session-fact">
                   <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
                 </p>
               </>
             ) : (
-              <p>{copy.detail}</p>
+              <p className="session-fact">{copy.detail}</p>
             )}
             <Link href="/dashboard" className="button">
               Back to the desk

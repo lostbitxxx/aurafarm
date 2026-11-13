@@ -443,8 +443,15 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .paper-shell .session-result p {
   margin: 0;
-  color: var(--dialog-muted);
+  color: var(--dialog-ink);
   line-height: 1.45;
+}
+
+.paper-shell .session-result .session-fact {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #9daa90;
+  border-radius: 14px;
+  background: #fffdf6;
 }
 
 .paper-shell .session-result .score-points {
