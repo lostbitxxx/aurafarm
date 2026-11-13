@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { claimCollectionReward } from "@/lib/actions/pets";
+import { previewRewards, type PreviewReward } from "@/lib/collection-catalog";
 import { SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
 import { rememberSeenRewards } from "@/lib/reward-seen";
@@ -150,6 +151,8 @@ export function RewardPicker({
   const colors = SAMPLE_COLORS.filter((color) => !ownedColorIds.includes(color.id));
   const hats = SAMPLE_HATS.filter((hat) => !ownedHatIds.includes(hat.id));
   const clothes = SAMPLE_CLOTHES.filter((item) => !ownedClothesIds.includes(item.id));
+  const previewHats = previewRewards("hat").filter((item) => !ownedHatIds.includes(item.id));
+  const previewClothes = previewRewards("clothes").filter((item) => !ownedClothesIds.includes(item.id));
   const active = REWARD_TABS.find((entry) => entry.id === tab) ?? REWARD_TABS[0];
 
   async function onChoose(itemId: string) {
@@ -213,8 +216,13 @@ export function RewardPicker({
               </li>
             ))}
           </ul>
-        ) : tab === "hats" && hats.length > 0 ? (
+        ) : tab === "hats" && (hats.length > 0 || previewHats.length > 0) ? (
           <ul className="collection-color-grid">
+            {previewHats.map((item) => (
+              <li key={item.id}>
+                <RewardAccessoryButton item={item} pending={pendingId === item.id} disabled={pendingId !== null} onChoose={onChoose} />
+              </li>
+            ))}
             {hats.map((hat) => (
               <li key={hat.id}>
                 <button
@@ -229,8 +237,13 @@ export function RewardPicker({
               </li>
             ))}
           </ul>
-        ) : tab === "clothes" && clothes.length > 0 ? (
+        ) : tab === "clothes" && (clothes.length > 0 || previewClothes.length > 0) ? (
           <ul className="collection-color-grid">
+            {previewClothes.map((item) => (
+              <li key={item.id}>
+                <RewardAccessoryButton item={item} pending={pendingId === item.id} disabled={pendingId !== null} onChoose={onChoose} />
+              </li>
+            ))}
             {clothes.map((item) => (
               <li key={item.id}>
                 <button
@@ -250,5 +263,31 @@ export function RewardPicker({
         )}
       </div>
     </FarmDialog>
+  );
+}
+
+function RewardAccessoryButton({
+  item,
+  pending,
+  disabled,
+  onChoose,
+}: {
+  item: PreviewReward;
+  pending: boolean;
+  disabled: boolean;
+  onChoose: (itemId: string) => void;
+}) {
+  return (
+    <button type="button" className="collection-color" disabled={disabled} onClick={() => onChoose(item.id)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="collection-accessory-art"
+        src={item.icon}
+        alt=""
+        draggable={false}
+        style={{ imageRendering: "pixelated" }}
+      />
+      <strong>{pending ? "…" : item.name}</strong>
+    </button>
   );
 }

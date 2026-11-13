@@ -4,14 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   COLLECTION_ACCESSORY_HINT,
-  COLLECTION_ACCESSORY_PREVIEW_NOTE,
-  COLLECTION_CLOTHES_CARDS,
   COLLECTION_COLOR_HINT,
-  COLLECTION_HAT_CARDS,
-  type CollectionAccessoryCard,
+  ownedPreviewRewards,
+  previewReward,
+  type PreviewReward,
 } from "@/lib/collection-catalog";
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_COLORS } from "@/lib/pet-assets";
+import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
@@ -103,6 +102,8 @@ const COLLECTION_TABS: { id: CollectionTab; label: string; emptyNoun: string }[]
 export function CollectionDialog({
   pets,
   ownedColorIds,
+  ownedHatIds,
+  ownedClothesIds,
   rewardCount,
   onChooseReward,
   onClose,
@@ -112,9 +113,7 @@ export function CollectionDialog({
 }: {
   pets: PetCard[];
   ownedColorIds: readonly string[];
-  /** Kept for callers; hats grid is preview-only and does not use ownership yet. */
   ownedHatIds: readonly string[];
-  /** Kept for callers; clothes grid is preview-only and does not use ownership yet. */
   ownedClothesIds: readonly string[];
   rewardCount: number;
   onChooseReward: () => void;
@@ -129,6 +128,10 @@ export function CollectionDialog({
   const [applyClothes, setApplyClothes] = useState<{ id: string | null } | null>(null);
   const active = COLLECTION_TABS.find((entry) => entry.id === tab) ?? COLLECTION_TABS[0];
   const ownedColors = SAMPLE_COLORS.filter((color) => ownedColorIds.includes(color.id));
+  const ownedPreviewHats = ownedPreviewRewards("hat", ownedHatIds);
+  const ownedPreviewClothes = ownedPreviewRewards("clothes", ownedClothesIds);
+  const ownedLegacyHats = SAMPLE_HATS.filter((hat) => ownedHatIds.includes(hat.id));
+  const ownedLegacyClothes = SAMPLE_CLOTHES.filter((item) => ownedClothesIds.includes(item.id));
   const applyColor = ownedColors.find((color) => color.id === applyColorId) ?? null;
 
   if (applyColor) {
@@ -169,10 +172,7 @@ export function CollectionDialog({
     tab === "colors" ? (
       <p className="panel-hint">{COLLECTION_COLOR_HINT}</p>
     ) : (
-      <>
-        <p className="panel-hint">{COLLECTION_ACCESSORY_HINT}</p>
-        <p className="panel-hint">{COLLECTION_ACCESSORY_PREVIEW_NOTE}</p>
-      </>
+      <p className="panel-hint">{COLLECTION_ACCESSORY_HINT}</p>
     );
 
   return (
@@ -226,14 +226,20 @@ export function CollectionDialog({
             </>
           )
         ) : tab === "hats" ? (
-          <AccessoryCatalogGrid
-            cards={COLLECTION_HAT_CARDS}
-            onSelectNone={() => setApplyHat({ id: null })}
+          <OwnedAccessoryPanel
+            emptyNoun={active.emptyNoun}
+            previewItems={ownedPreviewHats}
+            legacyItems={ownedLegacyHats}
+            legacyKind="hat"
+            onApply={(id) => setApplyHat({ id })}
           />
         ) : (
-          <AccessoryCatalogGrid
-            cards={COLLECTION_CLOTHES_CARDS}
-            onSelectNone={() => setApplyClothes({ id: null })}
+          <OwnedAccessoryPanel
+            emptyNoun={active.emptyNoun}
+            previewItems={ownedPreviewClothes}
+            legacyItems={ownedLegacyClothes}
+            legacyKind="clothes"
+            onApply={(id) => setApplyClothes({ id })}
           />
         )}
       </div>
@@ -241,66 +247,59 @@ export function CollectionDialog({
   );
 }
 
-function AccessoryCatalogGrid({
-  cards,
-  onSelectNone,
+function OwnedAccessoryPanel({
+  emptyNoun,
+  previewItems,
+  legacyItems,
+  legacyKind,
+  onApply,
 }: {
-  cards: readonly CollectionAccessoryCard[];
-  onSelectNone: () => void;
+  emptyNoun: string;
+  previewItems: readonly PreviewReward[];
+  legacyItems: readonly { id: string }[];
+  legacyKind: "hat" | "clothes";
+  onApply: (id: string) => void;
 }) {
+  if (previewItems.length === 0 && legacyItems.length === 0) {
+    return (
+      <>
+        <p className="collection-empty-title">Nothing to collect here yet.</p>
+        <p className="panel-hint">More {emptyNoun} are coming soon.</p>
+      </>
+    );
+  }
+
   return (
     <ul className="collection-color-grid collection-accessory-grid">
-      {cards.map((card) => {
-        if (card.kind === "none") {
-          return (
-            <li key={card.id}>
-              <button type="button" className="collection-color" onClick={onSelectNone}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="collection-accessory-art"
-                  src={card.icon}
-                  alt=""
-                  draggable={false}
-                  style={{ imageRendering: "pixelated" }}
-                />
-                <strong>{card.name}</strong>
-              </button>
-            </li>
-          );
-        }
-        if (card.kind === "coming_soon") {
-          return (
-            <li key={card.id}>
-              <div className="collection-color collection-color-soon" aria-disabled="true">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="collection-accessory-art"
-                  src={card.icon}
-                  alt=""
-                  draggable={false}
-                  style={{ imageRendering: "pixelated" }}
-                />
-                <strong>{card.name}</strong>
-              </div>
-            </li>
-          );
-        }
-        return (
-          <li key={card.id}>
-            <div className="collection-color collection-color-preview" aria-disabled="true">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                className="collection-accessory-art"
-                src={card.icon}
-                alt=""
-                draggable={false}
-                style={{ imageRendering: "pixelated" }}
-              />
-              <strong>{card.name}</strong>
-            </div>
-          </li>
-        );
-      })}
+      {previewItems.map((item) => (
+        <li key={item.id}>
+          <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="collection-accessory-art"
+              src={item.icon}
+              alt=""
+              draggable={false}
+              style={{ imageRendering: "pixelated" }}
+            />
+            <strong>{item.name}</strong>
+          </button>
+        </li>
+      ))}
+      {legacyItems.map((item) => (
+        <li key={item.id}>
+          <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
+            <PixelPetArt
+              petType="baby_slime"
+              hat={legacyKind === "hat" ? item.id : null}
+              clothes={legacyKind === "clothes" ? item.id : null}
+              className="dialog-pet-art"
+              alt=""
+            />
+            <strong>{item.id}</strong>
+          </button>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -386,7 +385,7 @@ function ApplyHatDialog({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const label = hatId ?? "no hat";
+  const label = (hatId ? previewReward(hatId)?.name : null) ?? hatId ?? "no hat";
 
   async function onApply(petId: string) {
     if (pendingId) return;
@@ -403,7 +402,7 @@ function ApplyHatDialog({
   }
 
   return (
-    <FarmDialog title={hatId ? `Apply ${hatId}` : "Remove hat"} onClose={onClose} wide>
+    <FarmDialog title={hatId ? `Apply ${label}` : "Remove hat"} onClose={onClose} wide>
       <p className="panel-hint">Which pet should wear {label}?</p>
       {error ? (
         <p className="form-error" role="alert">
@@ -453,7 +452,7 @@ function ApplyClothesDialog({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const label = clothesId ?? "no clothes";
+  const label = (clothesId ? previewReward(clothesId)?.name : null) ?? clothesId ?? "no clothes";
 
   async function onApply(petId: string) {
     if (pendingId) return;
@@ -470,7 +469,7 @@ function ApplyClothesDialog({
   }
 
   return (
-    <FarmDialog title={clothesId ? `Apply ${clothesId}` : "Remove clothes"} onClose={onClose} wide>
+    <FarmDialog title={clothesId ? `Apply ${label}` : "Remove clothes"} onClose={onClose} wide>
       <p className="panel-hint">Which pet should wear {label}?</p>
       {error ? (
         <p className="form-error" role="alert">

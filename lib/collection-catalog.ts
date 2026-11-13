@@ -1,7 +1,7 @@
 /**
- * Presentation-only Hats/Clothes grids for Collection.
- * Kept separate from SAMPLE_HATS / SAMPLE_CLOTHES and from ownership/equipment IDs.
- * The eight approved designs have no verified catalog or equip support yet.
+ * Hats and clothes shown in Collection and the level-up reward picker.
+ * Kept separate from SAMPLE_HATS / SAMPLE_CLOTHES. The eight approved designs
+ * can be owned as a reward and applied to a pet.
  */
 
 export const COLLECTION_ACCESSORY_HINT =
@@ -143,3 +143,26 @@ export const COLLECTION_CLOTHES_CARDS: readonly CollectionAccessoryCard[] = [
   { kind: "coming_soon", id: "clothes-coming-soon-2", name: "Coming soon", icon: COMING_SOON_ICON },
   { kind: "coming_soon", id: "clothes-coming-soon-3", name: "Coming soon", icon: COMING_SOON_ICON },
 ];
+
+export type PreviewReward = {
+  kind: "hat" | "clothes";
+  id: string;
+  name: string;
+  icon: string;
+};
+
+export function previewRewards(kind: "hat" | "clothes"): PreviewReward[] {
+  const cards = kind === "hat" ? COLLECTION_HAT_CARDS : COLLECTION_CLOTHES_CARDS;
+  return cards.flatMap((card) =>
+    card.kind === "preview" ? [{ kind, id: card.id, name: card.name, icon: card.icon }] : [],
+  );
+}
+
+export function previewReward(id: string): PreviewReward | null {
+  return previewRewards("hat").find((item) => item.id === id) ?? previewRewards("clothes").find((item) => item.id === id) ?? null;
+}
+
+export function ownedPreviewRewards(kind: "hat" | "clothes", ownedIds: readonly string[]): PreviewReward[] {
+  const owned = new Set(ownedIds);
+  return previewRewards(kind).filter((item) => owned.has(item.id));
+}

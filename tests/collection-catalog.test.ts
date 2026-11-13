@@ -7,6 +7,7 @@ import {
   COLLECTION_CLOTHES_CARDS,
   COLLECTION_COLOR_HINT,
   COLLECTION_HAT_CARDS,
+  ownedPreviewRewards,
 } from "../lib/collection-catalog";
 import { SAMPLE_CLOTHES, SAMPLE_HATS } from "../lib/pet-assets";
 
@@ -72,16 +73,24 @@ test("presentation catalogs stay separate from equippable legacy ids", () => {
   assert.match(COLLECTION_ACCESSORY_PREVIEW_NOTE, /Preview only/);
 });
 
-test("collection dialog no longer lists legacy hat_a or clothes_a labels in the accessory grids", () => {
+test("collection dialog shows only owned hats and clothes", () => {
   const source = readFileSync(
     new URL("../components/dashboard-dialogs.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /COLLECTION_HAT_CARDS/);
-  assert.match(source, /COLLECTION_CLOTHES_CARDS/);
-  assert.match(source, /collection-color-soon/);
-  assert.doesNotMatch(source, /ownedHats\.map/);
-  assert.doesNotMatch(source, /ownedClothes\.map/);
-  assert.doesNotMatch(source, /SAMPLE_HATS/);
-  assert.doesNotMatch(source, /SAMPLE_CLOTHES/);
+  assert.match(source, /ownedPreviewRewards\("hat", ownedHatIds\)/);
+  assert.match(source, /ownedPreviewRewards\("clothes", ownedClothesIds\)/);
+  assert.match(source, /SAMPLE_HATS.filter/);
+  assert.match(source, /SAMPLE_CLOTHES.filter/);
+  assert.match(source, /onApply\(item\.id\)/);
+  assert.doesNotMatch(source, /aria-disabled/);
+  assert.doesNotMatch(source, /COLLECTION_HAT_CARDS/);
+  assert.doesNotMatch(source, /COLLECTION_CLOTHES_CARDS/);
+  assert.doesNotMatch(source, /collection-color-soon/);
+  assert.doesNotMatch(source, /coming_soon/);
+  assert.deepEqual(
+    ownedPreviewRewards("hat", ["little-gentleman-top-hat", "hat_a"]).map((item) => item.id),
+    ["little-gentleman-top-hat"],
+  );
+  assert.deepEqual(ownedPreviewRewards("clothes", []), []);
 });

@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type CollectionReward, type PetCard } from "./pets";
@@ -83,6 +84,13 @@ export async function loadDashboard() {
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
   const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
 
+  function wornItem(value: unknown, kind: "hat" | "clothes") {
+    const legacy = kind === "hat" ? sampleHat(value) : sampleClothes(value);
+    if (legacy) return legacy;
+    const preview = typeof value === "string" ? previewReward(value) : null;
+    return preview?.kind === kind ? preview.id : null;
+  }
+
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
     return {
@@ -92,8 +100,8 @@ export async function loadDashboard() {
       xp,
       is_desktop_active: Boolean(pet.is_desktop_active),
       color: sampleColor(pet.color),
-      hat: sampleHat(pet.hat),
-      clothes: sampleClothes(pet.clothes),
+      hat: wornItem(pet.hat, "hat"),
+      clothes: wornItem(pet.clothes, "clothes"),
     };
   });
 
@@ -103,11 +111,15 @@ export async function loadDashboard() {
   });
   const ownedHatIds = (collectionsResult.data ?? []).flatMap((row) => {
     const hat = sampleHat(row.item_id);
-    return hat ? [hat] : [];
+    if (hat) return [hat];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "hat" ? [preview.id] : [];
   });
   const ownedClothesIds = (collectionsResult.data ?? []).flatMap((row) => {
     const clothes = sampleClothes(row.item_id);
-    return clothes ? [clothes] : [];
+    if (clothes) return [clothes];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "clothes" ? [preview.id] : [];
   });
 
   const pendingRewards: CollectionReward[] = (rewardsResult.data ?? []).flatMap((row) => {
