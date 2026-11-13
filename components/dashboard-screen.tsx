@@ -327,8 +327,11 @@ export function DashboardScreen({
           onDismiss={dismissCelebration}
         />
       ) : null}
-      {pickerOpen ? (
+      {pickerOpen && rewards[0] ? (
         <RewardPicker
+          key={rewards[0].id}
+          rewardId={rewards[0].id}
+          userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}
           ownedColorIds={ownedColors}
