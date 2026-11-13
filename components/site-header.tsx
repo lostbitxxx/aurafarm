@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { signOut } from "@/lib/actions/auth";
-import { STREAK_LABEL } from "@/lib/pet-assets";
+import { streakPillLabel } from "@/lib/pet-assets";
 import { formatDuration } from "@/lib/study";
 
 export function SiteHeader({
   displayName,
   studySeconds,
+  streakCount,
   onOpenShop,
   onOpenCollection,
   onOpenInventory,
@@ -16,12 +17,14 @@ export function SiteHeader({
 }: {
   displayName: string;
   studySeconds?: number;
+  streakCount?: number;
   onOpenShop?: () => void;
   onOpenCollection?: () => void;
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
   onOpenFriends?: () => void;
 }) {
+  const streakLabel = streakPillLabel(streakCount);
   return (
     <header className="topbar">
       <div className="topbar-nav">
@@ -73,8 +76,8 @@ export function SiteHeader({
         ) : null}
       </div>
       <div className="topbar-user">
-        <span className="streak-pill" title={STREAK_LABEL}>
-          <span aria-hidden="true">🔥</span> {STREAK_LABEL}
+        <span className="streak-pill" title={streakLabel}>
+          <span aria-hidden="true">🔥</span> {streakLabel}
         </span>
         {typeof studySeconds === "number" ? (
           <span className="points-balance">

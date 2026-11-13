@@ -9,6 +9,7 @@ const exampleBody = {
   duration_seconds: 1200,
   blocked_count: 1,
   blocked_hosts: ["www.instagram.com"],
+  local_day: "2026-11-13",
 };
 
 test("the sample score body parses", () => {
@@ -19,14 +20,22 @@ test("the sample score body parses", () => {
   assert.equal(parsed.durationSeconds, 1200);
   assert.equal(parsed.blockedCount, 1);
   assert.deepEqual(parsed.blockedHosts, ["www.instagram.com"]);
+  assert.equal(parsed.localDay, "2026-11-13");
 });
 
-test("a score body needs a token, a whole duration, and a list of hosts", () => {
+test("a score body needs a token, a whole duration, a list of hosts, and a local day", () => {
+  const { local_day: _day, ...withoutDay } = exampleBody;
   assert.equal(parseScoreRequest({ ...exampleBody, token: "" }).ok, false);
   assert.equal(parseScoreRequest({ duration_seconds: 1200, blocked_count: 1, blocked_hosts: [] }).ok, false);
   assert.equal(parseScoreRequest({ ...exampleBody, duration_seconds: "1200" }).ok, false);
   assert.equal(parseScoreRequest({ ...exampleBody, blocked_hosts: "www.instagram.com" }).ok, false);
   assert.equal(parseScoreRequest({ ...exampleBody, blocked_hosts: [1] }).ok, false);
+  assert.equal(parseScoreRequest({ ...exampleBody, local_day: "13-11-2026" }).ok, false);
+  assert.equal(parseScoreRequest(withoutDay).ok, false);
+  assert.equal(parseScoreRequest({ ...exampleBody, local_day: null }).ok, false);
+  const withDay = parseScoreRequest({ ...exampleBody, local_day: "2026-11-13" });
+  assert.equal(withDay.ok, true);
+  if (withDay.ok) assert.equal(withDay.localDay, "2026-11-13");
 });
 
 test("blocked hosts are capped before they reach the database", () => {

@@ -17,7 +17,15 @@ import { type FriendCard } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
-import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
+import {
+  displayStreakCount,
+  farmerLocalDay,
+  subscribeFarmerLocalDay,
+  experienceProgress,
+  type ActiveStudySession,
+  type RecordedStudySession,
+  type StudyScoreCard,
+} from "@/lib/study";
 import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 
 function roomStorageKey(userId: string) {
@@ -47,6 +55,8 @@ export function DashboardScreen({
   userId,
   displayName,
   totalStudySeconds,
+  streakCount,
+  streakLocalDate,
   pets,
   ownedColorIds,
   ownedHatIds,
@@ -72,6 +82,8 @@ export function DashboardScreen({
   userId: string;
   displayName: string;
   totalStudySeconds: number;
+  streakCount: number;
+  streakLocalDate: string | null;
   pets: PetCard[];
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
@@ -112,6 +124,14 @@ export function DashboardScreen({
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTotal, setPickerTotal] = useState(0);
+  // Server snapshot stays at epoch so a broken streak is never shown as live before the farmer day is known.
+  const todayLocal = useSyncExternalStore(
+    subscribeFarmerLocalDay,
+    farmerLocalDay,
+    () => "1970-01-01",
+  );
+  const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
+  const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
@@ -249,6 +269,7 @@ export function DashboardScreen({
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
+        streakCount={liveStreakCount}
         onOpenShop={() => setDialog("shop")}
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
@@ -282,6 +303,8 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        streakBoostActive={liveStreakCount > 0}
+        streakQualifiedToday={streakQualifiedToday}
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}

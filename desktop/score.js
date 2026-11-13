@@ -9,6 +9,14 @@ function wholeSecondsSince(startedAt, nowMs) {
   return Math.max(0, Math.floor((nowMs - startedAt) / 1000));
 }
 
+function farmerLocalDay(nowMs) {
+  const date = typeof nowMs === "number" ? new Date(nowMs) : new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function scoreRequestBody(study, nowMs) {
   const hosts = Array.isArray(study?.distractedHosts)
     ? study.distractedHosts
@@ -20,6 +28,7 @@ function scoreRequestBody(study, nowMs) {
     duration_seconds: wholeSecondsSince(study?.startedAt, nowMs),
     blocked_count: Number.isInteger(study?.log?.blockedCount) ? study.log.blockedCount : 0,
     blocked_hosts: hosts.filter((host) => typeof host === "string").slice(0, 20),
+    local_day: farmerLocalDay(nowMs),
   };
 }
 
