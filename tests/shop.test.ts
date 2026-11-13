@@ -49,7 +49,8 @@ test("the desk requires an account and the old shop page is gone", () => {
     new URL("../components/public-header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /Shop/);
+  assert.match(header, /onOpenShop\?: \(\) => void/);
+  assert.match(header, /onClick=\{onOpenShop\}/);
   assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
   assert.match(header, /Collection/);

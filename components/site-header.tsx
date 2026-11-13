@@ -8,12 +8,14 @@ import { formatDuration } from "@/lib/study";
 export function SiteHeader({
   displayName,
   studySeconds,
+  onOpenShop,
   onOpenCollection,
   onOpenInventory,
   onOpenAchievements,
 }: {
   displayName: string;
   studySeconds?: number;
+  onOpenShop?: () => void;
   onOpenCollection?: () => void;
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
