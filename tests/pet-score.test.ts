@@ -142,7 +142,11 @@ test("the sign-in panel can quit the pet", () => {
   const script = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   const preload = readFileSync(new URL("../desktop/preload.js", import.meta.url), "utf8");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
-  assert.match(panel, /Session token/);
+  assert.match(panel, /Session code/);
+  assert.match(panel, /Paste the launch code/);
+  assert.match(main, /role: "paste"/);
+  assert.match(main, /enableTextPaste/);
+  assert.match(main, /sessionCodeFromPaste/);
   assert.match(panel, /id="session-token"/);
   assert.match(script, /window\.pet\.useToken\(/);
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);

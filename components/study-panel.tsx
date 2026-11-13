@@ -89,6 +89,7 @@ export function StudyPanel({
   const [error, setError] = useState<string | null>(studyError);
   const [pending, setPending] = useState(false);
   const [launchCode, setLaunchCode] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
   const [codeSessionId, setCodeSessionId] = useState("");
   const [localStartedAt, setLocalStartedAt] = useState("");
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
@@ -225,6 +226,18 @@ export function StudyPanel({
     setTrackerOpen(true);
   }
 
+  async function copySessionCode(code: string) {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      window.setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      setCopiedCode(false);
+      setError("Could not copy the session code.");
+    }
+  }
+
   function onCloseTracker() {
     if (pending) return;
     setTrackerOpen(false);
@@ -244,6 +257,7 @@ export function StudyPanel({
     setTrackerOpen(false);
     setRushed(false);
     setLaunchCode(result.launchCode);
+    setCopiedCode(false);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
     setLocalPlanned(chosenSeconds);
@@ -367,7 +381,16 @@ export function StudyPanel({
                     <a className="launch-link" href={launchUrl}>
                       {launchUrl}
                     </a>
-                    <p className="launch-code">{visibleCode}</p>
+                    <div className="launch-code-row">
+                      <p className="launch-code">{visibleCode}</p>
+                      <button
+                        type="button"
+                        className="button button-ghost button-small"
+                        onClick={() => void copySessionCode(visibleCode)}
+                      >
+                        {copiedCode ? "Copied" : "Copy session"}
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <p>The launch code was shown when this session started.</p>

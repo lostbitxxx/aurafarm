@@ -45,14 +45,14 @@
   </head>
   <body>
     <form id="session-token">
-      <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+      <label>Session code <textarea name="token" autocomplete="off" spellcheck="false" placeholder="Paste the launch code" required></textarea></label>
       <button type="submit">Show pet</button>
     </form>
     <p id="update" hidden>
       <span id="update-label"></span>
       <button id="update-button" type="button">Download update</button>
     </p>
-    <p id="status">Paste a session token to show the pet.</p>
+    <p id="status">Paste a session code to show the pet.</p>
     <button id="cancel" type="button">Cancel study session</button>
     <button id="quit" class="quit" type="button">Quit</button>
     <script src="panel.js"></script>

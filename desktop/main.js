@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const fs = require("node:fs");
 const path = require("node:path");
 const { step } = require("./walk");
-const { parseAurafarmLink } = require("./links");
+const { parseAurafarmLink, sessionCodeFromPaste } = require("./links");
 const {
   CLOSE_AFTER_MS,
   createCloseWatch,
@@ -75,7 +75,7 @@ let appQuitting = false;
 let state = {
   petType: "baby_slime",
   level: 1,
-  status: "Paste a session token to show the pet.",
+  status: "Paste a session code to show the pet.",
 };
 const pendingLinks = [];
 
@@ -242,6 +242,22 @@ function togglePanel() {
   openPanel();
 }
 
+function enableTextPaste(win) {
+  win.webContents.on("context-menu", (_event, params) => {
+    if (win.isDestroyed()) return;
+    Menu.buildFromTemplate([
+      { role: "undo", enabled: params.editFlags.canUndo },
+      { role: "redo", enabled: params.editFlags.canRedo },
+      { type: "separator" },
+      { role: "cut", enabled: params.editFlags.canCut },
+      { role: "copy", enabled: params.editFlags.canCopy },
+      { role: "paste", enabled: params.editFlags.canPaste },
+      { type: "separator" },
+      { role: "selectAll" },
+    ]).popup({ window: win });
+  });
+}
+
 function openPanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
     panelWindow.show();
@@ -263,6 +279,7 @@ function openPanel() {
     },
   });
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
+  enableTextPaste(panelWindow);
   panelWindow.on("closed", () => {
     panelWindow = null;
     if (!appQuitting && spriteWindow && !spriteWindow.isDestroyed() && !spriteWindow.isVisible()) {
@@ -293,7 +310,7 @@ async function restoreSession() {
     await refreshPet();
   } catch {
     petLog("[pet] saved sign-in could not be read.");
-    setStatus("Paste a session token to show the pet.");
+    setStatus("Paste a session code to show the pet.");
   }
 }
 
@@ -372,8 +389,9 @@ async function claim(code) {
 
 function readSessionToken(raw) {
   const trimmed = String(raw || "").trim();
-  if (!trimmed) return { error: "A session token is required." };
-  if (!trimmed.startsWith("{")) return { launchCode: trimmed };
+  if (!trimmed) return { error: "A session code is required." };
+  const launchCode = sessionCodeFromPaste(trimmed);
+  if (launchCode) return { launchCode };
   let parsed;
   try {
     parsed = JSON.parse(trimmed);
@@ -988,6 +1006,18 @@ if (!gotLock) {
         {
           label: "Aurafarm",
           submenu: [{ role: "quit" }],
+        },
+        {
+          label: "Edit",
+          submenu: [
+            { role: "undo" },
+            { role: "redo" },
+            { type: "separator" },
+            { role: "cut" },
+            { role: "copy" },
+            { role: "paste" },
+            { role: "selectAll" },
+          ],
         },
       ]),
     );

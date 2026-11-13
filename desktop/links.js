@@ -19,4 +19,13 @@ function parseAurafarmLink(value) {
   return null;
 }
 
-module.exports = { parseAurafarmLink };
+function sessionCodeFromPaste(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  const linked = parseAurafarmLink(trimmed);
+  if (linked?.code) return linked.code;
+  if (!trimmed || trimmed.startsWith("{")) return "";
+  return trimmed;
+}
+
+module.exports = { parseAurafarmLink, sessionCodeFromPaste };

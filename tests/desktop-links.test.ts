@@ -3,8 +3,9 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 
 const require = createRequire(import.meta.url);
-const { parseAurafarmLink } = require("../desktop/links.js") as {
+const { parseAurafarmLink, sessionCodeFromPaste } = require("../desktop/links.js") as {
   parseAurafarmLink: (value: string) => { kind: "session"; code: string } | null;
+  sessionCodeFromPaste: (value: string) => string;
 };
 
 test("session links keep only the launch code", () => {
@@ -21,4 +22,11 @@ test("session links keep only the launch code", () => {
   assert.equal(decorated && "user" in decorated, false);
   assert.equal(parseAurafarmLink("https://example.com"), null);
   assert.equal(parseAurafarmLink("aurafarm://session?code=no"), null);
+});
+
+test("a pasted session field accepts a code or a session link", () => {
+  assert.equal(sessionCodeFromPaste("  ABC234  "), "ABC234");
+  assert.equal(sessionCodeFromPaste("aurafarm://session?code=ABC234"), "ABC234");
+  assert.equal(sessionCodeFromPaste('{"access_token":"a","refresh_token":"b"}'), "");
+  assert.equal(sessionCodeFromPaste("   "), "");
 });

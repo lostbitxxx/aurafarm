@@ -19,7 +19,7 @@ document.getElementById("session-token").addEventListener("submit", async (event
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   const result = await window.pet.useToken(String(data.get("token") ?? ""));
-  status.textContent = result.error || "Session token accepted.";
+  status.textContent = result.error || "Session code accepted.";
 });
 
 window.pet.onState((state) => {

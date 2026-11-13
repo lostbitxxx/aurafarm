@@ -465,6 +465,8 @@ test("study history merges session and XP rows by session id", () => {
   assert.match(panel, /modeLabel/);
   assert.match(panel, /showFocusDistraction/);
   assert.match(panel, /buildStudyHistory/);
+  assert.match(panel, /Copy session/);
+  assert.match(panel, /navigator\.clipboard\.writeText\(code\)/);
   assert.doesNotMatch(panel, /No blocked sites/);
   assert.doesNotMatch(panel, /history-sessions-title/);
 
