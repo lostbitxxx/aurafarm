@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat woodland vest: same verified belly-band geometry as bunny. -->
+  <path d="M8 29h10v5H8" fill="#6b8a59"/>
+  <path d="M24 29h10v5h-10" fill="#6b8a59"/>
+  <path d="M18 29h6v5h-6" fill="#f2ebe0"/>
+  <path d="M8 29h10v1H8M24 29h10v1h-10" fill="#5a7548"/>
+  <path d="M11 31h2v2h-2M29 31h2v2h-2" fill="#4d7a16"/>
+</svg>

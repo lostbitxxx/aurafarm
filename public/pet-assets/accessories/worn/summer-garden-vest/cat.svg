@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat summer vest: matching belly-band placement. -->
+  <path d="M8 29h10v5H8" fill="#8faf78"/>
+  <path d="M24 29h10v5h-10" fill="#8faf78"/>
+  <path d="M18 29h6v5h-6" fill="#f2ebe0"/>
+  <path d="M8 29h10v1H8M24 29h10v1h-10" fill="#7a9a64"/>
+  <path d="M12 31h1v1h-1M29 31h1v1h-1" fill="#6b8a59"/>
+</svg>
