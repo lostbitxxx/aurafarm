@@ -46,6 +46,20 @@ test("blocked hosts are capped before they reach the database", () => {
   assert.equal(parsed.blockedHosts.length, 20);
 });
 
+test("the session page uses the same paper layout as sign-in", () => {
+  const session = readFileSync(new URL("../app/dashboard/sessions/[id]/page.tsx", import.meta.url), "utf8");
+  const login = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
+  assert.match(login, /paper-shell/);
+  assert.match(login, /auth-layout/);
+  assert.match(login, /auth-card/);
+  assert.match(session, /paper-shell/);
+  assert.match(session, /auth-layout/);
+  assert.match(session, /auth-aside/);
+  assert.match(session, /auth-card/);
+  assert.match(session, /PublicHeader/);
+  assert.match(session, /Back to the desk/);
+});
+
 test("the score url uses the request origin and the session id", () => {
   assert.deepEqual(buildScoreResult("http://127.0.0.1:3000", "session-id", 46, true), {
     xp: 46,
