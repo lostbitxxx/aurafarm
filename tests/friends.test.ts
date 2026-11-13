@@ -7,6 +7,7 @@ import {
   friendRequestMessage,
   incomingFriendRequests,
   normalizeFriendCode,
+  socialStatusLabel,
   type FriendCard,
 } from "../lib/friends";
 
@@ -19,6 +20,7 @@ const ada: FriendCard = {
   color: "sage",
   hat: "hat_a",
   clothes: null,
+  presence: "offline",
 };
 
 const grace: FriendCard = {
@@ -30,6 +32,7 @@ const grace: FriendCard = {
   color: "lavender",
   hat: null,
   clothes: "clothes_a",
+  presence: "invisible",
 };
 
 test("friend rows keep accepted friends apart from incoming requests", () => {
@@ -50,11 +53,15 @@ test("friend rows keep accepted friends apart from incoming requests", () => {
         color: "sage",
         hat: "hat_a",
         clothes: "nope",
+        presence: "online",
       },
       { friend_id: "", status: "accepted" },
     ]),
-    [{ ...ada, clothes: null }],
+    [{ ...ada, clothes: null, presence: "online" }],
   );
+  assert.equal(socialStatusLabel("aurafarming"), "Aurafarming");
+  assert.equal(socialStatusLabel("invisible"), "Invisible");
+  assert.equal(friendRequestMessage("column allow_status_seen does not exist"), "Run migration 0026 before using social status.");
 });
 
 test("the desk opens Friends from Social and Leaderboard does nothing", () => {
@@ -67,10 +74,15 @@ test("the desk opens Friends from Social and Leaderboard does nothing", () => {
   assert.match(header, /Social/);
   assert.match(header, /onClick=\{onOpenFriends\}/);
   assert.match(header, />\s*Friends\s*</);
+  assert.match(header, />\s*Social Settings\s*</);
+  assert.match(header, /onClick=\{onOpenSocialSettings\}/);
   assert.match(header, />\s*Leaderboard\s*</);
   assert.doesNotMatch(header, /Leaderboard[\s\S]*onClick/);
   assert.match(desk, /onOpenFriends=\{\(\) => setDialog\("friends"\)\}/);
+  assert.match(desk, /onOpenSocialSettings=\{\(\) => setDialog\("social-settings"\)\}/);
   assert.match(desk, /<FriendsDialog/);
+  assert.match(desk, /<SocialSettingsDialog/);
+  assert.match(desk, /<SocialPresence/);
   assert.match(page, /loadFriendDesk/);
 
   assert.match(dialog, /Friend List/);
@@ -84,12 +96,69 @@ test("the desk opens Friends from Social and Leaderboard does nothing", () => {
   assert.match(dialog, /acceptFriend/);
   assert.match(dialog, /declineFriend/);
   assert.match(dialog, /friend\.displayName/);
+  assert.match(dialog, /socialStatusLabel/);
   assert.match(dialog, /PixelPetArt/);
+  assert.doesNotMatch(dialog, /Your friend code/);
+
+  const settings = readFileSync(new URL("../components/social-settings-dialog.tsx", import.meta.url), "utf8");
+  assert.match(settings, /Your friend code/);
+  assert.match(settings, /Copy/);
+  assert.match(settings, /navigator\.clipboard\.writeText/);
+  assert.match(settings, /Who can add you/);
+  assert.match(settings, /Who can see your status/);
+  assert.match(settings, /updateSocialSettings/);
+
+  const presence = readFileSync(new URL("../components/social-presence.tsx", import.meta.url), "utf8");
+  assert.match(presence, /touchSocialPresence/);
+  assert.match(presence, /10_000/);
+  assert.match(presence, /pagehide/);
+  const study = readFileSync(new URL("../lib/actions/study.ts", import.meta.url), "utf8");
+  assert.match(study, /complete_study_timer[\s\S]*touchSocialPresence\(true\)/);
+  assert.match(study, /end_study_early[\s\S]*touchSocialPresence\(true\)/);
+  assert.match(dialog, /10_000/);
+  assert.match(dialog, /void load\(\)/);
+  assert.match(dialog, /onClick=\{openFriendList\}/);
+  assert.doesNotMatch(presence, /return \(\) => \{[\s\S]*beat\(false\)/);
+  const friendDesk = readFileSync(new URL("../lib/friend-desk.ts", import.meta.url), "utf8");
+  assert.match(friendDesk, /touchSocialPresence\(true\)/);
+  const customize = readFileSync(new URL("../app/customize/page.tsx", import.meta.url), "utf8");
+  const session = readFileSync(new URL("../app/dashboard/sessions/[id]/page.tsx", import.meta.url), "utf8");
+  assert.match(customize, /<SocialPresence/);
+  assert.match(session, /<SocialPresence/);
+  assert.match(
+    readFileSync(new URL("../lib/customization.ts", import.meta.url), "utf8"),
+    /touchSocialPresence\(true\)/,
+  );
+  const desktop = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(desktop, /touch_social_presence/);
+  assert.match(desktop, /source: "pet"/);
 
   assert.match(action, /send_friend_request/);
   assert.match(action, /accept_friend/);
   assert.match(action, /decline_friend/);
   assert.match(action, /revalidatePath\("\/dashboard"\)/);
+  assert.match(action, /update_social_settings/);
+  assert.match(action, /touch_social_presence/);
+});
+
+test("social status is stored for every farmer and hidden when friends may not see it", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0026_social_status.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /allow_status_seen text not null default 'friend_only'/);
+  assert.match(sql, /allow_status_seen in \('friend_and_group', 'friend_only', 'group_only', 'none'\)/);
+  assert.match(sql, /current_status text not null default 'offline'/);
+  assert.match(sql, /current_status in \('online', 'aurafarming', 'offline'\)/);
+  assert.match(sql, /when studying then 'aurafarming'/);
+  assert.match(sql, /when desk_at is not null or pet_at is not null then 'online'/);
+  assert.match(sql, /function public\.touch_social_presence/);
+  assert.match(sql, /function public\.update_social_settings/);
+  assert.match(sql, /allow_status_seen in \('friend_only', 'friend_and_group'\)/);
+  assert.match(sql, /else 'invisible'/);
+  assert.doesNotMatch(sql, /allow_status_seen = 'none' then/);
+  assert.match(sql, /drop function if exists public\.list_friends\(\)/);
+  assert.match(sql, /after insert or update of status on public\.study_sessions/);
 });
 
 test("friendship migration stores codes, invite mode, and acceptance time", () => {

@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { FRIEND_CODE_PATTERN, friendRequestMessage, normalizeFriendCode } from "@/lib/friends";
+import { connection } from "next/server";
+import { FRIEND_CODE_PATTERN, friendCardsFromRows, friendRequestMessage, isFriendInvite, isStatusSeen, normalizeFriendCode, type FriendCard } from "@/lib/friends";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -64,4 +65,48 @@ export async function declineFriend(friendId: string) {
 
   revalidatePath("/dashboard");
   return { error: "" };
+}
+
+export async function updateSocialSettings(friendInvite: string, allowStatusSeen: string) {
+  if (!isFriendInvite(friendInvite) || !isStatusSeen(allowStatusSeen)) {
+    return { error: "Choose who can add you and who can see your status." };
+  }
+
+  const client = await signedInClient();
+  if ("error" in client) return client;
+
+  const { error } = await client.supabase.rpc("update_social_settings", {
+    next_invite: friendInvite,
+    next_seen: allowStatusSeen,
+  });
+  if (error) return { error: friendRequestMessage(error.message) };
+
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function touchSocialPresence(present: boolean) {
+  await connection();
+  if (typeof present !== "boolean") return { error: "" };
+  const client = await signedInClient();
+  if ("error" in client) return { error: "" };
+
+  const { error } = await client.supabase.rpc("touch_social_presence", {
+    source: "desk",
+    present,
+  });
+  if (error) {
+    console.error("touch_social_presence", error.message);
+    return { error: friendRequestMessage(error.message) };
+  }
+  return { error: "" };
+}
+
+export async function refreshFriendList(): Promise<{ error: string; friends: FriendCard[] }> {
+  const client = await signedInClient();
+  if ("error" in client) return { error: client.error ?? "Sign in to add a friend.", friends: [] };
+
+  const { data, error } = await client.supabase.rpc("list_friends");
+  if (error) return { error: friendRequestMessage(error.message), friends: [] };
+  return { error: "", friends: Array.isArray(data) ? friendCardsFromRows(data) : [] };
 }

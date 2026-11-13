@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CustomizeWizard } from "@/components/customize-wizard";
 import { PublicHeader } from "@/components/public-header";
+import { SocialPresence } from "@/components/social-presence";
 import { loadCustomizationGate } from "@/lib/customization";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default async function CustomizePage() {
   const gate = await loadCustomizationGate();
   return (
     <div className="desk-page customize-page">
+      <SocialPresence />
       <PublicHeader account={{ displayName: gate.displayName }} />
       <main className="customize-layout">
         <CustomizeWizard
