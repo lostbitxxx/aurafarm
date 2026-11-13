@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { claimCollectionReward } from "@/lib/actions/pets";
-import { previewRewards, type PreviewReward } from "@/lib/collection-catalog";
+import { previewReward, previewRewards, type PreviewReward } from "@/lib/collection-catalog";
 import { SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
+import {
+  canShuffleReward,
+  forgetRewardOffer,
+  REWARD_SHUFFLE_LIMIT,
+  rewardOfferServerSnapshot,
+  rewardOfferSnapshot,
+  saveRewardOffer,
+  shuffleRewardOffer,
+  subscribeRewardOffers,
+  type RewardPools,
+} from "@/lib/reward-offer";
 import { rememberSeenRewards } from "@/lib/reward-seen";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -24,14 +35,6 @@ const CONFETTI = [
   { left: "18%", delay: "0.34s", duration: "2.1s", color: "#fff8e8", rotate: "-20deg" },
   { left: "52%", delay: "0.32s", duration: "1.95s", color: "#f7f3e8", rotate: "10deg" },
   { left: "78%", delay: "0.12s", duration: "1.8s", color: "#c6ef4a", rotate: "-12deg" },
-];
-
-type RewardTab = "colors" | "hats" | "clothes";
-
-const REWARD_TABS: { id: RewardTab; label: string; empty: string }[] = [
-  { id: "colors", label: "Colors", empty: "You already own every color." },
-  { id: "hats", label: "Hats", empty: "You already own every hat." },
-  { id: "clothes", label: "Clothes", empty: "You already own every outfit." },
 ];
 
 export function LevelUpCelebration({
@@ -129,6 +132,8 @@ export function LevelUpCelebration({
 }
 
 export function RewardPicker({
+  rewardId,
+  userId,
   choiceNumber,
   choiceTotal,
   ownedColorIds,
@@ -137,6 +142,8 @@ export function RewardPicker({
   onClaimed,
   onClose,
 }: {
+  rewardId: string;
+  userId: string;
   choiceNumber: number;
   choiceTotal: number;
   ownedColorIds: readonly string[];
@@ -145,15 +152,40 @@ export function RewardPicker({
   onClaimed: (itemId: string) => void;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<RewardTab>("colors");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const colors = SAMPLE_COLORS.filter((color) => !ownedColorIds.includes(color.id));
-  const hats = SAMPLE_HATS.filter((hat) => !ownedHatIds.includes(hat.id));
-  const clothes = SAMPLE_CLOTHES.filter((item) => !ownedClothesIds.includes(item.id));
-  const previewHats = previewRewards("hat").filter((item) => !ownedHatIds.includes(item.id));
-  const previewClothes = previewRewards("clothes").filter((item) => !ownedClothesIds.includes(item.id));
-  const active = REWARD_TABS.find((entry) => entry.id === tab) ?? REWARD_TABS[0];
+  const pools = useMemo<RewardPools>(
+    () => ({
+      colors: SAMPLE_COLORS.filter((color) => !ownedColorIds.includes(color.id)).map((color) => color.id),
+      hats: [
+        ...previewRewards("hat")
+          .filter((item) => !ownedHatIds.includes(item.id))
+          .map((item) => item.id),
+        ...SAMPLE_HATS.filter((hat) => !ownedHatIds.includes(hat.id)).map((hat) => hat.id),
+      ],
+      clothes: [
+        ...previewRewards("clothes")
+          .filter((item) => !ownedClothesIds.includes(item.id))
+          .map((item) => item.id),
+        ...SAMPLE_CLOTHES.filter((item) => !ownedClothesIds.includes(item.id)).map((item) => item.id),
+      ],
+    }),
+    [ownedClothesIds, ownedColorIds, ownedHatIds],
+  );
+  const offer = useSyncExternalStore(
+    subscribeRewardOffers,
+    () => rewardOfferSnapshot(userId, rewardId, pools),
+    rewardOfferServerSnapshot,
+  );
+  const cards = offer
+    ? [
+        offer.colorId ? { kind: "Color" as const, id: offer.colorId } : null,
+        offer.hatId ? { kind: "Hat" as const, id: offer.hatId } : null,
+        offer.clothesId ? { kind: "Clothes" as const, id: offer.clothesId } : null,
+      ].filter((card) => card !== null)
+    : [];
+  const shufflesLeft = offer ? REWARD_SHUFFLE_LIMIT - offer.shufflesUsed : REWARD_SHUFFLE_LIMIT;
+  const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
 
   async function onChoose(itemId: string) {
     if (pendingId) return;
@@ -165,7 +197,15 @@ export function RewardPicker({
       setError(result.error);
       return;
     }
+    forgetRewardOffer(userId, rewardId);
     onClaimed(itemId);
+  }
+
+  function onShuffle() {
+    if (!offer) return;
+    const next = shuffleRewardOffer(offer, pools);
+    if (!next) return;
+    saveRewardOffer(userId, rewardId, pools, next);
   }
 
   return (
@@ -178,116 +218,85 @@ export function RewardPicker({
           {error}
         </p>
       ) : null}
-      <div className="collection-tabs" role="tablist" aria-label="Reward categories">
-        {REWARD_TABS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            id={`reward-tab-${entry.id}`}
-            aria-selected={tab === entry.id}
-            aria-controls={`reward-panel-${entry.id}`}
-            className={tab === entry.id ? "button button-small" : "button button-small button-ghost"}
-            onClick={() => setTab(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
-      <div
-        className="collection-panel"
-        role="tabpanel"
-        id={`reward-panel-${active.id}`}
-        aria-labelledby={`reward-tab-${active.id}`}
-      >
-        {tab === "colors" && colors.length > 0 ? (
-          <ul className="collection-color-grid">
-            {colors.map((color) => (
-              <li key={color.id}>
-                <button
-                  type="button"
-                  className="collection-color"
-                  disabled={pendingId !== null}
-                  onClick={() => onChoose(color.id)}
-                >
-                  <PixelPetArt petType="baby_slime" color={color.id} className="dialog-pet-art" alt="" />
-                  <strong>{pendingId === color.id ? "…" : color.name}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : tab === "hats" && (hats.length > 0 || previewHats.length > 0) ? (
-          <ul className="collection-color-grid">
-            {previewHats.map((item) => (
-              <li key={item.id}>
-                <RewardAccessoryButton item={item} pending={pendingId === item.id} disabled={pendingId !== null} onChoose={onChoose} />
-              </li>
-            ))}
-            {hats.map((hat) => (
-              <li key={hat.id}>
-                <button
-                  type="button"
-                  className="collection-color"
-                  disabled={pendingId !== null}
-                  onClick={() => onChoose(hat.id)}
-                >
-                  <PixelPetArt petType="baby_slime" hat={hat.id} className="dialog-pet-art" alt="" />
-                  <strong>{pendingId === hat.id ? "…" : hat.id}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : tab === "clothes" && (clothes.length > 0 || previewClothes.length > 0) ? (
-          <ul className="collection-color-grid">
-            {previewClothes.map((item) => (
-              <li key={item.id}>
-                <RewardAccessoryButton item={item} pending={pendingId === item.id} disabled={pendingId !== null} onChoose={onChoose} />
-              </li>
-            ))}
-            {clothes.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className="collection-color"
-                  disabled={pendingId !== null}
-                  onClick={() => onChoose(item.id)}
-                >
-                  <PixelPetArt petType="baby_slime" clothes={item.id} className="dialog-pet-art" alt="" />
-                  <strong>{pendingId === item.id ? "…" : item.id}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="panel-hint">{active.empty}</p>
-        )}
+      {!offer ? (
+        <p className="panel-hint">Drawing a reward…</p>
+      ) : cards.length > 0 ? (
+        <ul className="collection-color-grid">
+          {cards.map((card) => (
+            <li key={`${card.kind}-${card.id}`}>
+              <RewardChoiceButton
+                kind={card.kind}
+                itemId={card.id}
+                pending={pendingId === card.id}
+                disabled={pendingId !== null}
+                onChoose={onChoose}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="panel-hint">You already own every color, hat, and outfit.</p>
+      )}
+      <div className="reward-shuffle">
+        <button
+          type="button"
+          className="button button-small button-ghost"
+          disabled={!shuffleReady || pendingId !== null}
+          onClick={onShuffle}
+        >
+          {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}
+        </button>
       </div>
     </FarmDialog>
   );
 }
 
-function RewardAccessoryButton({
-  item,
+function RewardChoiceButton({
+  kind,
+  itemId,
   pending,
   disabled,
   onChoose,
 }: {
-  item: PreviewReward;
+  kind: "Color" | "Hat" | "Clothes";
+  itemId: string;
   pending: boolean;
   disabled: boolean;
   onChoose: (itemId: string) => void;
 }) {
+  const preview = kind === "Color" ? null : previewReward(itemId);
+  const colorName = SAMPLE_COLORS.find((color) => color.id === itemId)?.name ?? itemId;
+  const name = kind === "Color" ? colorName : (preview?.name ?? itemId);
   return (
-    <button type="button" className="collection-color" disabled={disabled} onClick={() => onChoose(item.id)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className="collection-accessory-art"
-        src={item.icon}
-        alt=""
-        draggable={false}
-        style={{ imageRendering: "pixelated" }}
-      />
-      <strong>{pending ? "…" : item.name}</strong>
+    <button type="button" className="collection-color" disabled={disabled} onClick={() => onChoose(itemId)}>
+      <span className="reward-offer-kind">{kind}</span>
+      {kind === "Color" ? (
+        <PixelPetArt petType="baby_slime" color={itemId} className="dialog-pet-art" alt="" />
+      ) : preview ? (
+        <RewardAccessoryArt item={preview} />
+      ) : (
+        <PixelPetArt
+          petType="baby_slime"
+          hat={kind === "Hat" ? itemId : null}
+          clothes={kind === "Clothes" ? itemId : null}
+          className="dialog-pet-art"
+          alt=""
+        />
+      )}
+      <strong>{pending ? "…" : name}</strong>
     </button>
+  );
+}
+
+function RewardAccessoryArt({ item }: { item: PreviewReward }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className="collection-accessory-art"
+      src={item.icon}
+      alt=""
+      draggable={false}
+      style={{ imageRendering: "pixelated" }}
+    />
   );
 }

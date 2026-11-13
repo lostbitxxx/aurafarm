@@ -1166,6 +1166,19 @@ button.dialog-row {
   gap: 0.65rem;
 }
 
+.reward-offer-kind {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dialog-muted, #5c6b62);
+}
+
+.reward-shuffle {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+}
+
 @media (max-width: 34rem) {
   .collection-color-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
