@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <>
+    <div className="paper-shell">
       <PublicHeader />
       <main className="auth-layout">
         <section className="auth-aside">
@@ -26,6 +26,6 @@ export default function RegisterPage() {
           <RegisterForm configured={isSupabaseConfigured()} />
         </section>
       </main>
-    </>
+    </div>
   );
 }
