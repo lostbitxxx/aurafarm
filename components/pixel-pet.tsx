@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { previewReward } from "@/lib/collection-catalog";
-import { petAssetPath, sampleClothes, sampleColor, sampleHat, type PetPose } from "@/lib/pet-assets";
+import {
+  petAssetPath,
+  sampleClothes,
+  sampleColor,
+  sampleHat,
+  wornClothesAsset,
+  type PetPose,
+} from "@/lib/pet-assets";
 
 export function PixelPetArt({
   petType,
@@ -26,9 +33,12 @@ export function PixelPetArt({
   const hatId = sampleHat(hat);
   const clothesId = sampleClothes(clothes);
   const wornHat = !hatId && hat ? previewReward(hat) : null;
-  const wornClothes = !clothesId && clothes ? previewReward(clothes) : null;
+  const previewClothes = !clothesId && clothes ? previewReward(clothes) : null;
+  const fittedClothes = !clothesId && clothes && !dropClothes ? wornClothesAsset(clothes, petType) : null;
   const hatIcon = wornHat?.kind === "hat" ? wornHat.icon : null;
-  const clothesIcon = wornClothes?.kind === "clothes" ? wornClothes.icon : null;
+  const clothesIcon =
+    fittedClothes ?? (previewClothes?.kind === "clothes" ? previewClothes.icon : null);
+  const clothesFitted = Boolean(fittedClothes);
   const src = petAssetPath(petType, pose, {
     color: sampleColor(color) ?? undefined,
     hat: dropHat ? null : hatId,
@@ -63,7 +73,15 @@ export function PixelPetArt({
       {body}
       {clothesIcon ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="pixel-pet-accessory is-clothes" src={clothesIcon} alt="" draggable={false} />
+        <img
+          className={clothesFitted ? "pixel-pet-accessory is-worn-clothes" : "pixel-pet-accessory is-clothes"}
+          src={clothesIcon}
+          alt=""
+          draggable={false}
+          onError={() => {
+            if (fittedClothes) setDropClothes(true);
+          }}
+        />
       ) : null}
       {hatIcon ? (
         // eslint-disable-next-line @next/next/no-img-element

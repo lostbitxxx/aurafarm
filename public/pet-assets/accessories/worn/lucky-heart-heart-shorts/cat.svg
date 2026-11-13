@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat heart shorts: belly-band placement. -->
+  <path d="M8 29h26v5H8" fill="#f2ebe0"/>
+  <path d="M8 29h26v1H8" fill="#e8e0d2"/>
+  <path d="M19 30h1v1h-1M22 30h1v1h-1M18 31h5v2h-5M19 33h3v1h-3" fill="#c45c4a"/>
+</svg>
