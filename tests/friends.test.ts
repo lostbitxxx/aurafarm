@@ -64,7 +64,7 @@ test("friend rows keep accepted friends apart from incoming requests", () => {
   assert.equal(friendRequestMessage("column allow_status_seen does not exist"), "Run migration 0026 before using social status.");
 });
 
-test("the desk opens Friends from Social and Leaderboard does nothing", () => {
+test("the desk opens Friends and Leaderboard from Social", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/friends-dialog.tsx", import.meta.url), "utf8");
@@ -76,10 +76,11 @@ test("the desk opens Friends from Social and Leaderboard does nothing", () => {
   assert.match(header, />\s*Friends\s*</);
   assert.match(header, />\s*Social Settings\s*</);
   assert.match(header, /onClick=\{onOpenSocialSettings\}/);
-  assert.match(header, />\s*Leaderboard\s*</);
-  assert.doesNotMatch(header, /Leaderboard[\s\S]*onClick/);
+  assert.match(header, /onClick=\{onOpenLeaderboard\}[\s\S]*Leaderboard/);
   assert.match(desk, /onOpenFriends=\{\(\) => setDialog\("friends"\)\}/);
   assert.match(desk, /onOpenSocialSettings=\{\(\) => setDialog\("social-settings"\)\}/);
+  assert.match(desk, /onOpenLeaderboard=\{\(\) => setDialog\("leaderboard"\)\}/);
+  assert.match(desk, /<LeaderboardDialog/);
   assert.match(desk, /<FriendsDialog/);
   assert.match(desk, /<SocialSettingsDialog/);
   assert.match(desk, /<SocialPresence/);

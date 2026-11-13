@@ -15,6 +15,7 @@ export function SiteHeader({
   onOpenAchievements,
   onOpenFriends,
   onOpenSocialSettings,
+  onOpenLeaderboard,
 }: {
   displayName: string;
   studySeconds?: number;
@@ -25,6 +26,7 @@ export function SiteHeader({
   onOpenAchievements?: () => void;
   onOpenFriends?: () => void;
   onOpenSocialSettings?: () => void;
+  onOpenLeaderboard?: () => void;
 }) {
   const streakLabel = streakPillLabel(streakCount);
   return (
@@ -75,7 +77,7 @@ export function SiteHeader({
                   Social Settings
                 </button>
               ) : null}
-              <button type="button" role="menuitem">
+              <button type="button" role="menuitem" onClick={onOpenLeaderboard}>
                 Leaderboard
               </button>
             </div>

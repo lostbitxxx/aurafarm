@@ -946,6 +946,176 @@ button.dialog-row {
   color: var(--dialog-ink);
 }
 
+.board-picker {
+  position: relative;
+}
+
+.board-picker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  border: 0;
+  border-radius: 18px;
+  padding: 0.75rem 0.95rem;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 246, 0.96), rgba(247, 243, 232, 0.96));
+  color: var(--dialog-ink);
+  text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(35, 57, 45, 0.14);
+  cursor: pointer;
+}
+
+.board-picker-trigger > span,
+.board-picker-menu button > span {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.board-picker-kicker {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dialog-muted);
+}
+
+.board-picker-trigger strong,
+.board-picker-menu strong {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.board-picker-trigger em,
+.board-picker-menu em {
+  font-style: normal;
+  font-size: 0.88rem;
+  color: #596650;
+}
+
+.board-picker.is-open .board-picker-trigger {
+  box-shadow: inset 0 0 0 2px #8fb53a;
+  background: rgba(198, 239, 74, 0.16);
+}
+
+.board-picker-chevron,
+.board-picker-check,
+.board-picker-mark {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board-picker-chevron {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--dialog-muted);
+  transition: transform 0.16s ease;
+}
+
+.board-picker.is-open .board-picker-chevron {
+  transform: rotate(180deg);
+  color: #3f7d3a;
+}
+
+.board-picker-menu {
+  position: fixed;
+  z-index: 30;
+  color: #23392d;
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border-radius: 18px;
+  max-height: min(22rem, calc(100vh - 1.5rem));
+  overflow: auto;
+  background: #fffdf8;
+  box-shadow:
+    0 16px 36px rgba(16, 32, 24, 0.16),
+    inset 0 0 0 1px rgba(35, 57, 45, 0.08);
+}
+
+.board-picker-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  border-radius: 13px;
+  padding: 0.62rem 0.7rem;
+  background: transparent;
+  color: var(--dialog-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-picker-menu button:hover,
+.board-picker-menu button:focus-visible {
+  background: #efe8d4;
+}
+
+.board-picker-menu button.is-selected {
+  background: rgba(198, 239, 74, 0.32);
+}
+
+.board-picker-mark {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.38rem;
+  border-radius: 10px;
+  background: #efe8d4;
+  color: #2f5e2c;
+}
+
+.board-picker-menu button.is-selected .board-picker-mark {
+  background: #fffdf8;
+}
+
+.board-picker-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-left: auto;
+  color: #3f7d3a;
+}
+
+.board-picker-trigger:focus-visible,
+.board-picker-menu button:focus-visible {
+  outline: 3px solid #8261a7;
+  outline-offset: 3px;
+}
+
+.leaderboard-grid {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+}
+
+.leaderboard-grid th,
+.leaderboard-grid td {
+  padding: 0.55rem 0.35rem;
+  border-bottom: 1px solid #d9ddcb;
+  text-align: left;
+}
+
+.leaderboard-grid th:last-child,
+.leaderboard-grid td:last-child {
+  text-align: right;
+}
+
+.leaderboard-grid tr.is-you td {
+  color: #3f7d3a;
+  font-weight: 600;
+}
+
 .friend-presence {
   display: block;
   margin-top: 0.15rem;
