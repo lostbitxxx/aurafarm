@@ -1,9 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
 import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
+import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
+import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
 
@@ -542,6 +545,37 @@ export function AchievementsDialog({ onClose }: { onClose: () => void }) {
   return (
     <FarmDialog title="Achievements" onClose={onClose}>
       <p>Coming soon!</p>
+    </FarmDialog>
+  );
+}
+
+export function EditPlanDialog({
+  displayName,
+  initialPlan,
+  onClose,
+}: {
+  displayName: string;
+  initialPlan: {
+    mode: StudyMode;
+    monthlySessions: number;
+    answers: BehaviorAnswers | null;
+  };
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  return (
+    <FarmDialog title="Edit study plan" onClose={onClose} wide>
+      <CustomizeWizard
+        displayName={displayName}
+        migrationError={null}
+        initialPlan={initialPlan}
+        embedded
+        onSaved={() => {
+          onClose();
+          router.refresh();
+        }}
+      />
     </FarmDialog>
   );
 }

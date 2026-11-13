@@ -27,6 +27,14 @@ import { LivingRoom } from "./living-room";
 import { PetDetailDialog } from "./pet-detail-dialog";
 import { PetStatus } from "./pet-status";
 
+function preferredStudySeconds(minutes: number | null | undefined) {
+  if (minutes == null || !Number.isFinite(minutes) || minutes < MIN_STUDY_MINUTES) {
+    return DEFAULT_STUDY_SECONDS;
+  }
+  const capped = Math.min(MAX_STUDY_MINUTES, Math.floor(minutes));
+  return capped * 60;
+}
+
 export function StudyPanel({
   activeSession,
   scores,
@@ -42,6 +50,7 @@ export function StudyPanel({
   downloadUrl,
   placedIds,
   placementReady,
+  preferredSessionMinutes,
   onOpenInventory,
   onEquipped,
 }: {
@@ -59,6 +68,7 @@ export function StudyPanel({
   downloadUrl: string | null;
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
+  preferredSessionMinutes?: number | null;
   onOpenInventory: () => void;
   onEquipped?: (petId: string) => void;
 }) {
@@ -82,7 +92,17 @@ export function StudyPanel({
   const [localStartedAt, setLocalStartedAt] = useState("");
   const [localPlanned, setLocalPlanned] = useState(DEFAULT_STUDY_SECONDS);
   const [localDesktop, setLocalDesktop] = useState(false);
-  const [chosenSeconds, setChosenSeconds] = useState(DEFAULT_STUDY_SECONDS);
+  const [chosenSeconds, setChosenSeconds] = useState(() =>
+    preferredStudySeconds(preferredSessionMinutes),
+  );
+  const preferredSeconds = preferredStudySeconds(preferredSessionMinutes);
+  const [preferredSnap, setPreferredSnap] = useState(preferredSeconds);
+  if (preferredSeconds !== preferredSnap) {
+    setPreferredSnap(preferredSeconds);
+    setChosenSeconds(preferredSeconds);
+    setCustomOpen(false);
+    setCustomMinutes("");
+  }
   const [customOpen, setCustomOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
   const [lengthOpen, setLengthOpen] = useState(false);

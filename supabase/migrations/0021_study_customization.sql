@@ -43,7 +43,7 @@ begin
       add constraint profiles_preferred_session_minutes_check
       check (
         preferred_session_minutes is null
-        or preferred_session_minutes in (15, 60, 90)
+        or preferred_session_minutes in (30, 60, 90)
       );
   end if;
 

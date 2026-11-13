@@ -1,16 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { LevelUpCelebration, RewardPicker } from "./level-up-reward";
-import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
+import {
+  AchievementsDialog,
+  CollectionDialog,
+  EditPlanDialog,
+  InventoryDialog,
+  ShopDialog,
+} from "./dashboard-dialogs";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
-import { modeLabel, type StudyMode } from "@/lib/study-mode";
+import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 
 function roomStorageKey(userId: string) {
   return `aurafarm.room.${userId}`;
@@ -56,6 +61,7 @@ export function DashboardScreen({
   preferredSessionMinutes,
   monthlySessionGoal,
   dailySessionGoal,
+  studyPlan,
 }: {
   userId: string;
   displayName: string;
@@ -77,9 +83,16 @@ export function DashboardScreen({
   preferredSessionMinutes: number | null;
   monthlySessionGoal: number | null;
   dailySessionGoal: number | null;
+  studyPlan: {
+    mode: StudyMode;
+    monthlySessions: number;
+    answers: BehaviorAnswers | null;
+  } | null;
 }) {
   const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
-  const [dialog, setDialog] = useState<"shop" | "collection" | "inventory" | "achievements" | null>(null);
+  const [dialog, setDialog] = useState<
+    "shop" | "collection" | "inventory" | "achievements" | "edit-plan" | null
+  >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
@@ -237,7 +250,9 @@ export function DashboardScreen({
             <strong>{modeLabel(studyMode)}</strong> study mode · {dailySessionGoal}×
             {preferredSessionMinutes} min today · {monthlySessionGoal} sessions this month
           </p>
-          <Link href="/customize">Edit plan</Link>
+          <button type="button" className="plan-edit" onClick={() => setDialog("edit-plan")}>
+            Edit plan
+          </button>
         </section>
       ) : null}
       <StudyPanel
@@ -255,6 +270,7 @@ export function DashboardScreen({
         downloadUrl={downloadUrl}
         placedIds={placedIds}
         placementReady={placementReady}
+        preferredSessionMinutes={preferredSessionMinutes}
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
       />
@@ -286,6 +302,13 @@ export function DashboardScreen({
         />
       ) : null}
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "edit-plan" && studyPlan ? (
+        <EditPlanDialog
+          displayName={displayName}
+          initialPlan={studyPlan}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {celebration && celebrationPet && display ? (
         <LevelUpCelebration
           reward={celebration}

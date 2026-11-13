@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   customizationMigrationMessage,
   isStudyMode,
+  parseBehaviorAnswers,
   type BehaviorAnswers,
   type StudyMode,
   type StudyPlan,
@@ -30,20 +31,22 @@ export async function loadCustomizationGate() {
     .eq("id", userId)
     .maybeSingle();
 
-  const migrationError = customizationMigrationMessage(profileResult.error?.message ?? null);
-  if (migrationError) {
+  const profileError = profileResult.error?.message ?? null;
+  const migrationError = customizationMigrationMessage(profileError);
+  if (migrationError || profileError) {
     return {
       userId,
       displayName: "Farmer",
       completed: false,
       plan: null as SavedStudyPlan | null,
-      error: migrationError,
+      error: migrationError ?? profileError,
     };
   }
 
   const profile = profileResult.data;
   const completed = Boolean(profile?.customization_completed_at);
   const mode = profile?.study_mode;
+  const answers = parseBehaviorAnswers(profile?.behavior_answers);
   const plan =
     completed && isStudyMode(mode)
       ? ({
@@ -53,7 +56,7 @@ export async function loadCustomizationGate() {
           dailySessions: Number(profile?.daily_session_goal ?? 1),
           studyDaysPerWeek: Number(profile?.study_days_per_week ?? 5),
           completed: true,
-          answers: (profile?.behavior_answers as BehaviorAnswers | null) ?? null,
+          answers,
         } satisfies SavedStudyPlan)
       : null;
 

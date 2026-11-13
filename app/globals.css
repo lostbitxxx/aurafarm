@@ -488,6 +488,12 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .tracker-card-wide { width: min(38rem, 100%); }
 
+.tracker-card-wide:has(.customize-embed) {
+  width: min(46rem, 100%);
+  max-height: min(90vh, 54rem);
+  overflow: auto;
+}
+
 .tracker-card > .button { margin-top: 1rem; }
 
 .tracker-card .button {
@@ -1296,21 +1302,76 @@ button.dialog-row {
 
 .button:disabled { cursor: progress; opacity: 0.7; }
 
+.customize-page {
+  color: var(--ink);
+  background: var(--paper);
+}
+
 .customize-layout {
   width: min(820px, calc(100% - 8vw));
   margin: 0 auto;
-  padding: 1rem 0 4rem;
+  padding: 0.5rem 0 4rem;
 }
 
 .customize-card {
-  background: var(--paper);
+  background: rgba(255, 255, 255, 0.55);
   color: var(--ink);
   border-radius: 28px;
   padding: 1.6rem 1.7rem 1.8rem;
-  box-shadow: var(--shadow);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .customize-eyebrow {
+  color: var(--moss);
+}
+
+.customize-embed {
+  color: var(--dialog-ink, var(--ink));
+}
+
+.customize-embed h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+  line-height: 0.98;
+  color: var(--dialog-ink, var(--ink));
+}
+
+.customize-embed .customize-steps {
+  margin-top: 0.9rem;
+}
+
+.customize-embed .customize-lede,
+.customize-embed .customize-question p,
+.customize-embed .customize-note,
+.customize-embed .customize-recommend {
+  color: rgba(20, 33, 26, 0.72);
+}
+
+.customize-embed .customize-option,
+.customize-embed .customize-mode,
+.customize-embed .daily-day {
+  background: #f7f3e8;
+}
+
+.customize-embed .button-ghost {
+  color: var(--ink);
+  background: rgba(20, 33, 26, 0.06);
+  box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
+}
+
+.plan-edit {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.plan-edit:hover {
   color: var(--moss);
 }
 
@@ -1366,24 +1427,51 @@ button.dialog-row {
 }
 
 .customize-steps li {
+  margin: 0;
+  padding: 0;
+}
+
+.customize-steps button {
   padding: 0.35rem 0.75rem;
+  border: 0;
   border-radius: 999px;
+  font: inherit;
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  background: transparent;
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink-soft);
+  cursor: pointer;
 }
 
-.customize-steps li.is-active {
+.customize-steps button.is-active {
   background: var(--slime);
   color: var(--ink);
   box-shadow: none;
   font-weight: 600;
 }
 
-.customize-steps li.is-done {
+.customize-steps button.is-done {
   color: var(--ok);
+}
+
+.customize-steps button:hover:not(:disabled) {
+  background: rgba(20, 33, 26, 0.06);
+}
+
+.customize-steps button.is-active:hover:not(:disabled) {
+  background: var(--slime);
+}
+
+.customize-steps button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.customize-steps button:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .customize-panel { display: grid; gap: 1.1rem; margin-top: 1.2rem; }
@@ -1416,7 +1504,7 @@ button.dialog-row {
   border: 0;
   border-radius: 18px;
   padding: 0.9rem 1rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line);
   cursor: pointer;
@@ -1448,6 +1536,16 @@ button.dialog-row {
   gap: 0.6rem;
 }
 
+.customize-card .button-ghost {
+  color: var(--ink);
+  background: rgba(20, 33, 26, 0.06);
+  box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
+}
+
+.customize-card .button-ghost:hover:not(:disabled) {
+  background: rgba(20, 33, 26, 0.1);
+}
+
 .goal-visual {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1459,7 +1557,7 @@ button.dialog-row {
   gap: 0.2rem;
   padding: 0.85rem 0.9rem;
   border-radius: 18px;
-  background: rgba(20, 33, 26, 0.05);
+  background: rgba(20, 33, 26, 0.04);
 }
 
 .goal-stat strong {
@@ -1484,7 +1582,7 @@ button.dialog-row {
   gap: 0.4rem;
   padding: 0.7rem;
   border-radius: 14px;
-  background: white;
+  background: rgba(255, 255, 255, 0.72);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   BEHAVIOR_QUESTIONS,
   STUDY_MODES,
@@ -10,12 +10,13 @@ import {
   modeTagline,
   planForMode,
   recommendStudyMode,
+  studyDaysPerWeek,
   type BehaviorAnswers,
   type StudyMode,
 } from "@/lib/study-mode";
 import { saveCustomization, type CustomizeFormState } from "@/lib/actions/customize";
 
-const initialState: CustomizeFormState = { error: "" };
+const initialState: CustomizeFormState = { error: "", saved: false };
 
 const emptyAnswers: Partial<BehaviorAnswers> = {};
 const FADE_MS = 220;
@@ -24,6 +25,8 @@ export function CustomizeWizard({
   displayName,
   migrationError,
   initialPlan,
+  embedded = false,
+  onSaved,
 }: {
   displayName: string;
   migrationError: string | null;
@@ -32,15 +35,29 @@ export function CustomizeWizard({
     monthlySessions: number;
     answers: BehaviorAnswers | null;
   } | null;
+  embedded?: boolean;
+  onSaved?: () => void;
 }) {
-  const [step, setStep] = useState(initialPlan ? 2 : 0);
+  const hasSavedAnswers = Boolean(
+    initialPlan?.answers?.attention &&
+      initialPlan.answers.lifestyle &&
+      initialPlan.answers.distraction,
+  );
+  const [step, setStep] = useState(hasSavedAnswers ? 2 : 0);
   const [fading, setFading] = useState(false);
   const [answers, setAnswers] = useState<Partial<BehaviorAnswers>>(
     initialPlan?.answers ?? emptyAnswers,
   );
-  const [mode, setMode] = useState<StudyMode | null>(initialPlan?.mode ?? null);
+  const [pickedMode, setPickedMode] = useState<StudyMode | null>(initialPlan?.mode ?? null);
+  const [modePickedByUser, setModePickedByUser] = useState(Boolean(initialPlan?.mode));
   const [monthlySessions, setMonthlySessions] = useState(initialPlan?.monthlySessions ?? 20);
   const [state, action, pending] = useActionState(saveCustomization, initialState);
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
+
+  useEffect(() => {
+    if (state.saved) onSavedRef.current?.();
+  }, [state.saved]);
 
   function goToStep(next: number) {
     if (next === step || fading) return;
@@ -60,12 +77,13 @@ export function CustomizeWizard({
     ? recommendStudyMode(answers as BehaviorAnswers)
     : null;
 
-  const activeMode = mode ?? recommended ?? "knight";
+  // Highlight follows the recommendation until the user taps a mode card.
+  const activeMode = (modePickedByUser ? pickedMode : null) ?? recommended ?? "knight";
   const lifestyle = answers.lifestyle ?? "steady";
-  const plan = useMemo(() => {
-    const days = lifestyle === "few" ? 3 : lifestyle === "daily" ? 6 : 5;
-    return adjustPlan(activeMode, monthlySessions, days);
-  }, [activeMode, monthlySessions, lifestyle]);
+  const plan = useMemo(
+    () => adjustPlan(activeMode, monthlySessions, studyDaysPerWeek(lifestyle)),
+    [activeMode, monthlySessions, lifestyle],
+  );
   const breakdown = describeDailyBreakdown(plan);
 
   function chooseAnswer<K extends keyof BehaviorAnswers>(id: K, value: BehaviorAnswers[K]) {
@@ -73,17 +91,29 @@ export function CustomizeWizard({
     setAnswers(next);
     if (next.attention && next.lifestyle && next.distraction) {
       const pick = recommendStudyMode(next as BehaviorAnswers);
-      setMode((current) => current ?? pick);
+      // New answers unlock a fresh recommendation; clear any old manual pick.
+      setModePickedByUser(false);
+      setPickedMode(pick);
       setMonthlySessions(planForMode(pick, next.lifestyle).monthlySessions);
     }
   }
 
   function chooseMode(nextMode: StudyMode) {
-    setMode(nextMode);
+    setModePickedByUser(true);
+    setPickedMode(nextMode);
     setMonthlySessions(planForMode(nextMode, lifestyle).monthlySessions);
   }
 
+  function openRecommendedMode() {
+    if (!recommended) return;
+    setModePickedByUser(false);
+    setPickedMode(recommended);
+    setMonthlySessions(planForMode(recommended, lifestyle).monthlySessions);
+    goToStep(1);
+  }
+
   if (migrationError) {
+    const needsMigration = /migration 0021|study-mode columns/i.test(migrationError);
     return (
       <section className="customize-card">
         <p className="eyebrow">Study mode</p>
@@ -91,22 +121,45 @@ export function CustomizeWizard({
         <p className="form-error" role="alert">
           {migrationError}
         </p>
-        <p className="customize-note">
-          Open the Supabase SQL editor, paste{" "}
-          <code>supabase/migrations/0021_study_customization.sql</code>, run it, then refresh
-          this page.
-        </p>
+        {needsMigration ? (
+          <p className="customize-note">
+            Open the Supabase SQL editor, paste{" "}
+            <code>supabase/migrations/0021_study_customization.sql</code>, run it, then refresh
+            this page.
+          </p>
+        ) : null}
       </section>
     );
   }
 
   return (
-    <section className="customize-card">
-      <p className="eyebrow customize-eyebrow">Welcome, {displayName}</p>
+    <section className={embedded ? "customize-embed" : "customize-card"}>
+      {embedded ? null : <p className="eyebrow customize-eyebrow">Welcome, {displayName}</p>}
       <ol className="customize-steps" aria-label="Customization steps">
-        <li className={step === 0 ? "is-active" : step > 0 ? "is-done" : ""}>Behavior</li>
-        <li className={step === 1 ? "is-active" : step > 1 ? "is-done" : ""}>Study mode</li>
-        <li className={step === 2 ? "is-active" : ""}>Goals</li>
+        {(
+          [
+            { id: 0, label: "Behavior" },
+            { id: 1, label: "Study mode" },
+            { id: 2, label: "Goals" },
+          ] as const
+        ).map((item) => {
+          const unlocked = item.id === 0 || questionsDone;
+          const className =
+            step === item.id ? "is-active" : unlocked && step > item.id ? "is-done" : "";
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                className={className}
+                disabled={!unlocked || fading}
+                aria-current={step === item.id ? "step" : undefined}
+                onClick={() => goToStep(item.id)}
+              >
+                {item.label}
+              </button>
+            </li>
+          );
+        })}
       </ol>
 
       <div
@@ -163,7 +216,7 @@ export function CustomizeWizard({
                 type="button"
                 className="button"
                 disabled={!questionsDone || fading}
-                onClick={() => goToStep(1)}
+                onClick={openRecommendedMode}
               >
                 See recommended study mode
               </button>
@@ -216,6 +269,7 @@ export function CustomizeWizard({
 
         {step === 2 ? (
           <form action={action} className="customize-panel">
+            {embedded ? <input type="hidden" name="embedded" value="1" /> : null}
             <input type="hidden" name="attention" value={answers.attention ?? ""} />
             <input type="hidden" name="lifestyle" value={answers.lifestyle ?? ""} />
             <input type="hidden" name="distraction" value={answers.distraction ?? ""} />
@@ -288,7 +342,7 @@ export function CustomizeWizard({
                 Back
               </button>
               <button className="button" type="submit" disabled={pending || fading}>
-                {pending ? "Saving…" : initialPlan ? "Save plan" : "Enter the desk"}
+                {pending ? "Saving…" : embedded || initialPlan ? "Save plan" : "Enter the desk"}
               </button>
             </div>
           </form>
