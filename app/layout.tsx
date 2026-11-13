@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     default: "Aurafarm",
     template: "%s · Aurafarm",
   },
-  description: "Sign up, raise a baby slime, and equip it to a Godot desktop.",
+  description: "Sign up, raise a baby slime, and equip it on your desk.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

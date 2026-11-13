@@ -2,7 +2,7 @@
 
 Review these files before any of this is built. Each phase is one file. Implement a phase only after the phase it depends on meets that file's "Done when".
 
-This set does not replace [the study-session plan](../../PLAN.md). Study sessions, the Electron pet, and the Godot web mini-game stay as they are. Godot scenes and the Electron sprite are out of this set.
+This set does not replace [the study-session plan](../../PLAN.md). Study sessions and the Electron pet stay as they are. The Electron sprite is out of this set.
 
 ## Settled decisions
 
