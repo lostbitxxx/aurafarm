@@ -49,7 +49,8 @@ test("the desk requires an account and the old shop page is gone", () => {
     new URL("../components/public-header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /Shop/);
+  assert.match(header, /onOpenShop\?: \(\) => void/);
+  assert.match(header, /onClick=\{onOpenShop\}/);
   assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
   assert.match(header, /Collection/);
@@ -74,6 +75,7 @@ test("the desk requires an account and the old shop page is gone", () => {
   assert.match(dialog, /Unlocks at level \{pet\.unlockLevel\}/);
   assert.match(dialog, /"Unlock"/);
   assert.doesNotMatch(dialog, /"Buy"/);
+  assert.match(dashboard, /onOpenShop=\{\(\) => setDialog\("shop"\)\}/);
   assert.match(dashboard, /farmerLevel=\{farmerLevel\}/);
   assert.match(dashboard, /highestPetLevel/);
 
