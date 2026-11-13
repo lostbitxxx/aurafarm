@@ -14,11 +14,20 @@ import {
 import { FriendsDialog } from "./friends-dialog";
 import { SocialPresence } from "./social-presence";
 import { SocialSettingsDialog } from "./social-settings-dialog";
+import { previewReward } from "@/lib/collection-catalog";
 import { type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
-import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
+import {
+  displayStreakCount,
+  farmerLocalDay,
+  subscribeFarmerLocalDay,
+  experienceProgress,
+  type ActiveStudySession,
+  type RecordedStudySession,
+  type StudyScoreCard,
+} from "@/lib/study";
 import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 
 function roomStorageKey(userId: string) {
@@ -48,6 +57,8 @@ export function DashboardScreen({
   userId,
   displayName,
   totalStudySeconds,
+  streakCount,
+  streakLocalDate,
   pets,
   ownedColorIds,
   ownedHatIds,
@@ -75,6 +86,8 @@ export function DashboardScreen({
   userId: string;
   displayName: string;
   totalStudySeconds: number;
+  streakCount: number;
+  streakLocalDate: string | null;
   pets: PetCard[];
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
@@ -117,6 +130,14 @@ export function DashboardScreen({
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTotal, setPickerTotal] = useState(0);
+  // Server snapshot stays at epoch so a broken streak is never shown as live before the farmer day is known.
+  const todayLocal = useSyncExternalStore(
+    subscribeFarmerLocalDay,
+    farmerLocalDay,
+    () => "1970-01-01",
+  );
+  const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
+  const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
@@ -226,8 +247,9 @@ export function DashboardScreen({
 
   function onRewardClaimed(itemId: string) {
     const color = sampleColor(itemId);
-    const hat = sampleHat(itemId);
-    const clothes = sampleClothes(itemId);
+    const preview = previewReward(itemId);
+    const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
+    const clothes = sampleClothes(itemId) ?? (preview?.kind === "clothes" ? preview.id : null);
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
@@ -254,6 +276,7 @@ export function DashboardScreen({
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
+        streakCount={liveStreakCount}
         onOpenShop={() => setDialog("shop")}
         onOpenCollection={() => setDialog("collection")}
         onOpenInventory={() => setDialog("inventory")}
@@ -288,8 +311,16 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        streakBoostActive={liveStreakCount > 0}
+        streakQualifiedToday={streakQualifiedToday}
+        ownedColorIds={ownedColors}
+        ownedHatIds={ownedHats}
+        ownedClothesIds={ownedClothes}
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
+        onColorApplied={onColorApplied}
+        onHatApplied={onHatApplied}
+        onClothesApplied={onClothesApplied}
       />
       {dialog === "shop" ? (
         <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
@@ -348,8 +379,11 @@ export function DashboardScreen({
           onDismiss={dismissCelebration}
         />
       ) : null}
-      {pickerOpen ? (
+      {pickerOpen && rewards[0] ? (
         <RewardPicker
+          key={rewards[0].id}
+          rewardId={rewards[0].id}
+          userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}
           ownedColorIds={ownedColors}

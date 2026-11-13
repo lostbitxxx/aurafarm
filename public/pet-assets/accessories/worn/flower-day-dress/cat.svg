@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat flower dress: belly-band placement. -->
+  <path d="M8 29h26v5H8" fill="#f4d0da"/>
+  <path d="M8 29h26v1H8" fill="#f0c4d0"/>
+  <path d="M12 31h2v2h-2M28 31h2v2h-2" fill="#f7e8ec"/>
+  <path d="M20 30h2v2h-2" fill="#f0c4d0"/>
+</svg>

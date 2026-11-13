@@ -26,7 +26,26 @@ export type ScoreRequest = {
   durationSeconds: number;
   blockedCount: number;
   blockedHosts: string[];
+  localDay: string;
 };
+
+function parseLocalDayField(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return undefined;
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return value;
+}
 
 export function parseScoreRequest(
   body: unknown,
@@ -39,6 +58,7 @@ export function parseScoreRequest(
   const durationSeconds = record.duration_seconds;
   const blockedCount = record.blocked_count;
   const blockedHosts = record.blocked_hosts;
+  const localDay = parseLocalDayField(record.local_day);
   if (typeof record.token !== "string" || record.token.length === 0) {
     return { ok: false, error: "A session token is required." };
   }
@@ -51,6 +71,9 @@ export function parseScoreRequest(
   if (!Array.isArray(blockedHosts) || blockedHosts.some((host) => typeof host !== "string")) {
     return { ok: false, error: "Blocked hosts must be a list of names." };
   }
+  if (localDay === undefined || localDay === null) {
+    return { ok: false, error: "Local day must be YYYY-MM-DD." };
+  }
 
   return {
     ok: true,
@@ -58,6 +81,7 @@ export function parseScoreRequest(
     durationSeconds,
     blockedCount,
     blockedHosts: blockedHosts.slice(0, MAX_BLOCKED_HOSTS),
+    localDay,
   };
 }
 

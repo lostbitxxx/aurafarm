@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Purple apron with paint dabs. -->
+  <path d="M8 29h26v5H8" fill="#6e3a68"/>
+  <path d="M8 29h26v1H8" fill="#5a2f55"/>
+  <path d="M19 29h4v1h-4" fill="#f2ebe0"/>
+  <path d="M12 31h2v2h-2" fill="#c45c4a"/>
+  <path d="M18 30h2v2h-2" fill="#5c73a3"/>
+  <path d="M24 31h2v2h-2" fill="#e2c46a"/>
+  <path d="M29 30h2v2h-2" fill="#4d7a16"/>
+</svg>

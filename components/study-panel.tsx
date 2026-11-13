@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
-import { describePet, equippedPet, type PetCard } from "@/lib/pets";
+import type { PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
   DEFAULT_STUDY_SECONDS,
@@ -11,12 +11,17 @@ import {
   plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
+  buildStudyHistory,
   formatClock,
   formatDuration,
+  formatHistoryTime,
+  formatHistoryXp,
   formatTimestamp,
   experienceForEarlyEnd,
   experienceForSession,
+  farmerLocalDay,
   remainingSeconds,
+  sessionCountsForStreak,
   STUDY_LENGTHS,
   type ActiveStudySession,
   type RecordedStudySession,
@@ -43,16 +48,22 @@ export function StudyPanel({
   closeBlocked,
   closeBlockedError,
   pets,
-  petName,
   petLevel,
   petXp,
-  petNote,
   downloadUrl,
   placedIds,
   placementReady,
   preferredSessionMinutes,
+  streakBoostActive = false,
+  streakQualifiedToday = false,
+  ownedColorIds,
+  ownedHatIds,
+  ownedClothesIds,
   onOpenInventory,
   onEquipped,
+  onColorApplied,
+  onHatApplied,
+  onClothesApplied,
 }: {
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -69,8 +80,16 @@ export function StudyPanel({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   preferredSessionMinutes?: number | null;
+  streakBoostActive?: boolean;
+  streakQualifiedToday?: boolean;
+  ownedColorIds: readonly string[];
+  ownedHatIds: readonly string[];
+  ownedClothesIds: readonly string[];
   onOpenInventory: () => void;
   onEquipped?: (petId: string) => void;
+  onColorApplied: (petId: string, colorId: string) => void;
+  onHatApplied: (petId: string, hatId: string | null) => void;
+  onClothesApplied: (petId: string, clothesId: string | null) => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -79,7 +98,12 @@ export function StudyPanel({
     activeSession?.useDesktopPet ? "pet" : "web",
     scores.map((score) => score.id).join(","),
     recordedSessions.map((session) => `${session.id}:${session.durationSeconds}`).join(","),
-    pets.map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}`).join(","),
+    pets
+      .map(
+        (pet) =>
+          `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`,
+      )
+      .join(","),
     studyError ?? "",
     closeBlocked ? "1" : "0",
     closeBlockedError ?? "",
@@ -118,7 +142,9 @@ export function StudyPanel({
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
   const [detailPetId, setDetailPetId] = useState<string | null>(null);
-  const [history, setHistory] = useState<"sessions" | "experience" | "download" | "dev-info" | null>(null);
+  const [history, setHistory] = useState<"activity" | "download" | "dev-info" | null>(null);
+  const drawerHandleRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   if (signature !== snapshot) {
     setSnapshot(signature);
@@ -163,7 +189,7 @@ export function StudyPanel({
     if (!shownSession) return { error: "No study session is running." };
     setPending(true);
     setError(null);
-    const result = await completeStudyTimer(shownSession.id, devPasswordValue);
+    const result = await completeStudyTimer(shownSession.id, devPasswordValue, farmerLocalDay());
     setPending(false);
     if (result.error) {
       setError(result.error);
@@ -312,13 +338,28 @@ export function StudyPanel({
     }
   }
 
-  const levelLabel = petLevel === null ? "No level yet" : `Level ${petLevel}`;
   const lengthSeconds = selectedLengthSeconds();
-  const equipped = equippedPet(pets);
   const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
 
+  useEffect(() => {
+    if (!railOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      const drawer = drawerRef.current;
+      const active = document.activeElement;
+      if (!drawer || !(active instanceof Node) || !drawer.contains(active)) return;
+      event.preventDefault();
+      setRailOpen(false);
+      drawerHandleRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [railOpen]);
+
   return (
-    <main className={railOpen ? "desk" : "desk is-rail-closed"}>
+    <main className="desk">
       <section className="scene" aria-label="Study scene">
         <LivingRoom
           pets={pets}
@@ -381,62 +422,81 @@ export function StudyPanel({
           </div>
         </div>
       </section>
-      <button
-        type="button"
-        className="level-bar"
-        aria-expanded={railOpen}
-        aria-controls="study-rail"
-        aria-label={railOpen ? "Hide personalization" : "Show personalization"}
-        onClick={() => setRailOpen((open) => !open)}
+      <div
+        ref={drawerRef}
+        className={railOpen ? "companion-drawer is-open" : "companion-drawer"}
       >
-        <span className="level-bar-gear" aria-hidden="true">
-          ⚙ {railOpen ? "›" : "‹"}
-        </span>
-        <span className="level-bar-track" aria-hidden="true">
-          <span className="vertical-fill" style={{ flexBasis: `${petXp}%` }} />
-        </span>
-        <span className="bar-level">{petLevel === null ? "—" : `L${petLevel}`}</span>
-      </button>
-      <aside id="study-rail" className="study-rail" aria-label="Personalization" hidden={!railOpen}>
-        <div className="rail-heading">
-          <div>
-            <p className="panel-kicker">Personalization</p>
-            <h2 className="panel-name">{petName}</h2>
+        <div className="level-dock">
+          <button
+            ref={drawerHandleRef}
+            type="button"
+            className="level-bar"
+            aria-expanded={railOpen}
+            aria-controls="study-rail"
+            aria-label={railOpen ? "Collapse companion panel" : "Expand companion panel"}
+            onClick={() => setRailOpen((open) => !open)}
+          >
+            <span className="level-bar-handle" aria-hidden="true">
+              <span className={`level-bar-arrow${railOpen ? " is-expanded" : ""}`}>
+                <svg viewBox="0 0 24 24" width="14" height="14" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M6.7 14.7a1 1 0 0 1 0-1.4l4.6-4.6a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 1 1-1.4 1.4L12 10.8l-3.9 3.9a1 1 0 0 1-1.4 0z"
+                  />
+                </svg>
+              </span>
+              <span className="level-bar-rule">
+                <span className="level-bar-line" />
+                <span className="level-bar-gear">
+                  <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
+                    <path
+                      fill="currentColor"
+                      d="M19.4 13a7.7 7.7 0 0 0 .1-1 7.7 7.7 0 0 0-.1-1l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.4 8.8a.5.5 0 0 0 .1.6l2 1.6a7.7 7.7 0 0 0-.1 1 7.7 7.7 0 0 0 .1 1l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7 7 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"
+                    />
+                  </svg>
+                </span>
+                <span className="level-bar-line" />
+              </span>
+            </span>
+          </button>
+          <div className="level-bar-stats">
+            <span className="bar-level">{petLevel === null ? "—" : `LV${petLevel}`}</span>
+            <div
+              className="level-bar-track"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={petXp}
+              aria-label={petLevel === null ? "Equipped pet experience" : `Level ${petLevel} experience`}
+            >
+              <span className="level-bar-fill" style={{ width: `${petXp}%` }} />
+            </div>
           </div>
-          <button type="button" className="close-panel" onClick={() => setRailOpen(false)}>
-            Close
-          </button>
         </div>
-        <p className="panel-desc">{levelLabel}</p>
-        <p className="panel-hint">{petNote}</p>
-        <p className="panel-hint">
-          {equipped ? `${describePet(equipped.pet_type).name} is equipped.` : "No pet is equipped."}
-        </p>
         <div
-          className="xp-track"
-          role="meter"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={petXp}
-          aria-label={`${petName} experience`}
+          id="study-rail"
+          className="study-rail"
+          role="region"
+          aria-label="Personalization"
+          aria-hidden={!railOpen}
+          {...(!railOpen ? { inert: true } : {})}
         >
-          <span className="xp-fill" style={{ width: `${petXp}%` }} />
+          <div className="study-rail-inner">
+            <h2 className="drawer-heading">Personalization</h2>
+            <div className="personalization-actions">
+              <button type="button" className="button button-ghost" onClick={() => setHistory("activity")}>
+                Sessions & Experience
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setHistory("download")}>
+                Download the Mac pet
+              </button>
+              <button type="button" className="button button-ghost" onClick={() => setHistory("dev-info")}>
+                Dev tools
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="personalization-actions">
-          <button type="button" className="button button-ghost" onClick={() => setHistory("dev-info")}>
-            Dev tools
-          </button>
-          <button type="button" className="button button-ghost" onClick={() => setHistory("download")}>
-            Download the Mac pet
-          </button>
-          <button type="button" className="button button-ghost" onClick={() => setHistory("sessions")}>
-            Sessions
-          </button>
-          <button type="button" className="button button-ghost" onClick={() => setHistory("experience")}>
-            Experience
-          </button>
-        </div>
-      </aside>
+      </div>
       {lengthOpen ? (
         <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
           <div
@@ -495,8 +555,24 @@ export function StudyPanel({
               <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
             ) : (
               <p>
-                A full finish is {experienceForSession(lengthSeconds, false)} XP. Ending early is{" "}
-                {experienceForEarlyEnd(lengthSeconds, false)} XP.
+                A full finish is{" "}
+                {experienceForSession(
+                  lengthSeconds,
+                  false,
+                  streakBoostActive && sessionCountsForStreak(lengthSeconds),
+                )}{" "}
+                XP
+                {streakBoostActive && sessionCountsForStreak(lengthSeconds)
+                  ? " with streak boost"
+                  : ""}
+                . Ending early is {experienceForEarlyEnd(lengthSeconds, false)} XP and does not count
+                for the streak
+                {!sessionCountsForStreak(lengthSeconds)
+                  ? ". Custom sessions need at least 5 minutes to count for the streak"
+                  : streakQualifiedToday
+                    ? ". Today already counts"
+                    : ""}
+                .
               </p>
             )}
             <div className="tracker-actions">
@@ -678,48 +754,23 @@ export function StudyPanel({
       {detailPet ? (
         <PetDetailDialog
           pet={detailPet}
+          ownedColorIds={ownedColorIds}
+          ownedHatIds={ownedHatIds}
+          ownedClothesIds={ownedClothesIds}
           sessionActive={Boolean(shownSession)}
           onClose={() => setDetailPetId(null)}
           onEquipped={onEquipped}
+          onColorApplied={onColorApplied}
+          onHatApplied={onHatApplied}
+          onClothesApplied={onClothesApplied}
         />
       ) : null}
-      {history === "sessions" ? (
-        <HistoryDialog title="Sessions" onClose={() => setHistory(null)}>
-          {recordedSessions.length === 0 ? (
-            <p className="empty-pets">No study time recorded yet.</p>
-          ) : (
-            <ul className="score-list">
-              {recordedSessions.map((session) => (
-                <li key={session.id}>
-                  <span>{session.status === "cancelled" ? "Cancelled" : "Finished"}</span>
-                  <span>{formatDuration(session.durationSeconds)}</span>
-                  {session.endedAt ? (
-                    <time dateTime={session.endedAt}>{formatTimestamp(session.endedAt)}</time>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </HistoryDialog>
-      ) : null}
-      {history === "experience" ? (
-        <HistoryDialog title="Experience" onClose={() => setHistory(null)}>
-          {scores.length === 0 ? (
-            <p className="empty-pets">No experience recorded yet.</p>
-          ) : (
-            <ul className="score-list">
-              {scores.map((score) => (
-                <li key={score.id}>
-                  <strong>{score.xp} XP</strong>
-                  <span>{score.distracted ? "Distracted" : "Focused"}</span>
-                  <span>{formatDuration(score.durationSeconds)}</span>
-                  <span>{score.blockedHosts.length > 0 ? score.blockedHosts.join(", ") : "No blocked sites"}</span>
-                  <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </HistoryDialog>
+      {history === "activity" ? (
+        <StudyHistoryDialog
+          recordedSessions={recordedSessions}
+          scores={scores}
+          onClose={() => setHistory(null)}
+        />
       ) : null}
       {history === "download" ? (
         <HistoryDialog title="Mac companion" onClose={() => setHistory(null)}>
@@ -739,6 +790,103 @@ export function StudyPanel({
         </HistoryDialog>
       ) : null}
     </main>
+  );
+}
+
+function StudyHistoryDialog({
+  recordedSessions,
+  scores,
+  onClose,
+}: {
+  recordedSessions: RecordedStudySession[];
+  scores: StudyScoreCard[];
+  onClose: () => void;
+}) {
+  const { cards, unmatchedScores } = buildStudyHistory(recordedSessions, scores);
+
+  return (
+    <HistoryDialog title="Sessions & Experience" onClose={onClose}>
+      <section className="study-history-section" aria-labelledby="study-history-title">
+        <h3 id="study-history-title" className="history-section-title">
+          Study history
+        </h3>
+        {cards.length === 0 ? (
+          <p className="empty-pets">No study time recorded yet.</p>
+        ) : (
+          <ul className="study-history">
+            {cards.map((card) => {
+              const distractionKnown = card.distractionSeconds !== null && card.distractionSeconds > 0;
+              return (
+                <li key={card.id} className="study-history-card">
+                  <div className="study-history-top">
+                    <div className="study-history-status">
+                      <span className="study-history-badge">
+                        {card.status === "cancelled" ? "Cancelled" : "Finished"}
+                      </span>
+                      <span className="study-history-duration">{formatDuration(card.durationSeconds)}</span>
+                    </div>
+                    <span className="study-history-xp">{formatHistoryXp(card.xp)}</span>
+                  </div>
+                  <span
+                    className={
+                      card.modeLabel === "Mode unknown"
+                        ? "study-history-mode is-unknown"
+                        : "study-history-mode"
+                    }
+                  >
+                    {card.modeLabel}
+                  </span>
+                  {card.showFocusDistraction ? (
+                    <div className="study-history-times">
+                      <div className="study-history-time-row">
+                        <span>Focus time</span>
+                        <span>{formatHistoryTime(card.focusSeconds)}</span>
+                      </div>
+                      <div
+                        className={
+                          distractionKnown
+                            ? "study-history-time-row is-distracted"
+                            : "study-history-time-row"
+                        }
+                      >
+                        <span>Distraction time</span>
+                        <span>{formatHistoryTime(card.distractionSeconds)}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                  {card.endedAt ? (
+                    <time className="study-history-date" dateTime={card.endedAt}>
+                      {formatTimestamp(card.endedAt)}
+                    </time>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+      {unmatchedScores.length > 0 ? (
+        <section className="history-section" aria-labelledby="unmatched-xp-title">
+          <h3 id="unmatched-xp-title" className="history-section-title">
+            Experience not linked in this list
+          </h3>
+          <p className="panel-hint">
+            These XP rows share a session id that is not in the loaded study-history page.
+          </p>
+          <ul className="score-list">
+            {unmatchedScores.map((score) => (
+              <li key={score.id}>
+                <strong>{formatHistoryXp(score.xp)}</strong>
+                <span>Session {score.id}</span>
+                {score.createdAt ? (
+                  <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </HistoryDialog>
   );
 }
 

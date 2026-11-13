@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat suit: same belly-band geometry as bunny. -->
+  <path d="M8 29h26v5H8" fill="#2f3338"/>
+  <path d="M8 29h26v1H8" fill="#3f454c"/>
+  <path d="M18 29h6v5h-6" fill="#f2ebe0"/>
+  <path d="M20 30h2v3h-2" fill="#5c3a2e"/>
+</svg>

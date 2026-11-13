@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { previewRewards } from "../lib/collection-catalog";
 import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
@@ -199,4 +200,45 @@ test("a new pet level banks one unspent collection choice", () => {
   assert.match(reset, /hat = null/);
   assert.match(reset, /clothes = null/);
   assert.match(reset, /level = 1/);
+});
+
+test("approved hats and clothes can be chosen as a level reward", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0025_collection_accessory_rewards.sql", import.meta.url),
+    "utf8",
+  );
+  const picker = readFileSync(new URL("../components/level-up-reward.tsx", import.meta.url), "utf8");
+  for (const item of [...previewRewards("hat"), ...previewRewards("clothes")]) {
+    assert.ok(item.name.length <= 32);
+    assert.match(sql, new RegExp(`'${item.id}', '${item.kind}', '${item.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+  }
+  assert.match(picker, /previewRewards\("hat"\)/);
+  assert.match(picker, /previewRewards\("clothes"\)/);
+  assert.match(picker, /collection-accessory-art/);
+});
+
+test("an owned approved hat or outfit can be applied to a pet", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0026_apply_accessory_rewards.sql", import.meta.url),
+    "utf8",
+  );
+  const actions = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
+  const hatCheck = sql.slice(sql.indexOf("user_pets_hat_check"), sql.indexOf("user_pets_clothes_check"));
+  const clothesCheck = sql.slice(sql.indexOf("user_pets_clothes_check"), sql.indexOf("function public.apply_pet_hat"));
+  const applyHat = sql.slice(sql.indexOf("function public.apply_pet_hat"), sql.indexOf("function public.apply_pet_clothes"));
+  const applyClothes = sql.slice(sql.indexOf("function public.apply_pet_clothes"));
+  for (const item of previewRewards("hat")) {
+    assert.match(hatCheck, new RegExp(`'${item.id}'`));
+  }
+  for (const item of previewRewards("clothes")) {
+    assert.match(clothesCheck, new RegExp(`'${item.id}'`));
+  }
+  assert.match(applyHat, /kind = 'hat'/);
+  assert.match(applyHat, /Hat not owned/);
+  assert.match(applyHat, /set hat = target_hat/);
+  assert.match(applyClothes, /kind = 'clothes'/);
+  assert.match(applyClothes, /Clothes not owned/);
+  assert.match(applyClothes, /set clothes = target_clothes/);
+  assert.match(actions, /previewReward\(hatId\)\?\.kind !== "hat"/);
+  assert.match(actions, /previewReward\(clothesId\)\?\.kind !== "clothes"/);
 });

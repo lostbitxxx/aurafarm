@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Cat wizard robe: belly-band robe suggestion, no foot coverage. -->
+  <path d="M8 29h26v5H8" fill="#5c73a3"/>
+  <path d="M8 29h26v1H8" fill="#4a5f8a"/>
+  <path d="M10 31h2v2h-2M30 31h2v2h-2" fill="#4a5f8a"/>
+  <path d="M19 30h4v2h-4" fill="#e2c46a"/>
+  <path d="M20 30h2v1h-2" fill="#f0d98a"/>
+</svg>

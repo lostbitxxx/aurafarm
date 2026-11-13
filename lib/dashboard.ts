@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type CollectionReward, type PetCard } from "./pets";
@@ -28,7 +29,7 @@ export async function loadDashboard() {
   const userId = gate.userId;
 
   const [
-    { data: profile },
+    profileResult,
     closeBlockedResult,
     petsResult,
     collectionsResult,
@@ -40,7 +41,7 @@ export async function loadDashboard() {
       supabase
         .from("profiles")
         .select(
-          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers",
+          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date",
         )
         .eq("id", userId)
         .maybeSingle(),
@@ -73,15 +74,23 @@ export async function loadDashboard() {
         .limit(10),
       supabase
         .from("study_sessions")
-        .select("id, status, duration_seconds, ended_at")
+        .select("id, status, duration_seconds, ended_at, xp_awarded, use_desktop_pet")
         .eq("user_id", userId)
         .in("status", ["submitted", "cancelled"])
         .not("duration_seconds", "is", null)
         .order("ended_at", { ascending: false }),
     ]);
 
+  const profile = profileResult.data;
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
   const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
+
+  function wornItem(value: unknown, kind: "hat" | "clothes") {
+    const legacy = kind === "hat" ? sampleHat(value) : sampleClothes(value);
+    if (legacy) return legacy;
+    const preview = typeof value === "string" ? previewReward(value) : null;
+    return preview?.kind === kind ? preview.id : null;
+  }
 
   const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
@@ -92,8 +101,8 @@ export async function loadDashboard() {
       xp,
       is_desktop_active: Boolean(pet.is_desktop_active),
       color: sampleColor(pet.color),
-      hat: sampleHat(pet.hat),
-      clothes: sampleClothes(pet.clothes),
+      hat: wornItem(pet.hat, "hat"),
+      clothes: wornItem(pet.clothes, "clothes"),
     };
   });
 
@@ -103,11 +112,15 @@ export async function loadDashboard() {
   });
   const ownedHatIds = (collectionsResult.data ?? []).flatMap((row) => {
     const hat = sampleHat(row.item_id);
-    return hat ? [hat] : [];
+    if (hat) return [hat];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "hat" ? [preview.id] : [];
   });
   const ownedClothesIds = (collectionsResult.data ?? []).flatMap((row) => {
     const clothes = sampleClothes(row.item_id);
-    return clothes ? [clothes] : [];
+    if (clothes) return [clothes];
+    const preview = previewReward(String(row.item_id));
+    return preview?.kind === "clothes" ? [preview.id] : [];
   });
 
   const pendingRewards: CollectionReward[] = (rewardsResult.data ?? []).flatMap((row) => {
@@ -136,12 +149,24 @@ export async function loadDashboard() {
     if (session.status !== "submitted" && session.status !== "cancelled") return [];
     const durationSeconds = Number(session.duration_seconds);
     if (!Number.isFinite(durationSeconds)) return [];
+    const xpRaw = session.xp_awarded;
+    const xpAwarded =
+      xpRaw === null || xpRaw === undefined
+        ? null
+        : Number.isFinite(Number(xpRaw))
+          ? Math.max(0, Math.trunc(Number(xpRaw)))
+          : null;
+    const modeRaw = session.use_desktop_pet;
+    const useDesktopPet =
+      modeRaw === true ? true : modeRaw === false ? false : null;
     return [
       {
         id: String(session.id),
         status: session.status,
         durationSeconds,
         endedAt: String(session.ended_at ?? ""),
+        xpAwarded,
+        useDesktopPet,
       },
     ];
   });
@@ -163,13 +188,22 @@ export async function loadDashboard() {
       recordedResult.error?.message ??
       petsResult.error?.message ??
       collectionsResult.error?.message ??
+      profileResult.error?.message ??
       null,
   );
+
+  const streakCount = Number.isFinite(Number(profile?.streak_count))
+    ? Math.max(0, Math.floor(Number(profile?.streak_count)))
+    : 0;
+  const streakLocalDate =
+    typeof profile?.streak_local_date === "string" ? profile.streak_local_date : null;
 
   return {
     userId,
     displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
     totalStudySeconds,
+    streakCount,
+    streakLocalDate,
     pets,
     ownedColorIds,
     ownedHatIds,

@@ -4,20 +4,32 @@ import { test } from "node:test";
 import { equippedPet, type PetCard } from "../lib/pets";
 import {
   buildPetLaunchUrl,
+  buildStudyHistory,
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
+  displayStreakCount,
   devTimerPasswordMatches,
   DISTRACTED_PENALTY,
   experienceForDuration,
   experienceForEarlyEnd,
   experienceForSession,
   experienceProgress,
+  farmerLocalDay,
   FINISH_BONUS,
+  formatStreakLabel,
+  parseLocalDay,
+  sessionCountsForStreak,
+  shiftLocalDay,
   storedStudySeconds,
+  STREAK_BONUS,
+  STREAK_MIN_SECONDS,
   XP_PER_MINUTE,
   focusedSeconds,
   formatClock,
   formatDuration,
+  formatHistoryMode,
+  formatHistoryTime,
+  formatHistoryXp,
   formatTimestamp,
   levelFromExperience,
   MAX_STUDY_MINUTES,
@@ -121,6 +133,7 @@ test("study lengths default to 5 minutes and offer 30, 60, and 90", () => {
 test("finish bonus and distracted penalty share one experience rate", () => {
   assert.equal(XP_PER_MINUTE, 2);
   assert.equal(FINISH_BONUS, 1.1);
+  assert.equal(STREAK_BONUS, 1.1);
   assert.equal(DISTRACTED_PENALTY, 0.7);
   assert.equal(experienceForDuration(59), 0);
   assert.equal(experienceForSession(300, false), 11);
@@ -130,6 +143,10 @@ test("finish bonus and distracted penalty share one experience rate", () => {
   assert.equal(experienceForSession(3600, false), 132);
   assert.equal(experienceForSession(5400, false), 198);
   assert.equal(experienceForSession(5400, true), 138);
+  assert.equal(experienceForSession(300, false, true), 12);
+  assert.equal(experienceForSession(300, true, true), 8);
+  assert.equal(experienceForSession(1800, false, true), 72);
+  assert.equal(experienceForSession(1800, true, true), 50);
   assert.equal(experienceForEarlyEnd(59, false), 0);
   assert.equal(experienceForEarlyEnd(300, false), 10);
   assert.equal(experienceForEarlyEnd(300, true), 7);
@@ -138,10 +155,29 @@ test("finish bonus and distracted penalty share one experience rate", () => {
   assert.equal(experienceForEarlyEnd(2700, false), 90);
   assert.equal(experienceForEarlyEnd(1800, true), 42);
   assert.ok(experienceForEarlyEnd(1800, false) < experienceForSession(1800, false));
+  assert.ok(experienceForSession(1800, false) < experienceForSession(1800, false, true));
   assert.equal(levelFromExperience(0), 1);
   assert.equal(levelFromExperience(99), 1);
   assert.equal(levelFromExperience(100), 2);
   assert.deepEqual(experienceProgress(105), { level: 2, intoLevel: 5, xp: 105 });
+});
+
+test("streak display uses the farmer local day and ignores broken streaks", () => {
+  assert.equal(parseLocalDay("2026-11-13"), "2026-11-13");
+  assert.equal(parseLocalDay("2026-11-31"), null);
+  assert.equal(parseLocalDay("13-11-2026"), null);
+  assert.equal(shiftLocalDay("2026-11-13", -1), "2026-11-12");
+  assert.equal(displayStreakCount(3, "2026-11-13", "2026-11-13"), 3);
+  assert.equal(displayStreakCount(3, "2026-11-12", "2026-11-13"), 3);
+  assert.equal(displayStreakCount(3, "2026-11-11", "2026-11-13"), 0);
+  assert.equal(displayStreakCount(0, "2026-11-13", "2026-11-13"), 0);
+  assert.equal(formatStreakLabel(1), "1 day");
+  assert.equal(formatStreakLabel(2), "2 days");
+  assert.match(farmerLocalDay(new Date("2026-11-13T12:00:00")), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(STREAK_MIN_SECONDS, 300);
+  assert.equal(sessionCountsForStreak(240), false);
+  assert.equal(sessionCountsForStreak(300), true);
+  assert.equal(sessionCountsForStreak(1800), true);
 });
 
 test("the dev timer password is a plain comparison", () => {
@@ -177,6 +213,90 @@ test("a missing timer column tells the farmer to run migration 0011", () => {
     studyTimerMigrationMessage("Could not find the table 'public.collection_rewards' in the schema cache") ?? "",
     /migration 0024/,
   );
+  assert.match(
+    studyTimerMigrationMessage("Could not find the 'streak_count' column of 'profiles' in the schema cache") ?? "",
+    /migration 0027/,
+  );
+  assert.equal(
+    studyTimerMigrationMessage("Streak day is out of range"),
+    "Streak day is out of range",
+  );
+  assert.equal(studyTimerMigrationMessage("Streak day is required"), "Streak day is required");
+});
+
+test("daily streak migration advances on full finish with a streak XP boost", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0027_daily_streak.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /streak_count integer not null default 0/);
+  assert.match(sql, /streak_local_date date/);
+  assert.match(sql, /function public\.touch_daily_streak/);
+  assert.match(sql, /current_date - 1/);
+  assert.match(sql, /current_date \+ 1/);
+  assert.match(sql, /streak_bonus constant integer := 11/);
+  assert.match(sql, /touch_daily_streak\(session_row\.user_id, local_day\)/);
+  assert.match(sql, /gained := gained \* streak_bonus \/ 10/);
+  assert.match(sql, /local_day date default null/);
+  assert.match(sql, /streak_count = 0/);
+  assert.match(sql, /streak_local_date = null/);
+  assert.match(
+    sql,
+    /drop function if exists public\.grant_study_experience\(uuid, integer, boolean, integer, text\[\], boolean, date\)/,
+  );
+
+  const grant = sql.slice(sql.indexOf("function public.grant_study_experience"), sql.indexOf("function public.submit_study_score"));
+  assert.match(grant, /if apply_finish_bonus then/);
+  assert.match(grant, /if local_day is not null then/);
+  assert.doesNotMatch(grant.slice(grant.indexOf("if distracted")), /touch_daily_streak/);
+
+  const boostSql = readFileSync(
+    new URL("../supabase/migrations/0029_streak_boost_requires_live.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(boostSql, /streak_was_live/);
+  assert.match(boostSql, /prior_day = \(local_day - 1\)/);
+  assert.match(boostSql, /if streak_was_live then/);
+
+  const minSql = readFileSync(
+    new URL("../supabase/migrations/0030_streak_min_five_minutes.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(minSql, /streak_min_seconds constant integer := 300/);
+  assert.match(minSql, /planned_seconds >= streak_min_seconds/);
+  assert.match(minSql, /counts_for_streak/);
+
+  const shortSql = readFileSync(
+    new URL("../supabase/migrations/0031_streak_ignore_short_dev_finish.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(shortSql, /when session_row\.planned_seconds >= 300 then local_day/);
+  assert.match(shortSql, /streak_day := case/);
+  assert.match(shortSql, /function public\.complete_study_timer/);
+
+  const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  assert.match(desk, /streakBoostActive=\{liveStreakCount > 0\}/);
+  assert.match(desk, /subscribeFarmerLocalDay/);
+  assert.match(desk, /1970-01-01/);
+  assert.doesNotMatch(desk, /streakLocalDate \?\? "1970-01-01"/);
+
+  const earlyPath = readFileSync(
+    new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),
+    "utf8",
+  );
+  const early = earlyPath.slice(earlyPath.indexOf("function public.end_study_early"));
+  assert.match(early, /false\s*\)/);
+  assert.doesNotMatch(early, /local_day/);
+
+  const action = readFileSync(new URL("../lib/actions/study.ts", import.meta.url), "utf8");
+  assert.match(action, /local_day: day/);
+  assert.match(action, /parseLocalDay\(localDay\)/);
+  assert.match(action, /Server strips local_day/);
+  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /completeStudyTimer\(shownSession\.id, devPasswordValue, farmerLocalDay\(\)\)/);
+  const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  assert.match(header, /streakPillLabel/);
+  assert.doesNotMatch(header, /Streak coming soon/);
 });
 
 test("the desk title is the equipped pet rather than the first row", () => {
@@ -325,7 +445,102 @@ test("the admin reset clears only the signed-in farmer", () => {
   assert.match(action, /getClaims/);
   assert.match(action, /Sign in before resetting your pets/);
   assert.match(page, /AdminReset/);
+  assert.match(panel, /Set streak/);
+  assert.match(panel, /Reset account/);
   assert.match(panel, /deletes your study records/);
   assert.match(panel, /Reset my pets and study records/);
+  assert.doesNotMatch(panel, /Type reset to confirm/);
+  assert.doesNotMatch(panel, /DEV_TIMER_PASSWORD/);
   assert.match(panel, /resetAllPets/);
+  assert.match(panel, /Set my streak/);
+  assert.match(panel, /setDailyStreak/);
+  assert.match(action, /set_daily_streak/);
+  assert.ok(panel.indexOf("Reset account") < panel.indexOf("Set streak"));
+  const streakBlock = panel.slice(panel.indexOf("admin-streak-title"));
+  assert.ok(streakBlock.indexOf("Streak days") < streakBlock.indexOf("Password"));
+});
+
+test("study history merges session and XP rows by session id", () => {
+  const sessions = [
+    {
+      id: "session-a",
+      status: "submitted" as const,
+      durationSeconds: 1500,
+      endedAt: "2026-01-01T12:00:00.000Z",
+      xpAwarded: 55,
+      useDesktopPet: true,
+    },
+    {
+      id: "session-b",
+      status: "cancelled" as const,
+      durationSeconds: 120,
+      endedAt: "2026-01-01T12:00:00.000Z",
+      xpAwarded: null,
+      useDesktopPet: false,
+    },
+    {
+      id: "session-c",
+      status: "submitted" as const,
+      durationSeconds: 300,
+      endedAt: "2026-01-02T12:00:00.000Z",
+      xpAwarded: null,
+      useDesktopPet: null,
+    },
+  ];
+  const scores = [
+    {
+      id: "session-a",
+      xp: 55,
+      distracted: false,
+      durationSeconds: 1500,
+      blockedHosts: [],
+      createdAt: "2026-01-01T12:00:00.000Z",
+    },
+    {
+      id: "orphan-xp",
+      xp: 12,
+      distracted: true,
+      durationSeconds: 600,
+      blockedHosts: ["example.com"],
+      createdAt: "2026-01-03T12:00:00.000Z",
+    },
+  ];
+
+  const { cards, unmatchedScores } = buildStudyHistory(sessions, scores);
+  assert.equal(cards.length, 3);
+  assert.equal(cards[0]?.id, "session-a");
+  assert.equal(cards[0]?.xp, 55);
+  assert.equal(cards[0]?.modeLabel, "With pet");
+  assert.equal(cards[0]?.showFocusDistraction, true);
+  assert.equal(cards[0]?.focusSeconds, null);
+  assert.equal(cards[0]?.distractionSeconds, null);
+  assert.equal(cards[1]?.status, "cancelled");
+  assert.equal(cards[1]?.xp, 0);
+  assert.equal(cards[1]?.modeLabel, "Web timer");
+  assert.equal(cards[1]?.showFocusDistraction, false);
+  assert.equal(cards[2]?.xp, null);
+  assert.equal(cards[2]?.modeLabel, "Mode unknown");
+  assert.equal(cards[2]?.showFocusDistraction, false);
+  assert.equal(unmatchedScores.length, 1);
+  assert.equal(unmatchedScores[0]?.id, "orphan-xp");
+  assert.equal(formatHistoryMode(true), "With pet");
+  assert.equal(formatHistoryMode(false), "Web timer");
+  assert.equal(formatHistoryMode(null), "Mode unknown");
+  assert.equal(formatHistoryXp(null), "Not available");
+  assert.equal(formatHistoryXp(0), "0 XP");
+  assert.equal(formatHistoryTime(null), "Not available");
+  assert.equal(formatHistoryTime(0), "0m");
+
+  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /Study history/);
+  assert.match(panel, /Focus time/);
+  assert.match(panel, /Distraction time/);
+  assert.match(panel, /modeLabel/);
+  assert.match(panel, /showFocusDistraction/);
+  assert.match(panel, /buildStudyHistory/);
+  assert.doesNotMatch(panel, /No blocked sites/);
+  assert.doesNotMatch(panel, /history-sessions-title/);
+
+  const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
+  assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet/);
 });

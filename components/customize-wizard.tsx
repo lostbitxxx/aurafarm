@@ -50,7 +50,9 @@ export function CustomizeWizard({
   );
   const [pickedMode, setPickedMode] = useState<StudyMode | null>(initialPlan?.mode ?? null);
   const [modePickedByUser, setModePickedByUser] = useState(Boolean(initialPlan?.mode));
-  const [monthlySessions, setMonthlySessions] = useState(initialPlan?.monthlySessions ?? 20);
+  const [monthlySessions, setMonthlySessions] = useState<number | "">(
+    initialPlan?.monthlySessions ?? 20,
+  );
   const [state, action, pending] = useActionState(saveCustomization, initialState);
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
@@ -80,9 +82,15 @@ export function CustomizeWizard({
   // Highlight follows the recommendation until the user taps a mode card.
   const activeMode = (modePickedByUser ? pickedMode : null) ?? recommended ?? "knight";
   const lifestyle = answers.lifestyle ?? "steady";
+  const suggestedMonthly = planForMode(activeMode, lifestyle).monthlySessions;
   const plan = useMemo(
-    () => adjustPlan(activeMode, monthlySessions, studyDaysPerWeek(lifestyle)),
-    [activeMode, monthlySessions, lifestyle],
+    () =>
+      adjustPlan(
+        activeMode,
+        monthlySessions === "" ? suggestedMonthly : monthlySessions,
+        studyDaysPerWeek(lifestyle),
+      ),
+    [activeMode, monthlySessions, lifestyle, suggestedMonthly],
   );
   const breakdown = describeDailyBreakdown(plan);
 
@@ -285,7 +293,16 @@ export function CustomizeWizard({
                 min={1}
                 max={120}
                 value={monthlySessions}
-                onChange={(event) => setMonthlySessions(Number(event.target.value) || 1)}
+                placeholder={String(suggestedMonthly)}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (raw === "") {
+                    setMonthlySessions("");
+                    return;
+                  }
+                  const next = Number(raw);
+                  if (Number.isFinite(next)) setMonthlySessions(Math.floor(next));
+                }}
                 required
               />
             </label>
@@ -342,7 +359,7 @@ export function CustomizeWizard({
                 Back
               </button>
               <button className="button" type="submit" disabled={pending || fading}>
-                {pending ? "Saving…" : embedded || initialPlan ? "Save plan" : "Enter the desk"}
+                {pending ? "Saving…" : embedded || initialPlan ? "Save plan" : "Farm aura"}
               </button>
             </div>
           </form>

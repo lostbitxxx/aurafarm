@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" shape-rendering="crispEdges">
+  <!-- Same belly-band placement as clothes_a; cat torso geometry matches bunny here. -->
+  <path d="M8 29h26v5H8" fill="#c9b6e0"/>
+  <path d="M8 29h26v1H8" fill="#b7a3d4"/>
+  <path d="M20 29h2v5h-2" fill="#b7a3d4"/>
+  <path d="M12 31h1v1h-1M16 30h1v1h-1M25 31h1v1h-1M29 30h1v1h-1" fill="#efe6f7"/>
+</svg>

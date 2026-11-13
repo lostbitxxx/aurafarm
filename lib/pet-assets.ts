@@ -111,6 +111,30 @@ export function speciesForPetType(petType: string): PetSpecies {
   return PET_TYPE_SPECIES[petType] ?? "cat";
 }
 
+/** The eight approved collection clothes with compact worn overlays (clothes_a placement). */
+export const WORN_CLOTHES_IDS = [
+  "little-gentleman-suit",
+  "summer-garden-vest",
+  "flower-day-dress",
+  "lucky-heart-heart-shorts",
+  "sleepy-companion-star-pajamas",
+  "little-artist-paint-apron",
+  "forest-mushroom-woodland-vest",
+  "little-wizard-wizard-robe",
+] as const;
+
+const WORN_CLOTHES_ID_SET = new Set<string>(WORN_CLOTHES_IDS);
+
+/**
+ * Body-fitted worn overlays for approved clothes (not catalogue thumbnails).
+ * Aligned to the clothes_a belly band so face, cheeks, and feet stay clear.
+ */
+export function wornClothesAsset(clothesId: string | null | undefined, petType: string): string | null {
+  if (!clothesId || !WORN_CLOTHES_ID_SET.has(clothesId)) return null;
+  const species = speciesForPetType(petType);
+  return `/pet-assets/accessories/worn/${clothesId}/${species}.svg`;
+}
+
 export function colorForPetType(petType: string): PetColor {
   return DEFAULT_PET_COLOR[petType] ?? "sage";
 }
@@ -148,6 +172,14 @@ export const ROOM_PLACEMENT_NOTE =
 export const ACCESSORY_NOTE = "Coming soon";
 
 export const STREAK_LABEL = "Streak coming soon";
+
+export function streakPillLabel(streakCount: number | null | undefined) {
+  if (typeof streakCount !== "number" || !Number.isFinite(streakCount)) {
+    return STREAK_LABEL;
+  }
+  const safe = Math.max(0, Math.floor(streakCount));
+  return safe === 1 ? "1 day" : `${safe} days`;
+}
 
 export const EQUIP_DURING_SESSION_NOTE =
   "You cannot switch the equipped pet while a study session is running. XP stays with the pet chosen when the session started.";
