@@ -116,7 +116,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(main, /grant_study_experience/);
   assert.match(main, /planned_seconds/);
   assert.match(main, /closeFrontTab/);
-  assert.match(main, /The study time has not finished/);
+  assert.match(main, /remaining <= 0\) void finishSession/);
+  assert.match(main, /response\.status === 200 \|\| response\.status === 409/);
+  assert.doesNotMatch(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
   assert.match(desk, /Desktop pet/);

@@ -279,6 +279,21 @@ test("cancelling a session stops it without experience", () => {
   assert.doesNotMatch(sql, /xp =/);
 });
 
+test("a pet finish scores the minutes already studied before the clock ends", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0027_pet_finish_partial.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /function public\.submit_study_score/);
+  assert.match(sql, /finished := now\(\) \+ interval '5 seconds' >=/);
+  assert.match(sql, /studied := session_row\.planned_seconds/);
+  assert.match(sql, /floor\(extract\(epoch from \(now\(\) - session_row\.started_at\)\)\)/);
+  assert.match(sql, /grant_study_experience\(\s*target_session_id,\s*studied,/);
+  assert.match(sql, /finished\s*\)/);
+  assert.doesNotMatch(sql, /Study time has not finished/);
+  assert.match(sql, /An earlier finish records the minutes already studied/);
+});
+
 test("ending early records studied minutes without the finish bonus", () => {
   const sql = readFileSync(
     new URL("../supabase/migrations/0014_end_study_early.sql", import.meta.url),

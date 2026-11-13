@@ -670,13 +670,6 @@ function setPetLevel(level) {
 async function finishSession() {
   if (!study?.token || finishing) return;
   const current = study;
-  const remaining = remainingStudyMs(current, Date.now());
-  if (remaining !== null && remaining > 5000) {
-    setStatus("The study time has not finished.", {
-      finishNote: "The study time has not finished.",
-    });
-    return;
-  }
   finishing = true;
   const desk = `origin=${API_ORIGIN} supabase=${supabase ? "yes" : "no"}`;
   try {
@@ -698,9 +691,13 @@ async function finishSession() {
       scoreDebug(`[score] POST ${current.id} failed: ${postError} ${desk}`);
     }
     if (study !== current) return;
-    const reachedScoreRoute = response && (response.status === 200 || response.status === 403 || response.status === 409);
-    if (!reachedScoreRoute) {
-      const saved = await submitScoreDirect(current, body, postError || `HTTP ${response ? response.status : "none"}`);
+    const routeSaved = response && (response.status === 200 || response.status === 409);
+    if (!routeSaved) {
+      const saved = await submitScoreDirect(
+        current,
+        body,
+        postError || `HTTP ${response ? response.status : "none"} ${payload?.error || ""}`.trim(),
+      );
       if (study !== current) return;
       if (!saved.ok) {
         setStatus(saved.message, { finishNote: saved.message });
@@ -754,6 +751,13 @@ async function submitScoreDirect(current, body, postFailure) {
         ok: true,
         url: `${API_ORIGIN}/dashboard/sessions/${current.id}`,
         message: "That session was already scored.",
+      };
+    }
+    if (/study time has not finished/i.test(error.message)) {
+      return {
+        ok: false,
+        url: "",
+        message: "Run migration 0027 in Supabase, then click Finish again.",
       };
     }
     return { ok: false, url: "", message: `Could not submit the score. ${error.message} ${desk}` };
