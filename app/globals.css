@@ -524,6 +524,12 @@ button.dialog-row {
   margin-left: auto;
 }
 
+.shop-lock {
+  font-size: 0.85rem;
+  color: var(--dialog-muted);
+  white-space: nowrap;
+}
+
 .dialog-pet-art {
   width: 48px;
   height: 48px;
@@ -1041,7 +1047,7 @@ button.dialog-row {
   gap: 0.15rem;
 }
 
-.score-layout, .shop-layout {
+.score-layout {
   width: min(720px, calc(100% - 8vw));
   margin: 0 auto 3rem;
 }

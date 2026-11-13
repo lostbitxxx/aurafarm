@@ -31,7 +31,7 @@ export function SiteHeader({
             Shop
           </button>
         ) : (
-          <Link href="/shop">Shop</Link>
+          <Link href="/dashboard">Shop</Link>
         )}
         {onOpenCollection ? (
           <button type="button" className="topbar-link" onClick={onOpenCollection}>

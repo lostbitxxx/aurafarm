@@ -82,7 +82,7 @@ test("a finished session adds its score to the wallet once", () => {
   assert.doesNotMatch(sql, /grant update \([^)]*points/);
   assert.match(route, /revalidatePath\("\/dashboard"\)/);
   assert.match(route, /revalidatePath\(`\/dashboard\/sessions\/\$\{id\}`\)/);
-  assert.match(route, /revalidatePath\("\/shop"\)/);
+  assert.doesNotMatch(route, /revalidatePath\("\/shop"\)/);
   assert.match(route, /revalidatePath\("\/inventory"\)/);
   assert.match(route, /\[score\] \$\{id\} rejected/);
   assert.match(route, /status=\$\{data\.status\} has_token=/);

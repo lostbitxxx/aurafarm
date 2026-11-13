@@ -33,6 +33,5 @@ export async function resetAllPets(password: string) {
 
   revalidatePath("/dashboard", "layout");
   revalidatePath("/inventory");
-  revalidatePath("/shop");
   return { error: "" };
 }

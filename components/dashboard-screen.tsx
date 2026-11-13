@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { AchievementsDialog, CollectionDialog, InventoryDialog, ShopDialog } from "./dashboard-dialogs";
-import { describePet, equippedPet, type PetCard } from "@/lib/pets";
+import { describePet, equippedPet, highestPetLevel, type PetCard } from "@/lib/pets";
 import { experienceProgress, type ActiveStudySession, type RecordedStudySession, type StudyScoreCard } from "@/lib/study";
 import { modeLabel, type StudyMode } from "@/lib/study-mode";
 
@@ -78,6 +78,7 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
+  const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
     .join("|");
@@ -174,7 +175,9 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onEquipped={onEquipped}
       />
-      {dialog === "shop" ? <ShopDialog ownedTypes={ownedTypes} onClose={() => setDialog(null)} /> : null}
+      {dialog === "shop" ? (
+        <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
+      ) : null}
       {dialog === "collection" ? (
         <CollectionDialog
           pets={localPets}

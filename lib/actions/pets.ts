@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
-import { shopPurchaseBlock } from "@/lib/pets";
+import { highestPetLevel, shopPurchaseBlock, wholePoints } from "@/lib/pets";
+import { levelFromExperience } from "@/lib/study";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,11 +47,14 @@ export async function buyPet(petType: string) {
     return { error: "Sign in to buy a pet." };
   }
 
-  const petsResult = await supabase.from("user_pets").select("pet_type").eq("user_id", userId);
+  const petsResult = await supabase.from("user_pets").select("pet_type, xp").eq("user_id", userId);
   if (petsResult.error) return { error: petsResult.error.message };
 
   const ownedTypes = (petsResult.data ?? []).map((pet) => String(pet.pet_type));
-  const blocked = shopPurchaseBlock(petType, ownedTypes);
+  const reachedLevel = highestPetLevel(
+    (petsResult.data ?? []).map((pet) => levelFromExperience(wholePoints(pet.xp))),
+  );
+  const blocked = shopPurchaseBlock(petType, ownedTypes, reachedLevel);
   if (blocked) return { error: blocked };
 
   const { error } = await supabase.rpc("purchase_pet", {
@@ -59,10 +63,11 @@ export async function buyPet(petType: string) {
   if (error) {
     if (/already owned/i.test(error.message)) return { error: "You already own that pet." };
     if (/not for sale/i.test(error.message)) return { error: "That pet is not for sale." };
+    const locked = error.message.match(/reach level (\d+)/i);
+    if (locked) return { error: `Reach level ${locked[1]} to unlock this pet.` };
     return { error: error.message };
   }
 
-  revalidatePath("/shop");
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
   return { error: "" };
