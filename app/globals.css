@@ -2683,11 +2683,14 @@ button.dialog-row {
 .study-active p { margin: 0; }
 .launch-link, .launch-code { word-break: break-all; }
 .launch-code-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-self: start;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 100%;
 }
-.launch-code-row .launch-code { flex: 1; }
+.launch-code-row .launch-code { flex: none; }
 .launch-code-row .button { flex: none; }
 .launch-code {
   margin: 0;
