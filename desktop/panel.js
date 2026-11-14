@@ -9,6 +9,7 @@ const toggle = document.getElementById("panel-toggle");
 const panelArrow = document.getElementById("panel-arrow");
 const timerFill = document.getElementById("timer-fill");
 const petToggle = document.getElementById("pet-toggle");
+const tokenForm = document.getElementById("session-token");
 const tokenField = document.querySelector("#session-token textarea");
 
 function applyPanelOpen(open) {
@@ -77,6 +78,7 @@ window.pet.onState((state) => {
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   if (typeof state.petVisible === "boolean") applyPetVisible(state.petVisible);
   timer.hidden = !state.remainingLabel;
+  tokenForm.hidden = Boolean(state.remainingLabel);
   timer.textContent = state.remainingLabel || "";
   const progress = Number(state.timerProgress);
   timerFill.style.height = `${Math.round((Number.isFinite(progress) ? progress : 0) * 100)}%`;
