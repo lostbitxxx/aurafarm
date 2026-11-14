@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { LevelUpCelebration, RewardPicker } from "./level-up-reward";
@@ -37,6 +38,7 @@ import {
   type StudyScoreCard,
 } from "@/lib/study";
 import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
+import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
 
 function roomStorageKey(userId: string) {
   return `aurafarm.room.${userId}`;
@@ -218,6 +220,21 @@ export function DashboardScreen({
     setPlacedIds(placement.ids);
     setPlacementReady(true);
   }, [userId, pets]);
+
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(DESK_REFRESH_CHANNEL);
+    let lastRefresh = 0;
+    channel.onmessage = (event: MessageEvent<{ type?: string }>) => {
+      if (event.data?.type !== DESK_REFRESH_TYPE) return;
+      const now = Date.now();
+      if (now - lastRefresh < 1000) return;
+      lastRefresh = now;
+      router.refresh();
+    };
+    return () => channel.close();
+  }, [router]);
 
   const seenRaw = useSyncExternalStore(
     subscribeSeenRewards,
