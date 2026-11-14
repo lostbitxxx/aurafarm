@@ -82,7 +82,8 @@ test("the session page uses the same paper layout as sign-in", () => {
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   assert.match(desk, /DESK_REFRESH_CHANNEL/);
   assert.match(desk, /DESK_REFRESH_TYPE/);
-  assert.match(desk, /router\.refresh\(\)/);
+  assert.match(desk, /startDeskRefresh\(\(\) => \{\s*router\.refresh\(\)/);
+  assert.match(desk, /deskRefreshing=\{deskRefreshing\}/);
   assert.doesNotMatch(desk, /visibilitychange/);
   assert.doesNotMatch(desk, /pageshow/);
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
@@ -91,7 +92,10 @@ test("the session page uses the same paper layout as sign-in", () => {
   assert.match(panel, /if \(!desktopPetSession\) return/);
   assert.match(panel, /visibilityState !== "visible"/);
   assert.match(panel, /visibilitychange/);
-  assert.match(panel, /router\.refresh\(\)/);
+  assert.match(panel, /startSessionRefresh\(\(\) => \{\s*router\.refresh\(\)/);
+  assert.match(panel, /Checking this session/);
+  assert.match(panel, /SessionRefreshStatus/);
+  assert.match(panel, /desktopPetSession && \(sessionRefreshing \|\| deskRefreshing\)/);
   assert.doesNotMatch(panel, /pageshow/);
   assert.doesNotMatch(panel, /requestDeskRefresh|DESK_REFRESH_CHANNEL/);
   const cancel = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
