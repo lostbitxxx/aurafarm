@@ -842,6 +842,12 @@ button.dialog-row {
   image-rendering: pixelated;
 }
 
+.dialog-row .pixel-pet.dialog-pet-art {
+  width: 48px;
+  height: 48px;
+  overflow: visible;
+}
+
 .pet-detail {
   display: grid;
   grid-template-columns: 1fr 1fr;

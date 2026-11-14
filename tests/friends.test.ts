@@ -59,6 +59,32 @@ test("friend rows keep accepted friends apart from incoming requests", () => {
     ]),
     [{ ...ada, clothes: null, presence: "online" }],
   );
+  assert.equal(
+    friendCardsFromRows([
+      {
+        friend_id: ada.friendId,
+        display_name: "Ada",
+        status: "accepted",
+        incoming: false,
+        pet_type: "baby_slime",
+        clothes: "little-gentleman-suit",
+      },
+    ])[0]?.clothes,
+    "little-gentleman-suit",
+  );
+  assert.equal(
+    friendCardsFromRows([
+      {
+        friend_id: ada.friendId,
+        display_name: "Ada",
+        status: "accepted",
+        incoming: false,
+        pet_type: "baby_slime",
+        clothes: "clothes_a",
+      },
+    ])[0]?.clothes,
+    "clothes_a",
+  );
   assert.equal(socialStatusLabel("aurafarming"), "Aurafarming");
   assert.equal(socialStatusLabel("invisible"), "Invisible");
   assert.equal(friendRequestMessage("column allow_status_seen does not exist"), "Run migration 0026 before using social status.");
