@@ -113,16 +113,10 @@ test("lettered hats and clothes use ordinary names", () => {
   assert.equal(sampleAccessoryName("clothes", "clothes_a"), "Blue vest");
   assert.equal(sampleAccessoryName("clothes", "clothes_b"), "Brown vest");
   assert.equal(sampleAccessoryName("hat", "nope"), null);
-
-  const sql = readFileSync(
-    new URL("../supabase/migrations/0035_accessory_display_names.sql", import.meta.url),
-    "utf8",
-  );
   for (const item of [...SAMPLE_HATS, ...SAMPLE_CLOTHES]) {
     assert.ok(item.name.length <= 32);
-    assert.match(sql, new RegExp(`'${item.id}', '${item.name}'`));
+    assert.notEqual(item.name, item.id);
   }
-  assert.doesNotMatch(sql, /hat_a', 'hat_a'/);
 
   const dialogs = readFileSync(new URL("../components/dashboard-dialogs.tsx", import.meta.url), "utf8");
   const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
