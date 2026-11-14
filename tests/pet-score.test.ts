@@ -173,7 +173,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
   assert.match(desk, /Desktop pet/);
   assert.match(desk, /Website timer/);
-  assert.match(desk, /Confirm/);
+  assert.match(desk, /xattr -cr ~\/Downloads\/Aurafarm\.app/);
+  assert.match(desk, /If this is the first time you download the app/);
+  assert.match(desk, /desktopHelp \|\| trackerChoice === false \? "Confirm" : "Next"/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
   assert.match(desk, /shownSession\?\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
