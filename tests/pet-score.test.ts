@@ -163,7 +163,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
-  assert.match(main, /PANEL_COLLAPSED_HEIGHT = 364/);
+  assert.match(main, /PANEL_HEIGHT = 309/);
+  assert.match(main, /PANEL_COLLAPSED_HEIGHT = 309/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
   assert.match(main, /area\.x \+ area\.width - width/);
   assert.match(main, /setBounds\(panelBounds\(panelOpen\), true\)/);

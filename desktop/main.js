@@ -58,8 +58,8 @@ async function loadRemoteConfig() {
 
 const PANEL_COLLAPSED_WIDTH = 24;
 const PANEL_EXPANDED_WIDTH = 320;
-const PANEL_HEIGHT = 520;
-const PANEL_COLLAPSED_HEIGHT = 364;
+const PANEL_HEIGHT = 309;
+const PANEL_COLLAPSED_HEIGHT = 309;
 
 let panelWindow = null;
 let panelOpen = false;
