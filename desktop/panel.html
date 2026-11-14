@@ -4,12 +4,45 @@
     <meta charset="utf-8" />
     <title>Aurafarm</title>
     <style>
+      html,
+      body {
+        height: 100%;
+      }
       body {
         margin: 0;
-        padding: 16px;
+        display: flex;
+        height: 100%;
+        overflow: hidden;
         font-family: "Avenir Next", "Segoe UI", sans-serif;
         background: #10241c;
         color: #f7f3e8;
+      }
+      #panel-toggle {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 40px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #f7f3e8;
+        font: 600 22px/1 "Avenir Next", "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+      body.is-open #panel-toggle {
+        border-right: 1px solid rgba(247, 243, 232, 0.18);
+      }
+      #panel-body {
+        display: none;
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+        padding: 16px 16px 16px 12px;
+      }
+      body.is-open #panel-body {
+        display: block;
       }
       form,
       p {
@@ -59,20 +92,23 @@
     </style>
   </head>
   <body>
-    <form id="session-token">
-      <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-      <button type="submit">Use session token</button>
-    </form>
-    <p id="update" hidden>
-      <span id="update-label"></span>
-      <button id="update-button" type="button">Download update</button>
-    </p>
-    <p id="status">Paste a session token.</p>
-    <p id="bubble" hidden></p>
-    <button id="finish" class="finish" type="button">Finish focused session</button>
-    <p id="note"></p>
-    <button id="cancel" type="button">Cancel study session</button>
-    <button id="quit" class="quit" type="button">Quit</button>
+    <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">‹</button>
+    <div id="panel-body">
+      <form id="session-token">
+        <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+        <button type="submit">Use session token</button>
+      </form>
+      <p id="update" hidden>
+        <span id="update-label"></span>
+        <button id="update-button" type="button">Download update</button>
+      </p>
+      <p id="status">Paste a session token.</p>
+      <p id="bubble" hidden></p>
+      <button id="finish" class="finish" type="button">Finish focused session</button>
+      <p id="note"></p>
+      <button id="cancel" type="button">Cancel study session</button>
+      <button id="quit" class="quit" type="button">Quit</button>
+    </div>
     <script src="panel.js"></script>
   </body>
 </html>
