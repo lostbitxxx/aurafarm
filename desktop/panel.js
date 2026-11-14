@@ -1,6 +1,9 @@
 const status = document.getElementById("status");
 const update = document.getElementById("update");
 const updateLabel = document.getElementById("update-label");
+const finishButton = document.getElementById("finish");
+const note = document.getElementById("note");
+const bubble = document.getElementById("bubble");
 const tokenField = document.querySelector("#session-token textarea");
 
 function fillSessionCode(text) {
@@ -35,6 +38,10 @@ document.getElementById("quit").addEventListener("click", () => {
   window.pet.quit();
 });
 
+finishButton.addEventListener("click", () => {
+  window.pet.finish();
+});
+
 document.getElementById("cancel").addEventListener("click", async () => {
   const result = await window.pet.cancelStudy();
   status.textContent = result.error || "Study session cancelled.";
@@ -49,6 +56,10 @@ document.getElementById("session-token").addEventListener("submit", async (event
 
 window.pet.onState((state) => {
   if (state.status) status.textContent = state.status;
+  finishButton.textContent = state.finishLabel || "Finish focused session";
+  note.textContent = state.finishNote || "";
+  bubble.textContent = state.bubble || "";
+  bubble.hidden = !state.bubble;
   if (state.updateUrl) {
     update.hidden = false;
     updateLabel.textContent = state.updateLabel || "A newer pet is available.";
