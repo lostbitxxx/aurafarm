@@ -56,9 +56,10 @@ async function loadRemoteConfig() {
   }
 }
 
-const PANEL_COLLAPSED_WIDTH = 40;
+const PANEL_COLLAPSED_WIDTH = 20;
 const PANEL_EXPANDED_WIDTH = 320;
 const PANEL_HEIGHT = 520;
+const PANEL_COLLAPSED_HEIGHT = 364;
 
 let panelWindow = null;
 let panelOpen = false;
@@ -162,7 +163,7 @@ function setDebug(debug) {
 function panelBounds(open) {
   const area = screen.getPrimaryDisplay().workArea;
   const width = open ? PANEL_EXPANDED_WIDTH : PANEL_COLLAPSED_WIDTH;
-  const height = Math.min(PANEL_HEIGHT, area.height);
+  const height = Math.min(open ? PANEL_HEIGHT : PANEL_COLLAPSED_HEIGHT, area.height);
   return {
     x: area.x + area.width - width,
     y: area.y + Math.round((area.height - height) / 2),
@@ -174,6 +175,7 @@ function panelBounds(open) {
 function placePanel() {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
+  win.setHasShadow(panelOpen);
   win.setBounds(panelBounds(panelOpen), true);
 }
 
@@ -216,10 +218,12 @@ function openPanel() {
   panelWindow = new BrowserWindow({
     ...bounds,
     frame: false,
+    transparent: true,
     movable: false,
     resizable: false,
     alwaysOnTop: true,
-    backgroundColor: "#10241c",
+    hasShadow: panelOpen,
+    backgroundColor: "#00000000",
     title: "Aurafarm",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
