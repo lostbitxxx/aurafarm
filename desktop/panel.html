@@ -4,75 +4,159 @@
     <meta charset="utf-8" />
     <title>Aurafarm</title>
     <style>
+      html {
+        font-size: 13px;
+      }
+      html,
+      body {
+        height: 100%;
+        background: transparent;
+      }
       body {
         margin: 0;
-        padding: 16px;
-        font-family: "Avenir Next", "Segoe UI", sans-serif;
-        background: #10241c;
-        color: #f7f3e8;
+        display: flex;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        line-height: 1.35;
+        background: #f7f3e8;
+        color: #23392d;
+      }
+      #panel-toggle {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 24px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: #f7f3e8;
+        color: #23392d;
+        font: 600 22px/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+      #panel-toggle:focus-visible {
+        outline: 3px solid #8261a7;
+        outline-offset: -3px;
+      }
+      #panel-body {
+        display: none;
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+        padding: 0.55rem calc(20px + 0.45rem) 0.55rem 0.45rem;
+      }
+      body.is-open #panel-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+      #session-block {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: 1.35rem;
+      }
+      #panel-actions {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: auto;
+        margin-bottom: auto;
       }
       form,
       p {
-        margin: 0 0 12px;
+        margin: 0;
       }
       label {
-        display: block;
-        font-size: 13px;
+        display: grid;
+        gap: 0.25rem;
+        font-weight: 500;
+        color: #23392d;
       }
       input,
       textarea {
         width: 100%;
         box-sizing: border-box;
-        margin-top: 4px;
-        padding: 8px;
+        border: 1px solid #9daa90;
+        border-radius: 14px;
+        padding: 0.45rem 0.6rem;
         font: inherit;
+        color: #23392d;
+        background: #fffdf6;
       }
       textarea {
-        min-height: 72px;
+        min-height: 4.5rem;
         resize: none;
       }
-      button {
-        margin-top: 8px;
+      input:focus,
+      textarea:focus {
+        outline: 3px solid #8261a7;
+        outline-offset: 3px;
       }
-      button.finish {
+      #panel-body button {
         display: block;
-        border: 0;
+        width: 100%;
+        margin: 0;
         border-radius: 999px;
-        padding: 8px 12px;
-        background: #c6ef4a;
-        color: #14211a;
-        font: 600 13px/1.2 "Avenir Next", "Segoe UI", sans-serif;
+        padding: 0.5rem 0.85rem;
+        font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
       }
+      #panel-body #session-token button {
+        margin-top: 0.7rem;
+      }
+      #panel-body button:hover {
+        filter: brightness(0.97);
+      }
+      #panel-body button:focus-visible {
+        outline: 3px solid #8261a7;
+        outline-offset: 3px;
+      }
+      #panel-body button.primary,
+      #panel-body button.finish {
+        background: #c5ef47;
+        color: #23392d;
+        border: 1px solid #97b839;
+      }
+      #panel-body button.ghost {
+        background: #f5f0e2;
+        color: #23392d;
+        border: 1px solid #9daa90;
+      }
       #note,
-      #bubble {
-        font-size: 13px;
-        line-height: 1.4;
+      #bubble,
+      #status,
+      #update-label {
+        color: #596650;
+        line-height: 1.35;
       }
-      button.quit {
-        margin-top: 16px;
-      }
-      #status {
-        font-size: 13px;
-        line-height: 1.4;
+      #note:empty {
+        display: none;
       }
     </style>
   </head>
   <body>
-    <form id="session-token">
-      <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-      <button type="submit">Use session token</button>
-    </form>
-    <p id="update" hidden>
-      <span id="update-label"></span>
-      <button id="update-button" type="button">Download update</button>
-    </p>
-    <p id="status">Paste a session token.</p>
-    <p id="bubble" hidden></p>
-    <button id="finish" class="finish" type="button">Finish focused session</button>
-    <p id="note"></p>
-    <button id="cancel" type="button">Cancel study session</button>
-    <button id="quit" class="quit" type="button">Quit</button>
+    <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">‹</button>
+    <div id="panel-body">
+      <div id="session-block">
+        <form id="session-token">
+          <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+          <button class="primary" type="submit">Use session token</button>
+        </form>
+        <p id="update" hidden>
+          <span id="update-label"></span>
+          <button id="update-button" class="primary" type="button">Download update</button>
+        </p>
+        <p id="status">Paste a session token.</p>
+        <p id="bubble" hidden></p>
+      </div>
+      <div id="panel-actions">
+        <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
+        <p id="note"></p>
+        <button id="quit" class="ghost" type="button">Quit</button>
+      </div>
+    </div>
     <script src="panel.js"></script>
   </body>
 </html>

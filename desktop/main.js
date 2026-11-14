@@ -56,7 +56,13 @@ async function loadRemoteConfig() {
   }
 }
 
+const PANEL_COLLAPSED_WIDTH = 24;
+const PANEL_EXPANDED_WIDTH = 320;
+const PANEL_HEIGHT = 309;
+const PANEL_COLLAPSED_HEIGHT = 309;
+
 let panelWindow = null;
+let panelOpen = false;
 let debugWindow = null;
 let bubbleHost = "";
 let finishing = false;
@@ -69,6 +75,7 @@ let state = {
   petType: "baby_slime",
   level: 1,
   status: "Paste a session token.",
+  panelOpen: false,
 };
 const pendingLinks = [];
 
@@ -153,9 +160,31 @@ function setDebug(debug) {
   publish();
 }
 
-function panelOrigin() {
+function panelBounds(open) {
   const area = screen.getPrimaryDisplay().workArea;
-  return { x: area.x + 80, y: area.y + 80 };
+  const width = open ? PANEL_EXPANDED_WIDTH : PANEL_COLLAPSED_WIDTH;
+  const height = Math.min(open ? PANEL_HEIGHT : PANEL_COLLAPSED_HEIGHT, area.height);
+  return {
+    x: area.x + area.width - width,
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+  };
+}
+
+function placePanel() {
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return;
+  win.setHasShadow(true);
+  win.setBounds(panelBounds(panelOpen), true);
+}
+
+function setPanelOpen(open) {
+  panelOpen = Boolean(open);
+  placePanel();
+  if (state.panelOpen === panelOpen) return;
+  state = { ...state, panelOpen };
+  publish();
 }
 
 function focusPanel() {
@@ -163,6 +192,7 @@ function focusPanel() {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
+  setPanelOpen(true);
   win.show();
   win.focus();
 }
@@ -184,14 +214,16 @@ function openPanel() {
     panelWindow.show();
     return;
   }
-  const anchor = panelOrigin();
+  const bounds = panelBounds(panelOpen);
   panelWindow = new BrowserWindow({
-    width: 320,
-    height: 520,
-    x: anchor.x,
-    y: anchor.y,
+    ...bounds,
+    frame: false,
+    transparent: true,
+    movable: false,
     resizable: false,
     alwaysOnTop: true,
+    hasShadow: true,
+    backgroundColor: "#00000000",
     title: "Aurafarm",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -772,6 +804,9 @@ ipcMain.on("open-update", () => {
 ipcMain.on("quit-app", () => {
   app.quit();
 });
+ipcMain.on("set-panel-open", (_event, open) => {
+  setPanelOpen(open);
+});
 
 async function checkForUpdate() {
   try {
@@ -842,6 +877,10 @@ if (!gotLock) {
         },
       ]),
     );
+    screen.on("display-metrics-changed", () => {
+      placePanel();
+      placeDebugWindow();
+    });
     openPanel();
     openDebugWindow();
     setDebug(describeCloseDebug({ session: false }));

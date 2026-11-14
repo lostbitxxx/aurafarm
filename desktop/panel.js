@@ -4,7 +4,19 @@ const updateLabel = document.getElementById("update-label");
 const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
 const bubble = document.getElementById("bubble");
+const toggle = document.getElementById("panel-toggle");
 const tokenField = document.querySelector("#session-token textarea");
+
+function applyPanelOpen(open) {
+  document.body.classList.toggle("is-open", open);
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-label", open ? "Close Aurafarm" : "Open Aurafarm");
+  toggle.textContent = open ? "›" : "‹";
+}
+
+toggle.addEventListener("click", () => {
+  window.pet.setOpen(toggle.getAttribute("aria-expanded") !== "true");
+});
 
 function fillSessionCode(text) {
   if (!(tokenField instanceof HTMLTextAreaElement)) return;
@@ -42,11 +54,6 @@ finishButton.addEventListener("click", () => {
   window.pet.finish();
 });
 
-document.getElementById("cancel").addEventListener("click", async () => {
-  const result = await window.pet.cancelStudy();
-  status.textContent = result.error || "Study session cancelled.";
-});
-
 document.getElementById("session-token").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
@@ -55,7 +62,9 @@ document.getElementById("session-token").addEventListener("submit", async (event
 });
 
 window.pet.onState((state) => {
+  if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   if (state.status) status.textContent = state.status;
+  finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish focused session";
   note.textContent = state.finishNote || "";
   bubble.textContent = state.bubble || "";

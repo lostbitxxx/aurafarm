@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld("pet", {
   cancelStudy: () => ipcRenderer.invoke("cancel-study"),
   openUpdate: () => ipcRenderer.send("open-update"),
   quit: () => ipcRenderer.send("quit-app"),
+  setOpen: (open) => ipcRenderer.send("set-panel-open", open),
 });
