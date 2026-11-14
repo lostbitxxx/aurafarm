@@ -13,6 +13,7 @@ const {
   hostnameFromUrl,
   describeCloseDebug,
   describeFrontRead,
+  closeCountdownStatus,
   nextCloseWatch,
   nextFrontLog,
   noteCloseAttempt,
@@ -53,6 +54,11 @@ const {
     reading: { app?: string; url?: string; error?: string },
     log: { blockedCount: number; blockedHosts: string[] },
   ) => string;
+  closeCountdownStatus: (
+    watch: { host: string; since: number },
+    now: number,
+    limitMs?: number,
+  ) => string;
   nextFrontLog: (
     active: boolean,
     log: { blockedCount: number; blockedHosts: string[]; currentHost: string },
@@ -68,11 +74,12 @@ const {
     matches?: (host: string, blockedHosts: readonly string[]) => boolean,
   ) => { blockedCount: number; blockedHosts: string[]; currentHost: string };
 };
-const { frontAppStatement, frontCloseStatement, frontUrlStatement, supportedFrontBrowser } =
+const { frontAppStatement, frontCloseStatement, frontUrlStatement, frontWindowBoundsStatement, supportedFrontBrowser } =
   require("../desktop/front-browser.js") as {
     frontAppStatement: () => string;
     frontCloseStatement: (appName: string) => string;
     frontUrlStatement: (appName: string) => string;
+    frontWindowBoundsStatement: (appName: string) => string;
     supportedFrontBrowser: (appName: string) => boolean;
   };
 
@@ -167,6 +174,10 @@ test("the mac reader asks only the front window of safari, chrome, or edge", () 
   assert.equal(supportedFrontBrowser("Microsoft Edge"), true);
   assert.equal(supportedFrontBrowser("Firefox"), false);
   assert.match(frontAppStatement(), /frontmost is true/);
+  assert.match(frontWindowBoundsStatement("Google Chrome"), /tell application "Google Chrome" to get bounds of front window/);
+  assert.match(frontWindowBoundsStatement("Safari"), /tell application "Safari" to get bounds of front window/);
+  assert.doesNotMatch(frontWindowBoundsStatement("Google Chrome"), /System Events/);
+  assert.equal(frontWindowBoundsStatement("Firefox"), "");
   assert.match(frontUrlStatement("Safari"), /URL of current tab of front window/);
   assert.match(frontUrlStatement("Google Chrome"), /URL of active tab of front window/);
   assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
@@ -202,6 +213,15 @@ test("a failed browser read is shown instead of a clear session", () => {
     describeFrontRead({ app: "Google Chrome", url: "https://www.youtube.com/", error: "" }, youtube),
     "Watching. Blocked 1: www.youtube.com",
   );
+  assert.equal(
+    closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 16_000),
+    "Watching. Closing www.youtube.com in 0:15.",
+  );
+  assert.equal(
+    closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 61_000),
+    "Watching. Closing www.youtube.com now.",
+  );
+  assert.equal(closeCountdownStatus({ host: "", since: 1_000 }, 2_000), "");
 });
 
 function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: number, enabled = true) {
@@ -214,18 +234,18 @@ function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: 
   });
 }
 
-test("a blocked host is closed once after 60 seconds on that page", () => {
-  assert.equal(CLOSE_AFTER_MS, 60_000);
+test("a blocked host is closed once after 30 seconds on that page", () => {
+  assert.equal(CLOSE_AFTER_MS, 30_000);
   const start = 1_000;
   const seen = dwell(createCloseWatch(), "https://www.instagram.com/reels", start);
   assert.equal(seen.close, false);
   assert.equal(seen.since, start);
 
-  const still = dwell(seen, "https://www.instagram.com/explore", start + 59_999);
+  const still = dwell(seen, "https://www.instagram.com/explore", start + 29_999);
   assert.equal(still.close, false);
   assert.equal(still.since, start);
 
-  const due = dwell(still, "https://www.instagram.com/", start + 60_000);
+  const due = dwell(still, "https://www.instagram.com/", start + 30_000);
   assert.equal(due.close, true);
   assert.equal(due.host, "www.instagram.com");
 
@@ -268,13 +288,14 @@ test("leaving, a lookalike, the desk, or switching the toggle off clears the wai
   assert.equal(disabled.host, "");
 });
 
-test("a different blocked host starts a new 60 second wait", () => {
+test("a different blocked host starts a new 30 second wait", () => {
   const instagram = dwell(createCloseWatch(), "https://www.instagram.com/", 1_000);
-  const youtube = dwell(instagram, "https://www.youtube.com/feed", 61_000);
+  const youtube = dwell(instagram, "https://www.youtube.com/feed", 31_000);
   assert.equal(youtube.host, "www.youtube.com");
-  assert.equal(youtube.since, 61_000);
+  assert.equal(youtube.since, 31_000);
   assert.equal(youtube.close, false);
-  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 121_000).close, true);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 60_999).close, false);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 61_000).close, true);
 });
 
 test("a missing address does not reset the wait or close on its own", () => {
@@ -283,7 +304,8 @@ test("a missing address does not reset the wait or close on its own", () => {
   assert.equal(missed.host, "www.tiktok.com");
   assert.equal(missed.since, 2_000);
   assert.equal(missed.close, false);
-  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 62_000).close, true);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 31_999).close, false);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 32_000).close, true);
 });
 
 test("the debug line names the reason a blocked tab stays open", () => {
@@ -304,7 +326,7 @@ test("the debug line names the reason a blocked tab stays open", () => {
       decision: { host: "www.youtube.com", since: 1_000, close: false },
       now: 4_000,
     }),
-    /www.youtube.com in Google Chrome for 3s of 60s/,
+    /www.youtube.com in Google Chrome for 3s of 30s/,
   );
   assert.match(
     describeCloseDebug({

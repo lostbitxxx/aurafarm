@@ -9,13 +9,16 @@ const {
   createFrontLog,
   describeCloseDebug,
   describeFrontRead,
+  closeCountdownStatus,
   deskHostFromOrigin,
   nextCloseWatch,
   nextFrontLog,
   noteCloseAttempt,
+  hostnameFromUrl,
 } = require("./frontmost");
-const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
+const { closeFrontWindow, readFrontBrowser, readFrontWindowBounds } = require("./front-browser");
 const { readPetConfig } = require("./config");
+const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { formatStudyClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
@@ -59,12 +62,15 @@ async function loadRemoteConfig() {
 
 const PANEL_COLLAPSED_WIDTH = 24;
 const PANEL_EXPANDED_WIDTH = 320;
-const PANEL_HEIGHT = 345;
-const PANEL_COLLAPSED_HEIGHT = 309;
+const PANEL_HEIGHT = 275;
+const PANEL_COLLAPSED_HEIGHT = 239;
+const PET_SIZE = 70;
 
 let panelWindow = null;
 let panelOpen = false;
-let debugWindow = null;
+let petWindow = null;
+let petVisible = true;
+let petAnimating = false;
 let bubbleHost = "";
 let finishing = false;
 let study = null;
@@ -77,6 +83,9 @@ let state = {
   level: 1,
   status: "Paste a session token.",
   panelOpen: false,
+  petVisible: true,
+  petPose: "idle",
+  petFlip: false,
 };
 const pendingLinks = [];
 
@@ -144,7 +153,7 @@ function publish() {
     assetOrigin: API_ORIGIN,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
-  for (const win of [panelWindow, debugWindow]) {
+  for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
@@ -184,9 +193,170 @@ function placePanel() {
 function setPanelOpen(open) {
   panelOpen = Boolean(open);
   placePanel();
+  placePet();
   if (state.panelOpen === panelOpen) return;
   state = { ...state, panelOpen };
   publish();
+}
+
+function petBounds() {
+  const area = screen.getPrimaryDisplay().workArea;
+  const panel = panelBounds(panelOpen);
+  const width = PET_SIZE;
+  const height = Math.min(PET_SIZE, area.height);
+  const x = Math.max(area.x, panel.x - width);
+  const y = area.y + area.height - height;
+  return {
+    x: Math.min(x, area.x + Math.max(0, area.width - width)),
+    y,
+    width,
+    height,
+  };
+}
+
+function placePet() {
+  if (petAnimating) return;
+  const win = petWindow;
+  if (!win || win.isDestroyed()) return;
+  win.setBounds(petBounds(), true);
+}
+
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function setPetPose(pose, flip) {
+  const nextFlip = Boolean(flip);
+  if (state.petPose === pose && state.petFlip === nextFlip) return;
+  state = { ...state, petPose: pose, petFlip: nextFlip };
+  publish();
+}
+
+async function walkPetTo(x, y) {
+  const win = petWindow;
+  if (!win || win.isDestroyed()) return;
+  const from = win.getBounds();
+  const faceLeft = x < from.x - 1;
+  const steps = 16;
+  for (let i = 1; i <= steps; i += 1) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    const t = 1 - Math.pow(1 - i / steps, 2);
+    petWindow.setPosition(
+      Math.round(from.x + (x - from.x) * t),
+      Math.round(from.y + (y - from.y) * t),
+    );
+    setPetPose(i % 4 < 2 ? "walk1" : "walk2", faceLeft);
+    await waitMs(40);
+  }
+  if (petWindow && !petWindow.isDestroyed()) petWindow.setPosition(Math.round(x), Math.round(y));
+}
+
+async function jumpPet() {
+  const win = petWindow;
+  if (!win || win.isDestroyed()) return;
+  const start = win.getBounds();
+  setPetPose("idle", state.petFlip);
+  for (const dy of [0, -14, -28, -36, -22, -6, 0, -10, -18, -8, 0]) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    petWindow.setPosition(start.x, start.y + dy);
+    await waitMs(32);
+  }
+}
+
+async function returnPetHome() {
+  if (!petWindow || petWindow.isDestroyed()) return;
+  const home = petBounds();
+  await walkPetTo(home.x, home.y);
+  setPetPose("idle", false);
+}
+
+async function finishPetApproach() {
+  try {
+    await returnPetHome();
+  } finally {
+    petAnimating = false;
+    setPetPose("idle", false);
+    placePet();
+  }
+}
+
+async function closeFrontTab(appName, host) {
+  let animated = false;
+  if (petVisible && petWindow && !petWindow.isDestroyed()) {
+    const bounds = await readFrontWindowBounds(appName);
+    const parsed = bounds.ok ? parseWindowBounds(bounds.value) : null;
+    if (parsed) {
+      petAnimating = true;
+      animated = true;
+      try {
+        const origin = petOriginForTabStrip(parsed, PET_SIZE);
+        const display = screen.getDisplayNearestPoint({
+          x: origin.x + PET_SIZE / 2,
+          y: origin.y + PET_SIZE / 2,
+        });
+        const aim = clampPetOrigin(origin, PET_SIZE, display.bounds);
+        await walkPetTo(aim.x, aim.y);
+        await jumpPet();
+      } catch {
+        await finishPetApproach();
+        return { ok: false, error: "", skipped: true };
+      }
+    }
+  }
+  if (animated) {
+    const still = await readFrontBrowser();
+    if (hostnameFromUrl(still.url || "") !== host) {
+      await finishPetApproach();
+      return { ok: false, error: "", skipped: true };
+    }
+  }
+  const result = await closeFrontWindow(appName);
+  if (animated) await finishPetApproach();
+  return result;
+}
+
+function setPetVisible(visible) {
+  petVisible = Boolean(visible);
+  if (petVisible) openPet();
+  else if (petWindow && !petWindow.isDestroyed()) petWindow.hide();
+  if (state.petVisible === petVisible) return;
+  state = { ...state, petVisible };
+  publish();
+}
+
+function openPet() {
+  if (petWindow && !petWindow.isDestroyed()) {
+    placePet();
+    if (petVisible) petWindow.showInactive();
+    return;
+  }
+  const bounds = petBounds();
+  petWindow = new BrowserWindow({
+    ...bounds,
+    show: petVisible,
+    frame: false,
+    transparent: true,
+    movable: false,
+    resizable: false,
+    focusable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: false,
+    backgroundColor: "#00000000",
+    title: "Aurafarm pet",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  petWindow.setIgnoreMouseEvents(true, { forward: true });
+  petWindow.loadFile(path.join(__dirname, "pet.html"));
+  petWindow.on("closed", () => {
+    petWindow = null;
+    if (!appQuitting && petVisible) setImmediate(() => openPet());
+  });
+  petWindow.webContents.once("did-finish-load", publish);
 }
 
 function focusPanel() {
@@ -437,8 +607,16 @@ function tickStudyClock() {
   const remaining = remainingStudyMs(study, now);
   const label = remaining === null ? "" : formatStudyClock(remaining);
   const progress = studyProgress(study, now) ?? 0;
-  if (state.remainingLabel !== label || state.timerProgress !== progress) {
-    state = { ...state, remainingLabel: label, timerProgress: progress };
+  const countdown = closeCountdownStatus(study.closeWatch, now);
+  const clockChanged = state.remainingLabel !== label || state.timerProgress !== progress;
+  const countdownChanged = Boolean(countdown) && state.status !== countdown;
+  if (clockChanged || countdownChanged) {
+    state = {
+      ...state,
+      remainingLabel: label,
+      timerProgress: progress,
+      ...(countdownChanged ? { status: countdown } : {}),
+    };
     publish();
   }
   if (remaining !== null && remaining <= 0) void finishSession();
@@ -526,45 +704,8 @@ function hideBubble() {
   publish();
 }
 
-function openDebugWindow() {
-  if (debugWindow && !debugWindow.isDestroyed()) return;
-  const win = new BrowserWindow({
-    width: 460,
-    height: 96,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    focusable: false,
-    hasShadow: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  debugWindow = win;
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setIgnoreMouseEvents(true, { forward: true });
-  win.loadFile(path.join(__dirname, "debug.html"));
-  win.on("closed", () => {
-    if (debugWindow === win) debugWindow = null;
-  });
-  win.webContents.once("did-finish-load", publish);
-  placeDebugWindow();
-}
-
-function placeDebugWindow() {
-  if (!debugWindow || debugWindow.isDestroyed()) return;
-  const area = screen.getPrimaryDisplay().workArea;
-  debugWindow.setPosition(area.x + 16, area.y + 16);
-}
-
 function setPetLevel(level) {
-  for (const win of [panelWindow, debugWindow]) {
+  for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
   }
 }
@@ -670,6 +811,11 @@ async function submitScoreDirect(current, body, postFailure) {
 
 function publishWatch(reading) {
   if (!study) return;
+  const countdown = closeCountdownStatus(study.closeWatch, Date.now());
+  if (countdown) {
+    setStatus(countdown);
+    return;
+  }
   if (!reading) {
     setStatus("Watching. Nothing on the blocklist is in front.");
     return;
@@ -744,13 +890,17 @@ async function pollFront() {
     let closeError = "";
     if (decision.close) {
       showBubble(decision.host);
-      const closed = await closeFrontWindow(reading.app);
+      const closed = await closeFrontTab(reading.app, decision.host);
       if (study !== current) return;
-      current.closeWatch = noteCloseAttempt(current.closeWatch);
-      if (!closed.ok) {
+      if (closed.skipped) {
         hideBubble();
-        closeError = closed.error || "osascript failed";
-        closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
+      } else {
+        current.closeWatch = noteCloseAttempt(current.closeWatch);
+        if (!closed.ok) {
+          hideBubble();
+          closeError = closed.error || "osascript failed";
+          closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
+        }
       }
     } else if (bubbleHost && (!reading.url || decision.host !== bubbleHost)) {
       hideBubble();
@@ -814,6 +964,9 @@ ipcMain.on("quit-app", () => {
 });
 ipcMain.on("set-panel-open", (_event, open) => {
   setPanelOpen(open);
+});
+ipcMain.on("set-pet-visible", (_event, visible) => {
+  setPetVisible(visible);
 });
 
 async function checkForUpdate() {
@@ -887,10 +1040,10 @@ if (!gotLock) {
     );
     screen.on("display-metrics-changed", () => {
       placePanel();
-      placeDebugWindow();
+      placePet();
     });
     openPanel();
-    openDebugWindow();
+    openPet();
     setDebug(describeCloseDebug({ session: false }));
     await loadRemoteConfig();
     await restoreSession();

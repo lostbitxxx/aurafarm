@@ -23,6 +23,11 @@ function frontUrlStatement(appName) {
   return "";
 }
 
+function frontWindowBoundsStatement(appName) {
+  if (!supportedFrontBrowser(appName)) return "";
+  return `tell application ${JSON.stringify(appName)} to get bounds of front window`;
+}
+
 function frontCloseStatement(appName) {
   if (!supportedFrontBrowser(appName)) return "";
   const tab = appName === "Safari" ? "current tab" : "active tab";
@@ -65,6 +70,13 @@ async function readFrontBrowser() {
   return { app: app.value, url: url.value, error: "" };
 }
 
+async function readFrontWindowBounds(appName) {
+  if (process.platform !== "darwin") return { ok: false, value: "", error: "Not macOS." };
+  const statement = frontWindowBoundsStatement(appName);
+  if (!statement) return { ok: false, value: "", error: "" };
+  return runOsascript(statement);
+}
+
 async function closeFrontWindow(appName) {
   if (process.platform !== "darwin") return { ok: false, error: "Not macOS." };
   const statement = frontCloseStatement(appName);
@@ -81,6 +93,8 @@ module.exports = {
   frontAppStatement,
   frontCloseStatement,
   frontUrlStatement,
+  frontWindowBoundsStatement,
   readFrontBrowser,
+  readFrontWindowBounds,
   supportedFrontBrowser,
 };
