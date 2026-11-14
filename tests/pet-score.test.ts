@@ -5,9 +5,13 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { formatStudyClock, remainingStudyMs } = require("../desktop/study-clock.js") as {
+const { formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
   formatStudyClock: (remainingMs: number) => string;
   remainingStudyMs: (
+    study: { plannedSeconds?: number; startedAtMs?: number },
+    now: number,
+  ) => number | null;
+  studyProgress: (
     study: { plannedSeconds?: number; startedAtMs?: number },
     now: number,
   ) => number | null;
@@ -153,6 +157,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /cancelStudySession/);
   assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="panel-toggle"/);
+  assert.match(panel, /id="timer-fill"/);
+  assert.match(panel, /#timer-fill[\s\S]*bottom: 0;/);
+  assert.match(panel, /#timer-fill[\s\S]*background: #c5ef47;/);
+  assert.match(script, /panelArrow\.textContent = open \? "›" : "‹"/);
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
@@ -180,11 +188,13 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = 309/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
   assert.match(main, /area\.x \+ area\.width - width/);
+  assert.match(main, /area\.y \+ area\.height - height/);
   assert.match(main, /setBounds\(panelBounds\(panelOpen\), true\)/);
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
   assert.match(main, /function focusPanel\(\)[\s\S]*setPanelOpen\(true\)/);
   assert.match(main, /display-metrics-changed/);
-  assert.match(panel, /#panel-actions \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: auto;\s*margin-bottom: auto;/);
+  assert.match(panel, /textarea \{\s*min-height: 2\.25rem;/);
+  assert.match(panel, /#panel-actions \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: auto;\s*margin-bottom: 0;/);
   assert.match(panel, /id="panel-actions"[\s\S]*id="finish"[\s\S]*id="quit"/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
@@ -208,6 +218,10 @@ test("the study clock shows the planned time that is left", () => {
     remainingStudyMs({ plannedSeconds: 120, startedAtMs: 1_700_000_000_000 }, 1_700_000_030_000),
     90_000,
   );
+  const started = 1_700_000_000_000;
+  assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), 0.5);
+  assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), 1);
+  assert.equal(studyProgress({ startedAtMs: started }, started), null);
 });
 
 test("the pet posts the score and does not open a port", () => {

@@ -7,6 +7,14 @@ function remainingStudyMs(current, now) {
   return started + planned * 1000 - now;
 }
 
+function studyProgress(current, now) {
+  const remaining = remainingStudyMs(current, now);
+  const planned = Number(current?.plannedSeconds);
+  if (remaining === null || !Number.isFinite(planned) || planned <= 0) return null;
+  const fraction = 1 - remaining / (planned * 1000);
+  return Math.min(1, Math.max(0, fraction));
+}
+
 function formatStudyClock(remainingMs) {
   const total = Math.max(0, Math.ceil(Number(remainingMs) / 1000));
   const hours = Math.floor(total / 3600);
@@ -20,4 +28,5 @@ function formatStudyClock(remainingMs) {
 module.exports = {
   formatStudyClock,
   remainingStudyMs,
+  studyProgress,
 };

@@ -6,13 +6,15 @@ const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
 const bubble = document.getElementById("bubble");
 const toggle = document.getElementById("panel-toggle");
+const panelArrow = document.getElementById("panel-arrow");
+const timerFill = document.getElementById("timer-fill");
 const tokenField = document.querySelector("#session-token textarea");
 
 function applyPanelOpen(open) {
   document.body.classList.toggle("is-open", open);
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   toggle.setAttribute("aria-label", open ? "Close Aurafarm" : "Open Aurafarm");
-  toggle.textContent = open ? "›" : "‹";
+  panelArrow.textContent = open ? "›" : "‹";
 }
 
 toggle.addEventListener("click", () => {
@@ -66,6 +68,8 @@ window.pet.onState((state) => {
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   timer.hidden = !state.remainingLabel;
   timer.textContent = state.remainingLabel || "";
+  const progress = Number(state.timerProgress);
+  timerFill.style.height = `${Math.round((Number.isFinite(progress) ? progress : 0) * 100)}%`;
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish focused session";
