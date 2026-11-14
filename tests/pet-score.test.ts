@@ -159,6 +159,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /width: 24px/);
   assert.doesNotMatch(panel, /border-right/);
   assert.match(panel, /"Outfit", "Avenir Next", "Segoe UI", sans-serif/);
+  assert.match(panel, /font-size: 13px/);
   assert.match(panel, /border-radius: 999px/);
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
