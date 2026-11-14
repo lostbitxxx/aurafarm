@@ -50,6 +50,14 @@ button, input { font: inherit; }
   text-decoration: none;
 }
 
+button.wordmark {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
 .topbar-nav, .topbar-user {
   display: flex;
   align-items: center;
@@ -676,10 +684,108 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .tracker-card .field { color: var(--dialog-ink); }
 
-.tracker-card .field input {
+.tracker-card .field input,
+.tracker-card .field textarea {
   border: 1px solid #9daa90;
   background: #fffdf6;
   color: var(--dialog-ink);
+}
+
+.tracker-card .field textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+}
+
+.crew-visibility {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.crew-visibility legend {
+  font-weight: 500;
+  padding: 0;
+}
+
+.crew-visibility-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.crew-visibility-options label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid #9daa90;
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  background: #fffdf6;
+  cursor: pointer;
+}
+
+.crew-visibility-options label:has(input:checked) {
+  background: #d6ef7a;
+  border-color: #6d8a32;
+}
+
+.crew-visibility-options input {
+  accent-color: #3d5a1f;
+}
+
+.crew-roster-heading {
+  margin: 0.85rem 0 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--dialog-ink);
+}
+
+.crew-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.crew-copy .panel-hint {
+  margin: 0;
+}
+
+.crew-code-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.crew-room-page {
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.crew-room-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.crew-room-status {
+  background: #fff9ed;
+  color: #23392d;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.crew-room-status.is-farming {
+  background: #c5ef47;
 }
 
 .tracker-card .form-error { color: #733d2c; }
@@ -946,6 +1052,7 @@ button.dialog-row {
   cursor: pointer;
   padding: 0;
 }
+
 
 .topbar-menu {
   position: relative;

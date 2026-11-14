@@ -14,6 +14,7 @@ export function SiteHeader({
   onOpenInventory,
   onOpenAchievements,
   onOpenFriends,
+  onOpenFarmCrew,
   onOpenSocialSettings,
   onOpenLeaderboard,
   pendingFriendRequest = false,
@@ -26,6 +27,7 @@ export function SiteHeader({
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
   onOpenFriends?: () => void;
+  onOpenFarmCrew?: () => void;
   onOpenSocialSettings?: () => void;
   onOpenLeaderboard?: () => void;
   pendingFriendRequest?: boolean;
@@ -81,6 +83,11 @@ export function SiteHeader({
                 <span>Friends</span>
                 {pendingFriendRequest ? <span className="request-dot" aria-hidden="true" /> : null}
               </button>
+              {onOpenFarmCrew ? (
+                <button type="button" role="menuitem" onClick={onOpenFarmCrew}>
+                  FarmCrew
+                </button>
+              ) : null}
               {onOpenSocialSettings ? (
                 <button type="button" role="menuitem" onClick={onOpenSocialSettings}>
                   Social Settings

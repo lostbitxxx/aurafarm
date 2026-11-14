@@ -25,6 +25,7 @@ export type LeaderboardScope = (typeof LEADERBOARD_SCOPES)[number]["id"];
 
 const LEADERBOARD_MIGRATION = "Run migration 0027 before opening the leaderboard.";
 const GLOBAL_LEADERBOARD_MIGRATION = "Run migration 0037 before opening the global leaderboard.";
+const CREW_LEADERBOARD_MIGRATION = "Run migration 0041 before opening the FarmCrew leaderboard.";
 
 export function isLeaderboardMode(value: unknown): value is LeaderboardMode {
   return LEADERBOARD_MODES.some((mode) => mode.id === value);
@@ -46,6 +47,7 @@ export function isLeaderboardScope(value: unknown): value is LeaderboardScope {
 }
 
 export function leaderboardMessage(message: string) {
+  if (/list_farm_crew_leaderboard/i.test(message)) return CREW_LEADERBOARD_MIGRATION;
   if (/list_global_leaderboard/i.test(message)) return GLOBAL_LEADERBOARD_MIGRATION;
   if (/list_friend_leaderboard/i.test(message)) return LEADERBOARD_MIGRATION;
   if (/choose a leaderboard/i.test(message)) return "Choose a leaderboard.";
