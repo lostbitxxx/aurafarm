@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { LevelUpCelebration, RewardPicker } from "./level-up-reward";
+import { DeskSong, SongUnlockCelebration } from "./song-player";
 import {
   AchievementsDialog,
   CollectionDialog,
@@ -18,6 +19,7 @@ import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
 import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
+import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
 import {
@@ -64,6 +66,8 @@ export function DashboardScreen({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  ownedSongs,
+  songsError,
   pendingRewards,
   petsError,
   activeSession,
@@ -93,6 +97,8 @@ export function DashboardScreen({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  ownedSongs: readonly OwnedSong[];
+  songsError: string | null;
   pendingRewards: readonly CollectionReward[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
@@ -127,6 +133,7 @@ export function DashboardScreen({
     | "friends"
     | "social-settings"
     | "leaderboard"
+    | "song"
     | null
   >(null);
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
@@ -136,6 +143,8 @@ export function DashboardScreen({
   const [ownedColors, setOwnedColors] = useState(ownedColorIds);
   const [ownedHats, setOwnedHats] = useState(ownedHatIds);
   const [ownedClothes, setOwnedClothes] = useState(ownedClothesIds);
+  const [ownedSongRows, setOwnedSongRows] = useState(ownedSongs);
+  const [songDisplay, setSongDisplay] = useState<string | null>(null);
   const [rewards, setRewards] = useState(pendingRewards);
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -154,10 +163,12 @@ export function DashboardScreen({
     .join("|");
   const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
   const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
+  const songSignature = ownedSongs.map((song) => `${song.id}:${song.seen ? 1 : 0}`).join("|");
   const friendSignature = friends.map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}`).join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
   const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
   const [rewardSnap, setRewardSnap] = useState(rewardSignature);
+  const [songSnap, setSongSnap] = useState(songSignature);
   const [friendSnap, setFriendSnap] = useState(friendSignature);
 
   if (petsSignature !== petsSnap) {
@@ -175,6 +186,11 @@ export function DashboardScreen({
   if (rewardSignature !== rewardSnap) {
     setRewardSnap(rewardSignature);
     setRewards(pendingRewards);
+  }
+
+  if (songSignature !== songSnap) {
+    setSongSnap(songSignature);
+    setOwnedSongRows(ownedSongs);
   }
 
   if (friendSignature !== friendSnap) {
@@ -209,8 +225,26 @@ export function DashboardScreen({
   }
 
   const celebration = display ? rewards.find((reward) => reward.id === display.id) ?? null : null;
+  const songBlocked = pickerOpen || Boolean(celebration && display);
+  const unseenSong = ownedSongRows.find((song) => !song.seen) ?? null;
+  if (songDisplay && !ownedSongRows.some((song) => song.id === songDisplay)) {
+    setSongDisplay(null);
+  } else if (!songBlocked && songDisplay === null && unseenSong) {
+    setSongDisplay(unseenSong.id);
+  }
+  const shownSong = songDisplay ? songById(songDisplay) : null;
 
   const activePet = equippedPet(localPets);
+  const songPet = activePet ?? localPets[0] ?? {
+    id: "song",
+    pet_type: "baby_slime",
+    level: 1,
+    xp: 0,
+    is_desktop_active: false,
+    color: null,
+    hat: null,
+    clothes: null,
+  };
   const described = activePet ? describePet(activePet.pet_type) : null;
   const progress = activePet ? experienceProgress(activePet.xp) : null;
   const sessionActive = Boolean(activeSession);
@@ -261,6 +295,16 @@ export function DashboardScreen({
   }, [rewards.length]);
 
   const dismissCelebration = useCallback(() => setDisplay(null), []);
+
+  const dismissSong = useCallback(() => {
+    setSongDisplay((id) => {
+      if (!id) return null;
+      setOwnedSongRows((current) =>
+        current.map((song) => (song.id === id ? { ...song, seen: true } : song)),
+      );
+      return null;
+    });
+  }, []);
 
   function onRewardClaimed(itemId: string) {
     const petId = rewards[0]?.petId;
@@ -313,7 +357,16 @@ export function DashboardScreen({
         onOpenFriends={() => setDialog("friends")}
         onOpenSocialSettings={() => setDialog("social-settings")}
         onOpenLeaderboard={() => setDialog("leaderboard")}
+        onOpenSong={() => setDialog("song")}
         pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
+      />
+      <DeskSong
+        userId={userId}
+        ownedIds={ownedSongRows.map((song) => song.id)}
+        featuredSongId={shownSong && !songBlocked ? shownSong.id : null}
+        songsError={songsError}
+        open={dialog === "song"}
+        onClose={() => setDialog(null)}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -407,6 +460,15 @@ export function DashboardScreen({
           displayName={displayName}
           initialPlan={studyPlan}
           onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {shownSong && !songBlocked ? (
+        <SongUnlockCelebration
+          key={shownSong.id}
+          songTitle={shownSong.title}
+          songId={shownSong.id}
+          pet={songPet}
+          onContinue={dismissSong}
         />
       ) : null}
       {celebration && celebrationPet && display ? (

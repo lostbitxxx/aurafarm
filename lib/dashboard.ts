@@ -4,6 +4,7 @@ import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type CollectionReward, type PetCard } from "./pets";
+import { SONGS, songById, type OwnedSong } from "./songs";
 import {
   closeBlockedMigrationMessage,
   DEFAULT_STUDY_SECONDS,
@@ -37,6 +38,7 @@ export async function loadDashboard() {
     sessionResult,
     scoresResult,
     recordedResult,
+    songsResult,
   ] = await Promise.all([
       supabase
         .from("profiles")
@@ -79,6 +81,7 @@ export async function loadDashboard() {
         .in("status", ["submitted", "cancelled"])
         .not("duration_seconds", "is", null)
         .order("ended_at", { ascending: false }),
+      supabase.from("user_songs").select("song_id, seen_at").eq("user_id", userId),
     ]);
 
   const profile = profileResult.data;
@@ -122,6 +125,21 @@ export async function loadDashboard() {
     const preview = previewReward(String(row.item_id));
     return preview?.kind === "clothes" ? [preview.id] : [];
   });
+
+  const seenSongIds = new Map<string, boolean>();
+  for (const row of songsResult.data ?? []) {
+    const id = typeof row.song_id === "string" ? row.song_id : "";
+    if (!songById(id)) continue;
+    seenSongIds.set(id, row.seen_at != null);
+  }
+  const ownedSongs: OwnedSong[] = SONGS.flatMap((song) =>
+    seenSongIds.has(song.id) ? [{ id: song.id, seen: seenSongIds.get(song.id) === true }] : [],
+  );
+  const songsError = songsResult.error
+    ? /user_songs/i.test(songsResult.error.message)
+      ? "Run migration 0038 before unlocking desk songs."
+      : songsResult.error.message
+    : null;
 
   const pendingRewards: CollectionReward[] = (rewardsResult.data ?? []).flatMap((row) => {
     const levelReached = Number(row.level_reached);
@@ -208,6 +226,8 @@ export async function loadDashboard() {
     ownedColorIds,
     ownedHatIds,
     ownedClothesIds,
+    ownedSongs,
+    songsError,
     pendingRewards,
     petsError: studyTimerMigrationMessage(
       rewardsResult.error?.message ??

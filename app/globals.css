@@ -713,6 +713,20 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .tracker-card p { margin: 0.7rem 0 0; }
 
+.tracker-card .song-title {
+  margin: 0.2rem 0 0;
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  color: var(--dialog-ink);
+}
+
+.song-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
 .tracker-card .panel-name { color: var(--dialog-ink); }
 
 .dialog-head {
