@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { achievementsMigrationMessage, earnedAchievementIds } from "./achievements";
 import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
@@ -29,6 +30,8 @@ export async function loadDashboard() {
   const supabase = await createClient();
   const userId = gate.userId;
 
+  const { error: evaluateError } = await supabase.rpc("evaluate_achievements");
+
   const [
     profileResult,
     closeBlockedResult,
@@ -39,6 +42,7 @@ export async function loadDashboard() {
     scoresResult,
     recordedResult,
     songsResult,
+    achievementsResult,
   ] = await Promise.all([
       supabase
         .from("profiles")
@@ -82,6 +86,9 @@ export async function loadDashboard() {
         .not("duration_seconds", "is", null)
         .order("ended_at", { ascending: false }),
       supabase.from("user_songs").select("song_id, seen_at").eq("user_id", userId),
+      evaluateError
+        ? Promise.resolve({ data: null, error: evaluateError })
+        : supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
     ]);
 
   const profile = profileResult.data;
@@ -189,6 +196,13 @@ export async function loadDashboard() {
     ];
   });
   const totalStudySeconds = recordedSessions.reduce((sum, session) => sum + session.durationSeconds, 0);
+  // endedAt only — the desk counts these in the farmer browser timezone (not the server's).
+  const planSessions = recordedSessions
+    .filter((session) => session.status === "submitted")
+    .map((session) => ({
+      status: "submitted" as const,
+      endedAt: session.endedAt,
+    }));
 
   const scores: StudyScoreCard[] = (scoresResult.data ?? []).map((score) => ({
     id: String(score.id),
@@ -216,6 +230,13 @@ export async function loadDashboard() {
   const streakLocalDate =
     typeof profile?.streak_local_date === "string" ? profile.streak_local_date : null;
 
+  const earnedAchievements = earnedAchievementIds(
+    (achievementsResult.data ?? []).map((row) => row.achievement_id),
+  );
+  const achievementsError = achievementsMigrationMessage(
+    evaluateError?.message ?? achievementsResult.error?.message ?? null,
+  );
+
   return {
     userId,
     displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
@@ -228,6 +249,8 @@ export async function loadDashboard() {
     ownedClothesIds,
     ownedSongs,
     songsError,
+    earnedAchievements,
+    achievementsError,
     pendingRewards,
     petsError: studyTimerMigrationMessage(
       rewardsResult.error?.message ??
@@ -244,6 +267,7 @@ export async function loadDashboard() {
     studyMode,
     preferredSessionMinutes: Number(profile?.preferred_session_minutes ?? 0) || null,
     monthlySessionGoal: Number(profile?.monthly_session_goal ?? 0) || null,
+    planSessions,
     dailySessionGoal: Number(profile?.daily_session_goal ?? 0) || null,
     studyPlan:
       studyMode && Number(profile?.monthly_session_goal ?? 0) > 0

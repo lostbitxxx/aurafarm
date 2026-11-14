@@ -1,4 +1,4 @@
-import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
+import { sampleClothes, sampleColor, sampleHat, wornClothesAsset } from "./pet-assets";
 
 export const FRIEND_CODE_PATTERN = /^[ABCDEFGHIJKLMNPQRSTUVWXYZ23456789]{8}$/;
 
@@ -102,6 +102,12 @@ export function friendCardsFromRows(rows: readonly FriendRpcRow[]) {
   });
 }
 
+function equippedClothes(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  if (sampleClothes(value) || wornClothesAsset(value, "baby_slime")) return value;
+  return null;
+}
+
 function friendCard(row: FriendRpcRow): FriendCard | null {
   const friendId = typeof row.friend_id === "string" ? row.friend_id : "";
   const status = row.status === "accepted" || row.status === "pending" ? row.status : null;
@@ -118,7 +124,7 @@ function friendCard(row: FriendRpcRow): FriendCard | null {
     petType,
     color: sampleColor(row.color),
     hat: sampleHat(row.hat),
-    clothes: sampleClothes(row.clothes),
+    clothes: equippedClothes(row.clothes),
     presence: friendPresence(row.presence),
   };
 }

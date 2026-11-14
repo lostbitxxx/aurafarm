@@ -23,6 +23,7 @@ import {
   SAMPLE_COLORS,
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
+import { ACHIEVEMENTS } from "@/lib/achievements";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
@@ -646,10 +647,40 @@ export function InventoryDialog({
   );
 }
 
-export function AchievementsDialog({ onClose }: { onClose: () => void }) {
+export function AchievementsDialog({
+  earnedIds,
+  error,
+  onClose,
+}: {
+  earnedIds: readonly string[];
+  error: string | null;
+  onClose: () => void;
+}) {
+  const earned = new Set(earnedIds);
   return (
     <FarmDialog title="Achievements" onClose={onClose}>
-      <p>Coming soon!</p>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <ul className="dialog-list achievement-list">
+        {ACHIEVEMENTS.map((achievement) => {
+          const done = earned.has(achievement.id);
+          return (
+            <li
+              key={achievement.id}
+              className={done ? "achievement-row achievement-row-earned" : "achievement-row achievement-row-locked"}
+            >
+              <div>
+                <strong>{achievement.title}</strong>
+                {done ? <span className="achievement-earned">Earned</span> : null}
+                <p className="panel-hint">{achievement.description}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </FarmDialog>
   );
 }

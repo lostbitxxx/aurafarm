@@ -61,8 +61,9 @@ export function AdminReset() {
       <section className="admin-tool admin-tool-danger" aria-labelledby="admin-reset-title">
         <h3 id="admin-reset-title">Reset account</h3>
         <p>
-          Destructive. Resets your pets to level 1 with 0 experience, clears colors, hats, and clothes, and
-          deletes your study records and collection. Other accounts stay as they are.
+          Destructive. Resets your pets to level 1 with 0 experience, clears colors, hats, and clothes,
+          marks achievements undone, and deletes your study records and collection. Other accounts stay as
+          they are.
         </p>
         <label className="field">
           Password
@@ -78,8 +79,8 @@ export function AdminReset() {
         </button>
         {resetDone ? (
           <p className="form-success">
-            Your pets are level 1 with 0 experience. Your study records, collection, and reward choices are
-            gone.
+            Your pets are level 1 with 0 experience. Your study records, collection, reward choices, and
+            achievements are gone.
           </p>
         ) : null}
         {resetError ? (

@@ -248,6 +248,9 @@ export function CustomizeWizard({
                   className={`customize-mode${activeMode === item ? " is-selected" : ""}`}
                   onClick={() => chooseMode(item)}
                 >
+                  {item === recommended ? (
+                    <span className="customize-mode-recommended">✦Recommended✦</span>
+                  ) : null}
                   <strong>{modeLabel(item)}</strong>
                   <span>{modeTagline(item)}</span>
                   <em>{planForMode(item).sessionMinutes} min blocks</em>

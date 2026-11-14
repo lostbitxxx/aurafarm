@@ -284,6 +284,73 @@ export function displayStreakCount(
   return 0;
 }
 
+function countSubmittedSessionsOnDay(
+  sessions: readonly { status: "submitted" | "cancelled"; endedAt: string }[],
+  matchDay: (day: string) => boolean,
+) {
+  let count = 0;
+  for (const session of sessions) {
+    if (session.status !== "submitted") continue;
+    const ended = new Date(session.endedAt);
+    if (Number.isNaN(ended.getTime())) continue;
+    if (matchDay(farmerLocalDay(ended))) count += 1;
+  }
+  return count;
+}
+
+/** Submitted sessions whose ended_at falls in the local calendar month of `localDay` (YYYY-MM-DD). */
+export function countSessionsInLocalMonth(
+  sessions: readonly { status: "submitted" | "cancelled"; endedAt: string }[],
+  localDay: string,
+) {
+  const parsed = parseLocalDay(localDay);
+  if (!parsed) return 0;
+  const monthPrefix = parsed.slice(0, 7);
+  return countSubmittedSessionsOnDay(sessions, (day) => day.startsWith(monthPrefix));
+}
+
+/** Submitted sessions whose ended_at falls on the farmer local day (YYYY-MM-DD). */
+export function countSessionsOnLocalDay(
+  sessions: readonly { status: "submitted" | "cancelled"; endedAt: string }[],
+  localDay: string,
+) {
+  const parsed = parseLocalDay(localDay);
+  if (!parsed) return 0;
+  return countSubmittedSessionsOnDay(sessions, (day) => day === parsed);
+}
+
+/** Short desk copy for plan progress (daily first, then monthly). */
+export function monthlyPlanEncouragement(
+  monthlyCompleted: number,
+  monthlyGoal: number,
+  dailyCompleted = 0,
+  dailyGoal = 0,
+) {
+  const safeMonthlyGoal = Number.isFinite(monthlyGoal) ? Math.max(1, Math.floor(monthlyGoal)) : 1;
+  const safeMonthlyDone = Number.isFinite(monthlyCompleted)
+    ? Math.max(0, Math.floor(monthlyCompleted))
+    : 0;
+  const safeDailyGoal = Number.isFinite(dailyGoal) ? Math.max(0, Math.floor(dailyGoal)) : 0;
+  const safeDailyDone = Number.isFinite(dailyCompleted) ? Math.max(0, Math.floor(dailyCompleted)) : 0;
+
+  if (safeMonthlyDone >= safeMonthlyGoal) return "goal reached";
+  if (safeDailyGoal > 0 && safeDailyDone >= safeDailyGoal) return "today done";
+  if (safeMonthlyDone <= 0) return "start with one";
+  const ratio = safeMonthlyDone / safeMonthlyGoal;
+  const left = safeMonthlyGoal - safeMonthlyDone;
+  if (ratio < 0.25) return "nice start";
+  if (ratio < 0.5) return "finding rhythm";
+  if (ratio < 0.75) return "past halfway";
+  if (left === 1) return "one left";
+  return `${left} left — almost`;
+}
+
+export function monthlyPlanPercent(completed: number, goal: number) {
+  const safeGoal = Number.isFinite(goal) ? Math.max(1, Math.floor(goal)) : 1;
+  const safeDone = Number.isFinite(completed) ? Math.max(0, Math.floor(completed)) : 0;
+  return Math.min(100, Math.round((safeDone / safeGoal) * 100));
+}
+
 export function formatStreakLabel(streakCount: number) {
   const safe = Number.isFinite(streakCount) ? Math.max(0, Math.floor(streakCount)) : 0;
   return safe === 1 ? "1 day" : `${safe} days`;

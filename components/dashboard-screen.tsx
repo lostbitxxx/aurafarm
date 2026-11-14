@@ -23,8 +23,12 @@ import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
 import {
+  countSessionsInLocalMonth,
+  countSessionsOnLocalDay,
   displayStreakCount,
   farmerLocalDay,
+  monthlyPlanEncouragement,
+  monthlyPlanPercent,
   subscribeFarmerLocalDay,
   experienceProgress,
   type ActiveStudySession,
@@ -68,6 +72,8 @@ export function DashboardScreen({
   ownedClothesIds,
   ownedSongs,
   songsError,
+  earnedAchievements,
+  achievementsError,
   pendingRewards,
   petsError,
   activeSession,
@@ -80,6 +86,7 @@ export function DashboardScreen({
   studyMode,
   preferredSessionMinutes,
   monthlySessionGoal,
+  planSessions,
   dailySessionGoal,
   studyPlan,
   friendCode,
@@ -99,6 +106,8 @@ export function DashboardScreen({
   ownedClothesIds: readonly string[];
   ownedSongs: readonly OwnedSong[];
   songsError: string | null;
+  earnedAchievements: readonly string[];
+  achievementsError: string | null;
   pendingRewards: readonly CollectionReward[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
@@ -111,6 +120,7 @@ export function DashboardScreen({
   studyMode: StudyMode | null;
   preferredSessionMinutes: number | null;
   monthlySessionGoal: number | null;
+  planSessions: readonly { status: "submitted" | "cancelled"; endedAt: string }[];
   dailySessionGoal: number | null;
   studyPlan: {
     mode: StudyMode;
@@ -155,6 +165,8 @@ export function DashboardScreen({
     farmerLocalDay,
     () => "1970-01-01",
   );
+  const monthlySessionsCompleted = countSessionsInLocalMonth(planSessions, todayLocal);
+  const dailySessionsCompleted = countSessionsOnLocalDay(planSessions, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
@@ -369,15 +381,63 @@ export function DashboardScreen({
         onClose={() => setDialog(null)}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
-        <section className="plan-banner" aria-label="Study plan">
-          <p>
-            <strong>{modeLabel(studyMode)}</strong> study mode · {dailySessionGoal}×
-            {preferredSessionMinutes} min today · {monthlySessionGoal} sessions this month
-          </p>
-          <button type="button" className="plan-edit" onClick={() => setDialog("edit-plan")}>
+        <div className="plan-row">
+          <section
+            className={
+              monthlySessionsCompleted >= monthlySessionGoal
+                ? "plan-banner is-complete"
+                : dailySessionsCompleted >= dailySessionGoal
+                  ? "plan-banner is-daily-done"
+                  : "plan-banner"
+            }
+            aria-label="Study plan"
+          >
+            <div
+              className="plan-banner-track"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={monthlySessionGoal}
+              aria-valuenow={Math.min(monthlySessionsCompleted, monthlySessionGoal)}
+              aria-label={`Study plan progress: ${dailySessionsCompleted} of ${dailySessionGoal} sessions today, ${monthlySessionsCompleted} of ${monthlySessionGoal} this month`}
+            >
+              <span
+                className="plan-banner-fill"
+                aria-hidden="true"
+                style={{
+                  width: `${monthlyPlanPercent(monthlySessionsCompleted, monthlySessionGoal)}%`,
+                }}
+              />
+            </div>
+            <p className="plan-banner-copy">
+              <strong>{modeLabel(studyMode)}</strong> ·{" "}
+              <span className="plan-banner-count">
+                {dailySessionsCompleted}/{dailySessionGoal}
+              </span>{" "}
+              today · {preferredSessionMinutes} min ·{" "}
+              <span className="plan-banner-count">
+                {monthlySessionsCompleted}/{monthlySessionGoal}
+              </span>{" "}
+              this month
+              <span className="plan-banner-note">
+                {" "}
+                ·{" "}
+                {monthlyPlanEncouragement(
+                  monthlySessionsCompleted,
+                  monthlySessionGoal,
+                  dailySessionsCompleted,
+                  dailySessionGoal,
+                )}
+              </span>
+            </p>
+          </section>
+          <button
+            type="button"
+            className="button button-ghost button-small plan-edit"
+            onClick={() => setDialog("edit-plan")}
+          >
             Edit plan
           </button>
-        </section>
+        </div>
       ) : null}
       <StudyPanel
         activeSession={activeSession}
@@ -433,7 +493,13 @@ export function DashboardScreen({
           onEquipped={onEquipped}
         />
       ) : null}
-      {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "achievements" ? (
+        <AchievementsDialog
+          earnedIds={earnedAchievements}
+          error={achievementsError}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {dialog === "friends" ? (
         <FriendsDialog
           friends={friends}
