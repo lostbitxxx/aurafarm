@@ -160,13 +160,15 @@ export function buildPetLaunchUrl(code: string) {
   return `aurafarm://session?${params.toString()}`;
 }
 
+export const STUDY_TIME_ZONE = "Asia/Hong_Kong";
+
 export function formatTimestamp(iso: string) {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "UTC",
+    timeZone: STUDY_TIME_ZONE,
   }).format(parsed);
 }
 
@@ -221,18 +223,22 @@ export function farmerLocalDay(now: Date = new Date()) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    timeZone: STUDY_TIME_ZONE,
   }).format(now);
 }
 
-/** Re-render after local midnight so live streak display can drop when a day is skipped. */
+/** Hong Kong is UTC+8 with no daylight saving, so midnight is 16:00 UTC that calendar day. */
+function msUntilNextHongKongMidnight(now = new Date()) {
+  const [year, month, dayOfMonth] = farmerLocalDay(now).split("-").map(Number);
+  const next = Date.UTC(year, month - 1, dayOfMonth, 16, 0, 0, 0);
+  return Math.max(1000, next - now.getTime());
+}
+
+/** Re-render after Hong Kong midnight so live streak display can drop when a day is skipped. */
 export function subscribeFarmerLocalDay(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
 
-  const msUntilNextLocalMidnight = () => {
-    const now = new Date();
-    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    return Math.max(1000, next.getTime() - now.getTime());
-  };
+  const msUntilNextLocalMidnight = () => msUntilNextHongKongMidnight();
 
   let timeoutId = window.setTimeout(function onLocalMidnight() {
     onStoreChange();

@@ -105,8 +105,9 @@ test("a second start is refused while a session is active", () => {
   assert.match(startSessionDecision(2).error, /already running/);
 });
 
-test("timestamps render in UTC", () => {
-  assert.equal(formatTimestamp("2026-11-04T15:28:00.000Z"), "4 Nov 2026, 15:28");
+test("timestamps render in Hong Kong time", () => {
+  assert.equal(formatTimestamp("2026-11-04T15:28:00.000Z"), "4 Nov 2026, 23:28");
+  assert.equal(formatTimestamp("2026-11-04T16:30:00.000Z"), "5 Nov 2026, 00:30");
   assert.equal(formatTimestamp("not-a-time"), "not-a-time");
 });
 
@@ -180,7 +181,8 @@ test("streak display uses the farmer local day and ignores broken streaks", () =
   assert.equal(displayStreakCount(0, "2026-11-13", "2026-11-13"), 0);
   assert.equal(formatStreakLabel(1), "1 day");
   assert.equal(formatStreakLabel(2), "2 days");
-  assert.match(farmerLocalDay(new Date("2026-11-13T12:00:00")), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(farmerLocalDay(new Date("2026-11-13T15:59:00.000Z")), "2026-11-13");
+  assert.equal(farmerLocalDay(new Date("2026-11-13T16:00:00.000Z")), "2026-11-14");
   assert.equal(STREAK_MIN_SECONDS, 300);
   assert.equal(sessionCountsForStreak(240), false);
   assert.equal(sessionCountsForStreak(300), true);
@@ -356,6 +358,27 @@ test("daily streak migration advances on full finish with a streak XP boost", ()
   assert.match(action, /Server strips local_day/);
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /completeStudyTimer\(shownSession\.id, devPasswordValue, farmerLocalDay\(\)\)/);
+  const hkSql = readFileSync(
+    new URL("../supabase/migrations/0039_hong_kong_study_day.sql", import.meta.url),
+    "utf8",
+  );
+  const hkGrant = hkSql.slice(hkSql.indexOf("function public.grant_study_experience"));
+  assert.match(hkGrant, /hk_today := \(timezone\('Asia\/Hong_Kong', now\(\)\)\)::date/);
+  assert.match(hkGrant, /when session_row\.planned_seconds >= streak_min_seconds then hk_today/);
+  assert.match(hkGrant, /touch_daily_streak\(session_row\.user_id, streak_day\)/);
+  assert.match(hkGrant, /local_day date default null/);
+  assert.match(hkGrant, /insert into public\.user_songs/);
+  assert.doesNotMatch(hkGrant, /then local_day/);
+  assert.doesNotMatch(hkGrant, /current_date/);
+  const hkTouch = hkSql.slice(
+    hkSql.indexOf("function public.touch_daily_streak"),
+    hkSql.indexOf("function public.grant_study_experience"),
+  );
+  assert.match(hkTouch, /hk_today := \(timezone\('Asia\/Hong_Kong', now\(\)\)\)::date/);
+  assert.match(hkTouch, /local_day < \(hk_today - 1\)/);
+  assert.match(hkTouch, /local_day > \(hk_today \+ 1\)/);
+  assert.doesNotMatch(hkTouch, /current_date/);
+
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   assert.match(header, /streakPillLabel/);
   assert.doesNotMatch(header, /Streak coming soon/);

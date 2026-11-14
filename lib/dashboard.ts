@@ -196,7 +196,7 @@ export async function loadDashboard() {
     ];
   });
   const totalStudySeconds = recordedSessions.reduce((sum, session) => sum + session.durationSeconds, 0);
-  // endedAt only — the desk counts these in the farmer browser timezone (not the server's).
+  // endedAt only — the desk counts these on the Hong Kong calendar day.
   const planSessions = recordedSessions
     .filter((session) => session.status === "submitted")
     .map((session) => ({
