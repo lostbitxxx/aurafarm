@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld("pet", {
   openUpdate: () => ipcRenderer.send("open-update"),
   quit: () => ipcRenderer.send("quit-app"),
   setOpen: (open) => ipcRenderer.send("set-panel-open", open),
+  setPetVisible: (visible) => ipcRenderer.send("set-pet-visible", visible),
 });

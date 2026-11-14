@@ -9,6 +9,18 @@ const { clampPetX, plainPetPath } = require("../desktop/pet-art.js") as {
   clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
   plainPetPath: (petType: string, pose: string) => string;
 };
+const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../desktop/pet-move.js") as {
+  clampPetOrigin: (
+    origin: { x: number; y: number },
+    petSize: number,
+    area: { x: number; y: number; width: number; height: number },
+  ) => { x: number; y: number };
+  parseWindowBounds: (value: string) => { x: number; y: number; width: number; height: number } | null;
+  petOriginForTabStrip: (
+    windowBounds: { x: number; y: number },
+    petSize: number,
+  ) => { x: number; y: number };
+};
 const { formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
   formatStudyClock: (remainingMs: number) => string;
   remainingStudyMs: (
@@ -117,12 +129,14 @@ test("the sign-in panel can quit the pet", () => {
   const script = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   const preload = readFileSync(new URL("../desktop/preload.js", import.meta.url), "utf8");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const petPage = readFileSync(new URL("../desktop/pet.html", import.meta.url), "utf8");
+  const petScript = readFileSync(new URL("../desktop/pet.js", import.meta.url), "utf8");
   assert.match(panel, /Session token/);
   assert.match(script, /document\.addEventListener\("paste"/);
   assert.match(main, /role: "paste"/);
   assert.match(main, /context-menu/);
   assert.match(panel, /id="session-token"/);
-  assert.match(panel, /#session-block \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: 1\.35rem;/);
+  assert.match(panel, /#session-block \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: 0;/);
   assert.match(panel, /id="session-block"[\s\S]*id="session-token"[\s\S]*id="status"/);
   assert.match(script, /window\.pet\.useToken\(/);
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);
@@ -178,9 +192,39 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
-  assert.match(panel, /id="pet-lane"/);
-  assert.match(panel, /#pet-lane \{\s*position: relative;\s*flex: 1;\s*min-height: 70px;\s*overflow: hidden;/);
-  assert.match(script, /clampPetX\(next, laneWidth, PET_WIDTH\)/);
+  assert.doesNotMatch(panel, /id="pet-lane"/);
+  assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);
+  assert.match(panel, /id="pet-switch-row"[\s\S]*id="pet-switch-label"[\s\S]*Show pet[\s\S]*id="pet-toggle"/);
+  assert.match(panel, /id="pet-toggle"[^>]*role="switch"[^>]*aria-checked="true"/);
+  assert.match(panel, /#pet-switch-row \{\s*position: absolute;\s*top: 0\.4rem;\s*right: calc\(20px \+ 0\.8rem\);[\s\S]*justify-content: flex-end;/);
+  assert.match(panel, /#panel-body #pet-toggle \{\s*[\s\S]*width: 26px;\s*height: 16px;/);
+  assert.match(panel, /#panel-body #pet-toggle\[aria-checked="true"\] \{\s*background: #34c759;/);
+  assert.match(panel, /translateX\(10px\)/);
+  assert.doesNotMatch(panel, /id="panel-actions"[\s\S]*id="pet-toggle"/);
+  assert.match(script, /window\.pet\.setPetVisible\(/);
+  assert.match(script, /state\.petVisible/);
+  assert.match(preload, /setPetVisible: \(visible\) => ipcRenderer\.send\("set-pet-visible", visible\)/);
+  assert.match(main, /ipcMain\.on\("set-pet-visible"/);
+  assert.match(main, /let petVisible = true/);
+  assert.match(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
+  assert.match(main, /panel\.x - width/);
+  assert.match(main, /area\.y \+ area\.height - height/);
+  assert.match(main, /setIgnoreMouseEvents\(true, \{ forward: true \}\)/);
+  assert.match(main, /focusable: false/);
+  assert.match(main, /skipTaskbar: true/);
+  assert.match(main, /placePet\(\)/);
+  assert.match(petPage, /id="pet-sprite"/);
+  assert.match(petPage, /background: transparent/);
+  assert.match(petPage, /width: 70px/);
+  assert.match(petPage, /height: 70px/);
+  assert.match(petScript, /plainPetPath\(shownPet, shownPose\)/);
+  assert.match(petScript, /scaleX\(-1\)/);
+  assert.match(main, /function closeFrontTab/);
+  assert.match(main, /readFrontWindowBounds/);
+  assert.match(main, /petOriginForTabStrip/);
+  assert.match(main, /await walkPetTo\(aim\.x, aim\.y\)/);
+  assert.match(main, /await jumpPet\(\)/);
+  assert.match(main, /if \(petAnimating\) return/);
   assert.match(main, /assetOrigin: API_ORIGIN/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
@@ -202,8 +246,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
-  assert.match(main, /PANEL_HEIGHT = 345/);
-  assert.match(main, /PANEL_COLLAPSED_HEIGHT = 309/);
+  assert.match(main, /PANEL_HEIGHT = 275/);
+  assert.match(main, /PANEL_COLLAPSED_HEIGHT = 239/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
   assert.match(main, /area\.x \+ area\.width - width/);
   assert.match(main, /area\.y \+ area\.height - height/);
@@ -240,6 +284,20 @@ test("the study clock shows the planned time that is left", () => {
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), 0.5);
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), 1);
   assert.equal(studyProgress({ startedAtMs: started }, started), null);
+});
+
+test("the pet aims beside the traffic lights on the tab strip", () => {
+  assert.deepEqual(petOriginForTabStrip({ x: 100, y: 40 }, 70), { x: 106, y: 23 });
+  assert.deepEqual(parseWindowBounds("12, 40, 812, 640"), { x: 12, y: 40, width: 800, height: 600 });
+  assert.equal(parseWindowBounds("nope"), null);
+  assert.deepEqual(
+    clampPetOrigin({ x: -20, y: -40 }, 70, { x: 0, y: 0, width: 1400, height: 900 }),
+    { x: 0, y: 0 },
+  );
+  assert.deepEqual(
+    clampPetOrigin({ x: 2000, y: 2000 }, 70, { x: 0, y: 0, width: 1400, height: 900 }),
+    { x: 1330, y: 830 },
+  );
 });
 
 test("a plain pet uses the default species sprite", () => {

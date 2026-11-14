@@ -69,7 +69,7 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
-const CLOSE_AFTER_MS = 60_000;
+const CLOSE_AFTER_MS = 30_000;
 
 function createCloseWatch() {
   return { host: "", since: 0, attemptedHost: "", close: false };
@@ -133,6 +133,16 @@ function describeCloseDebug(input) {
   return `Debug: ${decision.host} in ${app} for ${waited}s of ${limit}s.${note}`;
 }
 
+function closeCountdownStatus(watch, now, limitMs = CLOSE_AFTER_MS) {
+  if (!watch?.host || !(Number(watch.since) > 0)) return "";
+  const left = Number(watch.since) + Number(limitMs) - Number(now);
+  if (!(left > 0)) return `Watching. Closing ${watch.host} now.`;
+  const total = Math.ceil(left / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return `Watching. Closing ${watch.host} in ${minutes}:${seconds}.`;
+}
+
 function noteCloseAttempt(watch) {
   return {
     host: watch?.host ?? "",
@@ -174,6 +184,7 @@ module.exports = {
   hostnameFromUrl,
   describeCloseDebug,
   describeFrontRead,
+  closeCountdownStatus,
   nextCloseWatch,
   nextFrontLog,
   noteCloseAttempt,
