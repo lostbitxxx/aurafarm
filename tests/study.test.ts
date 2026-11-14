@@ -6,7 +6,11 @@ import {
   buildPetLaunchUrl,
   buildStudyHistory,
   closeBlockedMigrationMessage,
+  countSessionsInLocalMonth,
+  countSessionsOnLocalDay,
   DEFAULT_STUDY_SECONDS,
+  monthlyPlanEncouragement,
+  monthlyPlanPercent,
   displayStreakCount,
   devTimerPasswordMatches,
   DISTRACTED_PENALTY,
@@ -181,6 +185,59 @@ test("streak display uses the farmer local day and ignores broken streaks", () =
   assert.equal(sessionCountsForStreak(240), false);
   assert.equal(sessionCountsForStreak(300), true);
   assert.equal(sessionCountsForStreak(1800), true);
+});
+
+test("countSessionsInLocalMonth counts submitted sessions in the farmer month", () => {
+  const sessions = [
+    { status: "submitted" as const, endedAt: "2026-11-10T12:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "2026-11-20T12:00:00.000Z" },
+    { status: "cancelled" as const, endedAt: "2026-11-15T12:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "2026-10-15T12:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "2026-12-15T12:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "not-a-date" },
+  ];
+  const month = "2026-11";
+  const expected = sessions.filter(
+    (session) =>
+      session.status === "submitted" &&
+      !Number.isNaN(new Date(session.endedAt).getTime()) &&
+      farmerLocalDay(new Date(session.endedAt)).startsWith(month),
+  ).length;
+  assert.equal(countSessionsInLocalMonth(sessions, "2026-11-14"), expected);
+  assert.ok(expected >= 1);
+  assert.equal(countSessionsInLocalMonth(sessions, "bad-day"), 0);
+  assert.equal(countSessionsInLocalMonth([], "2026-11-14"), 0);
+});
+
+test("countSessionsOnLocalDay counts submitted sessions on that farmer day", () => {
+  const sessions = [
+    { status: "submitted" as const, endedAt: "2026-11-14T12:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "2026-11-14T18:00:00.000Z" },
+    { status: "cancelled" as const, endedAt: "2026-11-14T15:00:00.000Z" },
+    { status: "submitted" as const, endedAt: "2026-11-13T12:00:00.000Z" },
+  ];
+  const day = "2026-11-14";
+  const expected = sessions.filter(
+    (session) =>
+      session.status === "submitted" &&
+      !Number.isNaN(new Date(session.endedAt).getTime()) &&
+      farmerLocalDay(new Date(session.endedAt)) === day,
+  ).length;
+  assert.equal(countSessionsOnLocalDay(sessions, day), expected);
+  assert.equal(countSessionsOnLocalDay(sessions, "bad-day"), 0);
+});
+
+test("monthly plan encouragement tracks progress without overshooting percent", () => {
+  assert.equal(monthlyPlanPercent(0, 20), 0);
+  assert.equal(monthlyPlanPercent(10, 20), 50);
+  assert.equal(monthlyPlanPercent(25, 20), 100);
+  assert.match(monthlyPlanEncouragement(0, 20), /start with one/i);
+  assert.match(monthlyPlanEncouragement(2, 20), /nice start/i);
+  assert.match(monthlyPlanEncouragement(10, 20), /halfway|rhythm/i);
+  assert.match(monthlyPlanEncouragement(19, 20), /one left/i);
+  assert.match(monthlyPlanEncouragement(20, 20), /reached/i);
+  assert.match(monthlyPlanEncouragement(5, 20, 1, 1), /today done/i);
+  assert.match(monthlyPlanEncouragement(20, 20, 1, 1), /reached/i);
 });
 
 test("the dev timer password is a plain comparison", () => {

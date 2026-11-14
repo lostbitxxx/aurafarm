@@ -171,6 +171,13 @@ export async function loadDashboard() {
     ];
   });
   const totalStudySeconds = recordedSessions.reduce((sum, session) => sum + session.durationSeconds, 0);
+  // endedAt only — the desk counts these in the farmer browser timezone (not the server's).
+  const planSessions = recordedSessions
+    .filter((session) => session.status === "submitted")
+    .map((session) => ({
+      status: "submitted" as const,
+      endedAt: session.endedAt,
+    }));
 
   const scores: StudyScoreCard[] = (scoresResult.data ?? []).map((score) => ({
     id: String(score.id),
@@ -224,6 +231,7 @@ export async function loadDashboard() {
     studyMode,
     preferredSessionMinutes: Number(profile?.preferred_session_minutes ?? 0) || null,
     monthlySessionGoal: Number(profile?.monthly_session_goal ?? 0) || null,
+    planSessions,
     dailySessionGoal: Number(profile?.daily_session_goal ?? 0) || null,
     studyPlan:
       studyMode && Number(profile?.monthly_session_goal ?? 0) > 0
