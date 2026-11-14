@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         <ul className="steps">
           <li>It does not read background tabs, page contents, or passwords.</li>
           <li>
-            During a desktop study session, it comes forward and closes that browser window
+            During a desktop study session, it comes forward and closes that front tab
             after 1 minute on a blocklist host.
           </li>
           <li>
