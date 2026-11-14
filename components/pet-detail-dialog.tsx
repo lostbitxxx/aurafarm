@@ -11,6 +11,7 @@ import {
 import {
   colorForPetType,
   EQUIP_DURING_SESSION_NOTE,
+  sampleAccessoryName,
   SAMPLE_CLOTHES,
   SAMPLE_COLORS,
   SAMPLE_HATS,
@@ -34,7 +35,7 @@ function colorDisplayName(colorId: string | null | undefined, petType: string) {
 
 function accessoryDisplayName(kind: "hat" | "clothes", id: string | null | undefined) {
   if (!id) return COLLECTION_NONE.name;
-  return previewReward(id)?.name ?? id;
+  return previewReward(id)?.name ?? sampleAccessoryName(kind, id) ?? id;
 }
 
 export function PetDetailDialog({
@@ -383,7 +384,7 @@ function PetAccessoryPicker({
                   className="dialog-pet-art"
                   alt=""
                 />
-                <strong>{pendingKey === item.id ? "…" : item.id}</strong>
+                <strong>{pendingKey === item.id ? "…" : item.name}</strong>
               </button>
             </li>
           );

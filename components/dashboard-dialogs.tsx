@@ -15,7 +15,14 @@ import {
   type PreviewReward,
 } from "@/lib/collection-catalog";
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
-import { EQUIP_DURING_SESSION_NOTE, ROOM_PLACEMENT_NOTE, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import {
+  EQUIP_DURING_SESSION_NOTE,
+  ROOM_PLACEMENT_NOTE,
+  sampleAccessoryName,
+  SAMPLE_CLOTHES,
+  SAMPLE_COLORS,
+  SAMPLE_HATS,
+} from "@/lib/pet-assets";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
@@ -280,7 +287,7 @@ function OwnedAccessoryPanel({
   onSelectNone,
 }: {
   previewItems: readonly PreviewReward[];
-  legacyItems: readonly { id: string }[];
+  legacyItems: readonly { id: string; name: string }[];
   legacyKind: "hat" | "clothes";
   noneSelected: boolean;
   onApply: (id: string) => void;
@@ -336,7 +343,7 @@ function OwnedAccessoryPanel({
                 className="dialog-pet-art"
                 alt=""
               />
-              <strong>{item.id}</strong>
+              <strong>{item.name}</strong>
             </button>
           </li>
         ))}
@@ -427,7 +434,7 @@ function ApplyHatDialog({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const label = (hatId ? previewReward(hatId)?.name : null) ?? hatId ?? "no hat";
+  const label = (hatId ? previewReward(hatId)?.name ?? sampleAccessoryName("hat", hatId) : null) ?? hatId ?? "no hat";
 
   async function onApply(petId: string) {
     if (pendingId) return;
@@ -494,7 +501,10 @@ function ApplyClothesDialog({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const label = (clothesId ? previewReward(clothesId)?.name : null) ?? clothesId ?? "no clothes";
+  const label =
+    (clothesId ? previewReward(clothesId)?.name ?? sampleAccessoryName("clothes", clothesId) : null) ??
+    clothesId ??
+    "no clothes";
 
   async function onApply(petId: string) {
     if (pendingId) return;

@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { claimCollectionReward } from "@/lib/actions/pets";
 import { previewReward, previewRewards, type PreviewReward } from "@/lib/collection-catalog";
-import { SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import { sampleAccessoryName, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
 import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
 import {
   canShuffleReward,
@@ -266,7 +266,13 @@ function RewardChoiceButton({
 }) {
   const preview = kind === "Color" ? null : previewReward(itemId);
   const colorName = SAMPLE_COLORS.find((color) => color.id === itemId)?.name ?? itemId;
-  const name = kind === "Color" ? colorName : (preview?.name ?? itemId);
+  const legacyName =
+    kind === "Hat"
+      ? sampleAccessoryName("hat", itemId)
+      : kind === "Clothes"
+        ? sampleAccessoryName("clothes", itemId)
+        : null;
+  const name = kind === "Color" ? colorName : (preview?.name ?? legacyName ?? itemId);
   return (
     <button type="button" className="collection-color" disabled={disabled} onClick={() => onChoose(itemId)}>
       <span className="reward-offer-kind">{kind}</span>
