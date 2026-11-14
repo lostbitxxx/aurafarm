@@ -39,26 +39,14 @@ export function sampleColor(value: unknown): SampleColorId | null {
 }
 
 /**
- * hat_c through hat_j are already in the database. Adding one of them does not
- * need a migration. Copy the hat_a-* folders to hat_c-* (or the matching id)
- * under each pet color for cat and bunny, then edit those SVG files.
- * Copying hat_a-* already includes the clothes_a and clothes_b folders that sit
- * beside that hat, so a new hat does not need a clothes migration either.
+ * Legacy sample hats with pose folders under each pet color.
+ * Ids stay hat_a and hat_b (folders and the database). name is the label.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
- * With clothes: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
+ * hat_b uses the same pose set. With clothes: hat_a-clothes_a and hat_a-clothes_b.
  */
-/** Ids stay hat_a … hat_j (folders and the database). name is the label. */
 export const SAMPLE_HATS = [
   { id: "hat_a", name: "Forest hat" },
   { id: "hat_b", name: "Blue hat" },
-  { id: "hat_c", name: "Red hat" },
-  { id: "hat_d", name: "Pink hat" },
-  { id: "hat_e", name: "Yellow hat" },
-  { id: "hat_f", name: "Mint hat" },
-  { id: "hat_g", name: "Purple hat" },
-  { id: "hat_h", name: "White hat" },
-  { id: "hat_i", name: "Black hat" },
-  { id: "hat_j", name: "Orange hat" },
 ] as const;
 
 export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
@@ -69,24 +57,14 @@ export function sampleHat(value: unknown): SampleHatId | null {
 }
 
 /**
- * clothes_c through clothes_j are already in the database. Adding one of them does not
- * need a migration. Copy the *-clothes_a folders to *-clothes_c (or the matching id)
- * under each pet color for cat and bunny, including no-hat, hat_a, and hat_b, then edit those SVG files.
+ * Legacy sample clothes with pose folders under each pet color.
+ * Ids stay clothes_a and clothes_b (folders and the database). name is the label.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
- * With a hat: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
+ * clothes_b uses the same pose set. With a hat: hat_a-clothes_a and hat_b-clothes_a.
  */
-/** Ids stay clothes_a … clothes_j (folders and the database). name is the label. */
 export const SAMPLE_CLOTHES = [
   { id: "clothes_a", name: "Blue vest" },
   { id: "clothes_b", name: "Brown vest" },
-  { id: "clothes_c", name: "Red vest" },
-  { id: "clothes_d", name: "Pink vest" },
-  { id: "clothes_e", name: "Yellow vest" },
-  { id: "clothes_f", name: "Green vest" },
-  { id: "clothes_g", name: "Purple vest" },
-  { id: "clothes_h", name: "White vest" },
-  { id: "clothes_i", name: "Black vest" },
-  { id: "clothes_j", name: "Orange vest" },
 ] as const;
 
 export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
@@ -117,6 +95,29 @@ export const DEFAULT_PET_COLOR: Record<string, PetColor> = {
 
 export function speciesForPetType(petType: string): PetSpecies {
   return PET_TYPE_SPECIES[petType] ?? "cat";
+}
+
+/** The eight approved collection hats with worn overlays (catalogue art minus ground shadow). */
+export const WORN_HAT_IDS = [
+  "little-gentleman-top-hat",
+  "summer-garden-straw-hat",
+  "flower-day-daisy-clip",
+  "lucky-heart-clover-clip",
+  "sleepy-companion-nightcap",
+  "little-artist-beret",
+  "forest-mushroom-mushroom-cap",
+  "little-wizard-star-hat",
+] as const;
+
+const WORN_HAT_ID_SET = new Set<string>(WORN_HAT_IDS);
+
+/**
+ * Worn hat overlays for approved collection hats.
+ * Same artwork as the catalogue icon, without the baked ground-shadow ellipse.
+ */
+export function wornHatAsset(hatId: string | null | undefined): string | null {
+  if (!hatId || !WORN_HAT_ID_SET.has(hatId)) return null;
+  return `/pet-assets/accessories/worn/hats/${hatId}.svg`;
 }
 
 /** The eight approved collection clothes with compact worn overlays (clothes_a placement). */
@@ -157,8 +158,8 @@ export function outfitFolder(hat: string | null | undefined, clothes: string | n
  * Route for all three accessories:
  * /pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
  * The file is public/pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
- * color is the directory. hat is no-hat or hat_a through hat_j.
- * clothes is no-clothes or clothes_a through clothes_j.
+ * color is the directory. hat is no-hat, hat_a, or hat_b.
+ * clothes is no-clothes, clothes_a, or clothes_b.
  * pose is idle, walk1, walk2, blush, wait, study1, or study2.
  */
 export function petAssetPath(

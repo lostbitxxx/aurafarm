@@ -8,6 +8,7 @@ import {
   sampleColor,
   sampleHat,
   wornClothesAsset,
+  wornHatAsset,
   type PetPose,
 } from "@/lib/pet-assets";
 
@@ -32,10 +33,11 @@ export function PixelPetArt({
   const [dropHat, setDropHat] = useState(false);
   const hatId = sampleHat(hat);
   const clothesId = sampleClothes(clothes);
-  const wornHat = !hatId && hat ? previewReward(hat) : null;
+  const previewHat = !hatId && hat ? previewReward(hat) : null;
   const previewClothes = !clothesId && clothes ? previewReward(clothes) : null;
+  const fittedHat = !hatId && hat && !dropHat ? wornHatAsset(hat) : null;
   const fittedClothes = !clothesId && clothes && !dropClothes ? wornClothesAsset(clothes, petType) : null;
-  const hatIcon = wornHat?.kind === "hat" ? wornHat.icon : null;
+  const hatIcon = fittedHat ?? (previewHat?.kind === "hat" ? previewHat.icon : null);
   const clothesIcon =
     fittedClothes ?? (previewClothes?.kind === "clothes" ? previewClothes.icon : null);
   const clothesFitted = Boolean(fittedClothes);
@@ -92,33 +94,29 @@ export function PixelPetArt({
 }
 
 export function useWalkPose(active: boolean) {
-  const [pose, setPose] = useState<PetPose>("idle");
-  const reduced = useRef(false);
+  const [walkFrame, setWalkFrame] = useState<PetPose>("walk1");
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reduced.current = media.matches;
-    const onChange = () => {
-      reduced.current = media.matches;
-      if (media.matches) setPose("idle");
-    };
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
   useEffect(() => {
-    if (!active || reduced.current) {
-      setPose("idle");
-      return;
-    }
-    setPose("walk1");
+    if (!active || reduceMotion) return;
     const id = window.setInterval(() => {
-      setPose((current) => (current === "walk1" ? "walk2" : "walk1"));
+      setWalkFrame((current) => (current === "walk1" ? "walk2" : "walk1"));
     }, 250);
     return () => window.clearInterval(id);
-  }, [active]);
+  }, [active, reduceMotion]);
 
-  return pose;
+  // Return idle synchronously when not walking so callers never keep a raised-leg frame
+  // for a render after walking stops (effect-only resets left that gap).
+  if (!active || reduceMotion) return "idle";
+  return walkFrame === "walk2" ? "walk2" : "walk1";
 }
 
 export function usePetting(onPet: () => void) {
