@@ -4,6 +4,7 @@ export function requiresAccount(pathname: string) {
     pathname === "/inventory" ||
     pathname.startsWith("/inventory/") ||
     pathname === "/customize" ||
-    pathname.startsWith("/customize/")
+    pathname.startsWith("/customize/") ||
+    pathname.startsWith("/farmcrew/")
   );
 }

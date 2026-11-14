@@ -141,6 +141,8 @@ test("the desk opens Friends and Leaderboard from Social", () => {
   assert.match(settings, /Who can add you/);
   assert.match(settings, /Who can see your status/);
   assert.match(settings, /updateSocialSettings/);
+  assert.match(settings, /board-picker/);
+  assert.doesNotMatch(settings, /<select/);
 
   const presence = readFileSync(new URL("../components/social-presence.tsx", import.meta.url), "utf8");
   assert.match(presence, /touchSocialPresence/);

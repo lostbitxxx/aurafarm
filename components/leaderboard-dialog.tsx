@@ -55,7 +55,29 @@ export function LeaderboardDialog({
       wide
       extra={<LeaderboardScopeSwitch scope={scope} onChange={setScope} />}
     >
-      <LeaderboardModePicker mode={mode} onChange={setMode} />
+      <LeaderboardPanel userId={userId} mode={mode} onModeChange={setMode} rows={rows} error={error} loading={loading} />
+    </FarmDialog>
+  );
+}
+
+export function LeaderboardPanel({
+  userId,
+  mode,
+  onModeChange,
+  rows,
+  error,
+  loading,
+}: {
+  userId: string;
+  mode: LeaderboardMode;
+  onModeChange: (mode: LeaderboardMode) => void;
+  rows: readonly LeaderboardRow[];
+  error: string | null;
+  loading: boolean;
+}) {
+  return (
+    <>
+      <LeaderboardModePicker mode={mode} onChange={onModeChange} />
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -83,7 +105,7 @@ export function LeaderboardDialog({
           </tbody>
         </table>
       ) : null}
-    </FarmDialog>
+    </>
   );
 }
 

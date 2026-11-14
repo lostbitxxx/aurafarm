@@ -23,6 +23,10 @@ test("leaderboard rows keep rank, name, and score", () => {
     leaderboardMessage("Could not find the function public.list_global_leaderboard"),
     "Run migration 0037 before opening the global leaderboard.",
   );
+  assert.equal(
+    leaderboardMessage("Could not find the function public.list_farm_crew_leaderboard"),
+    "Run migration 0041 before opening the FarmCrew leaderboard.",
+  );
   assert.deepEqual(
     leaderboardRowsFromRpc([
       { farmer_id: "11111111-1111-4111-8111-111111111111", display_name: " Ada ", score: "120", place: 1 },
@@ -77,6 +81,14 @@ test("friend leaderboard sums study time and pet levels for accepted friends", (
     "utf8",
   );
   assert.match(globalSql, /function public\.list_global_leaderboard\(board text\)/);
+  const crewSql = readFileSync(
+    new URL("../supabase/migrations/0041_farm_crew_leaderboard.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(crewSql, /function public\.list_farm_crew_leaderboard\(target uuid, board text\)/);
+  assert.match(crewSql, /farm_crew_member\.status = 'accepted'/);
+  assert.match(crewSql, /rank\(\) over \(order by scored\.score desc\)/);
+  assert.doesNotMatch(crewSql, /limit 20/);
   assert.match(globalSql, /board not in \('all_time', 'month', 'week', 'pet_levels'\)/);
   assert.match(globalSql, /status in \('submitted', 'cancelled'\)/);
   assert.match(globalSql, /sum\(study_sessions\.duration_seconds\)/);

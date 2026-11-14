@@ -12,6 +12,7 @@ import {
   InventoryDialog,
   ShopDialog,
 } from "./dashboard-dialogs";
+import { FarmCrewDialog } from "./farm-crew-dialog";
 import { FriendsDialog } from "./friends-dialog";
 import { LeaderboardDialog } from "./leaderboard-dialog";
 import { SocialPresence } from "./social-presence";
@@ -141,6 +142,7 @@ export function DashboardScreen({
     | "achievements"
     | "edit-plan"
     | "friends"
+    | "farmcrew"
     | "social-settings"
     | "leaderboard"
     | "song"
@@ -367,6 +369,7 @@ export function DashboardScreen({
         onOpenInventory={() => setDialog("inventory")}
         onOpenAchievements={() => setDialog("achievements")}
         onOpenFriends={() => setDialog("friends")}
+        onOpenFarmCrew={() => setDialog("farmcrew")}
         onOpenSocialSettings={() => setDialog("social-settings")}
         onOpenLeaderboard={() => setDialog("leaderboard")}
         onOpenSong={() => setDialog("song")}
@@ -509,6 +512,7 @@ export function DashboardScreen({
           onClose={() => setDialog(null)}
         />
       ) : null}
+      {dialog === "farmcrew" ? <FarmCrewDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "leaderboard" ? (
         <LeaderboardDialog userId={userId} onClose={() => setDialog(null)} />
       ) : null}
