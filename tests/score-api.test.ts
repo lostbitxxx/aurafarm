@@ -58,6 +58,13 @@ test("the session page uses the same paper layout as sign-in", () => {
   assert.match(session, /auth-card/);
   assert.match(session, /PublicHeader/);
   assert.match(session, /Back to the desk/);
+  assert.match(session, /CloseDeskTab/);
+  assert.doesNotMatch(session, /href="\/dashboard"/);
+  const closeTab = readFileSync(
+    new URL("../app/dashboard/sessions/[id]/close-desk-tab.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(closeTab, /window\.close\(\)/);
 });
 
 test("the score url uses the request origin and the session id", () => {

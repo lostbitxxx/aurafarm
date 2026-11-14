@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PublicHeader } from "@/components/public-header";
 import { SocialPresence } from "@/components/social-presence";
 import { formatDuration, formatTimestamp } from "@/lib/study";
 import { loadStudyScore, type LoadedStudyScore } from "@/lib/study-score";
+import { CloseDeskTab } from "./close-desk-tab";
 
 export const metadata: Metadata = {
   title: "Session",
@@ -50,9 +50,7 @@ export default async function StudyScorePage({
             ) : (
               <p className="session-fact">{copy.detail}</p>
             )}
-            <Link href="/dashboard" className="button">
-              Back to the desk
-            </Link>
+            <CloseDeskTab>Back to the desk</CloseDeskTab>
           </div>
         </section>
       </main>
