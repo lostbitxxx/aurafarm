@@ -40,12 +40,13 @@ export function sampleColor(value: unknown): SampleColorId | null {
 
 /**
  * Legacy sample hats with pose folders under each pet color.
+ * Ids stay hat_a and hat_b (folders and the database). name is the label.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
  * hat_b uses the same pose set. With clothes: hat_a-clothes_a and hat_a-clothes_b.
  */
 export const SAMPLE_HATS = [
-  { id: "hat_a" },
-  { id: "hat_b" },
+  { id: "hat_a", name: "Forest hat" },
+  { id: "hat_b", name: "Blue hat" },
 ] as const;
 
 export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
@@ -57,12 +58,13 @@ export function sampleHat(value: unknown): SampleHatId | null {
 
 /**
  * Legacy sample clothes with pose folders under each pet color.
+ * Ids stay clothes_a and clothes_b (folders and the database). name is the label.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
  * clothes_b uses the same pose set. With a hat: hat_a-clothes_a and hat_b-clothes_a.
  */
 export const SAMPLE_CLOTHES = [
-  { id: "clothes_a" },
-  { id: "clothes_b" },
+  { id: "clothes_a", name: "Blue vest" },
+  { id: "clothes_b", name: "Brown vest" },
 ] as const;
 
 export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
@@ -70,6 +72,12 @@ export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
 export function sampleClothes(value: unknown): SampleClothesId | null {
   if (typeof value !== "string") return null;
   return SAMPLE_CLOTHES.some((clothes) => clothes.id === value) ? (value as SampleClothesId) : null;
+}
+
+export function sampleAccessoryName(kind: "hat" | "clothes", id: string | null | undefined) {
+  if (!id) return null;
+  const items = kind === "hat" ? SAMPLE_HATS : SAMPLE_CLOTHES;
+  return items.find((item) => item.id === id)?.name ?? null;
 }
 
 /** Temporary frontend artwork mapping — not a database change. */
@@ -87,6 +95,29 @@ export const DEFAULT_PET_COLOR: Record<string, PetColor> = {
 
 export function speciesForPetType(petType: string): PetSpecies {
   return PET_TYPE_SPECIES[petType] ?? "cat";
+}
+
+/** The eight approved collection hats with worn overlays (catalogue art minus ground shadow). */
+export const WORN_HAT_IDS = [
+  "little-gentleman-top-hat",
+  "summer-garden-straw-hat",
+  "flower-day-daisy-clip",
+  "lucky-heart-clover-clip",
+  "sleepy-companion-nightcap",
+  "little-artist-beret",
+  "forest-mushroom-mushroom-cap",
+  "little-wizard-star-hat",
+] as const;
+
+const WORN_HAT_ID_SET = new Set<string>(WORN_HAT_IDS);
+
+/**
+ * Worn hat overlays for approved collection hats.
+ * Same artwork as the catalogue icon, without the baked ground-shadow ellipse.
+ */
+export function wornHatAsset(hatId: string | null | undefined): string | null {
+  if (!hatId || !WORN_HAT_ID_SET.has(hatId)) return null;
+  return `/pet-assets/accessories/worn/hats/${hatId}.svg`;
 }
 
 /** The eight approved collection clothes with compact worn overlays (clothes_a placement). */
