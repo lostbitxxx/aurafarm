@@ -2693,6 +2693,14 @@ button.dialog-row {
 .study-active { display: grid; gap: 0.55rem; margin-bottom: 0.4rem; }
 .study-active p { margin: 0; }
 .launch-link, .launch-code { word-break: break-all; }
+.launch-link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: 100%;
+}
+.launch-link-row .launch-link { min-width: 0; }
+.launch-link-row .button { flex: none; }
 .launch-code-row {
   display: inline-flex;
   align-items: center;

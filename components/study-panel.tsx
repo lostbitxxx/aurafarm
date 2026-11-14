@@ -401,9 +401,12 @@ export function StudyPanel({
                 {launchUrl ? (
                   <>
                     <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                    <a className="launch-link" href={launchUrl}>
-                      {launchUrl}
-                    </a>
+                    <div className="launch-link-row">
+                      <a className="launch-link" href={launchUrl}>
+                        {launchUrl}
+                      </a>
+                      <CopyButton value={launchUrl} label="Copy launch link" />
+                    </div>
                     <CopySessionCode code={visibleCode} />
                   </>
                 ) : (
@@ -926,7 +929,7 @@ function StudyHistoryDialog({
   );
 }
 
-function CopySessionCode({ code }: { code: string }) {
+function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | null>(null);
 
@@ -938,7 +941,7 @@ function CopySessionCode({ code }: { code: string }) {
 
   async function onCopy() {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
       if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
       copiedTimer.current = window.setTimeout(() => setCopied(false), 1500);
@@ -948,16 +951,17 @@ function CopySessionCode({ code }: { code: string }) {
   }
 
   return (
+    <button type="button" className="button button-small" aria-label={label} onClick={() => void onCopy()}>
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
+function CopySessionCode({ code }: { code: string }) {
+  return (
     <div className="launch-code-row">
       <p className="launch-code">{code}</p>
-      <button
-        type="button"
-        className="button button-small"
-        aria-label="Copy session code"
-        onClick={() => void onCopy()}
-      >
-        {copied ? "Copied" : "Copy"}
-      </button>
+      <CopyButton value={code} label="Copy session code" />
     </div>
   );
 }
