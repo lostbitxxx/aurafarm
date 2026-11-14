@@ -368,8 +368,15 @@ export function StudyPanel({
           onOpenInventory={onOpenInventory}
         />
         <div className="below-room">
-          <div>
-            <p className="pet-name">{shownSession ? "Studying with you" : "Ready for a little focus?"}</p>
+          <div className="session-copy">
+            <div className={shownSession ? "session-title-row" : undefined}>
+              <p className="pet-name">{shownSession ? "Studying with you" : "Ready for a little focus?"}</p>
+              {shownSession ? (
+                <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
+                  End session early
+                </button>
+              ) : null}
+            </div>
             <p className="growth-label">
               {shownSession
                 ? shownSession.useDesktopPet
@@ -408,17 +415,13 @@ export function StudyPanel({
               </p>
             ) : null}
           </div>
-          <div className="scene-actions">
-            {shownSession ? (
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onOpenEarly}>
-                End session early
-              </button>
-            ) : (
-              <button type="button" className="button" disabled={pending} onClick={onAskTracker}>
+          {shownSession ? null : (
+            <div className="scene-actions is-start">
+              <button type="button" className="button button-start" disabled={pending} onClick={onAskTracker}>
                 Start studying →
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </section>
       <div
