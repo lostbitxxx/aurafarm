@@ -1,6 +1,6 @@
 -- hat_c through hat_j and clothes_c through clothes_j have no artwork.
 -- Unequip them, return any reward spent on them, and drop the catalog rows.
--- Run this after 0034_streak_short_session_and_soft_day.sql.
+-- Run this after 0035_claim_applies_reward.sql.
 
 update public.user_pets
 set hat = null
