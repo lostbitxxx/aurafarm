@@ -53,6 +53,11 @@
         flex-direction: column;
         gap: 0.45rem;
       }
+      #session-block {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: 2.25rem;
+      }
       #panel-actions {
         display: grid;
         gap: 0.45rem;
@@ -134,16 +139,18 @@
   <body>
     <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">‹</button>
     <div id="panel-body">
-      <form id="session-token">
-        <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-        <button class="primary" type="submit">Use session token</button>
-      </form>
-      <p id="update" hidden>
-        <span id="update-label"></span>
-        <button id="update-button" class="primary" type="button">Download update</button>
-      </p>
-      <p id="status">Paste a session token.</p>
-      <p id="bubble" hidden></p>
+      <div id="session-block">
+        <form id="session-token">
+          <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+          <button class="primary" type="submit">Use session token</button>
+        </form>
+        <p id="update" hidden>
+          <span id="update-label"></span>
+          <button id="update-button" class="primary" type="button">Download update</button>
+        </p>
+        <p id="status">Paste a session token.</p>
+        <p id="bubble" hidden></p>
+      </div>
       <div id="panel-actions">
         <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
         <p id="note"></p>

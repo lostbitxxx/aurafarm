@@ -97,6 +97,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /role: "paste"/);
   assert.match(main, /context-menu/);
   assert.match(panel, /id="session-token"/);
+  assert.match(panel, /#session-block \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: 2\.25rem;/);
+  assert.match(panel, /id="session-block"[\s\S]*id="session-token"[\s\S]*id="status"/);
   assert.match(script, /window\.pet\.useToken\(/);
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);
   assert.match(panel, /id="finish"/);
