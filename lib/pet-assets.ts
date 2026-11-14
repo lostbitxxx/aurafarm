@@ -47,17 +47,18 @@ export function sampleColor(value: unknown): SampleColorId | null {
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
  * With clothes: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
  */
+/** Ids stay hat_a … hat_j (folders and the database). name is the label. */
 export const SAMPLE_HATS = [
-  { id: "hat_a" },
-  { id: "hat_b" },
-  { id: "hat_c" },
-  { id: "hat_d" },
-  { id: "hat_e" },
-  { id: "hat_f" },
-  { id: "hat_g" },
-  { id: "hat_h" },
-  { id: "hat_i" },
-  { id: "hat_j" },
+  { id: "hat_a", name: "Forest hat" },
+  { id: "hat_b", name: "Blue hat" },
+  { id: "hat_c", name: "Red hat" },
+  { id: "hat_d", name: "Pink hat" },
+  { id: "hat_e", name: "Yellow hat" },
+  { id: "hat_f", name: "Mint hat" },
+  { id: "hat_g", name: "Purple hat" },
+  { id: "hat_h", name: "White hat" },
+  { id: "hat_i", name: "Black hat" },
+  { id: "hat_j", name: "Orange hat" },
 ] as const;
 
 export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
@@ -74,17 +75,18 @@ export function sampleHat(value: unknown): SampleHatId | null {
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
  * With a hat: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
  */
+/** Ids stay clothes_a … clothes_j (folders and the database). name is the label. */
 export const SAMPLE_CLOTHES = [
-  { id: "clothes_a" },
-  { id: "clothes_b" },
-  { id: "clothes_c" },
-  { id: "clothes_d" },
-  { id: "clothes_e" },
-  { id: "clothes_f" },
-  { id: "clothes_g" },
-  { id: "clothes_h" },
-  { id: "clothes_i" },
-  { id: "clothes_j" },
+  { id: "clothes_a", name: "Blue vest" },
+  { id: "clothes_b", name: "Brown vest" },
+  { id: "clothes_c", name: "Red vest" },
+  { id: "clothes_d", name: "Pink vest" },
+  { id: "clothes_e", name: "Yellow vest" },
+  { id: "clothes_f", name: "Green vest" },
+  { id: "clothes_g", name: "Purple vest" },
+  { id: "clothes_h", name: "White vest" },
+  { id: "clothes_i", name: "Black vest" },
+  { id: "clothes_j", name: "Orange vest" },
 ] as const;
 
 export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
@@ -92,6 +94,12 @@ export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
 export function sampleClothes(value: unknown): SampleClothesId | null {
   if (typeof value !== "string") return null;
   return SAMPLE_CLOTHES.some((clothes) => clothes.id === value) ? (value as SampleClothesId) : null;
+}
+
+export function sampleAccessoryName(kind: "hat" | "clothes", id: string | null | undefined) {
+  if (!id) return null;
+  const items = kind === "hat" ? SAMPLE_HATS : SAMPLE_CLOTHES;
+  return items.find((item) => item.id === id)?.name ?? null;
 }
 
 /** Temporary frontend artwork mapping — not a database change. */

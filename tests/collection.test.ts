@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { previewRewards } from "../lib/collection-catalog";
-import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
+import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleAccessoryName, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
   assert.equal(
@@ -75,6 +75,66 @@ test("a saved hat uses its folder and an empty hat does not", () => {
     SAMPLE_HATS.map((hat) => hat.id),
     ["hat_a", "hat_b", "hat_c", "hat_d", "hat_e", "hat_f", "hat_g", "hat_h", "hat_i", "hat_j"],
   );
+});
+
+test("lettered hats and clothes use ordinary names", () => {
+  assert.deepEqual(
+    SAMPLE_HATS.map((hat) => hat.name),
+    [
+      "Forest hat",
+      "Blue hat",
+      "Red hat",
+      "Pink hat",
+      "Yellow hat",
+      "Mint hat",
+      "Purple hat",
+      "White hat",
+      "Black hat",
+      "Orange hat",
+    ],
+  );
+  assert.deepEqual(
+    SAMPLE_CLOTHES.map((clothes) => clothes.name),
+    [
+      "Blue vest",
+      "Brown vest",
+      "Red vest",
+      "Pink vest",
+      "Yellow vest",
+      "Green vest",
+      "Purple vest",
+      "White vest",
+      "Black vest",
+      "Orange vest",
+    ],
+  );
+  assert.equal(sampleAccessoryName("hat", "hat_a"), "Forest hat");
+  assert.equal(sampleAccessoryName("hat", "hat_b"), "Blue hat");
+  assert.equal(sampleAccessoryName("clothes", "clothes_a"), "Blue vest");
+  assert.equal(sampleAccessoryName("clothes", "clothes_b"), "Brown vest");
+  assert.equal(sampleAccessoryName("hat", "nope"), null);
+
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0035_accessory_display_names.sql", import.meta.url),
+    "utf8",
+  );
+  for (const item of [...SAMPLE_HATS, ...SAMPLE_CLOTHES]) {
+    assert.ok(item.name.length <= 32);
+    assert.match(sql, new RegExp(`'${item.id}', '${item.name}'`));
+  }
+  assert.doesNotMatch(sql, /hat_a', 'hat_a'/);
+
+  const dialogs = readFileSync(new URL("../components/dashboard-dialogs.tsx", import.meta.url), "utf8");
+  const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
+  const reward = readFileSync(new URL("../components/level-up-reward.tsx", import.meta.url), "utf8");
+  assert.match(dialogs, /<strong>\{item\.name\}<\/strong>/);
+  assert.doesNotMatch(dialogs, /<strong>\{item\.id\}<\/strong>/);
+  assert.match(dialogs, /sampleAccessoryName\("hat", hatId\)/);
+  assert.match(dialogs, /sampleAccessoryName\("clothes", clothesId\)/);
+  assert.match(detail, /sampleAccessoryName\(kind, id\)/);
+  assert.match(detail, /<strong>\{pendingKey === item\.id \? "…" : item\.name\}<\/strong>/);
+  assert.match(reward, /sampleAccessoryName\("hat", itemId\)/);
+  assert.match(reward, /sampleAccessoryName\("clothes", itemId\)/);
 });
 
 test("hat ids are owned once per account and pets stay without a hat", () => {
