@@ -32,6 +32,7 @@ const CONFETTI = [
 ];
 
 const DEFAULT_VOLUME = 0.7;
+const MOBILE_PLAYBACK = "(max-width: 1120px)";
 
 function songStorageKey(userId: string) {
   return `aurafarm.song.${userId}`;
@@ -92,6 +93,8 @@ export function DeskSong({
   const [ready, setReady] = useState(false);
   const [currentId, setCurrentId] = useState(STARTER_SONG_ID);
   const [stopped, setStopped] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [mobilePlay, setMobilePlay] = useState(false);
   const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const [notice, setNotice] = useState("");
   const [elapsed, setElapsed] = useState(0);
@@ -99,9 +102,21 @@ export function DeskSong({
   const lastAudibleVolume = useRef(DEFAULT_VOLUME);
   const current = songById(currentId) ?? songById(STARTER_SONG_ID)!;
 
+  const paused = stopped || (mobile && !mobilePlay);
+
+  useEffect(() => {
+    const query = window.matchMedia(MOBILE_PLAYBACK);
+    function onChange() {
+      setMobile(query.matches);
+    }
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
   useEffect(() => {
     const ids = playableSongIds(ownedKey.split("|").filter(Boolean));
     if (hydratedUser.current !== userId) {
+      setMobile(window.matchMedia(MOBILE_PLAYBACK).matches);
       hydratedUser.current = userId;
       const saved = readSavedSong(userId);
       if (saved && ids.includes(saved.id)) {
@@ -157,7 +172,7 @@ export function DeskSong({
       setDuration(0);
     }
 
-    if (stopped) {
+    if (paused) {
       audio.pause();
       return;
     }
@@ -184,7 +199,7 @@ export function DeskSong({
       window.removeEventListener("pointerdown", tryPlay);
       window.removeEventListener("keydown", tryPlay);
     };
-  }, [ready, current.src, stopped]);
+  }, [ready, current.src, paused]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -210,6 +225,11 @@ export function DeskSong({
 
   function toggle() {
     setNotice("");
+    if (mobile && !mobilePlay) {
+      setMobilePlay(true);
+      setStopped(false);
+      return;
+    }
     setStopped((playingStopped) => !playingStopped);
   }
 
@@ -259,10 +279,10 @@ export function DeskSong({
       <audio ref={audioRef} loop preload="auto" hidden />
       {open ? (
         <FarmDialog title="Song" onClose={onClose}>
-          <p>{stopped ? "Paused" : "Now playing"}</p>
+          <p>{paused ? "Paused" : "Now playing"}</p>
           <p className="song-title">{current.title}</p>
           <div
-            className={stopped ? "song-vinyl" : "song-vinyl is-playing"}
+            className={paused ? "song-vinyl" : "song-vinyl is-playing"}
             aria-hidden="true"
           >
             <span className="song-vinyl-disc">
@@ -303,9 +323,9 @@ export function DeskSong({
                 type="button"
                 className="button song-transport"
                 onClick={toggle}
-                aria-label={stopped ? "Play" : "Pause"}
+                aria-label={paused ? "Play" : "Pause"}
               >
-                {stopped ? (
+                {paused ? (
                   <span className="song-icon song-icon-play" aria-hidden="true" />
                 ) : (
                   <span className="song-icon song-icon-pause" aria-hidden="true" />

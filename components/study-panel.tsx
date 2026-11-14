@@ -401,12 +401,9 @@ export function StudyPanel({
                 {launchUrl ? (
                   <>
                     <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                    <div className="launch-link-row">
-                      <a className="launch-link" href={launchUrl}>
-                        {launchUrl}
-                      </a>
-                      <CopyButton value={launchUrl} label="Copy launch link" />
-                    </div>
+                    <a className="launch-link" href={launchUrl}>
+                      {launchUrl}
+                    </a>
                     <CopySessionCode code={visibleCode} />
                   </>
                 ) : (
@@ -625,7 +622,10 @@ export function StudyPanel({
               <p>The session starts when you confirm.</p>
             )}
             {desktopHelp ? (
-              <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
+              <div className="pet-open-command-row">
+                <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
+                <CopyButton value="xattr -cr ~/Downloads/Aurafarm.app" label="Copy Terminal command" />
+              </div>
             ) : (
               <>
             <div className="tracker-choices" role="group" aria-label="Session tracker">
