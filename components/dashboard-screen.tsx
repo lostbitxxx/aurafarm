@@ -68,6 +68,8 @@ export function DashboardScreen({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  earnedAchievements,
+  achievementsError,
   pendingRewards,
   petsError,
   activeSession,
@@ -98,6 +100,8 @@ export function DashboardScreen({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  earnedAchievements: readonly string[];
+  achievementsError: string | null;
   pendingRewards: readonly CollectionReward[];
   petsError: string | null;
   activeSession: ActiveStudySession | null;
@@ -436,7 +440,13 @@ export function DashboardScreen({
           onEquipped={onEquipped}
         />
       ) : null}
-      {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
+      {dialog === "achievements" ? (
+        <AchievementsDialog
+          earnedIds={earnedAchievements}
+          error={achievementsError}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {dialog === "friends" ? (
         <FriendsDialog
           friends={friends}

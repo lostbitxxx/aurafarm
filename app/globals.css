@@ -801,6 +801,42 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.65rem;
 }
 
+.achievement-row {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #d9ddcb;
+  border-left-width: 4px;
+  border-radius: 0.6rem;
+  background: #f7f6ea;
+  color: var(--dialog-ink);
+}
+
+.achievement-row-earned {
+  border-left-color: var(--slime-deep);
+  background: #f7f6ea;
+  color: var(--dialog-ink);
+}
+
+.achievement-row strong {
+  font-family: var(--serif);
+}
+
+.achievement-earned {
+  margin-left: 0.55rem;
+  color: #4d7a16;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.achievement-row-locked {
+  border-left-color: #c5c8ba;
+  background: #e7e6dc;
+  color: #8b9084;
+}
+
+.achievement-row-locked .panel-hint {
+  color: #8b9084;
+}
+
 .dialog-row {
   display: flex;
   flex-wrap: wrap;
