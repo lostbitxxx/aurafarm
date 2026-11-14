@@ -914,11 +914,25 @@ button.dialog-row {
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tracker-card .friend-code-field {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   margin: 0;
+}
+
+.tracker-card .friend-code-field input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tracker-card form.friend-add-form .button {
+  flex: none;
 }
 
 .tracker-card .friend-code {
@@ -1523,6 +1537,19 @@ button.dialog-row {
   max-height: min(28rem, calc(90vh - 11rem));
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.collection-panel.friends-panel {
+  border-top: 1px solid #d9ddcb;
+  padding: 0 0.35rem 0.25rem;
+}
+
+.friends-panel .dialog-list {
+  margin-top: 0;
+}
+
+.friends-panel .dialog-row {
+  padding-top: 0.4rem;
 }
 
 .collection-color-grid {

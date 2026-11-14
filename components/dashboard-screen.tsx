@@ -361,7 +361,12 @@ export function DashboardScreen({
       ) : null}
       {dialog === "achievements" ? <AchievementsDialog onClose={() => setDialog(null)} /> : null}
       {dialog === "friends" ? (
-        <FriendsDialog friends={friends} friendsError={friendsError} onClose={() => setDialog(null)} />
+        <FriendsDialog
+          friends={friends}
+          friendCode={friendCode}
+          friendsError={friendsError}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
       {dialog === "leaderboard" ? (
         <LeaderboardDialog userId={userId} onClose={() => setDialog(null)} />

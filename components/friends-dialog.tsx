@@ -10,10 +10,12 @@ type FriendsTab = "list" | "add";
 
 export function FriendsDialog({
   friends,
+  friendCode,
   friendsError,
   onClose,
 }: {
   friends: readonly FriendCard[];
+  friendCode: string;
   friendsError: string | null;
   onClose: () => void;
 }) {
@@ -23,6 +25,7 @@ export function FriendsDialog({
   const [error, setError] = useState<string | null>(friendsError);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const signature = friends
     .map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}:${friend.presence}:${friend.petType ?? ""}`)
     .join("|");
@@ -72,6 +75,17 @@ export function FriendsDialog({
       window.clearInterval(timer);
     };
   }, []);
+
+  async function onCopy() {
+    if (!friendCode) return;
+    try {
+      await navigator.clipboard.writeText(friendCode);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+      setError("The code could not be copied.");
+    }
+  }
 
   async function onSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -148,7 +162,7 @@ export function FriendsDialog({
         </button>
       </div>
       <div
-        className="collection-panel"
+        className="collection-panel friends-panel"
         role="tabpanel"
         id={tab === "list" ? "friends-panel-list" : "friends-panel-add"}
         aria-labelledby={tab === "list" ? "friends-tab-list" : "friends-tab-add"}
@@ -178,6 +192,14 @@ export function FriendsDialog({
           )
         ) : (
           <>
+            <div className="friend-code-row">
+              <p className="panel-hint">
+                Your friend code <strong className="friend-code">{friendCode || "Unavailable"}</strong>
+              </p>
+              <button type="button" className="button button-small" onClick={onCopy} disabled={!friendCode}>
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
             <form className="friend-add-form" onSubmit={onSend}>
               <label className="field friend-code-field">
                 <input

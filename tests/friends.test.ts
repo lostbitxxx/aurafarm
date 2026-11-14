@@ -81,7 +81,7 @@ test("the desk opens Friends and Leaderboard from Social", () => {
   assert.match(desk, /onOpenSocialSettings=\{\(\) => setDialog\("social-settings"\)\}/);
   assert.match(desk, /onOpenLeaderboard=\{\(\) => setDialog\("leaderboard"\)\}/);
   assert.match(desk, /<LeaderboardDialog/);
-  assert.match(desk, /<FriendsDialog/);
+  assert.match(desk, /<FriendsDialog[\s\S]*friendCode=\{friendCode\}/);
   assert.match(desk, /<SocialSettingsDialog/);
   assert.match(desk, /<SocialPresence/);
   assert.match(page, /loadFriendDesk/);
@@ -99,7 +99,9 @@ test("the desk opens Friends and Leaderboard from Social", () => {
   assert.match(dialog, /friend\.displayName/);
   assert.match(dialog, /socialStatusLabel/);
   assert.match(dialog, /PixelPetArt/);
-  assert.doesNotMatch(dialog, /Your friend code/);
+  assert.match(dialog, /friends-panel/);
+  assert.match(dialog, /Your friend code/);
+  assert.match(dialog, /navigator\.clipboard\.writeText\(friendCode\)/);
 
   const settings = readFileSync(new URL("../components/social-settings-dialog.tsx", import.meta.url), "utf8");
   assert.match(settings, /Your friend code/);
