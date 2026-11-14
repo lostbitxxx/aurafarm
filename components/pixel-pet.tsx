@@ -8,6 +8,7 @@ import {
   sampleColor,
   sampleHat,
   wornClothesAsset,
+  wornHatAsset,
   type PetPose,
 } from "@/lib/pet-assets";
 
@@ -32,10 +33,11 @@ export function PixelPetArt({
   const [dropHat, setDropHat] = useState(false);
   const hatId = sampleHat(hat);
   const clothesId = sampleClothes(clothes);
-  const wornHat = !hatId && hat ? previewReward(hat) : null;
+  const previewHat = !hatId && hat ? previewReward(hat) : null;
   const previewClothes = !clothesId && clothes ? previewReward(clothes) : null;
+  const fittedHat = !hatId && hat && !dropHat ? wornHatAsset(hat) : null;
   const fittedClothes = !clothesId && clothes && !dropClothes ? wornClothesAsset(clothes, petType) : null;
-  const hatIcon = wornHat?.kind === "hat" ? wornHat.icon : null;
+  const hatIcon = fittedHat ?? (previewHat?.kind === "hat" ? previewHat.icon : null);
   const clothesIcon =
     fittedClothes ?? (previewClothes?.kind === "clothes" ? previewClothes.icon : null);
   const clothesFitted = Boolean(fittedClothes);
