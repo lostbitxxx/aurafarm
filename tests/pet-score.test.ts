@@ -139,6 +139,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /#session-block \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: 0;/);
   assert.match(panel, /id="session-block"[\s\S]*id="session-token"[\s\S]*id="status"/);
   assert.match(script, /window\.pet\.useToken\(/);
+  assert.match(script, /tokenForm\.hidden = Boolean\(state\.remainingLabel\)/);
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);
   assert.match(panel, /id="finish"/);
   assert.match(panel, /Finish focused session/);
@@ -199,6 +200,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /id="timer-fill"/);
   assert.match(panel, /#timer-fill[\s\S]*bottom: 0;/);
   assert.match(panel, /#timer-fill[\s\S]*background: #c5ef47;/);
+  assert.match(
+    panel,
+    /#timer \{\s*position: absolute;\s*top: 50%;\s*left: 0\.45rem;\s*right: calc\(20px \+ 0\.45rem\);\s*transform: translateY\(-50%\);\s*font-size: 2\.9rem;/,
+  );
   assert.match(script, /panelArrow\.textContent = open \? "›" : "‹"/);
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
