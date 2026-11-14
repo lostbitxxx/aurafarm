@@ -4,6 +4,7 @@ import { SocialPresence } from "@/components/social-presence";
 import { formatDuration, formatTimestamp } from "@/lib/study";
 import { loadStudyScore, type LoadedStudyScore } from "@/lib/study-score";
 import { CloseDeskTab } from "./close-desk-tab";
+import { RefreshDeskOnFinish } from "./refresh-desk";
 
 export const metadata: Metadata = {
   title: "Session",
@@ -50,6 +51,7 @@ export default async function StudyScorePage({
             ) : (
               <p className="session-fact">{copy.detail}</p>
             )}
+            <RefreshDeskOnFinish finished={score.state === "finished"} />
             <CloseDeskTab refresh={score.state === "finished"}>Back to the desk</CloseDeskTab>
           </div>
         </section>

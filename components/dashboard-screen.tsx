@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DeskTutorial, useDeskTutorial } from "./desk-tutorial";
 import { StudyPanel } from "./study-panel";
@@ -227,6 +227,7 @@ export function DashboardScreen({
   }, [userId, pets]);
 
   const router = useRouter();
+  const [deskRefreshing, startDeskRefresh] = useTransition();
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(DESK_REFRESH_CHANNEL);
@@ -236,7 +237,9 @@ export function DashboardScreen({
       const now = Date.now();
       if (now - lastRefresh < 1000) return;
       lastRefresh = now;
-      router.refresh();
+      startDeskRefresh(() => {
+        router.refresh();
+      });
     };
     return () => channel.close();
   }, [router]);
@@ -469,6 +472,7 @@ export function DashboardScreen({
       ) : null}
       <StudyPanel
         activeSession={activeSession}
+        deskRefreshing={deskRefreshing}
         scores={scores}
         recordedSessions={recordedSessions}
         studyError={studyError}

@@ -2521,6 +2521,27 @@ button.dialog-row {
   min-width: 0;
 }
 
+.session-refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.85rem 0 0;
+  color: var(--ink);
+}
+
+.session-refresh-mark {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(20, 33, 26, 0.2);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: session-refresh-spin 0.7s linear infinite;
+}
+
+@keyframes session-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 .session-title-row {
   display: flex;
   align-items: center;

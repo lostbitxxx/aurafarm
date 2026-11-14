@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import type { PetCard } from "@/lib/pets";
 import {
@@ -63,6 +64,7 @@ export function StudyPanel({
   onColorApplied,
   onHatApplied,
   onClothesApplied,
+  deskRefreshing = false,
   tutorialCurrent = false,
   onTutorialStart,
 }: {
@@ -91,6 +93,7 @@ export function StudyPanel({
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
+  deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
   onTutorialStart?: () => void;
 }) {
@@ -359,6 +362,22 @@ export function StudyPanel({
 
   const lengthSeconds = selectedLengthSeconds();
   const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
+  const desktopPetSession = shownSession?.useDesktopPet === true;
+  const router = useRouter();
+  const [sessionRefreshing, startSessionRefresh] = useTransition();
+  const checkingSession = desktopPetSession && (sessionRefreshing || deskRefreshing);
+
+  useEffect(() => {
+    if (!desktopPetSession) return;
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      startSessionRefresh(() => {
+        router.refresh();
+      });
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [desktopPetSession, router]);
 
   useEffect(() => {
     if (!railOpen) return;
@@ -389,22 +408,28 @@ export function StudyPanel({
         />
         <div className="below-room">
           <div className="session-copy">
-            <div className={shownSession ? "session-title-row" : undefined}>
-              <p className="pet-name">{shownSession ? "Studying with you" : "Ready for a little focus?"}</p>
-              {shownSession ? (
+            <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
+              <p className="pet-name">
+                {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
+              </p>
+              {shownSession && !checkingSession ? (
                 <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
                   End session early
                 </button>
               ) : null}
             </div>
             <p className="growth-label">
-              {shownSession
-                ? shownSession.useDesktopPet
-                  ? "Desktop pet is tracking this session."
-                  : "Website timer is tracking this session."
-                : "Choose the duration and tracker in two steps."}
+              {checkingSession
+                ? "Fetching the desk."
+                : shownSession
+                  ? shownSession.useDesktopPet
+                    ? "Desktop pet is tracking this session."
+                    : "Website timer is tracking this session."
+                  : "Choose the duration and tracker in two steps."}
             </p>
-            {shownSession?.useDesktopPet ? (
+            {checkingSession ? (
+              <SessionRefreshStatus />
+            ) : shownSession?.useDesktopPet ? (
               <div className="study-active">
                 {launchUrl ? (
                   <>
@@ -990,6 +1015,15 @@ function CopySessionCode({ code }: { code: string }) {
       <p className="launch-code">{code}</p>
       <CopyButton value={code} label="Copy session code" />
     </div>
+  );
+}
+
+function SessionRefreshStatus() {
+  return (
+    <p className="session-refresh" role="status">
+      <span className="session-refresh-mark" aria-hidden="true" />
+      Loading the desk
+    </p>
   );
 }
 
