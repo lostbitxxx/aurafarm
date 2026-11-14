@@ -242,3 +242,39 @@ test("an owned approved hat or outfit can be applied to a pet", () => {
   assert.match(actions, /previewReward\(hatId\)\?\.kind !== "hat"/);
   assert.match(actions, /previewReward\(clothesId\)\?\.kind !== "clothes"/);
 });
+
+test("choosing a level reward wears it on the pet that earned the level", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0035_claim_applies_reward.sql", import.meta.url),
+    "utf8",
+  );
+  const claim = sql.slice(sql.indexOf("function public.claim_collection_reward"));
+  const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const claimed = screen.slice(screen.indexOf("function onRewardClaimed"), screen.indexOf("const celebrationPet"));
+  const picker = readFileSync(new URL("../components/level-up-reward.tsx", import.meta.url), "utf8");
+
+  assert.match(claim, /select kind into item_kind/);
+  assert.match(claim, /from public\.collection_items/);
+  assert.match(claim, /select id, pet_id into reward_id, reward_pet_id/);
+  assert.match(claim, /Item not in the collection/);
+  assert.match(claim, /Item already owned/);
+  assert.match(claim, /No reward to claim/);
+  assert.match(claim, /insert into public\.user_collections/);
+  assert.match(claim, /set item_id = target_item/);
+  assert.match(claim, /for update/);
+  assert.match(claim, /security definer/);
+  assert.match(claim, /item_kind = 'color'/);
+  assert.match(claim, /set color = target_item/);
+  assert.match(claim, /item_kind = 'hat'/);
+  assert.match(claim, /set hat = target_item/);
+  assert.match(claim, /item_kind = 'clothes'/);
+  assert.match(claim, /set clothes = target_item/);
+  assert.match(claim, /where id = reward_pet_id/);
+  assert.match(claim, /and user_id = auth\.uid\(\)/);
+  assert.match(claimed, /rewards\[0\]\?\.petId/);
+  assert.match(claimed, /setLocalPets/);
+  assert.match(claimed, /return \{ \.\.\.pet, color \}/);
+  assert.match(claimed, /return \{ \.\.\.pet, hat \}/);
+  assert.match(claimed, /return \{ \.\.\.pet, clothes \}/);
+  assert.match(picker, /worn by this pet/);
+});

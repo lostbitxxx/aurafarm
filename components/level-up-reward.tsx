@@ -211,7 +211,7 @@ export function RewardPicker({
   return (
     <FarmDialog title="Choose a reward" onClose={onClose} wide>
       <p className="panel-hint">
-        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit.
+        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit. The one you pick is worn by this pet.
       </p>
       {error ? (
         <p className="form-error" role="alert">
