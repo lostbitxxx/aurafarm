@@ -5,6 +5,13 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
+const { formatStudyClock, remainingStudyMs } = require("../desktop/study-clock.js") as {
+  formatStudyClock: (remainingMs: number) => string;
+  remainingStudyMs: (
+    study: { plannedSeconds?: number; startedAtMs?: number },
+    now: number,
+  ) => number | null;
+};
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
   interpretScoreResponse: (
@@ -169,7 +176,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
-  assert.match(main, /PANEL_HEIGHT = 309/);
+  assert.match(main, /PANEL_HEIGHT = 345/);
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = 309/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
   assert.match(main, /area\.x \+ area\.width - width/);
@@ -190,6 +197,17 @@ test("the sign-in panel can quit the pet", () => {
 test("a commented vercel origin falls back to the local desk", () => {
   assert.equal(usableApiOrigin(["#https://aurafarm.vercel.app", ""]), "http://localhost:3000");
   assert.equal(usableApiOrigin("https://aurafarm.vercel.app/"), "https://aurafarm.vercel.app");
+});
+
+test("the study clock shows the planned time that is left", () => {
+  assert.equal(formatStudyClock(90.2 * 1000), "1:31");
+  assert.equal(formatStudyClock((3 * 3600 + 5 * 60) * 1000), "3:05:00");
+  assert.equal(formatStudyClock(0), "0:00");
+  assert.equal(remainingStudyMs({ startedAtMs: 1_000 }, 1_000), null);
+  assert.equal(
+    remainingStudyMs({ plannedSeconds: 120, startedAtMs: 1_700_000_000_000 }, 1_700_000_030_000),
+    90_000,
+  );
 });
 
 test("the pet posts the score and does not open a port", () => {

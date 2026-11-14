@@ -1,4 +1,5 @@
 const status = document.getElementById("status");
+const timer = document.getElementById("timer");
 const update = document.getElementById("update");
 const updateLabel = document.getElementById("update-label");
 const finishButton = document.getElementById("finish");
@@ -63,6 +64,8 @@ document.getElementById("session-token").addEventListener("submit", async (event
 
 window.pet.onState((state) => {
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
+  timer.hidden = !state.remainingLabel;
+  timer.textContent = state.remainingLabel || "";
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish focused session";

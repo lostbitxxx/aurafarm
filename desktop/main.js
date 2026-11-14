@@ -17,6 +17,7 @@ const {
 const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
+const { formatStudyClock, remainingStudyMs } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
@@ -58,7 +59,7 @@ async function loadRemoteConfig() {
 
 const PANEL_COLLAPSED_WIDTH = 24;
 const PANEL_EXPANDED_WIDTH = 320;
-const PANEL_HEIGHT = 309;
+const PANEL_HEIGHT = 345;
 const PANEL_COLLAPSED_HEIGHT = 309;
 
 let panelWindow = null;
@@ -429,20 +430,21 @@ async function cancelStudy() {
   return { error: "" };
 }
 
-function remainingStudyMs(current, now) {
-  const planned = Number(current?.plannedSeconds);
-  const started = Number(current?.startedAtMs);
-  if (!Number.isFinite(planned) || planned <= 0 || !Number.isFinite(started)) return null;
-  return started + planned * 1000 - now;
+function tickStudyClock() {
+  if (!study || finishing) return;
+  const remaining = remainingStudyMs(study, Date.now());
+  const label = remaining === null ? "" : formatStudyClock(remaining);
+  if (state.remainingLabel !== label) {
+    state = { ...state, remainingLabel: label };
+    publish();
+  }
+  if (remaining !== null && remaining <= 0) void finishSession();
 }
 
 function startStudyClock() {
   if (studyClock) clearInterval(studyClock);
-  studyClock = setInterval(() => {
-    if (!study || finishing) return;
-    const remaining = remainingStudyMs(study, Date.now());
-    if (remaining !== null && remaining <= 0) void finishSession();
-  }, 1000);
+  tickStudyClock();
+  studyClock = setInterval(tickStudyClock, 1000);
 }
 
 function stopStudyClock() {
@@ -502,7 +504,10 @@ function stopFrontWatch() {
   frontPoll = null;
   study = null;
   hideBubble();
+  state = { ...state, remainingLabel: "" };
+  const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));
+  if (state.debug === debugBefore) publish();
 }
 
 function showBubble(host) {
