@@ -172,11 +172,18 @@ test("the mac reader asks only the front window of safari, chrome, or edge", () 
   assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
   assert.equal(frontUrlStatement("Firefox"), "");
   assert.doesNotMatch(frontUrlStatement("Google Chrome"), /every tab/);
-  assert.match(frontCloseStatement("Safari"), /close front window/);
-  assert.match(frontCloseStatement("Google Chrome"), /close front window/);
-  assert.match(frontCloseStatement("Microsoft Edge"), /close front window/);
+  assert.match(frontCloseStatement("Safari"), /set targetTab to current tab of front window/);
+  for (const appName of ["Google Chrome", "Microsoft Edge"]) {
+    assert.match(frontCloseStatement(appName), /set targetTab to active tab of front window/);
+  }
+  for (const appName of ["Safari", "Google Chrome", "Microsoft Edge"]) {
+    const closeScript = frontCloseStatement(appName);
+    assert.match(closeScript, /close targetTab/);
+    assert.doesNotMatch(closeScript, /close front window/);
+    assert.doesNotMatch(closeScript, /close targetWindow/);
+    assert.doesNotMatch(closeScript, /close active tab/);
+  }
   assert.equal(frontCloseStatement("Firefox"), "");
-  assert.doesNotMatch(frontCloseStatement("Google Chrome"), /close active tab/);
 });
 
 test("a failed browser read is shown instead of a clear session", () => {

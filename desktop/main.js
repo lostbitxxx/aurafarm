@@ -17,6 +17,7 @@ const {
 const { closeFrontWindow, readFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
+const { formatStudyClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 
@@ -58,7 +59,7 @@ async function loadRemoteConfig() {
 
 const PANEL_COLLAPSED_WIDTH = 24;
 const PANEL_EXPANDED_WIDTH = 320;
-const PANEL_HEIGHT = 309;
+const PANEL_HEIGHT = 345;
 const PANEL_COLLAPSED_HEIGHT = 309;
 
 let panelWindow = null;
@@ -140,6 +141,7 @@ function publish() {
   petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
   const payload = {
     ...state,
+    assetOrigin: API_ORIGIN,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
   for (const win of [panelWindow, debugWindow]) {
@@ -166,7 +168,7 @@ function panelBounds(open) {
   const height = Math.min(open ? PANEL_HEIGHT : PANEL_COLLAPSED_HEIGHT, area.height);
   return {
     x: area.x + area.width - width,
-    y: area.y + Math.round((area.height - height) / 2),
+    y: area.y + area.height - height,
     width,
     height,
   };
@@ -429,20 +431,23 @@ async function cancelStudy() {
   return { error: "" };
 }
 
-function remainingStudyMs(current, now) {
-  const planned = Number(current?.plannedSeconds);
-  const started = Number(current?.startedAtMs);
-  if (!Number.isFinite(planned) || planned <= 0 || !Number.isFinite(started)) return null;
-  return started + planned * 1000 - now;
+function tickStudyClock() {
+  if (!study || finishing) return;
+  const now = Date.now();
+  const remaining = remainingStudyMs(study, now);
+  const label = remaining === null ? "" : formatStudyClock(remaining);
+  const progress = studyProgress(study, now) ?? 0;
+  if (state.remainingLabel !== label || state.timerProgress !== progress) {
+    state = { ...state, remainingLabel: label, timerProgress: progress };
+    publish();
+  }
+  if (remaining !== null && remaining <= 0) void finishSession();
 }
 
 function startStudyClock() {
   if (studyClock) clearInterval(studyClock);
-  studyClock = setInterval(() => {
-    if (!study || finishing) return;
-    const remaining = remainingStudyMs(study, Date.now());
-    if (remaining !== null && remaining <= 0) void finishSession();
-  }, 1000);
+  tickStudyClock();
+  studyClock = setInterval(tickStudyClock, 1000);
 }
 
 function stopStudyClock() {
@@ -502,7 +507,10 @@ function stopFrontWatch() {
   frontPoll = null;
   study = null;
   hideBubble();
+  state = { ...state, remainingLabel: "", timerProgress: 0 };
+  const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));
+  if (state.debug === debugBefore) publish();
 }
 
 function showBubble(host) {

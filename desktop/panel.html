@@ -24,18 +24,40 @@
         color: #23392d;
       }
       #panel-toggle {
-        display: grid;
-        place-items: center;
+        position: relative;
+        display: block;
         flex: none;
         width: 24px;
         height: 100%;
         margin: 0;
         padding: 0;
         border: 0;
+        overflow: hidden;
+        background: #f7f3e8;
+        cursor: pointer;
+      }
+      #panel-arrow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: 22px;
         background: #f7f3e8;
         color: #23392d;
         font: 600 22px/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
-        cursor: pointer;
+        pointer-events: none;
+      }
+      #timer-fill {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 0%;
+        background: #c5ef47;
+        pointer-events: none;
       }
       #panel-toggle:focus-visible {
         outline: 3px solid #8261a7;
@@ -58,11 +80,26 @@
         gap: 0.45rem;
         margin-top: 1.35rem;
       }
+      #pet-lane {
+        position: relative;
+        flex: 1;
+        min-height: 70px;
+        overflow: hidden;
+      }
+      #pet-sprite {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 70px;
+        height: 70px;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
       #panel-actions {
         display: grid;
         gap: 0.45rem;
         margin-top: auto;
-        margin-bottom: auto;
+        margin-bottom: 0;
       }
       form,
       p {
@@ -86,7 +123,7 @@
         background: #fffdf6;
       }
       textarea {
-        min-height: 4.5rem;
+        min-height: 2.25rem;
         resize: none;
       }
       input:focus,
@@ -124,6 +161,12 @@
         color: #23392d;
         border: 1px solid #9daa90;
       }
+      #timer {
+        font-size: 1.45rem;
+        font-weight: 650;
+        line-height: 1.2;
+        color: #23392d;
+      }
       #note,
       #bubble,
       #status,
@@ -137,7 +180,7 @@
     </style>
   </head>
   <body>
-    <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">‹</button>
+    <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm"><span id="panel-arrow">‹</span><span id="timer-fill"></span></button>
     <div id="panel-body">
       <div id="session-block">
         <form id="session-token">
@@ -148,8 +191,12 @@
           <span id="update-label"></span>
           <button id="update-button" class="primary" type="button">Download update</button>
         </p>
+        <p id="timer" hidden></p>
         <p id="status">Paste a session token.</p>
         <p id="bubble" hidden></p>
+      </div>
+      <div id="pet-lane">
+        <img id="pet-sprite" alt="" draggable="false" />
       </div>
       <div id="panel-actions">
         <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
@@ -157,6 +204,7 @@
         <button id="quit" class="ghost" type="button">Quit</button>
       </div>
     </div>
+    <script src="pet-art.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>

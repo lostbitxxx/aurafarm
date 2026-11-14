@@ -24,16 +24,12 @@ function frontUrlStatement(appName) {
 }
 
 function frontCloseStatement(appName) {
-  if (appName === "Safari") {
-    return 'tell application "Safari" to close front window';
-  }
-  if (appName === "Google Chrome") {
-    return 'tell application "Google Chrome" to close front window';
-  }
-  if (appName === "Microsoft Edge") {
-    return 'tell application "Microsoft Edge" to close front window';
-  }
-  return "";
+  if (!supportedFrontBrowser(appName)) return "";
+  const tab = appName === "Safari" ? "current tab" : "active tab";
+  return `tell application ${JSON.stringify(appName)}
+set targetTab to ${tab} of front window
+close targetTab
+end tell`;
 }
 
 function supportedFrontBrowser(appName) {

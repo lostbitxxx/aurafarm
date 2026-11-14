@@ -5,6 +5,21 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
+const { clampPetX, plainPetPath } = require("../desktop/pet-art.js") as {
+  clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
+  plainPetPath: (petType: string, pose: string) => string;
+};
+const { formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
+  formatStudyClock: (remainingMs: number) => string;
+  remainingStudyMs: (
+    study: { plannedSeconds?: number; startedAtMs?: number },
+    now: number,
+  ) => number | null;
+  studyProgress: (
+    study: { plannedSeconds?: number; startedAtMs?: number },
+    now: number,
+  ) => number | null;
+};
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
   interpretScoreResponse: (
@@ -146,9 +161,17 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /cancelStudySession/);
   assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="panel-toggle"/);
+  assert.match(panel, /id="timer-fill"/);
+  assert.match(panel, /#timer-fill[\s\S]*bottom: 0;/);
+  assert.match(panel, /#timer-fill[\s\S]*background: #c5ef47;/);
+  assert.match(script, /panelArrow\.textContent = open \? "›" : "‹"/);
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
+  assert.match(panel, /id="pet-lane"/);
+  assert.match(panel, /#pet-lane \{\s*position: relative;\s*flex: 1;\s*min-height: 70px;\s*overflow: hidden;/);
+  assert.match(script, /clampPetX\(next, laneWidth, PET_WIDTH\)/);
+  assert.match(main, /assetOrigin: API_ORIGIN/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
   assert.match(script, /state\.panelOpen/);
@@ -169,15 +192,17 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
-  assert.match(main, /PANEL_HEIGHT = 309/);
+  assert.match(main, /PANEL_HEIGHT = 345/);
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = 309/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
   assert.match(main, /area\.x \+ area\.width - width/);
+  assert.match(main, /area\.y \+ area\.height - height/);
   assert.match(main, /setBounds\(panelBounds\(panelOpen\), true\)/);
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
   assert.match(main, /function focusPanel\(\)[\s\S]*setPanelOpen\(true\)/);
   assert.match(main, /display-metrics-changed/);
-  assert.match(panel, /#panel-actions \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: auto;\s*margin-bottom: auto;/);
+  assert.match(panel, /textarea \{\s*min-height: 2\.25rem;/);
+  assert.match(panel, /#panel-actions \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: auto;\s*margin-bottom: 0;/);
   assert.match(panel, /id="panel-actions"[\s\S]*id="finish"[\s\S]*id="quit"/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
@@ -190,6 +215,31 @@ test("the sign-in panel can quit the pet", () => {
 test("a commented vercel origin falls back to the local desk", () => {
   assert.equal(usableApiOrigin(["#https://aurafarm.vercel.app", ""]), "http://localhost:3000");
   assert.equal(usableApiOrigin("https://aurafarm.vercel.app/"), "https://aurafarm.vercel.app");
+});
+
+test("the study clock shows the planned time that is left", () => {
+  assert.equal(formatStudyClock(90.2 * 1000), "1:31");
+  assert.equal(formatStudyClock((3 * 3600 + 5 * 60) * 1000), "3:05:00");
+  assert.equal(formatStudyClock(0), "0:00");
+  assert.equal(remainingStudyMs({ startedAtMs: 1_000 }, 1_000), null);
+  assert.equal(
+    remainingStudyMs({ plannedSeconds: 120, startedAtMs: 1_700_000_000_000 }, 1_700_000_030_000),
+    90_000,
+  );
+  const started = 1_700_000_000_000;
+  assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), 0.5);
+  assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), 1);
+  assert.equal(studyProgress({ startedAtMs: started }, started), null);
+});
+
+test("a plain pet uses the default species sprite", () => {
+  assert.equal(plainPetPath("baby_slime", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
+  assert.equal(plainPetPath("lantern_moth", "walk1"), "/pet-assets/pets/bunny/lavender/no-hat-no-clothes/walk1.svg");
+  assert.equal(plainPetPath("river_newt", "walk2"), "/pet-assets/pets/cat/honey/no-hat-no-clothes/walk2.svg");
+  assert.equal(plainPetPath("unknown", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
+  assert.equal(clampPetX(-4, 200, 70), 0);
+  assert.equal(clampPetX(180, 200, 70), 130);
+  assert.equal(clampPetX(40, 200, 70), 40);
 });
 
 test("the pet posts the score and does not open a port", () => {

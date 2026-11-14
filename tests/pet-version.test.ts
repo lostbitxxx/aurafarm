@@ -51,7 +51,7 @@ test("the privacy page states what the pet reads", () => {
   const page = readFileSync(new URL("../app/privacy/page.tsx", import.meta.url), "utf8").replace(/\s+/g, " ");
   assert.match(page, /address bar of the frontmost browser window/);
   assert.match(page, /does not read background tabs, page contents, or passwords/);
-  assert.match(page, /closes that browser window after 1 minute/);
+  assert.match(page, /closes that front tab after 1 minute/);
   assert.match(page, /stores the duration, the experience, and the blocked hostnames/);
   assert.doesNotMatch(page, /heartbeat/);
   assert.match(page, /quitting the pet stops the address-bar check/);
