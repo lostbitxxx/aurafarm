@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
+const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { parseAurafarmLink } = require("./links");
@@ -16,7 +17,7 @@ const {
   noteCloseAttempt,
   hostnameFromUrl,
 } = require("./frontmost");
-const { closeFrontWindow, readFrontBrowser, readFrontWindowBounds } = require("./front-browser");
+const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
@@ -74,6 +75,9 @@ let petAnimating = false;
 let bubbleHost = "";
 let finishing = false;
 let study = null;
+let lastBrowserApp = "";
+let lastSeenFront = "";
+let notingFront = false;
 let frontTimer = null;
 let studyClock = null;
 let frontPoll = null;
@@ -511,7 +515,8 @@ async function signIn(email, password) {
   return { error: "" };
 }
 
-async function claim(code) {
+async function claim(code, browser = "") {
+  const remembered = lastBrowserApp || scoreBrowserName(browser) || (await readScoreBrowser(DESK_HOST));
   const response = await fetch(`${API_ORIGIN}/api/sessions/claim`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -522,7 +527,7 @@ async function claim(code) {
   if (!body?.session_id || !Array.isArray(body.blocklist)) {
     return { error: "Claim rejected." };
   }
-  beginFrontWatch(body);
+  beginFrontWatch(body, remembered);
   return { error: "" };
 }
 
@@ -634,7 +639,7 @@ function stopStudyClock() {
   studyClock = null;
 }
 
-function beginFrontWatch(body) {
+function beginFrontWatch(body, browser = "") {
   stopFrontWatch();
   study = {
     id: String(body.session_id),
@@ -648,6 +653,7 @@ function beginFrontWatch(body) {
     plannedSeconds: Number(body.planned_seconds),
     startedAtMs: Number.isFinite(Date.parse(body.started_at)) ? Date.parse(body.started_at) : Date.now(),
     startedAt: Date.now(),
+    browser: scoreBrowserName(browser),
   };
   if (body.pet_type) {
     petLog(
@@ -742,7 +748,7 @@ async function finishSession() {
         setStatus(saved.message, { finishNote: saved.message });
         return;
       }
-      if (saved.url) await shell.openExternal(saved.url);
+      if (saved.url) await openScorePage(saved.url, lastBrowserApp || current.browser);
       if (study !== current) return;
       stopFrontWatch();
       focusPanel();
@@ -754,7 +760,7 @@ async function finishSession() {
       setStatus(result.message, { finishNote: result.message });
       return;
     }
-    if (result.url) await shell.openExternal(result.url);
+    if (result.url) await openScorePage(result.url, lastBrowserApp || current.browser);
     if (study !== current) return;
     stopFrontWatch();
     focusPanel();
@@ -762,6 +768,35 @@ async function finishSession() {
   } finally {
     finishing = false;
   }
+}
+
+async function noteFrontApp() {
+  if (notingFront || process.platform !== "darwin") return;
+  notingFront = true;
+  try {
+    const reading = await readFrontAppName();
+    if (!reading.ok || reading.name === lastSeenFront) return;
+    lastSeenFront = reading.name;
+    const browser = browserAppName(reading.name, "");
+    if (browser) lastBrowserApp = browser;
+  } finally {
+    notingFront = false;
+  }
+}
+
+function openScorePage(url, browser) {
+  if (process.platform === "darwin" && typeof browser === "string" && browser) {
+    return new Promise((resolve) => {
+      execFile("open", ["-a", browser, url], (error) => {
+        if (error) {
+          void shell.openExternal(url).finally(() => resolve());
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+  return shell.openExternal(url);
 }
 
 function scoreDebug(line) {
@@ -935,7 +970,8 @@ async function pollFront() {
 async function handleLink(link) {
   if (!link) return;
   if (link.kind === "session") {
-    const result = await claim(link.code);
+    const browser = await readScoreBrowser(DESK_HOST);
+    const result = await claim(link.code, browser);
     if (result.error) setStatus(result.error);
   }
 }
@@ -1044,6 +1080,10 @@ if (!gotLock) {
     });
     openPanel();
     openPet();
+    void noteFrontApp();
+    setInterval(() => {
+      void noteFrontApp();
+    }, 1000);
     setDebug(describeCloseDebug({ session: false }));
     await loadRemoteConfig();
     await restoreSession();

@@ -17,7 +17,7 @@ test("the desk lists pets for the signed-in farmer and keeps room placement", ()
   assert.match(loader, /\.order\("id", \{ ascending: true \}\)/);
   assert.doesNotMatch(loader, /createAdminClient/);
   assert.doesNotMatch(desk, /PetInventory/);
-  assert.match(desk, /setDialog\("inventory"\)/);
+  assert.match(desk, /showSection\("inventory"\)/);
   assert.match(desk, /describePet/);
   assert.match(desk, /localStorage/);
   assert.doesNotMatch(desk, /current\.size === 0/);
