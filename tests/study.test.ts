@@ -76,7 +76,8 @@ test("a study link shows the equipped pet for that session's user", () => {
   const panelScript = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   assert.match(panel, /id="finish"/);
   assert.match(panel, /Finish focused session/);
-  assert.doesNotMatch(panel, /id="finish"[^>]*hidden/);
+  assert.match(panel, /id="finish"[^>]*hidden/);
+  assert.match(panelScript, /finishButton\.hidden = !state\.finishLabel/);
   assert.match(panelScript, /window\.pet\.finish\(\)/);
   assert.match(panelScript, /state\.finishLabel \|\| "Finish focused session"/);
   assert.doesNotMatch(desktop, /sprite\.html/);

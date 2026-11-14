@@ -92,6 +92,9 @@
         font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
       }
+      #panel-body #session-token button {
+        margin-top: 0.7rem;
+      }
       #panel-body button:hover {
         filter: brightness(0.97);
       }
@@ -135,9 +138,8 @@
       </p>
       <p id="status">Paste a session token.</p>
       <p id="bubble" hidden></p>
-      <button id="finish" class="finish" type="button">Finish focused session</button>
+      <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
       <p id="note"></p>
-      <button id="cancel" class="ghost" type="button">Cancel study session</button>
       <button id="quit" class="ghost" type="button">Quit</button>
     </div>
     <script src="panel.js"></script>

@@ -54,11 +54,6 @@ finishButton.addEventListener("click", () => {
   window.pet.finish();
 });
 
-document.getElementById("cancel").addEventListener("click", async () => {
-  const result = await window.pet.cancelStudy();
-  status.textContent = result.error || "Study session cancelled.";
-});
-
 document.getElementById("session-token").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
@@ -69,6 +64,7 @@ document.getElementById("session-token").addEventListener("submit", async (event
 window.pet.onState((state) => {
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   if (state.status) status.textContent = state.status;
+  finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish focused session";
   note.textContent = state.finishNote || "";
   bubble.textContent = state.bubble || "";

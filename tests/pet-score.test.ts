@@ -101,7 +101,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(preload, /useToken: \(token\) => ipcRenderer\.invoke\("use-token", token\)/);
   assert.match(panel, /id="finish"/);
   assert.match(panel, /Finish focused session/);
-  assert.doesNotMatch(panel, /id="finish"[^>]*hidden/);
+  assert.match(panel, /id="finish"[^>]*hidden/);
+  assert.match(script, /finishButton\.hidden = !state\.finishLabel/);
   assert.match(script, /window\.pet\.finish\(\)/);
   assert.match(script, /state\.finishLabel \|\| "Finish focused session"/);
   assert.match(script, /state\.bubble/);
@@ -114,9 +115,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /signInWithPassword/);
   assert.match(main, /ipcMain\.handle\("sign-in"/);
   assert.match(preload, /signIn: \(email, password\)/);
-  assert.match(panel, /id="cancel"/);
-  assert.match(panel, /Cancel study session/);
-  assert.match(script, /cancelStudy/);
+  assert.doesNotMatch(panel, /id="cancel"/);
+  assert.doesNotMatch(panel, /Cancel study session/);
+  assert.doesNotMatch(script, /cancelStudy/);
+  assert.match(panel, /#session-token button \{\s*margin-top: 0\.7rem;/);
   assert.match(preload, /cancelStudy: \(\) => ipcRenderer\.invoke\("cancel-study"\)/);
   assert.match(main, /ipcMain\.handle\("cancel-study"/);
   assert.match(main, /does not change experience/);
