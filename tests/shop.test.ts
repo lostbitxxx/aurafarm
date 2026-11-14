@@ -76,7 +76,7 @@ test("the desk requires an account and the old shop page is gone", () => {
   assert.match(dialog, /Unlocks at level \{pet\.unlockLevel\}/);
   assert.match(dialog, /"Unlock"/);
   assert.doesNotMatch(dialog, /"Buy"/);
-  assert.match(dashboard, /onOpenShop=\{\(\) => setDialog\("shop"\)\}/);
+  assert.match(dashboard, /onOpenShop=\{\(\) => showSection\("shop"\)\}/);
   assert.match(dashboard, /farmerLevel=\{farmerLevel\}/);
   assert.match(dashboard, /highestPetLevel/);
 

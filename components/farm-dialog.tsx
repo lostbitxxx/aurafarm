@@ -74,6 +74,7 @@ export function FarmDialog({
       <div
         ref={cardRef}
         className={wide ? "tracker-card tracker-card-wide" : "tracker-card"}
+        data-tutorial="dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -83,7 +84,7 @@ export function FarmDialog({
         <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
           {extra}
-          <button type="button" className="dialog-close" onClick={onClose} aria-label="Close dialog">
+          <button type="button" className="dialog-close" data-tutorial="close" onClick={onClose} aria-label="Close dialog">
             ×
           </button>
         </div>

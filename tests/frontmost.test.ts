@@ -74,14 +74,27 @@ const {
     matches?: (host: string, blockedHosts: readonly string[]) => boolean,
   ) => { blockedCount: number; blockedHosts: string[]; currentHost: string };
 };
-const { frontAppStatement, frontCloseStatement, frontUrlStatement, frontWindowBoundsStatement, supportedFrontBrowser } =
-  require("../desktop/front-browser.js") as {
-    frontAppStatement: () => string;
-    frontCloseStatement: (appName: string) => string;
-    frontUrlStatement: (appName: string) => string;
-    frontWindowBoundsStatement: (appName: string) => string;
-    supportedFrontBrowser: (appName: string) => boolean;
-  };
+const {
+  deskTabProbeStatement,
+  frontAppStatement,
+  frontCloseStatement,
+  frontUrlStatement,
+  frontWindowBoundsStatement,
+  browserAppName,
+  parseFrontIdentity,
+  scoreBrowserName,
+  supportedFrontBrowser,
+} = require("../desktop/front-browser.js") as {
+  browserAppName: (appName: string, bundleId: string) => string;
+  deskTabProbeStatement: (appName: string, host: string) => string;
+  frontAppStatement: () => string;
+  frontCloseStatement: (appName: string) => string;
+  frontUrlStatement: (appName: string) => string;
+  frontWindowBoundsStatement: (appName: string) => string;
+  parseFrontIdentity: (value: string) => { name: string; bundleId: string };
+  scoreBrowserName: (appName: string) => string;
+  supportedFrontBrowser: (appName: string) => boolean;
+};
 
 const blocked = ["instagram.com", "tiktok.com", "youtube.com"];
 const desk = "localhost";
@@ -183,6 +196,26 @@ test("the mac reader asks only the front window of safari, chrome, or edge", () 
   assert.match(frontUrlStatement("Microsoft Edge"), /URL of active tab of front window/);
   assert.equal(frontUrlStatement("Firefox"), "");
   assert.doesNotMatch(frontUrlStatement("Google Chrome"), /every tab/);
+  assert.equal(scoreBrowserName("Safari"), "Safari");
+  assert.equal(browserAppName("Safari", ""), "Safari");
+  assert.equal(browserAppName("Dia", ""), "Dia");
+  assert.equal(browserAppName("Safari", "com.apple.Safari"), "Safari");
+  assert.equal(browserAppName("Google Chrome", "com.google.Chrome"), "Google Chrome");
+  assert.equal(browserAppName("Arc", "company.thebrowser.Browser"), "Arc");
+  assert.equal(browserAppName("Electron", "com.github.Electron"), "");
+  assert.equal(browserAppName("Cursor", "com.todesktop.230313mzl4w4u92"), "");
+  assert.deepEqual(parseFrontIdentity("Safari, com.apple.Safari"), { name: "Safari", bundleId: "com.apple.Safari" });
+  assert.equal(scoreBrowserName("Arc"), "Arc");
+  assert.equal(scoreBrowserName(" Google Chrome "), "Google Chrome");
+  assert.equal(scoreBrowserName("Electron"), "");
+  assert.equal(scoreBrowserName("Aurafarm"), "");
+  assert.equal(scoreBrowserName(""), "");
+  const probe = deskTabProbeStatement("Google Chrome", "localhost");
+  assert.match(probe, /localhost/);
+  assert.match(probe, /tabs of w/);
+  assert.match(deskTabProbeStatement("Safari", "aurafarm.app"), /aurafarm\.app/);
+  assert.equal(deskTabProbeStatement("Firefox", "localhost"), "");
+  assert.equal(deskTabProbeStatement("Safari", ""), "");
   assert.match(frontCloseStatement("Safari"), /set targetTab to current tab of front window/);
   for (const appName of ["Google Chrome", "Microsoft Edge"]) {
     assert.match(frontCloseStatement(appName), /set targetTab to active tab of front window/);

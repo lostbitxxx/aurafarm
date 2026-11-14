@@ -148,8 +148,8 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   const visibility = readFileSync(new URL("../supabase/migrations/0040_farm_crew_visibility.sql", import.meta.url), "utf8");
 
   assert.match(header, /onClick=\{onOpenFarmCrew\}[\s\S]*FarmCrew/);
-  assert.match(header, /aria-haspopup="menu">\s*Social\s*<\/button>/);
-  assert.match(desk, /onOpenFarmCrew=\{\(\) => setDialog\("farmcrew"\)\}/);
+  assert.match(header, /aria-haspopup="menu"[\s\S]*?>\s*Social\s*<\/button>/);
+  assert.match(desk, /onOpenFarmCrew=\{\(\) => showSection\("farmcrew"\)\}/);
   assert.match(desk, /<FarmCrewDialog/);
   assert.match(dialog, /FarmCrew List/);
   assert.match(dialog, /Join FarmCrew/);

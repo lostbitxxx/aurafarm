@@ -1365,6 +1365,7 @@ button.dialog-row {
   box-shadow: var(--shadow);
 }
 
+.topbar-menu.is-pinned .topbar-menu-list,
 .topbar-menu:hover .topbar-menu-list,
 .topbar-menu:focus-within .topbar-menu-list {
   display: grid;
@@ -3173,4 +3174,111 @@ button.dialog-row {
     animation: none !important;
     transition: none !important;
   }
+}
+
+[data-tutorial-current="true"] {
+  position: relative;
+  z-index: 41;
+}
+
+.tutorial-layer { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+
+.tutorial-scrim {
+  position: fixed;
+  z-index: 40;
+  background: rgba(16, 32, 24, 0.72);
+  pointer-events: auto;
+}
+
+.tutorial-ring {
+  position: fixed;
+  z-index: 41;
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--slime), 0 0 0 7px rgba(198, 239, 74, 0.28);
+  pointer-events: none;
+}
+
+.tutorial-ring.is-circle { border-radius: 999px; }
+
+.tutorial-card {
+  position: fixed;
+  z-index: 42;
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.tutorial-card {
+  width: min(18rem, calc(100vw - 1.5rem));
+  padding: 0.95rem 1rem 1rem;
+}
+
+.tutorial-card.is-above { transform: translateY(-100%); }
+
+.tutorial-card h2 {
+  margin: 0.15rem 0 0.35rem;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.tutorial-card p { margin: 0; }
+
+.tutorial-card p:not(.tutorial-progress) {
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.tutorial-progress {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--moss);
+}
+
+.tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.tutorial-next,
+.tutorial-prev,
+.tutorial-skip {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tutorial-next {
+  background: var(--slime);
+  color: var(--ink);
+}
+
+.tutorial-next:hover,
+.tutorial-next:focus-visible {
+  background: var(--slime-deep);
+}
+
+.tutorial-prev,
+.tutorial-skip {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
+}
+
+.tutorial-prev:hover,
+.tutorial-prev:focus-visible,
+.tutorial-skip:hover,
+.tutorial-skip:focus-visible {
+  background: rgba(20, 33, 26, 0.06);
 }

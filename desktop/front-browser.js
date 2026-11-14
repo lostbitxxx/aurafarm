@@ -41,6 +41,111 @@ function supportedFrontBrowser(appName) {
   return FRONT_BROWSERS.includes(appName);
 }
 
+function scoreBrowserName(appName) {
+  const name = typeof appName === "string" ? appName.trim() : "";
+  if (!name || name === "Electron" || name === "Aurafarm") return "";
+  return name;
+}
+
+function isBrowserBundle(bundleId) {
+  const id = String(bundleId || "").toLowerCase();
+  return /safari|chrome|firefox|mozilla|edgemac|brave|opera|vivaldi|thebrowser|chromium|duckduckgo|waterfox|librewolf|orion|comet|yandex|whale|floorp|helium/.test(id);
+}
+
+const BROWSER_APP_NAMES = new Set([
+  "Safari",
+  "Safari Technology Preview",
+  "Google Chrome",
+  "Google Chrome Canary",
+  "Microsoft Edge",
+  "Arc",
+  "Dia",
+  "Firefox",
+  "Firefox Developer Edition",
+  "Brave Browser",
+  "Orion",
+  "Vivaldi",
+  "Opera",
+  "Opera GX",
+  "Chromium",
+  "Comet",
+  "Zen Browser",
+  "DuckDuckGo",
+  "Helium",
+  "Floorp",
+  "LibreWolf",
+  "Waterfox",
+  "NAVER Whale",
+  "Yandex",
+  "Atlas",
+  "SigmaOS",
+  "Wavebox",
+  "Sidekick",
+  "Thorium",
+  "Mullvad Browser",
+]);
+
+function browserAppName(appName, bundleId) {
+  const name = scoreBrowserName(appName);
+  if (!name) return "";
+  if (BROWSER_APP_NAMES.has(name) || isBrowserBundle(bundleId)) return name;
+  return "";
+}
+
+function frontIdentityStatement() {
+  return 'tell application "System Events" to get {name, bundle identifier} of first application process whose frontmost is true';
+}
+
+function parseFrontIdentity(value) {
+  const text = String(value || "").trim();
+  const parts = text.split(", ");
+  if (parts.length < 2) return { name: text, bundleId: "" };
+  return { name: parts.slice(0, -1).join(", ").trim(), bundleId: parts[parts.length - 1].trim() };
+}
+
+function browserRunningStatement(appName) {
+  return `tell application "System Events" to (name of processes) contains ${JSON.stringify(appName)}`;
+}
+
+function deskTabProbeStatement(appName, host) {
+  if (!supportedFrontBrowser(appName)) return "";
+  const needle = typeof host === "string" ? host.trim() : "";
+  if (!needle) return "";
+  return `tell application ${JSON.stringify(appName)}
+set needle to ${JSON.stringify(needle)}
+repeat with w in windows
+repeat with t in tabs of w
+try
+if URL of t contains needle then return "yes"
+end try
+end repeat
+end repeat
+return "no"
+end tell`;
+}
+
+async function readScoreBrowser(deskHost) {
+  if (process.platform !== "darwin") return "";
+  const app = await runOsascript(frontAppStatement());
+  const named = app.ok ? scoreBrowserName(app.value) : "";
+  const host = typeof deskHost === "string" ? deskHost.trim() : "";
+  let chosen = named;
+  if (!chosen && host) {
+    for (const appName of FRONT_BROWSERS) {
+      const running = await runOsascript(browserRunningStatement(appName));
+      if (!running.ok || running.value !== "true") continue;
+      const statement = deskTabProbeStatement(appName, host);
+      if (!statement) continue;
+      const probe = await runOsascript(statement);
+      if (probe.ok && probe.value === "yes") {
+        chosen = appName;
+        break;
+      }
+    }
+  }
+  return chosen;
+}
+
 function runOsascript(statement, timeout = OSA_TIMEOUT_MS) {
   return new Promise((resolve) => {
     execFile(
@@ -57,6 +162,21 @@ function runOsascript(statement, timeout = OSA_TIMEOUT_MS) {
       },
     );
   });
+}
+
+async function readFrontAppName() {
+  if (process.platform !== "darwin") return { ok: false, name: "", error: "Not macOS." };
+  const app = await runOsascript(frontAppStatement());
+  if (!app.ok) return { ok: false, name: "", error: app.error };
+  return { ok: true, name: app.value, error: "" };
+}
+
+async function readFrontIdentity() {
+  if (process.platform !== "darwin") return { ok: false, name: "", bundleId: "", error: "" };
+  const result = await runOsascript(frontIdentityStatement());
+  if (!result.ok) return { ok: false, name: "", bundleId: "", error: result.error };
+  const parsed = parseFrontIdentity(result.value);
+  return { ok: true, name: parsed.name, bundleId: parsed.bundleId, error: "" };
 }
 
 async function readFrontBrowser() {
@@ -92,9 +212,18 @@ module.exports = {
   closeFrontWindow,
   frontAppStatement,
   frontCloseStatement,
+  browserAppName,
+  deskTabProbeStatement,
+  frontIdentityStatement,
   frontUrlStatement,
+  isBrowserBundle,
+  parseFrontIdentity,
   frontWindowBoundsStatement,
+  readFrontAppName,
   readFrontBrowser,
+  readFrontIdentity,
   readFrontWindowBounds,
+  readScoreBrowser,
+  scoreBrowserName,
   supportedFrontBrowser,
 };

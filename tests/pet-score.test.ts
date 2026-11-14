@@ -317,6 +317,11 @@ test("the pet posts the score and does not open a port", () => {
   assert.match(main, /\[score\] POST \$\{current\.id\}/);
   assert.match(main, /\[score\] session \$\{sessionId\} is/);
   assert.match(main, /rpc\("submit_study_score"/);
+  assert.match(main, /openScorePage\(saved\.url, lastBrowserApp \|\| current\.browser\)/);
+  assert.match(main, /openScorePage\(result\.url, lastBrowserApp \|\| current\.browser\)/);
+  assert.match(main, /\["-a", browser, url\]/);
+  assert.match(main, /shell\.openExternal\(url\)/);
+  assert.match(main, /readScoreBrowser\(DESK_HOST\)/);
   assert.match(main, /openExternal/);
   assert.doesNotMatch(main, /\.listen\(/);
   assert.match(route, /await connection\(\)/);
