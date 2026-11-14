@@ -2345,10 +2345,32 @@ button.dialog-row {
   cursor: pointer;
 }
 
+.customize-mode {
+  position: relative;
+}
+
+.customize-mode-recommended {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.9rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: #8b9284;
+  pointer-events: none;
+}
+
 .customize-option strong,
 .customize-mode strong {
   font-family: var(--serif);
   font-size: 1.15rem;
+}
+
+.customize-mode strong {
+  padding-right: 6.75rem;
 }
 
 .customize-option span,

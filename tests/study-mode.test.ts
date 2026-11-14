@@ -11,6 +11,23 @@ import {
   recommendStudyMode,
 } from "../lib/study-mode";
 
+test("study mode cards keep a fixed recommended label on the suggested mode", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /recommendStudyMode/);
+  assert.match(wizard, /Suggested for you/);
+  assert.match(wizard, /item === recommended/);
+  assert.match(wizard, /customize-mode-recommended/);
+  assert.match(wizard, />✦Recommended✦</);
+  assert.doesNotMatch(wizard, /activeMode === recommended[\s\S]*customize-mode-recommended/);
+  assert.match(css, /\.customize-mode-recommended/);
+  assert.match(css, /position:\s*absolute/);
+  assert.match(css, /\.customize-mode-recommended[\s\S]*font-style:\s*italic/);
+  assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,160}transform:\s*rotate/);
+  assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,120}border/);
+  assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,120}background:\s*(?!none)/);
+});
+
 test("behavior answers recommend assassin for short focus and frequent distraction", () => {
   assert.equal(
     recommendStudyMode({
