@@ -19,6 +19,10 @@ test("leaderboard rows keep rank, name, and score", () => {
     leaderboardMessage("Could not find the function public.list_friend_leaderboard"),
     "Run migration 0027 before opening the leaderboard.",
   );
+  assert.equal(
+    leaderboardMessage("Could not find the function public.list_global_leaderboard"),
+    "Run migration 0037 before opening the global leaderboard.",
+  );
   assert.deepEqual(
     leaderboardRowsFromRpc([
       { farmer_id: "11111111-1111-4111-8111-111111111111", display_name: " Ada ", score: "120", place: 1 },
@@ -62,5 +66,24 @@ test("friend leaderboard sums study time and pet levels for accepted friends", (
   assert.match(dialog, /board-picker/);
   assert.match(dialog, /aria-label="Leaderboard mode"/);
   assert.match(dialog, /leaderboard-grid/);
-  assert.match(dialog, /loadFriendLeaderboard\(mode\)/);
+  assert.match(dialog, /scope === "global" \? loadGlobalLeaderboard\(mode\) : loadFriendLeaderboard\(mode\)/);
+  assert.match(dialog, /aria-label="Leaderboard scope"/);
+  assert.match(dialog, /LEADERBOARD_SCOPES\.map/);
+  assert.match(modes, /label: "Friends"/);
+  assert.match(modes, /label: "Global"/);
+
+  const globalSql = readFileSync(
+    new URL("../supabase/migrations/0037_global_leaderboard.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(globalSql, /function public\.list_global_leaderboard\(board text\)/);
+  assert.match(globalSql, /board not in \('all_time', 'month', 'week', 'pet_levels'\)/);
+  assert.match(globalSql, /status in \('submitted', 'cancelled'\)/);
+  assert.match(globalSql, /sum\(study_sessions\.duration_seconds\)/);
+  assert.match(globalSql, /board = 'month' and study_sessions\.ended_at >= month_start/);
+  assert.match(globalSql, /board = 'week' and study_sessions\.ended_at >= week_start/);
+  assert.match(globalSql, /Asia\/Hong_Kong/);
+  assert.match(globalSql, /sum\(user_pets\.level\)/);
+  assert.match(globalSql, /limit 20/);
+  assert.match(globalSql, /grant execute on function public\.list_global_leaderboard\(text\) to authenticated/);
 });

@@ -11,12 +11,14 @@ export function FarmDialog({
   children,
   wide = false,
   titleId: titleIdProp,
+  extra,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
   titleId?: string;
+  extra?: ReactNode;
 }) {
   const generatedId = useId();
   const titleId = titleIdProp ?? generatedId;
@@ -80,6 +82,7 @@ export function FarmDialog({
       >
         <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
+          {extra}
           <button type="button" className="dialog-close" onClick={onClose} aria-label="Close dialog">
             ×
           </button>

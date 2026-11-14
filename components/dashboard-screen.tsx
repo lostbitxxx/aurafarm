@@ -16,7 +16,7 @@ import { LeaderboardDialog } from "./leaderboard-dialog";
 import { SocialPresence } from "./social-presence";
 import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
-import { type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
+import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -132,6 +132,7 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
+  const [friendRows, setFriendRows] = useState(friends);
   const [ownedColors, setOwnedColors] = useState(ownedColorIds);
   const [ownedHats, setOwnedHats] = useState(ownedHatIds);
   const [ownedClothes, setOwnedClothes] = useState(ownedClothesIds);
@@ -153,9 +154,11 @@ export function DashboardScreen({
     .join("|");
   const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
   const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
+  const friendSignature = friends.map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}`).join("|");
   const [petsSnap, setPetsSnap] = useState(petsSignature);
   const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
   const [rewardSnap, setRewardSnap] = useState(rewardSignature);
+  const [friendSnap, setFriendSnap] = useState(friendSignature);
 
   if (petsSignature !== petsSnap) {
     setPetsSnap(petsSignature);
@@ -172,6 +175,11 @@ export function DashboardScreen({
   if (rewardSignature !== rewardSnap) {
     setRewardSnap(rewardSignature);
     setRewards(pendingRewards);
+  }
+
+  if (friendSignature !== friendSnap) {
+    setFriendSnap(friendSignature);
+    setFriendRows(friends);
   }
 
   useEffect(() => {
@@ -305,6 +313,7 @@ export function DashboardScreen({
         onOpenFriends={() => setDialog("friends")}
         onOpenSocialSettings={() => setDialog("social-settings")}
         onOpenLeaderboard={() => setDialog("leaderboard")}
+        pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
       />
       {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
         <section className="plan-banner" aria-label="Study plan">
@@ -377,6 +386,7 @@ export function DashboardScreen({
           friends={friends}
           friendCode={friendCode}
           friendsError={friendsError}
+          onFriendsChange={setFriendRows}
           onClose={() => setDialog(null)}
         />
       ) : null}

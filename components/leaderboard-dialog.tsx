@@ -2,13 +2,15 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { loadFriendLeaderboard } from "@/lib/actions/leaderboard";
+import { loadFriendLeaderboard, loadGlobalLeaderboard } from "@/lib/actions/leaderboard";
 import {
   LEADERBOARD_MODES,
+  LEADERBOARD_SCOPES,
   formatLeaderboardScore,
   leaderboardValueLabel,
   type LeaderboardMode,
   type LeaderboardRow,
+  type LeaderboardScope,
 } from "@/lib/leaderboard";
 import { FarmDialog } from "./farm-dialog";
 
@@ -19,6 +21,7 @@ export function LeaderboardDialog({
   userId: string;
   onClose: () => void;
 }) {
+  const [scope, setScope] = useState<LeaderboardScope>("friends");
   const [mode, setMode] = useState<LeaderboardMode>("all_time");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +30,9 @@ export function LeaderboardDialog({
   useEffect(() => {
     let stopped = false;
     setLoading(true);
-    void loadFriendLeaderboard(mode).then((result) => {
+    setRows([]);
+    const load = scope === "global" ? loadGlobalLeaderboard(mode) : loadFriendLeaderboard(mode);
+    void load.then((result) => {
       if (stopped) return;
       setLoading(false);
       if (result.error) {
@@ -41,10 +46,15 @@ export function LeaderboardDialog({
     return () => {
       stopped = true;
     };
-  }, [mode]);
+  }, [mode, scope]);
 
   return (
-    <FarmDialog title="Leaderboard" onClose={onClose} wide>
+    <FarmDialog
+      title="Leaderboard"
+      onClose={onClose}
+      wide
+      extra={<LeaderboardScopeSwitch scope={scope} onChange={setScope} />}
+    >
       <LeaderboardModePicker mode={mode} onChange={setMode} />
       {error ? (
         <p className="form-error" role="alert">
@@ -74,6 +84,31 @@ export function LeaderboardDialog({
         </table>
       ) : null}
     </FarmDialog>
+  );
+}
+
+function LeaderboardScopeSwitch({
+  scope,
+  onChange,
+}: {
+  scope: LeaderboardScope;
+  onChange: (scope: LeaderboardScope) => void;
+}) {
+  return (
+    <div className="board-scope" role="tablist" aria-label="Leaderboard scope">
+      <span className={scope === "global" ? "board-scope-thumb is-global" : "board-scope-thumb"} aria-hidden="true" />
+      {LEADERBOARD_SCOPES.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          role="tab"
+          aria-selected={scope === option.id}
+          onClick={() => onChange(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

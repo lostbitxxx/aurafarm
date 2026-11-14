@@ -73,11 +73,15 @@ test("the desk opens Friends and Leaderboard from Social", () => {
 
   assert.match(header, /Social/);
   assert.match(header, /onClick=\{onOpenFriends\}/);
-  assert.match(header, />\s*Friends\s*</);
+  assert.match(header, /<span>Friends<\/span>/);
+  assert.match(header, /pendingFriendRequest \? <span className="request-dot"/);
+  assert.match(header, /aria-haspopup="menu">\s*Social\s*<\/button>/);
+  assert.doesNotMatch(header, /aria-haspopup="menu"[\s\S]{0,40}request-dot/);
   assert.match(header, />\s*Social Settings\s*</);
   assert.match(header, /onClick=\{onOpenSocialSettings\}/);
   assert.match(header, /onClick=\{onOpenLeaderboard\}[\s\S]*Leaderboard/);
   assert.match(desk, /onOpenFriends=\{\(\) => setDialog\("friends"\)\}/);
+  assert.match(desk, /pendingFriendRequest=\{incomingFriendRequests\(friendRows\)\.length > 0\}/);
   assert.match(desk, /onOpenSocialSettings=\{\(\) => setDialog\("social-settings"\)\}/);
   assert.match(desk, /onOpenLeaderboard=\{\(\) => setDialog\("leaderboard"\)\}/);
   assert.match(desk, /<LeaderboardDialog/);
@@ -88,6 +92,7 @@ test("the desk opens Friends and Leaderboard from Social", () => {
 
   assert.match(dialog, /Friend List/);
   assert.match(dialog, /Add Friends/);
+  assert.match(dialog, /pendingRequest \? <span className="request-dot"/);
   assert.match(dialog, /Send Request/);
   assert.match(dialog, /button-accept/);
   assert.match(dialog, /Accept/);

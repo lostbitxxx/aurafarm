@@ -12,11 +12,13 @@ export function FriendsDialog({
   friends,
   friendCode,
   friendsError,
+  onFriendsChange,
   onClose,
 }: {
   friends: readonly FriendCard[];
   friendCode: string;
   friendsError: string | null;
+  onFriendsChange?: (friends: readonly FriendCard[]) => void;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<FriendsTab>("list");
@@ -43,6 +45,11 @@ export function FriendsDialog({
 
   const accepted = acceptedFriends(rows);
   const incoming = incomingFriendRequests(rows);
+  const pendingRequest = incoming.length > 0;
+
+  useEffect(() => {
+    onFriendsChange?.(rows);
+  }, [rows, onFriendsChange]);
 
   async function loadFriends() {
     const result = await refreshFriendList();
@@ -155,10 +162,14 @@ export function FriendsDialog({
           id="friends-tab-add"
           aria-selected={tab === "add"}
           aria-controls="friends-panel-add"
-          className={tab === "add" ? "button button-small" : "button button-small button-ghost"}
+          className={
+            tab === "add" ? "button button-small request-tab" : "button button-small button-ghost request-tab"
+          }
+          aria-label={pendingRequest ? "Add Friends, pending request" : undefined}
           onClick={() => setTab("add")}
         >
           Add Friends
+          {pendingRequest ? <span className="request-dot" aria-hidden="true" /> : null}
         </button>
       </div>
       <div
