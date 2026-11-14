@@ -5,6 +5,7 @@ import {
   NO_OTHER_SONGS,
   SONGS,
   nextOwnedSong,
+  previousOwnedSong,
   songsOwnedAtLevel,
 } from "../lib/songs";
 
@@ -50,6 +51,21 @@ test("songs unlock every two levels and skip needs another song", () => {
       "golden-hour",
     ).song?.id,
     "sunday-in-blue",
+  );
+  assert.deepEqual(previousOwnedSong(["sunday-in-blue"], "sunday-in-blue"), {
+    song: null,
+    message: NO_OTHER_SONGS,
+  });
+  assert.equal(
+    previousOwnedSong(["sunday-in-blue", "little-by-little"], "little-by-little").song?.id,
+    "sunday-in-blue",
+  );
+  assert.equal(
+    previousOwnedSong(
+      ["sunday-in-blue", "little-by-little", "golden-hour"],
+      "sunday-in-blue",
+    ).song?.id,
+    "golden-hour",
   );
 });
 
@@ -105,7 +121,18 @@ test("the desk opens songs and celebrates an unlock", () => {
   assert.match(screen, /SongUnlockCelebration/);
   assert.match(screen, /featuredSongId=\{shownSong && !songBlocked \? shownSong\.id : null\}/);
   assert.match(player, /New song unlocked/);
-  assert.match(player, /Next song/);
+  assert.match(player, /aria-label="Previous song"/);
+  assert.match(player, /aria-label="Next song"/);
+  assert.match(player, /song-icon-prev/);
+  assert.match(player, /song-icon-next/);
+  assert.match(player, /song-transport/);
+  assert.match(player, /aria-label=\{stopped \? "Play" : "Pause"\}/);
+  assert.match(player, /song-vinyl/);
+  assert.match(player, /is-playing/);
   assert.match(player, /NO_OTHER_SONGS/);
+  assert.match(player, /song-progress/);
+  assert.match(player, /Song progress/);
+  assert.match(player, /song-volume/);
+  assert.match(player, /aria-label="Volume"/);
   assert.match(proxy, /mp3/);
 });

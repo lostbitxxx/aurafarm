@@ -55,11 +55,24 @@ export function playableSongIds(ownedIds: readonly string[]) {
   return owned.length > 0 ? owned : [STARTER_SONG_ID];
 }
 
-export function nextOwnedSong(ownedIds: readonly string[], currentId: string) {
+function ownedSongAtOffset(
+  ownedIds: readonly string[],
+  currentId: string,
+  offset: 1 | -1,
+) {
   const owned = SONGS.filter((song) => ownedIds.includes(song.id));
   if (owned.length <= 1) return { song: null, message: NO_OTHER_SONGS };
   const index = owned.findIndex((song) => song.id === currentId);
-  const next = owned[(index + 1) % owned.length];
+  const from = index >= 0 ? index : 0;
+  const next = owned[(from + offset + owned.length) % owned.length];
   if (!next || next.id === currentId) return { song: null, message: NO_OTHER_SONGS };
   return { song: next, message: "" };
+}
+
+export function nextOwnedSong(ownedIds: readonly string[], currentId: string) {
+  return ownedSongAtOffset(ownedIds, currentId, 1);
+}
+
+export function previousOwnedSong(ownedIds: readonly string[], currentId: string) {
+  return ownedSongAtOffset(ownedIds, currentId, -1);
 }
