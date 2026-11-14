@@ -1,9 +1,17 @@
-export function PetStatus({ downloadUrl }: { downloadUrl: string | null }) {
+export function PetStatus({
+  downloadUrl,
+  showHeading = true,
+}: {
+  downloadUrl: string | null;
+  showHeading?: boolean;
+}) {
   return (
     <section className="pet-status" aria-label="Desktop pet">
-      <div className="inventory-heading">
-        <h2>Desktop pet</h2>
-      </div>
+      {showHeading ? (
+        <div className="inventory-heading">
+          <h2>Desktop pet</h2>
+        </div>
+      ) : null}
       {downloadUrl ? (
         <a className="button" href={downloadUrl}>
           Download the Mac pet

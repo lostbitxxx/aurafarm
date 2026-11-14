@@ -131,7 +131,7 @@ export function StudyPanel({
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
-  const [desktopHelp, setDesktopHelp] = useState(false);
+  const [desktopStep, setDesktopStep] = useState<0 | 1 | 2>(0);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [railOpen, setRailOpen] = useState(false);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -245,21 +245,25 @@ export function StudyPanel({
     setChosenSeconds(seconds);
     setLengthOpen(false);
     setTrackerChoice(null);
-    setDesktopHelp(false);
+    setDesktopStep(0);
     setTrackerOpen(true);
   }
 
   function onCloseTracker() {
     if (pending) return;
-    setDesktopHelp(false);
+    setDesktopStep(0);
     setTrackerOpen(false);
     setLengthOpen(true);
   }
 
   function onBackTracker() {
     if (pending) return;
-    if (desktopHelp) {
-      setDesktopHelp(false);
+    if (desktopStep === 2) {
+      setDesktopStep(1);
+      return;
+    }
+    if (desktopStep === 1) {
+      setDesktopStep(0);
       return;
     }
     onCloseTracker();
@@ -609,53 +613,36 @@ export function StudyPanel({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="dialog-head">
-              <h2 id="tracker-title">How should this session be tracked?</h2>
+              <h2 id="tracker-title">
+                {desktopStep === 2
+                  ? "Close blocked tabs?"
+                  : desktopStep === 1
+                    ? "Desktop pet"
+                    : "How should this session be tracked?"}
+              </h2>
               <button type="button" className="dialog-close" onClick={onCloseTracker} aria-label="Close dialog">
                 ×
               </button>
             </div>
-            {desktopHelp ? (
-              <p>
-                If this is the first time you download the app, open Terminal and run:
-              </p>
-            ) : (
-              <p>The session starts when you confirm.</p>
-            )}
-            {desktopHelp ? (
-              <div className="pet-open-command-row">
-                <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
-                <CopyButton value="xattr -cr ~/Downloads/Aurafarm.app" label="Copy Terminal command" />
-              </div>
-            ) : (
+            {desktopStep === 0 ? <p>The session starts when you confirm.</p> : null}
+            {desktopStep === 1 ? (
+              <ol className="pet-setup-steps">
+                <li>
+                  <p>If you haven't downloaded our desktop application, please download it here.</p>
+                  <PetStatus downloadUrl={downloadUrl} showHeading={false} />
+                </li>
+                <li>
+                  <p>After downloading, unzip it, then open your Terminal and run this command:</p>
+                  <div className="pet-open-command-row">
+                    <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
+                    <CopyButton value="xattr -cr ~/Downloads/Aurafarm.app" label="Copy Terminal command" />
+                  </div>
+                </li>
+              </ol>
+            ) : null}
+            {desktopStep === 2 ? (
               <>
-            <div className="tracker-choices" role="group" aria-label="Session tracker">
-              <button
-                type="button"
-                className={trackerChoice === true ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === true}
-                disabled={pending}
-                onClick={() => setTrackerChoice(true)}
-              >
-                Desktop pet
-              </button>
-              <button
-                type="button"
-                className={trackerChoice === false ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === false}
-                disabled={pending}
-                onClick={() => setTrackerChoice(false)}
-              >
-                Website timer
-              </button>
-            </div>
-            {trackerChoice === true ? (
-              <>
-                <p>
-                  The desktop pet tracks the time.
-                  {closeBlocked
-                    ? " It comes forward and closes a blocklist window after 30 seconds."
-                    : " Closing blocklist windows is off."}
-                </p>
+                <p>When on, we close tabs like YouTube and Instagram for you when you get distracted.</p>
                 <button
                   type="button"
                   className={closeBlocked ? "button" : "button button-ghost"}
@@ -670,12 +657,34 @@ export function StudyPanel({
                     {closeBlockedError}
                   </p>
                 ) : null}
-                <PetStatus downloadUrl={downloadUrl} />
               </>
             ) : null}
-            {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+            {desktopStep === 0 ? (
+              <>
+                <div className="tracker-choices" role="group" aria-label="Session tracker">
+                  <button
+                    type="button"
+                    className={trackerChoice === true ? "button" : "button button-ghost"}
+                    aria-pressed={trackerChoice === true}
+                    disabled={pending}
+                    onClick={() => setTrackerChoice(true)}
+                  >
+                    Desktop pet
+                  </button>
+                  <button
+                    type="button"
+                    className={trackerChoice === false ? "button" : "button button-ghost"}
+                    aria-pressed={trackerChoice === false}
+                    disabled={pending}
+                    onClick={() => setTrackerChoice(false)}
+                  >
+                    Website timer
+                  </button>
+                </div>
+                {trackerChoice === true ? <p>The desktop pet tracks the time.</p> : null}
+                {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
               </>
-            )}
+            ) : null}
             {error ? (
               <p className="form-error" role="alert">
                 {error}
@@ -688,16 +697,20 @@ export function StudyPanel({
               <button
                 type="button"
                 className="button"
-                disabled={pending || (!desktopHelp && trackerChoice === null)}
+                disabled={pending || (desktopStep === 0 && trackerChoice === null)}
                 onClick={() => {
-                  if (!desktopHelp && trackerChoice) {
-                    setDesktopHelp(true);
+                  if (desktopStep === 0 && trackerChoice) {
+                    setDesktopStep(1);
+                    return;
+                  }
+                  if (desktopStep === 1) {
+                    setDesktopStep(2);
                     return;
                   }
                   void onConfirmTracker();
                 }}
               >
-                {desktopHelp || trackerChoice === false ? "Confirm" : "Next"}
+                {desktopStep === 2 || trackerChoice === false ? "Confirm" : "Next"}
               </button>
             </div>
           </div>
