@@ -1206,7 +1206,6 @@ button.dialog-row {
   position: absolute;
   width: 86px;
   transform: translate(-50%, -50%);
-  transition: left 2s ease-in-out, top 2s ease-in-out;
   z-index: 2;
 }
 
@@ -1220,6 +1219,15 @@ button.dialog-row {
   padding: 0;
   cursor: pointer;
   color: inherit;
+}
+
+.room-pet-sprite {
+  display: block;
+  line-height: 0;
+}
+
+.room-pet-sprite.is-flipped {
+  transform: scaleX(-1);
 }
 
 .room-pet-wrap.is-equipped .pixel-pet-art {
@@ -1240,19 +1248,6 @@ button.dialog-row {
   border-radius: 999px;
   font-size: 0.65rem;
   font-weight: 700;
-}
-
-.room-pet-button {
-  display: block;
-  width: 100%;
-  margin-top: 0.2rem;
-  border: 1px solid #c5cbb9;
-  border-radius: 999px;
-  background: #fff9ed;
-  color: #23392d;
-  font-size: 0.7rem;
-  padding: 0.2rem 0.4rem;
-  cursor: pointer;
 }
 
 .room-empty {
