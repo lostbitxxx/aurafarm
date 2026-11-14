@@ -56,7 +56,7 @@ async function loadRemoteConfig() {
   }
 }
 
-const PANEL_COLLAPSED_WIDTH = 20;
+const PANEL_COLLAPSED_WIDTH = 24;
 const PANEL_EXPANDED_WIDTH = 320;
 const PANEL_HEIGHT = 520;
 const PANEL_COLLAPSED_HEIGHT = 364;
@@ -175,7 +175,7 @@ function panelBounds(open) {
 function placePanel() {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  win.setHasShadow(panelOpen);
+  win.setHasShadow(true);
   win.setBounds(panelBounds(panelOpen), true);
 }
 
@@ -222,7 +222,7 @@ function openPanel() {
     movable: false,
     resizable: false,
     alwaysOnTop: true,
-    hasShadow: panelOpen,
+    hasShadow: true,
     backgroundColor: "#00000000",
     title: "Aurafarm",
     webPreferences: {
