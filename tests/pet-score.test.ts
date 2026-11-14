@@ -155,6 +155,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(openPanel, /movable: false/);
   assert.match(openPanel, /panelBounds\(panelOpen\)/);
   assert.match(panel, /background: #f7f3e8/);
+  assert.doesNotMatch(panel, /#10241c/);
   assert.match(panel, /width: 24px/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = 364/);
