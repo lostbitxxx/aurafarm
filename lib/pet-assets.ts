@@ -39,25 +39,13 @@ export function sampleColor(value: unknown): SampleColorId | null {
 }
 
 /**
- * hat_c through hat_j are already in the database. Adding one of them does not
- * need a migration. Copy the hat_a-* folders to hat_c-* (or the matching id)
- * under each pet color for cat and bunny, then edit those SVG files.
- * Copying hat_a-* already includes the clothes_a and clothes_b folders that sit
- * beside that hat, so a new hat does not need a clothes migration either.
+ * Legacy sample hats with pose folders under each pet color.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
- * With clothes: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
+ * hat_b uses the same pose set. With clothes: hat_a-clothes_a and hat_a-clothes_b.
  */
 export const SAMPLE_HATS = [
   { id: "hat_a" },
   { id: "hat_b" },
-  { id: "hat_c" },
-  { id: "hat_d" },
-  { id: "hat_e" },
-  { id: "hat_f" },
-  { id: "hat_g" },
-  { id: "hat_h" },
-  { id: "hat_i" },
-  { id: "hat_j" },
 ] as const;
 
 export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
@@ -68,23 +56,13 @@ export function sampleHat(value: unknown): SampleHatId | null {
 }
 
 /**
- * clothes_c through clothes_j are already in the database. Adding one of them does not
- * need a migration. Copy the *-clothes_a folders to *-clothes_c (or the matching id)
- * under each pet color for cat and bunny, including no-hat, hat_a, and hat_b, then edit those SVG files.
+ * Legacy sample clothes with pose folders under each pet color.
  * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
- * With a hat: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-clothes_a/{pose}.svg
+ * clothes_b uses the same pose set. With a hat: hat_a-clothes_a and hat_b-clothes_a.
  */
 export const SAMPLE_CLOTHES = [
   { id: "clothes_a" },
   { id: "clothes_b" },
-  { id: "clothes_c" },
-  { id: "clothes_d" },
-  { id: "clothes_e" },
-  { id: "clothes_f" },
-  { id: "clothes_g" },
-  { id: "clothes_h" },
-  { id: "clothes_i" },
-  { id: "clothes_j" },
 ] as const;
 
 export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
@@ -149,8 +127,8 @@ export function outfitFolder(hat: string | null | undefined, clothes: string | n
  * Route for all three accessories:
  * /pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
  * The file is public/pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
- * color is the directory. hat is no-hat or hat_a through hat_j.
- * clothes is no-clothes or clothes_a through clothes_j.
+ * color is the directory. hat is no-hat, hat_a, or hat_b.
+ * clothes is no-clothes, clothes_a, or clothes_b.
  * pose is idle, walk1, walk2, blush, wait, study1, or study2.
  */
 export function petAssetPath(

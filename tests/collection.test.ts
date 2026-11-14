@@ -70,10 +70,11 @@ test("a saved hat uses its folder and an empty hat does not", () => {
     "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
   );
   assert.equal(sampleHat("hat_a"), "hat_a");
+  assert.equal(sampleHat("hat_c"), null);
   assert.equal(sampleHat("forest"), null);
   assert.deepEqual(
     SAMPLE_HATS.map((hat) => hat.id),
-    ["hat_a", "hat_b", "hat_c", "hat_d", "hat_e", "hat_f", "hat_g", "hat_h", "hat_i", "hat_j"],
+    ["hat_a", "hat_b"],
   );
 });
 
@@ -119,10 +120,11 @@ test("a saved outfit uses its folder and empty clothes do not", () => {
     "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
   );
   assert.equal(sampleClothes("clothes_a"), "clothes_a");
+  assert.equal(sampleClothes("clothes_c"), null);
   assert.equal(sampleClothes("blue-vest"), null);
   assert.deepEqual(
     SAMPLE_CLOTHES.map((clothes) => clothes.id),
-    ["clothes_a", "clothes_b", "clothes_c", "clothes_d", "clothes_e", "clothes_f", "clothes_g", "clothes_h", "clothes_i", "clothes_j"],
+    ["clothes_a", "clothes_b"],
   );
 });
 
@@ -241,6 +243,45 @@ test("an owned approved hat or outfit can be applied to a pet", () => {
   assert.match(applyClothes, /set clothes = target_clothes/);
   assert.match(actions, /previewReward\(hatId\)\?\.kind !== "hat"/);
   assert.match(actions, /previewReward\(clothesId\)\?\.kind !== "clothes"/);
+});
+
+test("unused sample hats and clothes are removed from the catalog", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0036_remove_unused_accessories.sql", import.meta.url),
+    "utf8",
+  );
+  const removed = [
+    "hat_c", "hat_d", "hat_e", "hat_f", "hat_g", "hat_h", "hat_i", "hat_j",
+    "clothes_c", "clothes_d", "clothes_e", "clothes_f", "clothes_g", "clothes_h", "clothes_i", "clothes_j",
+  ];
+  const hatNull = sql.indexOf("set hat = null");
+  const clothesNull = sql.indexOf("set clothes = null");
+  const rewardNull = sql.indexOf("update public.collection_rewards");
+  const deleteOwned = sql.indexOf("delete from public.user_collections");
+  const deleteItems = sql.indexOf("delete from public.collection_items");
+  const hatCheckAt = sql.indexOf("add constraint user_pets_hat_check");
+  const clothesCheckAt = sql.indexOf("add constraint user_pets_clothes_check");
+  const hatCheck = sql.slice(hatCheckAt, clothesCheckAt);
+  const clothesCheck = sql.slice(clothesCheckAt);
+
+  assert.ok(hatNull >= 0 && hatNull < clothesNull);
+  assert.ok(clothesNull < rewardNull);
+  assert.ok(rewardNull < deleteOwned);
+  assert.ok(deleteOwned < deleteItems);
+  assert.ok(deleteItems < hatCheckAt);
+  assert.ok(hatCheckAt < clothesCheckAt);
+  assert.match(sql.slice(0, rewardNull), /update public\.user_pets/);
+  assert.match(sql.slice(rewardNull, deleteOwned), /set item_id = null/);
+
+  for (const id of removed) {
+    assert.match(sql.slice(0, hatCheckAt), new RegExp(`'${id}'`));
+    assert.doesNotMatch(hatCheck, new RegExp(`'${id}'`));
+    assert.doesNotMatch(clothesCheck, new RegExp(`'${id}'`));
+  }
+  assert.match(hatCheck, /'hat_a'/);
+  assert.match(hatCheck, /'little-gentleman-top-hat'/);
+  assert.match(clothesCheck, /'clothes_a'/);
+  assert.match(clothesCheck, /'little-gentleman-suit'/);
 });
 
 test("choosing a level reward wears it on the pet that earned the level", () => {
