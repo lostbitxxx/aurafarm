@@ -141,6 +141,7 @@ function publish() {
   petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
   const payload = {
     ...state,
+    assetOrigin: API_ORIGIN,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
   for (const win of [panelWindow, debugWindow]) {

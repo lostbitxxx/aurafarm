@@ -8,13 +8,26 @@ const bubble = document.getElementById("bubble");
 const toggle = document.getElementById("panel-toggle");
 const panelArrow = document.getElementById("panel-arrow");
 const timerFill = document.getElementById("timer-fill");
+const petLane = document.getElementById("pet-lane");
+const petSprite = document.getElementById("pet-sprite");
 const tokenField = document.querySelector("#session-token textarea");
+const PET_WIDTH = 70;
+const PET_STEP = 2;
+let petX = 0;
+let petDir = 1;
+let walkFrame = "walk1";
+let walkTimer = null;
+let frameTimer = null;
+let assetOrigin = "";
+let shownPet = "baby_slime";
 
 function applyPanelOpen(open) {
   document.body.classList.toggle("is-open", open);
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   toggle.setAttribute("aria-label", open ? "Close Aurafarm" : "Open Aurafarm");
   panelArrow.textContent = open ? "›" : "‹";
+  if (open) startPetWalk();
+  else stopPetWalk();
 }
 
 toggle.addEventListener("click", () => {
@@ -64,7 +77,52 @@ document.getElementById("session-token").addEventListener("submit", async (event
   status.textContent = result.error || "Session token accepted.";
 });
 
+function petSrc(pose) {
+  const base = String(assetOrigin || "").replace(/\/$/, "");
+  if (!base) return "";
+  return base + plainPetPath(shownPet, pose);
+}
+
+function applyPetSprite() {
+  const src = petSrc(walkTimer ? walkFrame : "idle");
+  if (src && petSprite.getAttribute("src") !== src) petSprite.src = src;
+}
+
+function stepPet() {
+  const laneWidth = petLane.clientWidth;
+  const max = Math.max(0, laneWidth - PET_WIDTH);
+  const next = petX + petDir * PET_STEP;
+  if (next <= 0) petDir = 1;
+  if (next >= max) petDir = -1;
+  petX = clampPetX(next, laneWidth, PET_WIDTH);
+  petSprite.style.left = `${petX}px`;
+  petSprite.style.transform = petDir < 0 ? "scaleX(-1)" : "";
+}
+
+function startPetWalk() {
+  if (walkTimer) return;
+  walkTimer = setInterval(stepPet, 40);
+  frameTimer = setInterval(() => {
+    walkFrame = walkFrame === "walk1" ? "walk2" : "walk1";
+    applyPetSprite();
+  }, 250);
+  applyPetSprite();
+  stepPet();
+}
+
+function stopPetWalk() {
+  if (walkTimer) clearInterval(walkTimer);
+  walkTimer = null;
+  if (frameTimer) clearInterval(frameTimer);
+  frameTimer = null;
+  walkFrame = "walk1";
+  applyPetSprite();
+}
+
 window.pet.onState((state) => {
+  if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
+  if (state.petType) shownPet = state.petType;
+  applyPetSprite();
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   timer.hidden = !state.remainingLabel;
   timer.textContent = state.remainingLabel || "";

@@ -5,6 +5,10 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
+const { clampPetX, plainPetPath } = require("../desktop/pet-art.js") as {
+  clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
+  plainPetPath: (petType: string, pose: string) => string;
+};
 const { formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
   formatStudyClock: (remainingMs: number) => string;
   remainingStudyMs: (
@@ -164,6 +168,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
+  assert.match(panel, /id="pet-lane"/);
+  assert.match(panel, /#pet-lane \{\s*position: relative;\s*flex: 1;\s*min-height: 70px;\s*overflow: hidden;/);
+  assert.match(script, /clampPetX\(next, laneWidth, PET_WIDTH\)/);
+  assert.match(main, /assetOrigin: API_ORIGIN/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
   assert.match(script, /state\.panelOpen/);
@@ -222,6 +230,16 @@ test("the study clock shows the planned time that is left", () => {
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), 0.5);
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), 1);
   assert.equal(studyProgress({ startedAtMs: started }, started), null);
+});
+
+test("a plain pet uses the default species sprite", () => {
+  assert.equal(plainPetPath("baby_slime", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
+  assert.equal(plainPetPath("lantern_moth", "walk1"), "/pet-assets/pets/bunny/lavender/no-hat-no-clothes/walk1.svg");
+  assert.equal(plainPetPath("river_newt", "walk2"), "/pet-assets/pets/cat/honey/no-hat-no-clothes/walk2.svg");
+  assert.equal(plainPetPath("unknown", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
+  assert.equal(clampPetX(-4, 200, 70), 0);
+  assert.equal(clampPetX(180, 200, 70), 130);
+  assert.equal(clampPetX(40, 200, 70), 40);
 });
 
 test("the pet posts the score and does not open a port", () => {

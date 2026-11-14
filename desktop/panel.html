@@ -80,6 +80,21 @@
         gap: 0.45rem;
         margin-top: 1.35rem;
       }
+      #pet-lane {
+        position: relative;
+        flex: 1;
+        min-height: 70px;
+        overflow: hidden;
+      }
+      #pet-sprite {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 70px;
+        height: 70px;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
       #panel-actions {
         display: grid;
         gap: 0.45rem;
@@ -180,12 +195,16 @@
         <p id="status">Paste a session token.</p>
         <p id="bubble" hidden></p>
       </div>
+      <div id="pet-lane">
+        <img id="pet-sprite" alt="" draggable="false" />
+      </div>
       <div id="panel-actions">
         <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
         <p id="note"></p>
         <button id="quit" class="ghost" type="button">Quit</button>
       </div>
     </div>
+    <script src="pet-art.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>
