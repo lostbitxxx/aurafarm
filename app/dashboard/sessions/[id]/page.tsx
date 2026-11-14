@@ -50,7 +50,7 @@ export default async function StudyScorePage({
             ) : (
               <p className="session-fact">{copy.detail}</p>
             )}
-            <CloseDeskTab>Back to the desk</CloseDeskTab>
+            <CloseDeskTab refresh={score.state === "finished"}>Back to the desk</CloseDeskTab>
           </div>
         </section>
       </main>

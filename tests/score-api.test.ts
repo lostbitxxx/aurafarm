@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { labelForBlockedHost } from "../lib/blocklist";
+import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE, requestDeskRefresh } from "../lib/desk-refresh";
 import { buildScoreResult, parseScoreRequest } from "../lib/scoring";
 
 const exampleBody = {
@@ -59,12 +60,40 @@ test("the session page uses the same paper layout as sign-in", () => {
   assert.match(session, /PublicHeader/);
   assert.match(session, /Back to the desk/);
   assert.match(session, /CloseDeskTab/);
+  assert.match(session, /refresh=\{score\.state === "finished"\}/);
   assert.doesNotMatch(session, /href="\/dashboard"/);
   const closeTab = readFileSync(
     new URL("../app/dashboard/sessions/[id]/close-desk-tab.tsx", import.meta.url),
     "utf8",
   );
+  assert.match(closeTab, /if \(refresh\) requestDeskRefresh\(\)/);
   assert.match(closeTab, /window\.close\(\)/);
+  const refresh = readFileSync(new URL("../lib/desk-refresh.ts", import.meta.url), "utf8");
+  assert.match(refresh, /aurafarm-desk/);
+  assert.match(closeTab, /requestDeskRefresh/);
+  const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  assert.match(desk, /DESK_REFRESH_CHANNEL/);
+  assert.match(desk, /DESK_REFRESH_TYPE/);
+  assert.match(desk, /router\.refresh\(\)/);
+  assert.doesNotMatch(desk, /visibilitychange/);
+  assert.doesNotMatch(desk, /pageshow/);
+  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(panel, /endStudyEarly\(shownSession\.id\)/);
+  assert.doesNotMatch(panel, /requestDeskRefresh|DESK_REFRESH_CHANNEL/);
+  const cancel = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const cancelFn = cancel.slice(cancel.indexOf("async function cancelStudy"), cancel.indexOf("function tickStudyClock"));
+  assert.match(cancelFn, /cancel_study_session/);
+  assert.doesNotMatch(cancelFn, /openExternal|requestDeskRefresh|aurafarm-desk/);
+});
+
+test("a finished session asks the open desk to refresh", async () => {
+  const channel = new BroadcastChannel(DESK_REFRESH_CHANNEL);
+  const message = new Promise<unknown>((resolve) => {
+    channel.onmessage = (event: MessageEvent<unknown>) => resolve(event.data);
+  });
+  requestDeskRefresh();
+  assert.deepEqual(await message, { type: DESK_REFRESH_TYPE });
+  channel.close();
 });
 
 test("the score url uses the request origin and the session id", () => {
