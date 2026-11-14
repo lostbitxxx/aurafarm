@@ -89,6 +89,29 @@ export function speciesForPetType(petType: string): PetSpecies {
   return PET_TYPE_SPECIES[petType] ?? "cat";
 }
 
+/** The eight approved collection hats with worn overlays (catalogue art minus ground shadow). */
+export const WORN_HAT_IDS = [
+  "little-gentleman-top-hat",
+  "summer-garden-straw-hat",
+  "flower-day-daisy-clip",
+  "lucky-heart-clover-clip",
+  "sleepy-companion-nightcap",
+  "little-artist-beret",
+  "forest-mushroom-mushroom-cap",
+  "little-wizard-star-hat",
+] as const;
+
+const WORN_HAT_ID_SET = new Set<string>(WORN_HAT_IDS);
+
+/**
+ * Worn hat overlays for approved collection hats.
+ * Same artwork as the catalogue icon, without the baked ground-shadow ellipse.
+ */
+export function wornHatAsset(hatId: string | null | undefined): string | null {
+  if (!hatId || !WORN_HAT_ID_SET.has(hatId)) return null;
+  return `/pet-assets/accessories/worn/hats/${hatId}.svg`;
+}
+
 /** The eight approved collection clothes with compact worn overlays (clothes_a placement). */
 export const WORN_CLOTHES_IDS = [
   "little-gentleman-suit",
