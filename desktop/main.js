@@ -612,7 +612,7 @@ function tickStudyClock() {
   const remaining = remainingStudyMs(study, now);
   const label = remaining === null ? "" : formatStudyClock(remaining);
   const progress = studyProgress(study, now) ?? 0;
-  const countdown = closeCountdownStatus(study.closeWatch, now);
+  const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, now) : "";
   const clockChanged = state.remainingLabel !== label || state.timerProgress !== progress;
   const countdownChanged = Boolean(countdown) && state.status !== countdown;
   if (clockChanged || countdownChanged) {
@@ -646,7 +646,7 @@ function beginFrontWatch(body, browser = "") {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
-    closeBlocked: true,
+    closeBlocked: body.close_blocked === true,
     closeWatch: createCloseWatch(),
     log: createFrontLog(),
     distractedHosts: [],
@@ -846,7 +846,7 @@ async function submitScoreDirect(current, body, postFailure) {
 
 function publishWatch(reading) {
   if (!study) return;
-  const countdown = closeCountdownStatus(study.closeWatch, Date.now());
+  const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, Date.now()) : "";
   if (countdown) {
     setStatus(countdown);
     return;
@@ -906,7 +906,7 @@ async function pollFront() {
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
-    current.closeBlocked = true;
+    if (typeof preference.value === "boolean") current.closeBlocked = preference.value;
     const now = Date.now();
     const decision = nextCloseWatch(current.closeWatch, {
       enabled: true,
@@ -923,7 +923,7 @@ async function pollFront() {
     }
     let closeNote = "";
     let closeError = "";
-    if (decision.close) {
+    if (decision.close && current.closeBlocked) {
       showBubble(decision.host);
       const closed = await closeFrontTab(reading.app, decision.host);
       if (study !== current) return;
@@ -937,7 +937,7 @@ async function pollFront() {
           closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
         }
       }
-    } else if (bubbleHost && (!reading.url || decision.host !== bubbleHost)) {
+    } else if (bubbleHost && (!current.closeBlocked || !reading.url || decision.host !== bubbleHost)) {
       hideBubble();
     }
     if (study !== current) return;
