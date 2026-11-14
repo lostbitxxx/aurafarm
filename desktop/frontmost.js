@@ -152,7 +152,7 @@ function describeFrontRead(reading, log) {
   }
   const app = reading?.app || "";
   if (app && app !== "Safari" && app !== "Google Chrome" && app !== "Microsoft Edge") {
-    return `Watching. ${app} is in front. Click Chrome or Safari and leave it in front.`;
+    return `Watching. ${app} is in front.`;
   }
   const host = hostnameFromUrl(reading?.url || "");
   if (!host) {
