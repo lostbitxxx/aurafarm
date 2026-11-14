@@ -1180,6 +1180,21 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .tracker-card .pet-status { margin-top: 1rem; color: var(--dialog-ink); }
+.tracker-card .pet-setup-steps {
+  margin: 0.85rem 0 0;
+  padding-left: 1.35rem;
+  display: grid;
+  gap: 1rem;
+  color: var(--dialog-ink);
+}
+.tracker-card .pet-setup-steps li::marker { font-weight: 700; }
+.tracker-card .pet-setup-steps p { margin: 0; }
+.tracker-card .pet-setup-steps .pet-status {
+  margin-top: 0.65rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
 .tracker-card .pet-open-command-row {
   display: flex;
   align-items: center;
