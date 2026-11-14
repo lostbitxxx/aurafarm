@@ -629,3 +629,15 @@ test("study history merges session and XP rows by session id", () => {
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   assert.match(dashboard, /ended_at, xp_awarded, use_desktop_pet/);
 });
+
+test("the desktop session token sits beside the copy button", () => {
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const start = css.indexOf(".launch-code-row {");
+  const row = css.slice(start, css.indexOf(".button:disabled { cursor: progress", start));
+  assert.match(row, /inline-flex/);
+  assert.match(row, /justify-self: start/);
+  assert.match(row, /width: max-content/);
+  assert.match(row, /gap: 0\.35rem/);
+  assert.match(row, /\.launch-code-row \.launch-code \{ flex: none; \}/);
+  assert.doesNotMatch(row, /flex: 1/);
+});
