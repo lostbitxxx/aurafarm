@@ -61,7 +61,15 @@ test("the session page uses the same paper layout as sign-in", () => {
   assert.match(session, /Back to the desk/);
   assert.match(session, /CloseDeskTab/);
   assert.match(session, /refresh=\{score\.state === "finished"\}/);
+  assert.match(session, /RefreshDeskOnFinish/);
+  assert.match(session, /finished=\{score\.state === "finished"\}/);
   assert.doesNotMatch(session, /href="\/dashboard"/);
+  const refreshDesk = readFileSync(
+    new URL("../app/dashboard/sessions/[id]/refresh-desk.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(refreshDesk, /if \(!finished\) return/);
+  assert.match(refreshDesk, /requestDeskRefresh\(\)/);
   const closeTab = readFileSync(
     new URL("../app/dashboard/sessions/[id]/close-desk-tab.tsx", import.meta.url),
     "utf8",
@@ -79,6 +87,12 @@ test("the session page uses the same paper layout as sign-in", () => {
   assert.doesNotMatch(desk, /pageshow/);
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /endStudyEarly\(shownSession\.id\)/);
+  assert.match(panel, /shownSession\?\.useDesktopPet === true/);
+  assert.match(panel, /if \(!desktopPetSession\) return/);
+  assert.match(panel, /visibilityState !== "visible"/);
+  assert.match(panel, /visibilitychange/);
+  assert.match(panel, /router\.refresh\(\)/);
+  assert.doesNotMatch(panel, /pageshow/);
   assert.doesNotMatch(panel, /requestDeskRefresh|DESK_REFRESH_CHANNEL/);
   const cancel = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   const cancelFn = cancel.slice(cancel.indexOf("async function cancelStudy"), cancel.indexOf("function tickStudyClock"));

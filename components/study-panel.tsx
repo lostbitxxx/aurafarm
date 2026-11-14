@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
 import type { PetCard } from "@/lib/pets";
 import {
@@ -355,6 +356,18 @@ export function StudyPanel({
 
   const lengthSeconds = selectedLengthSeconds();
   const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
+  const desktopPetSession = shownSession?.useDesktopPet === true;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!desktopPetSession) return;
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      router.refresh();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [desktopPetSession, router]);
 
   useEffect(() => {
     if (!railOpen) return;
