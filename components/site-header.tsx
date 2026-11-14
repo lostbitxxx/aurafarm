@@ -16,6 +16,7 @@ export function SiteHeader({
   onOpenFriends,
   onOpenSocialSettings,
   onOpenLeaderboard,
+  onOpenSong,
   pendingFriendRequest = false,
 }: {
   displayName: string;
@@ -28,6 +29,7 @@ export function SiteHeader({
   onOpenFriends?: () => void;
   onOpenSocialSettings?: () => void;
   onOpenLeaderboard?: () => void;
+  onOpenSong?: () => void;
   pendingFriendRequest?: boolean;
 }) {
   const streakLabel = streakPillLabel(streakCount);
@@ -65,6 +67,11 @@ export function SiteHeader({
         ) : (
           <Link href="/dashboard">Achievements</Link>
         )}
+        {onOpenSong ? (
+          <button type="button" className="topbar-link" onClick={onOpenSong}>
+            Song
+          </button>
+        ) : null}
         {onOpenFriends ? (
           <div className="topbar-menu">
             <button type="button" className="topbar-link" aria-haspopup="menu">
