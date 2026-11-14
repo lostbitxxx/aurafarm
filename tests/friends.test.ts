@@ -73,21 +73,26 @@ test("the desk opens Friends and Leaderboard from Social", () => {
 
   assert.match(header, /Social/);
   assert.match(header, /onClick=\{onOpenFriends\}/);
-  assert.match(header, />\s*Friends\s*</);
+  assert.match(header, /<span>Friends<\/span>/);
+  assert.match(header, /pendingFriendRequest \? <span className="request-dot"/);
+  assert.match(header, /aria-haspopup="menu">\s*Social\s*<\/button>/);
+  assert.doesNotMatch(header, /aria-haspopup="menu"[\s\S]{0,40}request-dot/);
   assert.match(header, />\s*Social Settings\s*</);
   assert.match(header, /onClick=\{onOpenSocialSettings\}/);
   assert.match(header, /onClick=\{onOpenLeaderboard\}[\s\S]*Leaderboard/);
   assert.match(desk, /onOpenFriends=\{\(\) => setDialog\("friends"\)\}/);
+  assert.match(desk, /pendingFriendRequest=\{incomingFriendRequests\(friendRows\)\.length > 0\}/);
   assert.match(desk, /onOpenSocialSettings=\{\(\) => setDialog\("social-settings"\)\}/);
   assert.match(desk, /onOpenLeaderboard=\{\(\) => setDialog\("leaderboard"\)\}/);
   assert.match(desk, /<LeaderboardDialog/);
-  assert.match(desk, /<FriendsDialog/);
+  assert.match(desk, /<FriendsDialog[\s\S]*friendCode=\{friendCode\}/);
   assert.match(desk, /<SocialSettingsDialog/);
   assert.match(desk, /<SocialPresence/);
   assert.match(page, /loadFriendDesk/);
 
   assert.match(dialog, /Friend List/);
   assert.match(dialog, /Add Friends/);
+  assert.match(dialog, /pendingRequest \? <span className="request-dot"/);
   assert.match(dialog, /Send Request/);
   assert.match(dialog, /button-accept/);
   assert.match(dialog, /Accept/);
@@ -99,7 +104,9 @@ test("the desk opens Friends and Leaderboard from Social", () => {
   assert.match(dialog, /friend\.displayName/);
   assert.match(dialog, /socialStatusLabel/);
   assert.match(dialog, /PixelPetArt/);
-  assert.doesNotMatch(dialog, /Your friend code/);
+  assert.match(dialog, /friends-panel/);
+  assert.match(dialog, /Your friend code/);
+  assert.match(dialog, /navigator\.clipboard\.writeText\(friendCode\)/);
 
   const settings = readFileSync(new URL("../components/social-settings-dialog.tsx", import.meta.url), "utf8");
   assert.match(settings, /Your friend code/);

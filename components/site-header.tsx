@@ -16,6 +16,7 @@ export function SiteHeader({
   onOpenFriends,
   onOpenSocialSettings,
   onOpenLeaderboard,
+  pendingFriendRequest = false,
 }: {
   displayName: string;
   studySeconds?: number;
@@ -27,6 +28,7 @@ export function SiteHeader({
   onOpenFriends?: () => void;
   onOpenSocialSettings?: () => void;
   onOpenLeaderboard?: () => void;
+  pendingFriendRequest?: boolean;
 }) {
   const streakLabel = streakPillLabel(streakCount);
   return (
@@ -69,8 +71,15 @@ export function SiteHeader({
               Social
             </button>
             <div className="topbar-menu-list" role="menu">
-              <button type="button" role="menuitem" onClick={onOpenFriends}>
-                Friends
+              <button
+                type="button"
+                role="menuitem"
+                className="topbar-menu-item"
+                onClick={onOpenFriends}
+                aria-label={pendingFriendRequest ? "Friends, pending request" : undefined}
+              >
+                <span>Friends</span>
+                {pendingFriendRequest ? <span className="request-dot" aria-hidden="true" /> : null}
               </button>
               {onOpenSocialSettings ? (
                 <button type="button" role="menuitem" onClick={onOpenSocialSettings}>

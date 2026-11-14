@@ -16,7 +16,15 @@ export type LeaderboardRow = {
   place: number;
 };
 
+export const LEADERBOARD_SCOPES = [
+  { id: "friends", label: "Friends" },
+  { id: "global", label: "Global" },
+] as const;
+
+export type LeaderboardScope = (typeof LEADERBOARD_SCOPES)[number]["id"];
+
 const LEADERBOARD_MIGRATION = "Run migration 0027 before opening the leaderboard.";
+const GLOBAL_LEADERBOARD_MIGRATION = "Run migration 0037 before opening the global leaderboard.";
 
 export function isLeaderboardMode(value: unknown): value is LeaderboardMode {
   return LEADERBOARD_MODES.some((mode) => mode.id === value);
@@ -33,7 +41,12 @@ export function formatLeaderboardScore(mode: LeaderboardMode, score: number) {
   return formatDuration(safe);
 }
 
+export function isLeaderboardScope(value: unknown): value is LeaderboardScope {
+  return LEADERBOARD_SCOPES.some((scope) => scope.id === value);
+}
+
 export function leaderboardMessage(message: string) {
+  if (/list_global_leaderboard/i.test(message)) return GLOBAL_LEADERBOARD_MIGRATION;
   if (/list_friend_leaderboard/i.test(message)) return LEADERBOARD_MIGRATION;
   if (/choose a leaderboard/i.test(message)) return "Choose a leaderboard.";
   return message;
