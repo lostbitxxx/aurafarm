@@ -135,6 +135,7 @@ export function StudyPanel({
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
+  const [desktopStep, setDesktopStep] = useState<0 | 1 | 2>(0);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [railOpen, setRailOpen] = useState(false);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -248,13 +249,28 @@ export function StudyPanel({
     setChosenSeconds(seconds);
     setLengthOpen(false);
     setTrackerChoice(null);
+    setDesktopStep(0);
     setTrackerOpen(true);
   }
 
   function onCloseTracker() {
     if (pending) return;
+    setDesktopStep(0);
     setTrackerOpen(false);
     setLengthOpen(true);
+  }
+
+  function onBackTracker() {
+    if (pending) return;
+    if (desktopStep === 2) {
+      setDesktopStep(1);
+      return;
+    }
+    if (desktopStep === 1) {
+      setDesktopStep(0);
+      return;
+    }
+    onCloseTracker();
   }
 
   async function onConfirmTracker() {
@@ -611,40 +627,36 @@ export function StudyPanel({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="dialog-head">
-              <h2 id="tracker-title">How should this session be tracked?</h2>
+              <h2 id="tracker-title">
+                {desktopStep === 2
+                  ? "Close blocked tabs?"
+                  : desktopStep === 1
+                    ? "Desktop pet"
+                    : "How should this session be tracked?"}
+              </h2>
               <button type="button" className="dialog-close" onClick={onCloseTracker} aria-label="Close dialog">
                 ×
               </button>
             </div>
-            <p>The session starts when you confirm.</p>
-            <div className="tracker-choices" role="group" aria-label="Session tracker">
-              <button
-                type="button"
-                className={trackerChoice === true ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === true}
-                disabled={pending}
-                onClick={() => setTrackerChoice(true)}
-              >
-                Desktop pet
-              </button>
-              <button
-                type="button"
-                className={trackerChoice === false ? "button" : "button button-ghost"}
-                aria-pressed={trackerChoice === false}
-                disabled={pending}
-                onClick={() => setTrackerChoice(false)}
-              >
-                Website timer
-              </button>
-            </div>
-            {trackerChoice === true ? (
+            {desktopStep === 0 ? <p>The session starts when you confirm.</p> : null}
+            {desktopStep === 1 ? (
+              <ol className="pet-setup-steps">
+                <li>
+                  <p>If you haven't downloaded our desktop application, please download it here.</p>
+                  <PetStatus downloadUrl={downloadUrl} showHeading={false} />
+                </li>
+                <li>
+                  <p>After downloading, unzip it, then open your Terminal and run this command:</p>
+                  <div className="pet-open-command-row">
+                    <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
+                    <CopyButton value="xattr -cr ~/Downloads/Aurafarm.app" label="Copy Terminal command" />
+                  </div>
+                </li>
+              </ol>
+            ) : null}
+            {desktopStep === 2 ? (
               <>
-                <p>
-                  The desktop pet tracks the time.
-                  {closeBlocked
-                    ? " It comes forward and closes a blocklist window after one minute."
-                    : " Closing blocklist windows is off."}
-                </p>
+                <p>When on, we close tabs like YouTube and Instagram for you when you get distracted.</p>
                 <button
                   type="button"
                   className={closeBlocked ? "button" : "button button-ghost"}
@@ -659,21 +671,60 @@ export function StudyPanel({
                     {closeBlockedError}
                   </p>
                 ) : null}
-                <PetStatus downloadUrl={downloadUrl} />
               </>
             ) : null}
-            {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+            {desktopStep === 0 ? (
+              <>
+                <div className="tracker-choices" role="group" aria-label="Session tracker">
+                  <button
+                    type="button"
+                    className={trackerChoice === true ? "button" : "button button-ghost"}
+                    aria-pressed={trackerChoice === true}
+                    disabled={pending}
+                    onClick={() => setTrackerChoice(true)}
+                  >
+                    Desktop pet
+                  </button>
+                  <button
+                    type="button"
+                    className={trackerChoice === false ? "button" : "button button-ghost"}
+                    aria-pressed={trackerChoice === false}
+                    disabled={pending}
+                    onClick={() => setTrackerChoice(false)}
+                  >
+                    Website timer
+                  </button>
+                </div>
+                {trackerChoice === true ? <p>The desktop pet tracks the time.</p> : null}
+                {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+              </>
+            ) : null}
             {error ? (
               <p className="form-error" role="alert">
                 {error}
               </p>
             ) : null}
             <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onBackTracker}>
                 Back
               </button>
-              <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
-                Confirm
+              <button
+                type="button"
+                className="button"
+                disabled={pending || (desktopStep === 0 && trackerChoice === null)}
+                onClick={() => {
+                  if (desktopStep === 0 && trackerChoice) {
+                    setDesktopStep(1);
+                    return;
+                  }
+                  if (desktopStep === 1) {
+                    setDesktopStep(2);
+                    return;
+                  }
+                  void onConfirmTracker();
+                }}
+              >
+                {desktopStep === 2 || trackerChoice === false ? "Confirm" : "Next"}
               </button>
             </div>
           </div>
@@ -905,7 +956,7 @@ function StudyHistoryDialog({
   );
 }
 
-function CopySessionCode({ code }: { code: string }) {
+function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | null>(null);
 
@@ -917,7 +968,7 @@ function CopySessionCode({ code }: { code: string }) {
 
   async function onCopy() {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
       if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
       copiedTimer.current = window.setTimeout(() => setCopied(false), 1500);
@@ -927,16 +978,17 @@ function CopySessionCode({ code }: { code: string }) {
   }
 
   return (
+    <button type="button" className="button button-small" aria-label={label} onClick={() => void onCopy()}>
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
+function CopySessionCode({ code }: { code: string }) {
+  return (
     <div className="launch-code-row">
       <p className="launch-code">{code}</p>
-      <button
-        type="button"
-        className="button button-small"
-        aria-label="Copy session code"
-        onClick={() => void onCopy()}
-      >
-        {copied ? "Copied" : "Copy"}
-      </button>
+      <CopyButton value={code} label="Copy session code" />
     </div>
   );
 }

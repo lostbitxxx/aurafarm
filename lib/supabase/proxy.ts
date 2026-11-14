@@ -64,11 +64,12 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims.sub;
 
-  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isGuestEntry =
+    pathname === "/" || pathname === "/login" || pathname === "/register";
   if (!userId && requiresAccount(pathname)) {
     return redirectWithSession(request, supabaseResponse, "/login");
   }
-  if (userId && isAuthPage) {
+  if (userId && isGuestEntry) {
     return redirectWithSession(request, supabaseResponse, "/dashboard");
   }
 

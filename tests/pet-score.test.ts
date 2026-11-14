@@ -169,15 +169,26 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   assert.match(desk, /Copy session code/);
-  assert.match(desk, /navigator\.clipboard\.writeText\(code\)/);
+  assert.match(desk, /Copy Terminal command/);
+  assert.match(desk, /navigator\.clipboard\.writeText\(value\)/);
   assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
   assert.match(desk, /Desktop pet/);
   assert.match(desk, /Website timer/);
-  assert.match(desk, /Confirm/);
+  assert.match(desk, /xattr -cr ~\/Downloads\/Aurafarm\.app/);
+  assert.match(
+    desk,
+    /Desktop pet[\s\S]*If you haven't downloaded our desktop application, please download it here\.[\s\S]*<PetStatus downloadUrl=\{downloadUrl\} showHeading=\{false\} \/>[\s\S]*After downloading, unzip it, then open your Terminal and run this command:[\s\S]*xattr -cr ~\/Downloads\/Aurafarm\.app/,
+  );
+  assert.match(
+    desk,
+    /desktopStep === 2 \? \([\s\S]*When on, we close tabs like YouTube and Instagram for you when you get distracted\.[\s\S]*Close blocked tabs[\s\S]*Confirm/,
+  );
+  assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
+  assert.match(desk, /desktopStep === 2 \|\| trackerChoice === false \? "Confirm" : "Next"/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
   assert.match(desk, /shownSession\?\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
-  assert.match(desk, /trackerChoice === true \? \([\s\S]*Close blocked tabs[\s\S]*trackerChoice === false/);
+  assert.match(desk, /trackerChoice === true \?[\s\S]*The desktop pet tracks the time\.[\s\S]*trackerChoice === false/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);

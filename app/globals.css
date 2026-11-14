@@ -1180,6 +1180,53 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .tracker-card .pet-status { margin-top: 1rem; color: var(--dialog-ink); }
+.tracker-card .pet-setup-steps {
+  margin: 0.85rem 0 0;
+  padding-left: 1.35rem;
+  display: grid;
+  gap: 1rem;
+  color: var(--dialog-ink);
+}
+.tracker-card .pet-setup-steps li::marker { font-weight: 700; }
+.tracker-card .pet-setup-steps p { margin: 0; }
+.tracker-card .pet-setup-steps .pet-status {
+  margin-top: 0.65rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.tracker-card .pet-open-command-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.tracker-card .pet-open-command {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: #fffdf6;
+  color: var(--dialog-ink);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.tracker-card .pet-open-command-row .pet-open-command {
+  margin: 0;
+  flex: 1;
+  min-width: max-content;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.tracker-card .pet-open-command-row .button {
+  flex: none;
+  padding: 0.22rem 0.45rem;
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
 .tracker-card .pet-status h2 { font-size: 1.2rem; }
 .tracker-card .equipped-flag { color: #4d7a16; }
 
@@ -1415,6 +1462,166 @@ button.dialog-row {
 .topbar-menu-list button:hover,
 .topbar-menu-list button:focus-visible {
   background: #efe8d4;
+}
+
+.topbar-desktop-links {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.topbar-name {
+  min-width: 0;
+}
+
+.topbar-menu-button {
+  display: none;
+  position: relative;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
+  cursor: pointer;
+}
+
+.topbar-song {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topbar-menu-button:focus-visible,
+.topbar-song:focus-visible,
+.topbar-drawer-link:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.topbar-menu-button .request-dot {
+  position: absolute;
+  top: 0.22rem;
+  right: 0.18rem;
+}
+
+.topbar-menu-icon {
+  display: grid;
+  gap: 0.22rem;
+  width: 0.95rem;
+}
+
+.topbar-menu-icon span {
+  display: block;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.topbar-menu-button.is-open .topbar-menu-icon span:nth-child(1) {
+  transform: translateY(calc(0.22rem + 1.5px)) rotate(45deg);
+}
+
+.topbar-menu-button.is-open .topbar-menu-icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.topbar-menu-button.is-open .topbar-menu-icon span:nth-child(3) {
+  transform: translateY(calc(-0.22rem - 1.5px)) rotate(-45deg);
+}
+
+.topbar-scrim,
+.topbar-drawer {
+  display: none;
+}
+
+.topbar-scrim {
+  position: absolute;
+  z-index: 16;
+  top: 100%;
+  left: calc(-1 * var(--topbar-pad-x, 1rem));
+  right: calc(-1 * var(--topbar-pad-r, 1rem));
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(16, 32, 24, 0.28);
+  cursor: pointer;
+}
+
+.topbar-drawer {
+  position: absolute;
+  z-index: 17;
+  top: 100%;
+  right: calc(-1 * var(--topbar-pad-r, 1rem));
+  flex-direction: column;
+  width: min(19rem, 84vw);
+  max-height: min(32rem, calc(100dvh - 4.5rem));
+  margin: 0;
+  padding: 0.4rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(20, 33, 26, 0.12);
+  border-top: 0;
+  border-right: 0;
+  border-radius: 0 0 0 18px;
+  background: #fff9ed;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+.topbar-drawer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  padding: 0.72rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.topbar-drawer-link:hover,
+.topbar-drawer-link:focus-visible {
+  background: #efe8d4;
+}
+
+.topbar-drawer-study {
+  margin: 0;
+  padding: 0.55rem 0.8rem 0.2rem;
+}
+
+.topbar-drawer form {
+  margin: 0.35rem 0.35rem 0.2rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(20, 33, 26, 0.1);
+}
+
+.topbar-drawer form .button {
+  width: 100%;
 }
 
 .tracker-card form.friend-add-form {
@@ -3125,13 +3332,6 @@ button.dialog-row {
   .level-dock {
     padding: 0.3rem 1rem 0.65rem;
   }
-  .desk-page .topbar {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    padding: 1rem 1.25rem;
-    row-gap: 0.55rem;
-  }
-  .desk-page .topbar-user { flex-wrap: wrap; justify-content: flex-end; }
   .scene { padding: 0.25rem 1.25rem calc(5.75rem + env(safe-area-inset-bottom, 0px)); }
   .goal-visual { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .plan-row { margin: 0 1.25rem 0.5rem; }
@@ -3148,6 +3348,71 @@ button.dialog-row {
   .big-pet { min-height: 140px; }
   .big-pet-art { width: 120px; height: 120px; }
   .level-up-pet { width: 132px; height: 132px; }
+}
+
+@media (max-width: 1120px) {
+  .desk-page .topbar {
+    --topbar-pad-x: max(1rem, env(safe-area-inset-left));
+    --topbar-pad-r: max(1rem, env(safe-area-inset-right));
+    position: relative;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.8rem var(--topbar-pad-r) 0.8rem var(--topbar-pad-x);
+  }
+
+  .desk-page .topbar-nav {
+    flex: none;
+  }
+
+  .desk-page .topbar-song {
+    display: inline-flex;
+  }
+
+  .desk-page .wordmark {
+    display: block;
+    flex: none;
+    font-size: 1.25rem;
+  }
+
+  .desk-page .topbar-desktop-links,
+  .desk-page .topbar-desktop {
+    display: none;
+  }
+
+  .desk-page .topbar-user {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 0.45rem;
+  }
+
+  .desk-page .streak-pill {
+    flex: none;
+    gap: 0.25rem;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .desk-page .topbar-name {
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desk-page .topbar-menu-button {
+    display: inline-flex;
+  }
+
+  .desk-page .topbar-scrim {
+    display: block;
+  }
+
+  .desk-page .topbar-drawer {
+    display: flex;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3170,7 +3435,8 @@ button.dialog-row {
   .level-bar-arrow,
   .study-rail,
   .plan-banner-fill,
-  .song-vinyl-disc {
+  .song-vinyl-disc,
+  .topbar-menu-icon span {
     animation: none !important;
     transition: none !important;
   }
