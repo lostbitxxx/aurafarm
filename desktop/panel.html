@@ -34,6 +34,21 @@
       button {
         margin-top: 8px;
       }
+      button.finish {
+        display: block;
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: #c6ef4a;
+        color: #14211a;
+        font: 600 13px/1.2 "Avenir Next", "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+      #note,
+      #bubble {
+        font-size: 13px;
+        line-height: 1.4;
+      }
       button.quit {
         margin-top: 16px;
       }
@@ -46,13 +61,16 @@
   <body>
     <form id="session-token">
       <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-      <button type="submit">Show pet</button>
+      <button type="submit">Use session token</button>
     </form>
     <p id="update" hidden>
       <span id="update-label"></span>
       <button id="update-button" type="button">Download update</button>
     </p>
-    <p id="status">Paste a session token to show the pet.</p>
+    <p id="status">Paste a session token.</p>
+    <p id="bubble" hidden></p>
+    <button id="finish" class="finish" type="button">Finish focused session</button>
+    <p id="note"></p>
     <button id="cancel" type="button">Cancel study session</button>
     <button id="quit" class="quit" type="button">Quit</button>
     <script src="panel.js"></script>

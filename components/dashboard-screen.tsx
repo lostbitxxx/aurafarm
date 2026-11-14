@@ -255,6 +255,7 @@ export function DashboardScreen({
   const dismissCelebration = useCallback(() => setDisplay(null), []);
 
   function onRewardClaimed(itemId: string) {
+    const petId = rewards[0]?.petId;
     const color = sampleColor(itemId);
     const preview = previewReward(itemId);
     const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
@@ -262,6 +263,17 @@ export function DashboardScreen({
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
+    if (petId) {
+      setLocalPets((current) =>
+        current.map((pet) => {
+          if (pet.id !== petId) return pet;
+          if (color) return { ...pet, color };
+          if (hat) return { ...pet, hat };
+          if (clothes) return { ...pet, clothes };
+          return pet;
+        }),
+      );
+    }
     setRewards((current) => current.slice(1));
     if (rewards.length <= 1) setPickerOpen(false);
   }
