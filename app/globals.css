@@ -1180,6 +1180,17 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 }
 
 .tracker-card .pet-status { margin-top: 1rem; color: var(--dialog-ink); }
+.tracker-card .pet-open-command {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: #fffdf6;
+  color: var(--dialog-ink);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
 .tracker-card .pet-status h2 { font-size: 1.2rem; }
 .tracker-card .equipped-flag { color: #4d7a16; }
 

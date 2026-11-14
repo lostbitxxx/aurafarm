@@ -131,6 +131,7 @@ export function StudyPanel({
   const [lengthOpen, setLengthOpen] = useState(false);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
+  const [desktopHelp, setDesktopHelp] = useState(false);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [railOpen, setRailOpen] = useState(false);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -244,13 +245,24 @@ export function StudyPanel({
     setChosenSeconds(seconds);
     setLengthOpen(false);
     setTrackerChoice(null);
+    setDesktopHelp(false);
     setTrackerOpen(true);
   }
 
   function onCloseTracker() {
     if (pending) return;
+    setDesktopHelp(false);
     setTrackerOpen(false);
     setLengthOpen(true);
+  }
+
+  function onBackTracker() {
+    if (pending) return;
+    if (desktopHelp) {
+      setDesktopHelp(false);
+      return;
+    }
+    onCloseTracker();
   }
 
   async function onConfirmTracker() {
@@ -602,7 +614,17 @@ export function StudyPanel({
                 ×
               </button>
             </div>
-            <p>The session starts when you confirm.</p>
+            {desktopHelp ? (
+              <p>
+                If this is the first time you download the app, open Terminal and run:
+              </p>
+            ) : (
+              <p>The session starts when you confirm.</p>
+            )}
+            {desktopHelp ? (
+              <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
+            ) : (
+              <>
             <div className="tracker-choices" role="group" aria-label="Session tracker">
               <button
                 type="button"
@@ -628,7 +650,7 @@ export function StudyPanel({
                 <p>
                   The desktop pet tracks the time.
                   {closeBlocked
-                    ? " It comes forward and closes a blocklist window after one minute."
+                    ? " It comes forward and closes a blocklist window after 30 seconds."
                     : " Closing blocklist windows is off."}
                 </p>
                 <button
@@ -649,17 +671,30 @@ export function StudyPanel({
               </>
             ) : null}
             {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
+              </>
+            )}
             {error ? (
               <p className="form-error" role="alert">
                 {error}
               </p>
             ) : null}
             <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseTracker}>
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onBackTracker}>
                 Back
               </button>
-              <button type="button" className="button" disabled={pending || trackerChoice === null} onClick={onConfirmTracker}>
-                Confirm
+              <button
+                type="button"
+                className="button"
+                disabled={pending || (!desktopHelp && trackerChoice === null)}
+                onClick={() => {
+                  if (!desktopHelp && trackerChoice) {
+                    setDesktopHelp(true);
+                    return;
+                  }
+                  void onConfirmTracker();
+                }}
+              >
+                {desktopHelp || trackerChoice === false ? "Confirm" : "Next"}
               </button>
             </div>
           </div>
