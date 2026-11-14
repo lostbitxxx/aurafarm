@@ -2,7 +2,6 @@ const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("node:fs");
 const path = require("node:path");
-const { step } = require("./walk");
 const { parseAurafarmLink } = require("./links");
 const {
   CLOSE_AFTER_MS,
@@ -23,7 +22,6 @@ const { version: PET_VERSION } = require("./package.json");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
-const WINDOW = { x: 128, y: 128 };
 const API_ORIGIN = usableApiOrigin([
   process.env.AURAFARM_API_ORIGIN,
   require("./bundled-origin"),
@@ -58,15 +56,10 @@ async function loadRemoteConfig() {
   }
 }
 
-let spriteWindow = null;
 let panelWindow = null;
-let finishWindow = null;
-let bubbleWindow = null;
 let debugWindow = null;
 let bubbleHost = "";
 let finishing = false;
-let velocity = { x: 2, y: 0 };
-let petShown = false;
 let study = null;
 let frontTimer = null;
 let studyClock = null;
@@ -75,7 +68,7 @@ let appQuitting = false;
 let state = {
   petType: "baby_slime",
   level: 1,
-  status: "Paste a session token to show the pet.",
+  status: "Paste a session token.",
 };
 const pendingLinks = [];
 
@@ -142,7 +135,7 @@ function publish() {
     ...state,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
   };
-  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
+  for (const win of [panelWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
@@ -160,86 +153,18 @@ function setDebug(debug) {
   publish();
 }
 
-function usableRects() {
-  return screen.getAllDisplays().map((display) => display.workArea);
-}
-
-function placeOnScreen() {
-  if (!spriteWindow) return;
+function panelOrigin() {
   const area = screen.getPrimaryDisplay().workArea;
-  const origin = { x: area.x + 80, y: area.y + 80 };
-  spriteWindow.setPosition(origin.x, origin.y);
+  return { x: area.x + 80, y: area.y + 80 };
 }
 
-function walk() {
-  if (!spriteWindow || spriteWindow.isDestroyed()) return;
-  placeFinishWindow();
-  placeBubbleWindow();
-  placeDebugWindow();
-  // A hidden always-on-top window comes back if macOS is asked to move it.
-  if (!petShown) return;
-  const [x, y] = spriteWindow.getPosition();
-  const next = step({ x, y }, velocity, WINDOW, usableRects());
-  velocity = next.velocity;
-  spriteWindow.setPosition(next.position.x, next.position.y);
-}
-
-function createSprite() {
-  spriteWindow = new BrowserWindow({
-    width: WINDOW.x,
-    height: WINDOW.y,
-    show: false,
-    transparent: true,
-    frame: false,
-    resizable: false,
-    hasShadow: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  spriteWindow.setAlwaysOnTop(true, "screen-saver");
-  spriteWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  spriteWindow.setIgnoreMouseEvents(true, { forward: true });
-  spriteWindow.loadFile(path.join(__dirname, "sprite.html"));
-  spriteWindow.on("closed", () => {
-    spriteWindow = null;
-  });
-  spriteWindow.webContents.once("did-finish-load", publish);
-  placeOnScreen();
-}
-
-function showPet() {
-  const win = spriteWindow;
-  if (!win || win.isDestroyed()) return;
-  petShown = true;
-  win.setOpacity(1);
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  if (!win.isVisible()) win.show();
-}
-
-function hidePet() {
-  const win = spriteWindow;
-  if (!win || win.isDestroyed()) return;
-  petShown = false;
-  // hide() is ignored on macOS while the window is visible on every workspace.
-  win.setVisibleOnAllWorkspaces(false);
-  win.setOpacity(0);
-  win.hide();
-  if (!panelWindow || panelWindow.isDestroyed()) openPanel();
-}
-
-function togglePanel() {
-  if (panelWindow && !panelWindow.isDestroyed()) {
-    panelWindow.close();
-    panelWindow = null;
-    return;
-  }
+function focusPanel() {
   openPanel();
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
 }
 
 function pasteSessionCode(win) {
@@ -259,11 +184,11 @@ function openPanel() {
     panelWindow.show();
     return;
   }
-  const anchor = spriteWindow ? spriteWindow.getBounds() : { x: 80, y: 80 };
+  const anchor = panelOrigin();
   panelWindow = new BrowserWindow({
     width: 320,
-    height: 420,
-    x: anchor.x + WINDOW.x + 12,
+    height: 520,
+    x: anchor.x,
     y: anchor.y,
     resizable: false,
     alwaysOnTop: true,
@@ -291,9 +216,7 @@ function openPanel() {
   });
   panelWindow.on("closed", () => {
     panelWindow = null;
-    if (!appQuitting && spriteWindow && !spriteWindow.isDestroyed() && !spriteWindow.isVisible()) {
-      setImmediate(() => openPanel());
-    }
+    if (!appQuitting) setImmediate(() => openPanel());
   });
   panelWindow.webContents.once("did-finish-load", publish);
 }
@@ -319,7 +242,7 @@ async function restoreSession() {
     await refreshPet();
   } catch {
     petLog("[pet] saved sign-in could not be read.");
-    setStatus("Paste a session token to show the pet.");
+    setStatus("Paste a session token.");
   }
 }
 
@@ -357,21 +280,13 @@ async function refreshPet() {
   }
   if (!data) {
     petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
-    if (!study) setStatus("No pet is equipped on the desk.");
     return;
   }
   petLog(
     `[pet] equipped ${data.pet_type} level ${data.level} for ${sessionData.session.user?.id ?? "unknown"}`,
   );
-  if (study) {
-    state = { ...state, petType: data.pet_type, level: data.level };
-    publish();
-    return;
-  }
-  setStatus(`${data.pet_type} is on the desktop.`, {
-    petType: data.pet_type,
-    level: data.level,
-  });
+  state = { ...state, petType: data.pet_type, level: data.level };
+  publish();
 }
 
 async function signIn(email, password) {
@@ -404,7 +319,6 @@ async function claim(code) {
     return { error: "Claim rejected." };
   }
   beginFrontWatch(body);
-  showPet();
   return { error: "" };
 }
 
@@ -449,7 +363,7 @@ async function useToken(raw) {
     }),
   );
   await refreshPet();
-  showPet();
+  focusPanel();
   setStatus("Session token accepted.");
   return { error: "" };
 }
@@ -478,7 +392,7 @@ async function cancelStudy() {
     return { error: error.message };
   }
   if (study) stopFrontWatch();
-  hidePet();
+  focusPanel();
   setStatus("Study session cancelled. No experience was added.");
   return { error: "" };
 }
@@ -541,7 +455,7 @@ function beginFrontWatch(body) {
     }),
   );
   publishWatch();
-  openFinishWindow();
+  focusPanel();
   frontTimer = setInterval(() => {
     void pollFront();
   }, FRONT_POLL_MS);
@@ -555,110 +469,20 @@ function stopFrontWatch() {
   stopStudyClock();
   frontPoll = null;
   study = null;
-  closeFinishWindow();
   hideBubble();
   setDebug(describeCloseDebug({ session: false }));
-}
-
-function openFinishWindow() {
-  if (finishWindow && !finishWindow.isDestroyed()) return;
-  const win = new BrowserWindow({
-    width: 280,
-    height: 120,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    hasShadow: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  finishWindow = win;
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.loadFile(path.join(__dirname, "finish.html"));
-  win.on("closed", () => {
-    if (finishWindow === win) finishWindow = null;
-  });
-  win.webContents.once("did-finish-load", publish);
-  placeFinishWindow();
-}
-
-function closeFinishWindow() {
-  const win = finishWindow;
-  finishWindow = null;
-  if (win && !win.isDestroyed()) win.close();
-}
-
-function placeFinishWindow() {
-  if (!finishWindow || finishWindow.isDestroyed() || !spriteWindow || spriteWindow.isDestroyed()) return;
-  const [x, y] = spriteWindow.getPosition();
-  finishWindow.setPosition(x, y + WINDOW.y + 6);
-}
-
-function openBubbleWindow() {
-  if (bubbleWindow && !bubbleWindow.isDestroyed()) {
-    placeBubbleWindow();
-    return;
-  }
-  const win = new BrowserWindow({
-    width: 260,
-    height: 48,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    focusable: false,
-    hasShadow: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  bubbleWindow = win;
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.setIgnoreMouseEvents(true, { forward: true });
-  win.loadFile(path.join(__dirname, "bubble.html"));
-  win.on("closed", () => {
-    if (bubbleWindow === win) bubbleWindow = null;
-  });
-  win.webContents.once("did-finish-load", publish);
-  placeBubbleWindow();
-}
-
-function closeBubbleWindow() {
-  const win = bubbleWindow;
-  bubbleWindow = null;
-  if (win && !win.isDestroyed()) win.close();
-}
-
-function placeBubbleWindow() {
-  if (!bubbleWindow || bubbleWindow.isDestroyed() || !spriteWindow || spriteWindow.isDestroyed()) return;
-  const [x, y] = spriteWindow.getPosition();
-  bubbleWindow.setPosition(x + Math.round((WINDOW.x - 260) / 2), y - 56);
 }
 
 function showBubble(host) {
   bubbleHost = host;
   state = { ...state, bubble: `Closing ${host}` };
-  openBubbleWindow();
   publish();
 }
 
 function hideBubble() {
   bubbleHost = "";
-  if (!state.bubble && !(bubbleWindow && !bubbleWindow.isDestroyed())) return;
+  if (!state.bubble) return;
   state = { ...state, bubble: "" };
-  closeBubbleWindow();
   publish();
 }
 
@@ -700,7 +524,7 @@ function placeDebugWindow() {
 }
 
 function setPetLevel(level) {
-  for (const win of [spriteWindow, panelWindow, finishWindow, bubbleWindow, debugWindow]) {
+  for (const win of [panelWindow, debugWindow]) {
     if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level);
   }
 }
@@ -740,7 +564,7 @@ async function finishSession() {
       if (saved.url) await shell.openExternal(saved.url);
       if (study !== current) return;
       stopFrontWatch();
-      hidePet();
+      focusPanel();
       setStatus(saved.message, { finishNote: "" });
       return;
     }
@@ -752,7 +576,7 @@ async function finishSession() {
     if (result.url) await shell.openExternal(result.url);
     if (study !== current) return;
     stopFrontWatch();
-    hidePet();
+    focusPanel();
     setStatus(result.message, { finishNote: "" });
   } finally {
     finishing = false;
@@ -879,7 +703,6 @@ async function pollFront() {
     let closeNote = "";
     let closeError = "";
     if (decision.close) {
-      showPet();
       showBubble(decision.host);
       const closed = await closeFrontWindow(reading.app);
       if (study !== current) return;
@@ -910,7 +733,7 @@ async function pollFront() {
     if (study !== current) return;
     if (!active) {
       stopFrontWatch();
-      hidePet();
+      focusPanel();
       setStatus("Study session ended.");
     }
   } finally {
@@ -935,17 +758,6 @@ function registerMacProtocol() {
     app.setAsDefaultProtocolClient("aurafarm");
   }
 }
-
-ipcMain.on("pointer-inside", (event, inside) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (!win) return;
-  if (inside) win.setIgnoreMouseEvents(false);
-  else win.setIgnoreMouseEvents(true, { forward: true });
-});
-
-ipcMain.on("toggle-panel", () => {
-  togglePanel();
-});
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
 ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
@@ -1030,7 +842,6 @@ if (!gotLock) {
         },
       ]),
     );
-    createSprite();
     openPanel();
     openDebugWindow();
     setDebug(describeCloseDebug({ session: false }));
@@ -1040,7 +851,6 @@ if (!gotLock) {
     for (const arg of [...process.argv, ...pendingLinks]) {
       if (arg.startsWith("aurafarm://")) await handleLink(parseAurafarmLink(arg));
     }
-    setInterval(walk, 32);
     setInterval(() => {
       void refreshPet();
     }, PET_REFRESH_MS);
