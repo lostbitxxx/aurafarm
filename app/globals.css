@@ -2194,20 +2194,22 @@ button.dialog-row {
   box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
 }
 
-.plan-edit {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 6vw 0.5rem;
 }
 
-.plan-edit:hover {
-  color: var(--moss);
+.plan-row .plan-banner {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.plan-row .plan-edit {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .customize-card h1 {
@@ -2442,20 +2444,70 @@ button.dialog-row {
 }
 
 .plan-banner {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  margin: 0 6vw 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  background: rgba(198, 239, 74, 0.22);
+  padding: 0.42rem 1rem;
+  border-radius: 999px;
+  background: rgba(198, 239, 74, 0.14);
   color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.35;
+  box-shadow:
+    inset 0 0 0 1px rgba(20, 33, 26, 0.1),
+    0 0 0 2px rgba(198, 239, 74, 0.4),
+    0 0 0 3.5px rgba(27, 52, 40, 0.1);
 }
 
-.plan-banner p { margin: 0; }
-.plan-banner a { font-weight: 600; }
+.plan-banner-track {
+  position: absolute;
+  inset: 3px;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.plan-banner-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(198, 239, 74, 0.38);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.plan-banner.is-daily-done {
+  background: rgba(198, 239, 74, 0.2);
+}
+
+.plan-banner.is-daily-done .plan-banner-fill {
+  background: rgba(198, 239, 74, 0.48);
+}
+
+.plan-banner.is-complete {
+  background: rgba(198, 239, 74, 0.26);
+}
+
+.plan-banner.is-complete .plan-banner-fill {
+  background: rgba(198, 239, 74, 0.56);
+}
+
+.plan-banner-copy {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plan-banner-count {
+  font-weight: 700;
+}
+
+.plan-banner-note {
+  color: var(--moss);
+  font-weight: 500;
+}
 
 @media (max-width: 860px) {
   .hero, .auth-layout { grid-template-columns: 1fr; }
@@ -2495,7 +2547,8 @@ button.dialog-row {
   .desk-page .topbar-user { flex-wrap: wrap; justify-content: flex-end; }
   .scene { padding: 0.25rem 1.25rem calc(5.75rem + env(safe-area-inset-bottom, 0px)); }
   .goal-visual { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .plan-banner { margin: 0 1.25rem 0.5rem; }
+  .plan-row { margin: 0 1.25rem 0.5rem; }
+  .plan-banner-note { display: none; }
   .companion-drawer.is-open .study-rail {
     max-height: min(40vh, 16rem);
   }
@@ -2528,7 +2581,8 @@ button.dialog-row {
   .level-up-rays,
   .level-up-bit,
   .level-bar-arrow,
-  .study-rail {
+  .study-rail,
+  .plan-banner-fill {
     animation: none !important;
     transition: none !important;
   }
