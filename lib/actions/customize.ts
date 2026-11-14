@@ -31,6 +31,19 @@ export async function saveCustomization(
     return { ...emptyState, error: "Sign in to save your study mode." };
   }
 
+  const existing = await supabase
+    .from("profiles")
+    .select("customization_completed_at")
+    .eq("id", userId)
+    .maybeSingle();
+  if (existing.error) {
+    return {
+      ...emptyState,
+      error: customizationMigrationMessage(existing.error.message) ?? existing.error.message,
+    };
+  }
+  const firstCompletion = !existing.data?.customization_completed_at;
+
   const { data: saved, error } = await supabase
     .from("profiles")
     .update({
@@ -62,5 +75,5 @@ export async function saveCustomization(
     return { error: "", saved: true };
   }
 
-  redirect("/dashboard");
+  redirect(firstCompletion ? "/dashboard?tutorial=1" : "/dashboard");
 }

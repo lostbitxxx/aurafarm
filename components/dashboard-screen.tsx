@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { DeskTutorial, useDeskTutorial } from "./desk-tutorial";
 import { StudyPanel } from "./study-panel";
 import { SiteHeader } from "./site-header";
 import { LevelUpCelebration, RewardPicker } from "./level-up-reward";
@@ -150,6 +151,10 @@ export function DashboardScreen({
     | "song"
     | null
   >(null);
+  const tour = useDeskTutorial(userId, dialog);
+  function showSection(section: NonNullable<typeof dialog>) {
+    tour.openSection(section, () => setDialog(section));
+  }
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
@@ -384,16 +389,19 @@ export function DashboardScreen({
         displayName={displayName}
         studySeconds={totalStudySeconds}
         streakCount={liveStreakCount}
-        onOpenShop={() => setDialog("shop")}
-        onOpenCollection={() => setDialog("collection")}
-        onOpenInventory={() => setDialog("inventory")}
-        onOpenAchievements={() => setDialog("achievements")}
-        onOpenFriends={() => setDialog("friends")}
-        onOpenFarmCrew={() => setDialog("farmcrew")}
-        onOpenSocialSettings={() => setDialog("social-settings")}
-        onOpenLeaderboard={() => setDialog("leaderboard")}
-        onOpenSong={() => setDialog("song")}
+        onOpenShop={() => showSection("shop")}
+        onOpenCollection={() => showSection("collection")}
+        onOpenInventory={() => showSection("inventory")}
+        onOpenAchievements={() => showSection("achievements")}
+        onOpenFriends={() => showSection("friends")}
+        onOpenFarmCrew={() => showSection("farmcrew")}
+        onOpenSocialSettings={() => showSection("social-settings")}
+        onOpenLeaderboard={() => showSection("leaderboard")}
+        onOpenSong={() => showSection("song")}
         pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
+        tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
+        socialPinned={tour.socialPinned && !tour.covered}
+        onSocialClick={tour.onSocialClick}
       />
       <DeskSong
         userId={userId}
@@ -456,7 +464,7 @@ export function DashboardScreen({
           <button
             type="button"
             className="button button-ghost button-small plan-edit"
-            onClick={() => setDialog("edit-plan")}
+            onClick={() => showSection("edit-plan")}
           >
             Edit plan
           </button>
@@ -484,11 +492,13 @@ export function DashboardScreen({
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
-        onOpenInventory={() => setDialog("inventory")}
+        onOpenInventory={() => showSection("inventory")}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
+        tutorialCurrent={tour.step?.target === "start" && !tour.covered}
+        onTutorialStart={tour.onStart}
       />
       {dialog === "shop" ? (
         <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
@@ -584,6 +594,28 @@ export function DashboardScreen({
           ownedClothesIds={ownedClothes}
           onClaimed={onRewardClaimed}
           onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
+      {tour.step && tour.stepIndex !== null ? (
+        <DeskTutorial
+          step={tour.step}
+          stepIndex={tour.stepIndex}
+          title={tour.title}
+          body={tour.body}
+          ringTarget={tour.ringTarget}
+          holeTarget={tour.holeTarget}
+          includeMenu={tour.includeMenu}
+          onNext={() => {
+            tour.onNext();
+            setDialog(null);
+          }}
+          onPrev={() => {
+            tour.onPrev();
+            setDialog(null);
+          }}
+          onSkip={tour.onSkip}
+          onScrim={tour.onScrim}
+          onMissingTarget={tour.onMissingTarget}
         />
       ) : null}
     </div>

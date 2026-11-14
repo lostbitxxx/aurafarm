@@ -65,6 +65,8 @@ export function StudyPanel({
   onHatApplied,
   onClothesApplied,
   deskRefreshing = false,
+  tutorialCurrent = false,
+  onTutorialStart,
 }: {
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
@@ -92,6 +94,8 @@ export function StudyPanel({
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
   deskRefreshing?: boolean;
+  tutorialCurrent?: boolean;
+  onTutorialStart?: () => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -458,7 +462,17 @@ export function StudyPanel({
           </div>
           {shownSession ? null : (
             <div className="scene-actions is-start">
-              <button type="button" className="button button-start" disabled={pending} onClick={onAskTracker}>
+              <button
+                type="button"
+                className="button button-start"
+                data-tutorial="start"
+                data-tutorial-current={tutorialCurrent ? "true" : undefined}
+                disabled={pending}
+                onClick={() => {
+                  onTutorialStart?.();
+                  onAskTracker();
+                }}
+              >
                 Start studying →
               </button>
             </div>

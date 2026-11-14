@@ -20,6 +20,9 @@ export function SiteHeader({
   onOpenLeaderboard,
   onOpenSong,
   pendingFriendRequest = false,
+  tutorialTarget = null,
+  socialPinned = false,
+  onSocialClick,
 }: {
   displayName: string;
   studySeconds?: number;
@@ -34,54 +37,98 @@ export function SiteHeader({
   onOpenLeaderboard?: () => void;
   onOpenSong?: () => void;
   pendingFriendRequest?: boolean;
+  tutorialTarget?: string | null;
+  socialPinned?: boolean;
+  onSocialClick?: () => void;
 }) {
   const streakLabel = streakPillLabel(streakCount);
+  const tutorialCurrent = (target: string) => (tutorialTarget === target ? "true" : undefined);
   const studyLabel = typeof studySeconds === "number" ? formatDuration(studySeconds) : null;
-  return (
-    <header className="topbar">
-      <div className="topbar-nav">
-        <Link href="/dashboard" className="wordmark">
-          Aurafarm
-        </Link>
-        <div className="topbar-desktop-links">
-          {onOpenShop ? (
-            <button type="button" className="topbar-link" onClick={onOpenShop}>
-              Shop
+return (
+  <header className="topbar">
+    <div className="topbar-nav">
+      <Link href="/dashboard" className="wordmark">
+        Aurafarm
+      </Link>
+      <div className="topbar-desktop-links">
+        {onOpenShop ? (
+          <button
+            type="button"
+            className="topbar-link"
+            data-tutorial="shop"
+            data-tutorial-current={tutorialCurrent("shop")}
+            onClick={onOpenShop}
+          >
+            Shop
+          </button>
+        ) : (
+          <Link href="/dashboard">Shop</Link>
+        )}
+        {onOpenCollection ? (
+          <button
+            type="button"
+            className="topbar-link"
+            data-tutorial="collection"
+            data-tutorial-current={tutorialCurrent("collection")}
+            onClick={onOpenCollection}
+          >
+            Collection
+          </button>
+        ) : (
+          <Link href="/dashboard">Collection</Link>
+        )}
+        {onOpenInventory ? (
+          <button
+            type="button"
+            className="topbar-link"
+            data-tutorial="pets"
+            data-tutorial-current={tutorialCurrent("pets")}
+            onClick={onOpenInventory}
+          >
+            Pets
+          </button>
+        ) : (
+          <Link href="/dashboard">Pets</Link>
+        )}
+        {onOpenAchievements ? (
+          <button
+            type="button"
+            className="topbar-link"
+            data-tutorial="achievements"
+            data-tutorial-current={tutorialCurrent("achievements")}
+            onClick={onOpenAchievements}
+          >
+            Achievements
+          </button>
+        ) : (
+          <Link href="/dashboard">Achievements</Link>
+        )}
+        {onOpenSong ? (
+          <button
+            type="button"
+            className="topbar-link"
+            data-tutorial="song"
+            data-tutorial-current={tutorialCurrent("song")}
+            onClick={onOpenSong}
+          >
+            Song
+          </button>
+        ) : null}
+        {onOpenFriends ? (
+          <div
+            className={socialPinned ? "topbar-menu is-pinned" : "topbar-menu"}
+            data-tutorial="social"
+            data-tutorial-current={tutorialCurrent("social")}
+          >
+            <button
+              type="button"
+              className="topbar-link"
+              aria-haspopup="menu"
+              aria-expanded={socialPinned}
+              onClick={onSocialClick}
+            >
+              Social
             </button>
-          ) : (
-            <Link href="/dashboard">Shop</Link>
-          )}
-          {onOpenCollection ? (
-            <button type="button" className="topbar-link" onClick={onOpenCollection}>
-              Collection
-            </button>
-          ) : (
-            <Link href="/dashboard">Collection</Link>
-          )}
-          {onOpenInventory ? (
-            <button type="button" className="topbar-link" onClick={onOpenInventory}>
-              Pets
-            </button>
-          ) : (
-            <Link href="/dashboard">Pets</Link>
-          )}
-          {onOpenAchievements ? (
-            <button type="button" className="topbar-link" onClick={onOpenAchievements}>
-              Achievements
-            </button>
-          ) : (
-            <Link href="/dashboard">Achievements</Link>
-          )}
-          {onOpenSong ? (
-            <button type="button" className="topbar-link" onClick={onOpenSong}>
-              Song
-            </button>
-          ) : null}
-          {onOpenFriends ? (
-            <div className="topbar-menu">
-              <button type="button" className="topbar-link" aria-haspopup="menu">
-                Social
-              </button>
               <div className="topbar-menu-list" role="menu">
                 <button
                   type="button"
