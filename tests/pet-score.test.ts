@@ -61,6 +61,16 @@ test("the pet score body is the phase 3 example", () => {
   assert.equal(body.blocked_count, 1);
   assert.deepEqual(body.blocked_hosts, ["www.instagram.com"]);
   assert.match(body.local_day, /^\d{4}-\d{2}-\d{2}$/);
+  const beforeHongKongMidnight = scoreRequestBody(
+    { token: "session-secret", startedAt: 0, log: { blockedCount: 0, blockedHosts: [] } },
+    Date.parse("2026-11-13T15:59:00.000Z"),
+  );
+  const afterHongKongMidnight = scoreRequestBody(
+    { token: "session-secret", startedAt: 0, log: { blockedCount: 0, blockedHosts: [] } },
+    Date.parse("2026-11-13T16:00:00.000Z"),
+  );
+  assert.equal(beforeHongKongMidnight.local_day, "2026-11-13");
+  assert.equal(afterHongKongMidnight.local_day, "2026-11-14");
   const parsed = parseScoreRequest(body);
   assert.equal(parsed.ok, true);
   if (parsed.ok) assert.equal(parsed.localDay, body.local_day);

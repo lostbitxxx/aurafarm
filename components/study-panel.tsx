@@ -379,10 +379,6 @@ export function StudyPanel({
             </p>
             {shownSession?.useDesktopPet ? (
               <div className="study-active">
-                <p>
-                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-                </p>
-                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
                 {launchUrl ? (
                   <>
                     <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
@@ -394,6 +390,10 @@ export function StudyPanel({
                 ) : (
                   <p>The launch code was shown when this session started.</p>
                 )}
+                <p>
+                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                </p>
+                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
               </div>
             ) : shownSession ? (
               <StudyClock
