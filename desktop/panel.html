@@ -14,9 +14,11 @@
         display: flex;
         height: 100%;
         overflow: hidden;
-        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.45;
         background: #f7f3e8;
-        color: #14211a;
+        color: #23392d;
       }
       #panel-toggle {
         display: grid;
@@ -28,12 +30,13 @@
         padding: 0;
         border: 0;
         background: #f7f3e8;
-        color: #14211a;
-        font: 600 22px/1 "Avenir Next", "Segoe UI", sans-serif;
+        color: #23392d;
+        font: 600 22px/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
       }
-      body.is-open #panel-toggle {
-        border-right: 1px solid rgba(20, 33, 26, 0.18);
+      #panel-toggle:focus-visible {
+        outline: 3px solid #8261a7;
+        outline-offset: -3px;
       }
       #panel-body {
         display: none;
@@ -43,54 +46,73 @@
         padding: 16px 16px 16px 12px;
       }
       body.is-open #panel-body {
-        display: block;
+        display: grid;
+        gap: 0.75rem;
+        align-content: start;
       }
       form,
       p {
-        margin: 0 0 12px;
+        margin: 0;
       }
       label {
-        display: block;
-        font-size: 13px;
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 500;
+        color: #23392d;
       }
       input,
       textarea {
         width: 100%;
         box-sizing: border-box;
-        margin-top: 4px;
-        padding: 8px;
+        border: 1px solid #9daa90;
+        border-radius: 14px;
+        padding: 0.8rem 0.9rem;
         font: inherit;
-        color: #14211a;
-        background: #fff9ed;
+        color: #23392d;
+        background: #fffdf6;
       }
       textarea {
-        min-height: 72px;
+        min-height: 5.5rem;
         resize: none;
       }
-      button {
-        margin-top: 8px;
+      input:focus,
+      textarea:focus {
+        outline: 3px solid #8261a7;
+        outline-offset: 3px;
       }
-      button.finish {
+      #panel-body button {
         display: block;
-        border: 0;
+        width: 100%;
+        margin: 0;
         border-radius: 999px;
-        padding: 8px 12px;
-        background: #c6ef4a;
-        color: #14211a;
-        font: 600 13px/1.2 "Avenir Next", "Segoe UI", sans-serif;
+        padding: 0.85rem 1.2rem;
+        font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
       }
+      #panel-body button:hover {
+        filter: brightness(0.97);
+      }
+      #panel-body button:focus-visible {
+        outline: 3px solid #8261a7;
+        outline-offset: 3px;
+      }
+      #panel-body button.primary,
+      #panel-body button.finish {
+        background: #c5ef47;
+        color: #23392d;
+        border: 1px solid #97b839;
+      }
+      #panel-body button.ghost {
+        background: #f5f0e2;
+        color: #23392d;
+        border: 1px solid #9daa90;
+      }
       #note,
-      #bubble {
-        font-size: 13px;
-        line-height: 1.4;
-      }
-      button.quit {
-        margin-top: 16px;
-      }
-      #status {
-        font-size: 13px;
-        line-height: 1.4;
+      #bubble,
+      #status,
+      #update-label {
+        color: #596650;
+        line-height: 1.45;
       }
     </style>
   </head>
@@ -99,18 +121,18 @@
     <div id="panel-body">
       <form id="session-token">
         <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-        <button type="submit">Use session token</button>
+        <button class="primary" type="submit">Use session token</button>
       </form>
       <p id="update" hidden>
         <span id="update-label"></span>
-        <button id="update-button" type="button">Download update</button>
+        <button id="update-button" class="primary" type="button">Download update</button>
       </p>
       <p id="status">Paste a session token.</p>
       <p id="bubble" hidden></p>
       <button id="finish" class="finish" type="button">Finish focused session</button>
       <p id="note"></p>
-      <button id="cancel" type="button">Cancel study session</button>
-      <button id="quit" class="quit" type="button">Quit</button>
+      <button id="cancel" class="ghost" type="button">Cancel study session</button>
+      <button id="quit" class="ghost" type="button">Quit</button>
     </div>
     <script src="panel.js"></script>
   </body>
