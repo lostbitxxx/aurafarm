@@ -126,7 +126,7 @@ test("the desk opens songs and celebrates an unlock", () => {
   assert.match(player, /song-icon-prev/);
   assert.match(player, /song-icon-next/);
   assert.match(player, /song-transport/);
-  assert.match(player, /aria-label=\{stopped \? "Play" : "Pause"\}/);
+  assert.match(player, /aria-label=\{paused \? "Play" : "Pause"\}/);
   assert.match(player, /song-vinyl/);
   assert.match(player, /is-playing/);
   assert.match(player, /NO_OTHER_SONGS/);

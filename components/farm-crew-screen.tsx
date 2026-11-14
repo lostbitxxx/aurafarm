@@ -8,6 +8,7 @@ import { loadFarmCrewLeaderboard } from "@/lib/actions/leaderboard";
 import { managesFarmCrew, type FarmCrewRoom } from "@/lib/farm-crew";
 import type { LeaderboardMode, LeaderboardRow } from "@/lib/leaderboard";
 import { CrewAdminDialog } from "./crew-admin-dialog";
+import { HeaderMenu } from "./header-menu";
 import { CrewRoom } from "./crew-room";
 import { FarmDialog } from "./farm-dialog";
 import { LeaderboardPanel } from "./leaderboard-dialog";
@@ -57,27 +58,51 @@ export function FarmCrewScreen({ room }: { room: FarmCrewRoom }) {
       <header className="topbar">
         <div className="topbar-nav">
           <span className="wordmark">AuraFarmCrew</span>
-          <Link href="/dashboard" className="topbar-link">
-            Back to Dashboard
-          </Link>
-          {detail ? (
-            <button type="button" className="topbar-link" onClick={() => setPanel("board")}>
-              Leaderboard
-            </button>
-          ) : null}
-          {detail && managesFarmCrew(detail.role) ? (
-            <button type="button" className="topbar-link" onClick={() => setPanel("admin")}>
-              Admin
-            </button>
-          ) : null}
+          <div className="topbar-desktop-links">
+            <Link href="/dashboard" className="topbar-link">
+              Back to Dashboard
+            </Link>
+            {detail ? (
+              <button type="button" className="topbar-link" onClick={() => setPanel("board")}>
+                Leaderboard
+              </button>
+            ) : null}
+            {detail && managesFarmCrew(detail.role) ? (
+              <button type="button" className="topbar-link" onClick={() => setPanel("admin")}>
+                Admin
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className="topbar-user">
-          <span>{room.displayName}</span>
-          <form action={signOut}>
+          <span className="topbar-name" title={room.displayName}>
+            {room.displayName}
+          </span>
+          <form action={signOut} className="topbar-desktop">
             <button type="submit" className="button button-small button-ghost">
               Sign out
             </button>
           </form>
+          <HeaderMenu>
+            <Link href="/dashboard" className="topbar-drawer-link">
+              Back to Dashboard
+            </Link>
+            {detail ? (
+              <button type="button" className="topbar-drawer-link" onClick={() => setPanel("board")}>
+                Leaderboard
+              </button>
+            ) : null}
+            {detail && managesFarmCrew(detail.role) ? (
+              <button type="button" className="topbar-drawer-link" onClick={() => setPanel("admin")}>
+                Admin
+              </button>
+            ) : null}
+            <form action={signOut}>
+              <button type="submit" className="button button-small button-ghost">
+                Sign out
+              </button>
+            </form>
+          </HeaderMenu>
         </div>
       </header>
       <main className="crew-room-page">
