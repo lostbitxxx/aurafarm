@@ -49,9 +49,14 @@
         padding: 0.55rem 0.7rem 0.55rem 0.45rem;
       }
       body.is-open #panel-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+      #panel-actions {
         display: grid;
         gap: 0.45rem;
-        align-content: start;
+        margin-top: auto;
       }
       form,
       p {
@@ -138,9 +143,11 @@
       </p>
       <p id="status">Paste a session token.</p>
       <p id="bubble" hidden></p>
-      <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
-      <p id="note"></p>
-      <button id="quit" class="ghost" type="button">Quit</button>
+      <div id="panel-actions">
+        <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
+        <p id="note"></p>
+        <button id="quit" class="ghost" type="button">Quit</button>
+      </div>
     </div>
     <script src="panel.js"></script>
   </body>

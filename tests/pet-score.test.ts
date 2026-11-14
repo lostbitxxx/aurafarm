@@ -174,6 +174,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
   assert.match(main, /function focusPanel\(\)[\s\S]*setPanelOpen\(true\)/);
   assert.match(main, /display-metrics-changed/);
+  assert.match(panel, /#panel-actions \{\s*display: grid;\s*gap: 0\.45rem;\s*margin-top: auto;/);
+  assert.match(panel, /id="panel-actions"[\s\S]*id="finish"[\s\S]*id="quit"/);
   assert.match(panel, /id="quit"/);
   assert.match(panel, />Quit</);
   assert.match(script, /getElementById\("quit"\)/);
