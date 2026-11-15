@@ -94,4 +94,12 @@ test("all eight approved clothes have compact clothes_a-style worn overlays", ()
   const renderer = readFileSync(new URL("../components/pixel-pet.tsx", import.meta.url), "utf8");
   assert.match(renderer, /wornClothesAsset/);
   assert.match(renderer, /is-worn-clothes/);
+  assert.match(renderer, /pose === "study1" \|\| pose === "study2"/);
+  assert.match(renderer, /is-study/);
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.pixel-pet\.is-study \.pixel-pet-accessory\.is-worn-clothes/);
+  assert.match(css, /\.pixel-pet\.is-study \.pixel-pet-accessory\.is-hat/);
+  assert.match(css, /calc\(11 \/ 64 \* 100%\)/);
+  assert.match(css, /calc\(3 \/ 64 \* 100%\)/);
+  assert.match(css, /calc\(42 \/ 64 \* 100%\)/);
 });

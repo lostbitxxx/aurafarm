@@ -2060,6 +2060,18 @@ button.dialog-row {
   transform: none;
 }
 
+/* Study art is 64x64. The pet is the 42x42 standing sprite at translate(11 3). */
+.pixel-pet.is-study .pixel-pet-accessory.is-worn-clothes,
+.pixel-pet.is-study .pixel-pet-accessory.is-hat,
+.pixel-pet.is-study .pixel-pet-accessory.is-clothes {
+  inset: auto;
+  left: calc(11 / 64 * 100%);
+  top: calc(3 / 64 * 100%);
+  width: calc(42 / 64 * 100%);
+  height: calc(42 / 64 * 100%);
+  transform: none;
+}
+
 .pixel-pet-art.is-walking {
   animation: bob 0.5s steps(2) infinite;
 }
