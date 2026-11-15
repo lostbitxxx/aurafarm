@@ -13,8 +13,14 @@
         background: transparent;
       }
       body {
+        --shell-cream: #f7f3e8;
+        --shell-border: #9daa90;
+        --track-sage: #cfd6c6;
+        --fill-purple: #9d8db8;
+        --fill-band: rgba(55, 40, 78, 0.16);
+        --shell-ink: #23392d;
+        --shell-radius: 14px;
         margin: 0;
-        display: flex;
         box-sizing: border-box;
         height: 100%;
         overflow: hidden;
@@ -23,49 +29,57 @@
         font-size: 1rem;
         line-height: 1.35;
         background: transparent;
-        color: #23392d;
+        color: var(--shell-ink);
       }
-      body.edge-left,
-      body.edge-right {
+      /* One cream surface: the bar extends; no separate left card. */
+      #shell {
+        position: relative;
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        margin: 0;
+        border: 1.5px solid var(--shell-border);
+        border-radius: var(--shell-radius);
+        background: var(--shell-cream);
+        box-shadow: 2px 3px 0 rgba(35, 57, 45, 0.14);
+        color: var(--shell-ink);
+      }
+      body.edge-left #shell,
+      body.edge-right #shell {
         flex-direction: row;
       }
-      body.edge-right {
+      body.edge-right #shell {
         flex-direction: row-reverse;
       }
-      body.edge-top,
-      body.edge-bottom {
+      body.edge-top #shell,
+      body.edge-bottom #shell {
         flex-direction: column;
       }
-      body.edge-bottom {
+      body.edge-bottom #shell {
         flex-direction: column-reverse;
       }
-      #dock-chrome {
-        --capsule-cream: #f7f3e8;
-        --capsule-border: #9daa90;
-        --track-sage: #cfd6c6;
-        --fill-purple: #9d8db8;
-        --fill-band: rgba(55, 40, 78, 0.16);
-        --capsule-ink: #23392d;
+      #dock-rail {
+        position: relative;
+        z-index: 1;
         display: flex;
         flex: none;
         align-items: center;
         box-sizing: border-box;
         margin: 0;
-        border: 1.5px solid var(--capsule-border);
-        border-radius: 999px;
-        background: var(--capsule-cream);
-        box-shadow: 2px 3px 0 rgba(35, 57, 45, 0.14);
-        color: var(--capsule-ink);
+        background: transparent;
+        color: var(--shell-ink);
       }
-      body.edge-left #dock-chrome,
-      body.edge-right #dock-chrome {
+      body.edge-left #dock-rail,
+      body.edge-right #dock-rail {
         flex-direction: column;
         width: 40px;
         height: 100%;
         padding: 6px 0;
       }
-      body.edge-top #dock-chrome,
-      body.edge-bottom #dock-chrome {
+      body.edge-top #dock-rail,
+      body.edge-bottom #dock-rail {
         flex-direction: row;
         width: 100%;
         height: 40px;
@@ -78,9 +92,9 @@
         margin: 0;
         padding: 0;
         border: 0;
-        border-radius: 999px;
+        border-radius: 10px;
         background: transparent;
-        color: var(--capsule-ink);
+        color: var(--shell-ink);
         cursor: grab;
         -webkit-app-region: no-drag;
       }
@@ -139,7 +153,7 @@
         position: relative;
         display: block;
         overflow: hidden;
-        border-radius: 999px;
+        border-radius: 8px;
         background: var(--track-sage);
         pointer-events: none;
       }
@@ -185,7 +199,7 @@
         place-items: center;
         flex: none;
         min-width: 2.2em;
-        color: var(--capsule-ink);
+        color: var(--shell-ink);
         font: 650 10px/1.1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         letter-spacing: 0.02em;
         pointer-events: none;
@@ -207,30 +221,31 @@
       #panel-body {
         position: relative;
         display: flex;
-        flex: 0 0 0;
+        flex: 1 1 0;
         flex-direction: column;
         gap: 0.45rem;
-        width: 0;
         min-width: 0;
         min-height: 0;
-        overflow: hidden;
+        box-sizing: border-box;
         margin: 0;
         border: 0;
-        border-radius: 18px;
-        background: #f7f3e8;
+        border-radius: 0;
+        background: transparent;
         box-shadow: none;
-        padding: 0;
+        padding: 0.55rem 0.55rem 0.55rem 0.55rem;
+        overflow: auto;
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transition: opacity 220ms ease, visibility 220ms ease;
+        transition: opacity 200ms ease, visibility 200ms ease;
+      }
+      body.edge-right #panel-body {
+        padding-right: 0.35rem;
+      }
+      body.edge-left #panel-body {
+        padding-left: 0.35rem;
       }
       body.is-open #panel-body {
-        flex: 1 1 0;
-        width: auto;
-        overflow: auto;
-        box-shadow: 2px 3px 0 rgba(35, 57, 45, 0.1);
-        padding: 0.55rem calc(20px + 0.45rem) 0.55rem 0.45rem;
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
@@ -243,7 +258,7 @@
       #pet-switch-row {
         position: absolute;
         top: 0.4rem;
-        right: calc(20px + 0.8rem);
+        right: 0.45rem;
         z-index: 1;
         display: flex;
         flex: none;
@@ -251,6 +266,9 @@
         justify-content: flex-end;
         gap: 0.45rem;
         margin: 0;
+      }
+      body.edge-right #pet-switch-row {
+        right: 0.45rem;
       }
       #pet-switch-label {
         font-size: 0.92rem;
@@ -322,7 +340,7 @@
         width: 100%;
         box-sizing: border-box;
         border: 1px solid #9daa90;
-        border-radius: 14px;
+        border-radius: 12px;
         padding: 0.45rem 0.6rem;
         font: inherit;
         color: #23392d;
@@ -344,7 +362,7 @@
         display: block;
         width: 100%;
         margin: 0;
-        border-radius: 999px;
+        border-radius: 12px;
         padding: 0.5rem 0.85rem;
         font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
@@ -374,7 +392,7 @@
         position: absolute;
         top: 50%;
         left: 0.45rem;
-        right: calc(20px + 0.45rem);
+        right: 0.45rem;
         transform: translateY(-50%);
         font-size: 2.9rem;
         font-weight: 650;
@@ -395,45 +413,47 @@
     </style>
   </head>
   <body class="edge-right">
-    <div id="dock-chrome">
-      <button id="dock-handle" type="button" aria-label="Move Aurafarm overlay" title="Move">
-        <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 1.1v9.8M1.1 6h9.8M3.2 3.2 1.1 6l2.1 2.8M8.8 3.2 10.9 6 8.8 8.8M3.2 3.2 6 1.1l2.8 2.1M3.2 8.8 6 10.9l2.8-2.1"
-          />
-        </svg>
-      </button>
-      <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
-        <span id="exp-track"><span id="exp-fill"></span></span>
-      </button>
-      <span id="exp-level" aria-live="polite"></span>
-    </div>
-    <div id="panel-body">
-      <div id="pet-switch-row">
-        <span id="pet-switch-label">Show pet</span>
-        <button id="pet-toggle" type="button" role="switch" aria-checked="true" aria-labelledby="pet-switch-label"><span id="pet-switch-knob"></span></button>
+    <div id="shell">
+      <div id="dock-rail">
+        <button id="dock-handle" type="button" aria-label="Move Aurafarm overlay" title="Move">
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 1.1v9.8M1.1 6h9.8M3.2 3.2 1.1 6l2.1 2.8M8.8 3.2 10.9 6 8.8 8.8M3.2 3.2 6 1.1l2.8 2.1M3.2 8.8 6 10.9l2.8-2.1"
+            />
+          </svg>
+        </button>
+        <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
+          <span id="exp-track"><span id="exp-fill"></span></span>
+        </button>
+        <span id="exp-level" aria-live="polite"></span>
       </div>
-      <div id="session-block">
-        <form id="session-token">
-          <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-          <button class="primary" type="submit">Use session token</button>
-        </form>
-        <p id="update" hidden>
-          <span id="update-label"></span>
-          <button id="update-button" class="primary" type="button">Download update</button>
-        </p>
-        <p id="timer" hidden></p>
-        <p id="status">Paste a session token.</p>
-        <p id="bubble" hidden></p>
-      </div>
-      <div id="panel-actions">
-        <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
-        <p id="note"></p>
-        <button id="quit" class="ghost" type="button">Quit</button>
+      <div id="panel-body">
+        <div id="pet-switch-row">
+          <span id="pet-switch-label">Show pet</span>
+          <button id="pet-toggle" type="button" role="switch" aria-checked="true" aria-labelledby="pet-switch-label"><span id="pet-switch-knob"></span></button>
+        </div>
+        <div id="session-block">
+          <form id="session-token">
+            <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
+            <button class="primary" type="submit">Use session token</button>
+          </form>
+          <p id="update" hidden>
+            <span id="update-label"></span>
+            <button id="update-button" class="primary" type="button">Download update</button>
+          </p>
+          <p id="timer" hidden></p>
+          <p id="status">Paste a session token.</p>
+          <p id="bubble" hidden></p>
+        </div>
+        <div id="panel-actions">
+          <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
+          <p id="note"></p>
+          <button id="quit" class="ghost" type="button">Quit</button>
+        </div>
       </div>
     </div>
     <script src="panel.js"></script>

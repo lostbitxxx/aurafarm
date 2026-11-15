@@ -1,0 +1,27 @@
+---
+description: Desktop pet overlay dock, EXP shell, and open/close motion
+globs: desktop/**/*
+alwaysApply: false
+---
+
+# Desktop overlay UX
+
+## Shape and surface
+- One cream `#shell` that morphs — do not add a separate left cream card beside the EXP rail.
+- Boxy rounded corners (`~14px`), not pill/`border-radius: 999px` on the shell.
+- EXP rail stays on the docked edge (right/left/top); content lives inside the same shell.
+
+## Open / close motion
+- Prefer function-driven stages over stepped frame `setBounds` loops.
+- Open: extend **down** (tall strip) then **out** (full width), then fade content in.
+- Close: fade content out, then reverse (narrow, then shorten).
+- Use native `setBounds(bounds, true)` on macOS when motion is allowed; respect reduced motion (instant bounds, no waits).
+- Keep `panelToggleSeq` so rapid toggles cancel stale timeouts.
+
+## Pet
+- Anchor the pet beside the EXP rail (`barThickness`), not the far edge of the open panel window.
+- Pet stays click-through; handle-only dragging; no bottom dock target (left/right/top only).
+
+## Do not
+- Invent XP or change session/score APIs for overlay polish.
+- Leave a large transparent window after close that blocks other apps.

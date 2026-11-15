@@ -75,16 +75,29 @@ function collapsedChromeLength(cfg) {
   return cfg.handleSize + cfg.barLength + cfg.levelSize + cfg.chromePad * 2;
 }
 
+/**
+ * @param {string} edge
+ * @param {boolean | "closed" | "tall" | "open"} open
+ *   closed = strip only; tall = strip at open height (phase 1); open = full panel
+ */
 function panelSize(edge, open, area, options = {}) {
   const cfg = resolveConfig(options);
   const { inset, insetBottom } = edgeInsets(cfg);
   const maxW = Math.max(0, area.width - inset * 2);
   const maxH = Math.max(0, area.height - inset - insetBottom);
+  const mode = open === true || open === "open" ? "open" : open === "tall" ? "tall" : "closed";
+  const openHeight = Math.min(Math.max(cfg.panelLength, collapsedChromeLength(cfg)), maxH);
   if (isVerticalEdge(edge)) {
-    if (open) {
+    if (mode === "open") {
       return {
         width: Math.min(cfg.panelSpan + cfg.barThickness, maxW),
-        height: Math.min(Math.max(cfg.panelLength, collapsedChromeLength(cfg)), maxH),
+        height: openHeight,
+      };
+    }
+    if (mode === "tall") {
+      return {
+        width: Math.min(cfg.barThickness, maxW),
+        height: openHeight,
       };
     }
     return {
@@ -92,9 +105,17 @@ function panelSize(edge, open, area, options = {}) {
       height: Math.min(collapsedChromeLength(cfg), maxH),
     };
   }
-  if (open) {
+  const openWidth = Math.min(Math.max(cfg.panelSpan, collapsedChromeLength(cfg)), maxW);
+  if (mode === "open") {
     return {
-      width: Math.min(Math.max(cfg.panelSpan, collapsedChromeLength(cfg)), maxW),
+      width: openWidth,
+      height: Math.min(cfg.panelLength + cfg.barThickness, maxH),
+    };
+  }
+  if (mode === "tall") {
+    // For top dock, "down" grows thickness toward content before widening along the edge.
+    return {
+      width: Math.min(collapsedChromeLength(cfg), maxW),
       height: Math.min(cfg.panelLength + cfg.barThickness, maxH),
     };
   }
@@ -143,24 +164,26 @@ function panelOriginForDock(edge, offset, panel, area, options = {}) {
   return { x: area.x + inset + clamped, y: area.y + area.height - insetBottom - panel.height };
 }
 
+/** Pet sits beside the EXP rail (barThickness), not the far edge of an open panel. */
 function petOriginBesidePanel(edge, panelBounds, petSize, area, options = {}) {
   const cfg = resolveConfig(options);
   const { inset, insetBottom } = edgeInsets(cfg);
   const size = Number(petSize) || 0;
+  const bar = cfg.barThickness;
   let x;
   let y;
   if (edge === "right") {
-    x = panelBounds.x - size;
+    x = panelBounds.x + panelBounds.width - bar - size;
     y = panelBounds.y + panelBounds.height - size;
   } else if (edge === "left") {
-    x = panelBounds.x + panelBounds.width;
+    x = panelBounds.x + bar;
     y = panelBounds.y + panelBounds.height - size;
   } else if (edge === "bottom") {
     x = panelBounds.x + Math.max(0, panelBounds.width - size);
-    y = panelBounds.y - size;
+    y = panelBounds.y + panelBounds.height - bar - size;
   } else {
     x = panelBounds.x + Math.max(0, panelBounds.width - size);
-    y = panelBounds.y + panelBounds.height;
+    y = panelBounds.y + bar;
   }
   const maxX = area.x + Math.max(0, area.width - size);
   const maxY = area.y + Math.max(0, area.height - size);
@@ -172,6 +195,9 @@ function petOriginBesidePanel(edge, panelBounds, petSize, area, options = {}) {
 
 /**
  * Full overlay placement for a docked edge + along-edge offset.
+ */
+/**
+ * @param {boolean | "closed" | "tall" | "open"} open
  */
 function overlayLayout(edge, offset, open, area, options = {}) {
   const cfg = resolveConfig(options);

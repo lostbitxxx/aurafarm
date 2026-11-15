@@ -206,14 +206,16 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /repeating-linear-gradient/);
   assert.match(panel, /aria-label="Move Aurafarm overlay"/);
   assert.match(panel, /<svg viewBox="0 0 12 12"/);
-  assert.match(panel, /id="dock-chrome"[\s\S]*id="dock-handle"[\s\S]*id="panel-toggle"[\s\S]*id="exp-level"/);
+  assert.match(panel, /id="shell"[\s\S]*id="dock-rail"[\s\S]*id="dock-handle"[\s\S]*id="panel-toggle"[\s\S]*id="exp-level"[\s\S]*id="panel-body"/);
   assert.match(panel, /body\.edge-left[\s\S]*body\.edge-right[\s\S]*body\.edge-top[\s\S]*body\.edge-bottom/);
   assert.match(panel, /cursor: grab/);
-  assert.match(panel, /border-radius: 999px/);
+  assert.match(panel, /--shell-radius: 14px/);
+  assert.match(panel, /border-radius: var\(--shell-radius\)/);
+  assert.doesNotMatch(panel, /id="dock-chrome"/);
   assert.match(panel, /box-shadow: 2px 3px 0/);
   assert.match(
     panel,
-    /#timer \{\s*position: absolute;\s*top: 50%;\s*left: 0\.45rem;\s*right: calc\(20px \+ 0\.45rem\);\s*transform: translateY\(-50%\);\s*font-size: 2\.9rem;/,
+    /#timer \{\s*position: absolute;\s*top: 50%;\s*left: 0\.45rem;\s*right: 0\.45rem;\s*transform: translateY\(-50%\);\s*font-size: 2\.9rem;/,
   );
   assert.match(script, /applyExpBar/);
   assert.match(script, /xpIntoLevel/);
@@ -231,7 +233,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);
   assert.match(panel, /id="pet-switch-row"[\s\S]*id="pet-switch-label"[\s\S]*Show pet[\s\S]*id="pet-toggle"/);
   assert.match(panel, /id="pet-toggle"[^>]*role="switch"[^>]*aria-checked="true"/);
-  assert.match(panel, /#pet-switch-row \{\s*position: absolute;\s*top: 0\.4rem;\s*right: calc\(20px \+ 0\.8rem\);[\s\S]*justify-content: flex-end;/);
+  assert.match(panel, /#pet-switch-row \{\s*position: absolute;\s*top: 0\.4rem;\s*right: 0\.45rem;[\s\S]*justify-content: flex-end;/);
   assert.match(panel, /#panel-body #pet-toggle \{\s*[\s\S]*width: 26px;\s*height: 16px;/);
   assert.match(panel, /#panel-body #pet-toggle\[aria-checked="true"\] \{\s*background: #34c759;/);
   assert.match(panel, /translateX\(10px\)/);
@@ -251,7 +253,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /xpIntoLevel/);
   assert.match(main, /petStatsReady/);
   assert.match(main, /petDisplayProgress/);
-  assert.match(main, /animatePanelBounds/);
+  assert.match(main, /function applyPanelBounds/);
+  assert.match(main, /PANEL_SURFACE_MS = 200/);
+  assert.match(main, /PANEL_STAGE_MS = 140/);
+  assert.match(main, /applyPanelBounds\("tall"\)/);
+  assert.match(main, /applyPanelBounds\("open"\)/);
+  assert.match(main, /applyPanelBounds\("closed"\)/);
+  assert.doesNotMatch(main, /steps = 8/);
+  assert.match(panel, /transition: opacity 200ms ease, visibility 200ms ease/);
+  assert.match(panel, /#panel-body \{[\s\S]*background: transparent/);
   assert.match(script, /LV\$\{/);
   assert.doesNotMatch(script, /textContent = `L\$\{/);
   assert.match(main, /setIgnoreMouseEvents\(true, \{ forward: true \}\)/);
@@ -285,14 +295,14 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(openPanel, /transparent: true/);
   assert.match(openPanel, /movable: false/);
   assert.match(openPanel, /panelBounds\(panelOpen\)/);
-  assert.match(panel, /background: #f7f3e8/);
+  assert.match(panel, /--shell-cream: #f7f3e8/);
   assert.doesNotMatch(panel, /#10241c/);
   assert.match(panel, /width: 40px/);
-  assert.match(panel, /padding: 0\.55rem calc\(20px \+ 0\.45rem\) 0\.55rem 0\.45rem/);
+  assert.match(panel, /#panel-body \{[\s\S]*padding: 0\.55rem 0\.55rem 0\.55rem 0\.55rem/);
   assert.doesNotMatch(panel, /border-right/);
   assert.match(panel, /"Outfit", "Avenir Next", "Segoe UI", sans-serif/);
   assert.match(panel, /font-size: 13px/);
-  assert.match(panel, /border-radius: 999px/);
+  assert.doesNotMatch(panel, /#shell \{[\s\S]*border-radius: 999px/);
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = DOCK_DEFAULTS\.barThickness/);

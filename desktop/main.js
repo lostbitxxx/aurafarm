@@ -247,36 +247,15 @@ function syncPanelOpenState() {
   publish();
 }
 
-async function animatePanelBounds(target, seq) {
+const PANEL_SURFACE_MS = 200;
+/** Pause between "extend down" and "extend out" native resizes. */
+const PANEL_STAGE_MS = 140;
+
+/** Instant native resize — content fade runs in the renderer inside the same cream shell. */
+function applyPanelBounds(mode) {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  if (prefersReducedMotion()) {
-    win.setBounds(target, false);
-    placePet();
-    return;
-  }
-  const from = win.getBounds();
-  const steps = 8;
-  const durationMs = 220;
-  const stepMs = Math.max(16, Math.round(durationMs / steps));
-  for (let i = 1; i <= steps; i += 1) {
-    if (seq !== panelToggleSeq || !panelWindow || panelWindow.isDestroyed()) return;
-    const t = i / steps;
-    const eased = 1 - (1 - t) * (1 - t);
-    panelWindow.setBounds(
-      {
-        x: Math.round(from.x + (target.x - from.x) * eased),
-        y: Math.round(from.y + (target.y - from.y) * eased),
-        width: Math.round(from.width + (target.width - from.width) * eased),
-        height: Math.round(from.height + (target.height - from.height) * eased),
-      },
-      false,
-    );
-    placePet();
-    await waitMs(stepMs);
-  }
-  if (seq !== panelToggleSeq || !panelWindow || panelWindow.isDestroyed()) return;
-  panelWindow.setBounds(target, false);
+  win.setBounds(panelBounds(mode), false);
   placePet();
 }
 
@@ -296,7 +275,8 @@ function dockWorkArea(point) {
 
 function currentOverlay(open = panelOpen, point) {
   const area = dockWorkArea(point);
-  return overlayLayout(dock.edge, dock.offset, open, area, dockOptions());
+  const mode = open === true ? "open" : open === false ? "closed" : open;
+  return overlayLayout(dock.edge, dock.offset, mode, area, dockOptions());
 }
 
 function panelBounds(open) {
@@ -325,24 +305,37 @@ function setPanelOpen(open) {
     return;
   }
   const seq = ++panelToggleSeq;
+  const reduced = prefersReducedMotion();
   if (next) {
-    // Grow the window first so expanding content has room, then reveal.
-    void animatePanelBounds(panelBounds(true), seq).then(() => {
+    // Extend the bar down, then out (EXP rail stays on the dock edge; pet stays beside it).
+    void (async () => {
+      if (reduced) {
+        applyPanelBounds("open");
+      } else {
+        applyPanelBounds("tall");
+        await waitMs(PANEL_STAGE_MS);
+        if (seq !== panelToggleSeq) return;
+        applyPanelBounds("open");
+      }
       if (seq !== panelToggleSeq) return;
       panelOpen = true;
-      placePet();
       syncPanelOpenState();
-    });
+    })();
     return;
   }
-  // Hide content first, then shrink bounds after the fade.
+  // Fade content inside the shell, then reverse: narrow, then shorten.
   panelOpen = false;
   syncPanelOpenState();
-  const delay = prefersReducedMotion() ? 0 : 200;
-  void waitMs(delay).then(() => {
-    if (seq !== panelToggleSeq) return;
-    return animatePanelBounds(panelBounds(false), seq);
-  });
+  void (async () => {
+    if (!reduced) {
+      await waitMs(PANEL_SURFACE_MS);
+      if (seq !== panelToggleSeq) return;
+      applyPanelBounds("tall");
+      await waitMs(PANEL_STAGE_MS);
+      if (seq !== panelToggleSeq) return;
+    }
+    applyPanelBounds("closed");
+  })();
 }
 
 function petBounds() {
