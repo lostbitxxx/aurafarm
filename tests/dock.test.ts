@@ -3,41 +3,41 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 
 const require = createRequire(import.meta.url);
+type DockMode = boolean | "closed" | "tall" | "open";
+type Area = { x: number; y: number; width: number; height: number };
+type Rect = { x: number; y: number; width: number; height: number };
+
 const {
   nearestEdge,
   overlayLayout,
   panelSize,
   snapOverlay,
 } = require("../desktop/dock.js") as {
-  nearestEdge: (x: number, y: number, area: { x: number; y: number; width: number; height: number }) => string;
+  nearestEdge: (x: number, y: number, area: Area) => string;
   overlayLayout: (
     edge: string,
     offset: number,
-    open: boolean,
-    area: { x: number; y: number; width: number; height: number },
+    open: DockMode,
+    area: Area,
     options?: Record<string, number>,
   ) => {
     edge: string;
     offset: number;
     vertical: boolean;
-    panel: { x: number; y: number; width: number; height: number };
-    pet: { x: number; y: number; width: number; height: number };
+    panel: Rect;
+    pet: Rect;
   };
-  panelSize: (
-    edge: string,
-    open: boolean,
-    area: { x: number; y: number; width: number; height: number },
-  ) => { width: number; height: number };
+  panelSize: (edge: string, open: DockMode, area: Area) => { width: number; height: number };
   snapOverlay: (
-    panelBounds: { x: number; y: number; width: number; height: number },
+    panelBounds: Rect,
     pointer: { x: number; y: number },
-    area: { x: number; y: number; width: number; height: number },
-    open: boolean,
+    area: Area,
+    open: DockMode,
   ) => {
     edge: string;
     offset: number;
-    panel: { x: number; y: number; width: number; height: number };
-    pet: { x: number; y: number; width: number; height: number };
+    panel: Rect;
+    pet: Rect;
   };
 };
 
