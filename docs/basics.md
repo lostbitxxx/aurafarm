@@ -41,28 +41,15 @@ Leave `.env.local` untracked. It holds Supabase keys. The template to copy is `.
 
 ## SQL in the Supabase SQL editor
 
-There is no migration runner in this repo. Paste each file into the Supabase SQL editor and run it yourself.
+There is no migration runner in this repo. Paste each file into the Supabase SQL editor and run it yourself. Environment variables and the rest of setup are in the [README](../README.md).
 
 1. Open the project in the [Supabase dashboard](https://supabase.com/dashboard).
 2. Go to **SQL Editor** and choose **New query**.
 3. Open the next file under [`supabase/migrations`](../supabase/migrations), copy the whole file, and paste it into the editor.
 4. Click **Run**. Wait until it finishes with no error.
-5. Repeat for the next file. Run them in filename order. Each file expects the ones before it.
+5. Repeat for the next file. Run them in filename order. Each file expects the ones before it. Two files can share a number prefix; the full filename still decides the order.
 
-| File | What it adds |
-| --- | --- |
-| `0001_profiles_and_user_pets.sql` | Profiles, pet inventory, equip, and the signup trigger |
-| `0002_study_sessions.sql` | Study sessions and the blocklist |
-| `0003_score_submit_status.sql` | Clearer result when a score is submitted twice |
-| `0004_profile_display_name.sql` | `display_name` on older profile tables |
-| `0005_user_pets_created_at.sql` | `user_pets.created_at` when an older table is missing it |
-| `0006_pet_devices.sql` | Pet installs and the one-time study-session claim |
-| `0007_close_blocked.sql` | Toggle for closing a blocked tab |
-| `0008_pet_shop.sql` | Point balance and `purchase_pet` |
-| `0009_score_wallet.sql` | Finished study scores add points |
-| `0010_score_wallet_points.sql` | Fixes the points update inside the score function |
-
-A new project starts at `0001` and goes through `0010`. A project that already has some of these applied starts at the first file that has not been run.
+A new project starts at `0001_profiles_and_user_pets.sql` and continues through the last file in that folder. A project that already has some of these applied starts at the first file that has not been run.
 
 In the same dashboard, under **Authentication**, turn **Confirm email** off so a new account opens the desk right away. Signup creates the profile and a level 1 baby slime.
 
@@ -95,6 +82,6 @@ npm install
 npm start
 ```
 
-The sprite walks the desktop. Click it to sign in, or paste a launch code from the desk. On startup the pet registers `aurafarm://` for the current user, so `aurafarm://session?code=…` opens this app.
+The sprite walks the desktop. Click it to open the panel, then paste the launch code from the desk. On startup the pet registers `aurafarm://` for the current user, so `aurafarm://session?code=…` opens this app.
 
 `npm run pack` from `desktop/` writes an unsigned Mac zip to `desktop/dist/`. That folder is not committed. Host the zip somewhere else and set `NEXT_PUBLIC_PET_DOWNLOAD_URL` in `.env.local` so the desk download button points at it.
