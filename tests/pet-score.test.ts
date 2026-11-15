@@ -196,15 +196,25 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /Unlock/);
   assert.doesNotMatch(desk, /cancelStudySession/);
   assert.doesNotMatch(desk, /Cancel session/);
+  assert.match(panel, /id="dock-handle"/);
   assert.match(panel, /id="panel-toggle"/);
   assert.match(panel, /id="timer-fill"/);
   assert.match(panel, /#timer-fill[\s\S]*bottom: 0;/);
   assert.match(panel, /#timer-fill[\s\S]*background: #c5ef47;/);
+  assert.match(panel, /aria-label="Move Aurafarm overlay"/);
+  assert.match(panel, /<svg viewBox="0 0 12 12"/);
+  assert.match(panel, /id="dock-chrome"[\s\S]*id="dock-handle"[\s\S]*id="panel-toggle"/);
+  assert.match(panel, /body\.edge-left[\s\S]*body\.edge-right[\s\S]*body\.edge-top[\s\S]*body\.edge-bottom/);
+  assert.match(panel, /cursor: grab/);
   assert.match(
     panel,
     /#timer \{\s*position: absolute;\s*top: 50%;\s*left: 0\.45rem;\s*right: calc\(20px \+ 0\.45rem\);\s*transform: translateY\(-50%\);\s*font-size: 2\.9rem;/,
   );
-  assert.match(script, /panelArrow\.textContent = open \? "›" : "‹"/);
+  assert.match(script, /arrowForEdge\(dockEdge, panelIsOpen\)/);
+  assert.match(script, /dockDragStart/);
+  assert.match(script, /dockDragEnd/);
+  assert.match(script, /dockDragCancel/);
+  assert.match(script, /applyDockEdge/);
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
@@ -223,9 +233,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /ipcMain\.on\("set-pet-visible"/);
   assert.match(main, /let petVisible = true/);
   assert.match(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
-  assert.match(main, /panel\.x - width/);
-  assert.match(main, /area\.y \+ area\.height - height/);
+  assert.match(main, /overlayLayout/);
+  assert.match(main, /snapOverlay/);
+  assert.match(main, /petOriginBesidePanel/);
   assert.match(main, /setIgnoreMouseEvents\(true, \{ forward: true \}\)/);
+  assert.match(main, /dock-drag-start/);
+  assert.match(main, /dock-drag-end/);
+  assert.match(main, /getDisplayNearestPoint/);
+  assert.match(preload, /dockDragStart:/);
+  assert.match(preload, /dockDragEnd:/);
   assert.match(main, /focusable: false/);
   assert.match(main, /skipTaskbar: true/);
   assert.match(main, /placePet\(\)/);
@@ -240,7 +256,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /petOriginForTabStrip/);
   assert.match(main, /await walkPetTo\(aim\.x, aim\.y\)/);
   assert.match(main, /await jumpPet\(\)/);
-  assert.match(main, /if \(petAnimating\) return/);
+  assert.match(main, /if \(petAnimating \|\| dockDrag\) return/);
   assert.match(main, /assetOrigin: API_ORIGIN/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
@@ -261,14 +277,16 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /border-radius: 999px/);
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
-  assert.match(main, /PANEL_COLLAPSED_WIDTH = 24/);
-  assert.match(main, /PANEL_HEIGHT = 275/);
-  assert.match(main, /PANEL_COLLAPSED_HEIGHT = 239/);
-  assert.match(main, /PANEL_EXPANDED_WIDTH = 320/);
-  assert.match(main, /area\.x \+ area\.width - width/);
-  assert.match(main, /area\.y \+ area\.height - height/);
+  assert.match(main, /PANEL_COLLAPSED_WIDTH = DOCK_DEFAULTS\.barThickness/);
+  assert.match(main, /PANEL_HEIGHT = DOCK_DEFAULTS\.panelLength/);
+  assert.match(main, /PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS\.barLength/);
+  assert.match(main, /PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS\.panelSpan/);
+  assert.match(main, /edge: "right"/);
   assert.match(main, /setBounds\(panelBounds\(panelOpen\), true\)/);
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
+  assert.match(main, /beginDockDrag|endDockDrag|cancelDockDrag/);
+  assert.doesNotMatch(main, /writeSecret\("dock/);
+  assert.doesNotMatch(main, /readSecret\("dock/);
   assert.match(main, /function focusPanel\(\)[\s\S]*setPanelOpen\(true\)/);
   assert.match(main, /display-metrics-changed/);
   assert.match(panel, /textarea \{\s*min-height: 2\.25rem;/);
