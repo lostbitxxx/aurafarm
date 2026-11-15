@@ -46,7 +46,8 @@ export function PixelPetArt({
     hat: dropHat ? null : hatId,
     clothes: dropClothes ? null : clothesId,
   });
-  const frameClass = ["pixel-pet-art", className].filter(Boolean).join(" ");
+  const studying = pose === "study1" || pose === "study2";
+  const frameClass = ["pixel-pet-art", studying ? "is-study" : "", className].filter(Boolean).join(" ");
 
   useEffect(() => {
     setDropClothes(false);
