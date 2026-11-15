@@ -1,16 +1,27 @@
 /** Dock edge math for the pet + progress-bar overlay. Pure functions for tests. */
 
-const EDGES = ["left", "right", "top", "bottom"];
-const EDGE_PRIORITY = { left: 0, right: 1, top: 2, bottom: 3 };
+/** Bottom is not a dock target — only left, right, and top. */
+const EDGES = ["left", "right", "top"];
+const EDGE_PRIORITY = { left: 0, right: 1, top: 2 };
+
+function normalizeEdge(edge) {
+  return EDGES.includes(edge) ? edge : "right";
+}
 
 const DEFAULTS = {
-  inset: 4,
+  inset: 8,
+  /** Flush with the work-area bottom; side/top still use `inset`. */
+  insetBottom: 0,
   petSize: 70,
-  barThickness: 24,
-  barLength: 239,
+  /** Outer capsule thickness (vertical width / horizontal height), including chrome pad. */
+  barThickness: 52,
+  /** Track length along the edge (exclusive of handle + level + pad). */
+  barLength: 168,
   panelSpan: 320,
   panelLength: 275,
-  handleSize: 22,
+  handleSize: 28,
+  levelSize: 24,
+  chromePad: 6,
 };
 
 function isVerticalEdge(edge) {
@@ -21,6 +32,19 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function resolveConfig(options = {}) {
+  if (typeof options === "number") {
+    return { ...DEFAULTS, inset: options };
+  }
+  return { ...DEFAULTS, ...options };
+}
+
+function edgeInsets(cfg) {
+  const inset = cfg.inset;
+  const insetBottom = Number.isFinite(cfg.insetBottom) ? cfg.insetBottom : inset;
+  return { inset, insetBottom };
+}
+
 /**
  * Nearest usable edge. Ties break by EDGE_PRIORITY so corners stay stable.
  */
@@ -29,7 +53,6 @@ function nearestEdge(x, y, area) {
     left: x - area.x,
     right: area.x + area.width - x,
     top: y - area.y,
-    bottom: area.y + area.height - y,
   };
   let best = "left";
   let bestDistance = distances.left;
@@ -48,29 +71,37 @@ function nearestEdge(x, y, area) {
   return best;
 }
 
+function collapsedChromeLength(cfg) {
+  return cfg.handleSize + cfg.barLength + cfg.levelSize + cfg.chromePad * 2;
+}
+
 function panelSize(edge, open, area, options = {}) {
-  const cfg = { ...DEFAULTS, ...options };
-  const inset = cfg.inset;
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
   const maxW = Math.max(0, area.width - inset * 2);
-  const maxH = Math.max(0, area.height - inset * 2);
+  const maxH = Math.max(0, area.height - inset - insetBottom);
   if (isVerticalEdge(edge)) {
     if (open) {
       return {
-        width: Math.min(cfg.panelSpan, maxW),
-        height: Math.min(cfg.panelLength, maxH),
+        width: Math.min(cfg.panelSpan + cfg.barThickness, maxW),
+        height: Math.min(Math.max(cfg.panelLength, collapsedChromeLength(cfg)), maxH),
       };
     }
-    const height = Math.min(cfg.handleSize + cfg.barLength, maxH);
-    return { width: Math.min(cfg.barThickness, maxW), height };
+    return {
+      width: Math.min(cfg.barThickness, maxW),
+      height: Math.min(collapsedChromeLength(cfg), maxH),
+    };
   }
   if (open) {
     return {
-      width: Math.min(cfg.panelSpan, maxW),
-      height: Math.min(cfg.panelLength, maxH),
+      width: Math.min(Math.max(cfg.panelSpan, collapsedChromeLength(cfg)), maxW),
+      height: Math.min(cfg.panelLength + cfg.barThickness, maxH),
     };
   }
-  const width = Math.min(cfg.handleSize + cfg.barLength, maxW);
-  return { width, height: Math.min(cfg.barThickness, maxH) };
+  return {
+    width: Math.min(collapsedChromeLength(cfg), maxW),
+    height: Math.min(cfg.barThickness, maxH),
+  };
 }
 
 /**
@@ -78,22 +109,28 @@ function panelSize(edge, open, area, options = {}) {
  * For left/right, offset is panel top relative to area.y + inset.
  * For top/bottom, offset is panel left relative to area.x + inset.
  */
-function clampDockOffset(edge, offset, panel, area, inset = DEFAULTS.inset) {
+function clampDockOffset(edge, offset, panel, area, options = {}) {
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
   if (isVerticalEdge(edge)) {
-    const max = Math.max(0, area.height - inset * 2 - panel.height);
+    const max = Math.max(0, area.height - inset - insetBottom - panel.height);
     return clamp(Math.round(offset), 0, max);
   }
   const max = Math.max(0, area.width - inset * 2 - panel.width);
   return clamp(Math.round(offset), 0, max);
 }
 
-function offsetFromPanelOrigin(edge, panelOrigin, area, inset = DEFAULTS.inset) {
+function offsetFromPanelOrigin(edge, panelOrigin, area, options = {}) {
+  const cfg = resolveConfig(options);
+  const { inset } = edgeInsets(cfg);
   if (isVerticalEdge(edge)) return Math.round(panelOrigin.y - (area.y + inset));
   return Math.round(panelOrigin.x - (area.x + inset));
 }
 
-function panelOriginForDock(edge, offset, panel, area, inset = DEFAULTS.inset) {
-  const clamped = clampDockOffset(edge, offset, panel, area, inset);
+function panelOriginForDock(edge, offset, panel, area, options = {}) {
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
+  const clamped = clampDockOffset(edge, offset, panel, area, cfg);
   if (edge === "left") {
     return { x: area.x + inset, y: area.y + inset + clamped };
   }
@@ -103,10 +140,12 @@ function panelOriginForDock(edge, offset, panel, area, inset = DEFAULTS.inset) {
   if (edge === "top") {
     return { x: area.x + inset + clamped, y: area.y + inset };
   }
-  return { x: area.x + inset + clamped, y: area.y + area.height - inset - panel.height };
+  return { x: area.x + inset + clamped, y: area.y + area.height - insetBottom - panel.height };
 }
 
-function petOriginBesidePanel(edge, panelBounds, petSize, area, inset = DEFAULTS.inset) {
+function petOriginBesidePanel(edge, panelBounds, petSize, area, options = {}) {
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
   const size = Number(petSize) || 0;
   let x;
   let y;
@@ -127,7 +166,7 @@ function petOriginBesidePanel(edge, panelBounds, petSize, area, inset = DEFAULTS
   const maxY = area.y + Math.max(0, area.height - size);
   return {
     x: clamp(Math.round(x), area.x + inset, Math.max(area.x + inset, maxX - inset)),
-    y: clamp(Math.round(y), area.y + inset, Math.max(area.y + inset, maxY - inset)),
+    y: clamp(Math.round(y), area.y + inset, Math.max(area.y + inset, maxY - insetBottom)),
   };
 }
 
@@ -135,20 +174,22 @@ function petOriginBesidePanel(edge, panelBounds, petSize, area, inset = DEFAULTS
  * Full overlay placement for a docked edge + along-edge offset.
  */
 function overlayLayout(edge, offset, open, area, options = {}) {
-  const cfg = { ...DEFAULTS, ...options };
-  const size = panelSize(edge, open, area, cfg);
-  const clampedOffset = clampDockOffset(edge, offset, size, area, cfg.inset);
-  const origin = panelOriginForDock(edge, clampedOffset, size, area, cfg.inset);
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
+  const dockEdge = normalizeEdge(edge);
+  const size = panelSize(dockEdge, open, area, cfg);
+  const clampedOffset = clampDockOffset(dockEdge, offset, size, area, cfg);
+  const origin = panelOriginForDock(dockEdge, clampedOffset, size, area, cfg);
   const panel = { ...origin, ...size };
   const pet = {
-    ...petOriginBesidePanel(edge, panel, cfg.petSize, area, cfg.inset),
+    ...petOriginBesidePanel(dockEdge, panel, cfg.petSize, area, cfg),
     width: cfg.petSize,
-    height: Math.min(cfg.petSize, Math.max(0, area.height - cfg.inset * 2)),
+    height: Math.min(cfg.petSize, Math.max(0, area.height - inset - insetBottom)),
   };
   return {
-    edge,
+    edge: dockEdge,
     offset: clampedOffset,
-    vertical: isVerticalEdge(edge),
+    vertical: isVerticalEdge(dockEdge),
     panel,
     pet,
   };
@@ -158,7 +199,8 @@ function overlayLayout(edge, offset, open, area, options = {}) {
  * Snap a free-floating panel rect to the nearest edge, keeping along-edge place.
  */
 function snapOverlay(panelBounds, pointer, area, open, options = {}) {
-  const cfg = { ...DEFAULTS, ...options };
+  const cfg = resolveConfig(options);
+  const { inset, insetBottom } = edgeInsets(cfg);
   const x = Number.isFinite(pointer?.x) ? pointer.x : panelBounds.x + panelBounds.width / 2;
   const y = Number.isFinite(pointer?.y) ? pointer.y : panelBounds.y + panelBounds.height / 2;
   const edge = nearestEdge(x, y, area);
@@ -166,16 +208,16 @@ function snapOverlay(panelBounds, pointer, area, open, options = {}) {
   let guessOrigin;
   if (isVerticalEdge(edge)) {
     guessOrigin = {
-      x: edge === "left" ? area.x + cfg.inset : area.x + area.width - cfg.inset - size.width,
+      x: edge === "left" ? area.x + inset : area.x + area.width - inset - size.width,
       y: Math.round(panelBounds.y),
     };
   } else {
     guessOrigin = {
       x: Math.round(panelBounds.x),
-      y: edge === "top" ? area.y + cfg.inset : area.y + area.height - cfg.inset - size.height,
+      y: edge === "top" ? area.y + inset : area.y + area.height - insetBottom - size.height,
     };
   }
-  const offset = offsetFromPanelOrigin(edge, guessOrigin, area, cfg.inset);
+  const offset = offsetFromPanelOrigin(edge, guessOrigin, area, cfg);
   return overlayLayout(edge, offset, open, area, cfg);
 }
 
@@ -183,8 +225,10 @@ module.exports = {
   DEFAULTS,
   EDGES,
   clampDockOffset,
+  collapsedChromeLength,
   isVerticalEdge,
   nearestEdge,
+  normalizeEdge,
   offsetFromPanelOrigin,
   overlayLayout,
   panelOriginForDock,

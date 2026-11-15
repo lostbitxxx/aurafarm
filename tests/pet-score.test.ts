@@ -198,26 +198,35 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /Cancel session/);
   assert.match(panel, /id="dock-handle"/);
   assert.match(panel, /id="panel-toggle"/);
-  assert.match(panel, /id="timer-fill"/);
-  assert.match(panel, /#timer-fill[\s\S]*bottom: 0;/);
-  assert.match(panel, /#timer-fill[\s\S]*background: #c5ef47;/);
+  assert.match(panel, /id="exp-track"/);
+  assert.match(panel, /id="exp-fill"/);
+  assert.match(panel, /id="exp-level"/);
+  assert.match(panel, /#exp-fill[\s\S]*bottom: 0;/);
+  assert.match(panel, /#exp-fill[\s\S]*--fill-purple|#9d8db8|fill-purple/);
+  assert.match(panel, /repeating-linear-gradient/);
   assert.match(panel, /aria-label="Move Aurafarm overlay"/);
   assert.match(panel, /<svg viewBox="0 0 12 12"/);
-  assert.match(panel, /id="dock-chrome"[\s\S]*id="dock-handle"[\s\S]*id="panel-toggle"/);
+  assert.match(panel, /id="dock-chrome"[\s\S]*id="dock-handle"[\s\S]*id="panel-toggle"[\s\S]*id="exp-level"/);
   assert.match(panel, /body\.edge-left[\s\S]*body\.edge-right[\s\S]*body\.edge-top[\s\S]*body\.edge-bottom/);
   assert.match(panel, /cursor: grab/);
+  assert.match(panel, /border-radius: 999px/);
+  assert.match(panel, /box-shadow: 2px 3px 0/);
   assert.match(
     panel,
     /#timer \{\s*position: absolute;\s*top: 50%;\s*left: 0\.45rem;\s*right: calc\(20px \+ 0\.45rem\);\s*transform: translateY\(-50%\);\s*font-size: 2\.9rem;/,
   );
-  assert.match(script, /arrowForEdge\(dockEdge, panelIsOpen\)/);
+  assert.match(script, /applyExpBar/);
+  assert.match(script, /xpIntoLevel/);
   assert.match(script, /dockDragStart/);
   assert.match(script, /dockDragEnd/);
   assert.match(script, /dockDragCancel/);
+  assert.match(script, /lostpointercapture/);
   assert.match(script, /applyDockEdge/);
   assert.match(panel, /aria-controls="panel-body"/);
   assert.match(panel, /aria-label="Open Aurafarm"/);
   assert.match(panel, /id="panel-body"/);
+  assert.doesNotMatch(panel, /id="timer-fill"/);
+  assert.doesNotMatch(panel, /id="panel-arrow"/);
   assert.doesNotMatch(panel, /id="pet-lane"/);
   assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);
   assert.match(panel, /id="pet-switch-row"[\s\S]*id="pet-switch-label"[\s\S]*Show pet[\s\S]*id="pet-toggle"/);
@@ -236,6 +245,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /overlayLayout/);
   assert.match(main, /snapOverlay/);
   assert.match(main, /petOriginBesidePanel/);
+  assert.match(main, /nearestEdge/);
+  assert.match(main, /insetBottom/);
+  assert.match(main, /select\("id, pet_type, level, xp"\)/);
+  assert.match(main, /xpIntoLevel/);
+  assert.match(main, /petStatsReady/);
+  assert.match(main, /petDisplayProgress/);
+  assert.match(main, /animatePanelBounds/);
+  assert.match(script, /LV\$\{/);
+  assert.doesNotMatch(script, /textContent = `L\$\{/);
   assert.match(main, /setIgnoreMouseEvents\(true, \{ forward: true \}\)/);
   assert.match(main, /dock-drag-start/);
   assert.match(main, /dock-drag-end/);
@@ -269,7 +287,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(openPanel, /panelBounds\(panelOpen\)/);
   assert.match(panel, /background: #f7f3e8/);
   assert.doesNotMatch(panel, /#10241c/);
-  assert.match(panel, /width: 24px/);
+  assert.match(panel, /width: 40px/);
   assert.match(panel, /padding: 0\.55rem calc\(20px \+ 0\.45rem\) 0\.55rem 0\.45rem/);
   assert.doesNotMatch(panel, /border-right/);
   assert.match(panel, /"Outfit", "Avenir Next", "Segoe UI", sans-serif/);

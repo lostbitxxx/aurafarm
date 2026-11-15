@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell } = require("electron");
+const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
@@ -22,10 +22,12 @@ const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
 const {
   DEFAULTS: DOCK_DEFAULTS,
+  nearestEdge,
   overlayLayout,
   petOriginBesidePanel,
   snapOverlay,
 } = require("./dock");
+const { petDisplayProgress } = require("./xp");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { formatStudyClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
@@ -73,6 +75,7 @@ const PANEL_HEIGHT = DOCK_DEFAULTS.panelLength;
 const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
 const PET_SIZE = DOCK_DEFAULTS.petSize;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
+const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
 let panelWindow = null;
 let panelOpen = false;
@@ -89,13 +92,20 @@ let frontTimer = null;
 let studyClock = null;
 let frontPoll = null;
 let appQuitting = false;
-/** @type {{ edge: "left"|"right"|"top"|"bottom", offset: number }} */
+/** @type {{ edge: "left"|"right"|"top", offset: number }} */
 let dock = { edge: "right", offset: 0 };
 /** @type {null | { grabX: number, grabY: number, width: number, height: number }} */
 let dockDrag = null;
+let panelToggleSeq = 0;
+/** @type {string | null} */
+let statsPetId = null;
+let statsRefreshSeq = 0;
 let state = {
   petType: "baby_slime",
-  level: 1,
+  level: null,
+  xpIntoLevel: null,
+  petStatsReady: false,
+  statsPetId: null,
   status: "Paste a session token.",
   panelOpen: false,
   petVisible: true,
@@ -190,13 +200,84 @@ function setDebug(debug) {
 function dockOptions() {
   return {
     inset: DOCK_INSET,
+    insetBottom: DOCK_INSET_BOTTOM,
     petSize: PET_SIZE,
     barThickness: PANEL_COLLAPSED_WIDTH,
     barLength: PANEL_COLLAPSED_HEIGHT,
     panelSpan: PANEL_EXPANDED_WIDTH,
     panelLength: PANEL_HEIGHT,
     handleSize: DOCK_DEFAULTS.handleSize,
+    levelSize: DOCK_DEFAULTS.levelSize,
+    chromePad: DOCK_DEFAULTS.chromePad,
   };
+}
+
+function applyEquippedPetStats(row) {
+  const display = petDisplayProgress(row);
+  const petType = typeof row?.pet_type === "string" && row.pet_type ? row.pet_type : state.petType;
+  statsPetId = display.petId;
+  state = {
+    ...state,
+    petType,
+    level: display.level,
+    xpIntoLevel: display.xpIntoLevel,
+    petStatsReady: display.ready,
+    statsPetId: display.petId,
+  };
+}
+
+function prefersReducedMotion() {
+  try {
+    if (typeof systemPreferences.getAnimationSettings === "function") {
+      const settings = systemPreferences.getAnimationSettings();
+      if (settings && settings.shouldRenderRichAnimation === false) return true;
+    }
+  } catch {
+    // Fall through to no preference.
+  }
+  return false;
+}
+
+function syncPanelOpenState() {
+  if (state.panelOpen === panelOpen) {
+    publish();
+    return;
+  }
+  state = { ...state, panelOpen };
+  publish();
+}
+
+async function animatePanelBounds(target, seq) {
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return;
+  if (prefersReducedMotion()) {
+    win.setBounds(target, false);
+    placePet();
+    return;
+  }
+  const from = win.getBounds();
+  const steps = 8;
+  const durationMs = 220;
+  const stepMs = Math.max(16, Math.round(durationMs / steps));
+  for (let i = 1; i <= steps; i += 1) {
+    if (seq !== panelToggleSeq || !panelWindow || panelWindow.isDestroyed()) return;
+    const t = i / steps;
+    const eased = 1 - (1 - t) * (1 - t);
+    panelWindow.setBounds(
+      {
+        x: Math.round(from.x + (target.x - from.x) * eased),
+        y: Math.round(from.y + (target.y - from.y) * eased),
+        width: Math.round(from.width + (target.width - from.width) * eased),
+        height: Math.round(from.height + (target.height - from.height) * eased),
+      },
+      false,
+    );
+    placePet();
+    await waitMs(stepMs);
+  }
+  if (seq !== panelToggleSeq || !panelWindow || panelWindow.isDestroyed()) return;
+  panelWindow.setBounds(target, false);
+  placePet();
 }
 
 function dockWorkArea(point) {
@@ -236,12 +317,32 @@ function setDockEdgeState(edge) {
 }
 
 function setPanelOpen(open) {
-  panelOpen = Boolean(open);
-  placePanel();
-  placePet();
-  if (state.panelOpen === panelOpen) return;
-  state = { ...state, panelOpen };
-  publish();
+  const next = Boolean(open);
+  if (next === panelOpen && !dockDrag) {
+    placePanel();
+    placePet();
+    syncPanelOpenState();
+    return;
+  }
+  const seq = ++panelToggleSeq;
+  if (next) {
+    // Grow the window first so expanding content has room, then reveal.
+    void animatePanelBounds(panelBounds(true), seq).then(() => {
+      if (seq !== panelToggleSeq) return;
+      panelOpen = true;
+      placePet();
+      syncPanelOpenState();
+    });
+    return;
+  }
+  // Hide content first, then shrink bounds after the fade.
+  panelOpen = false;
+  syncPanelOpenState();
+  const delay = prefersReducedMotion() ? 0 : 200;
+  void waitMs(delay).then(() => {
+    if (seq !== panelToggleSeq) return;
+    return animatePanelBounds(panelBounds(false), seq);
+  });
 }
 
 function petBounds() {
@@ -252,10 +353,23 @@ function placePet() {
   if (petAnimating || dockDrag) return;
   const win = petWindow;
   if (!win || win.isDestroyed()) return;
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    const panelRect = panelWindow.getBounds();
+    const area = dockWorkArea({
+      x: panelRect.x + panelRect.width / 2,
+      y: panelRect.y + panelRect.height / 2,
+    });
+    const origin = petOriginBesidePanel(dock.edge, panelRect, PET_SIZE, area, dockOptions());
+    win.setBounds(
+      { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
+      false,
+    );
+    return;
+  }
   win.setBounds(petBounds(), true);
 }
 
-function placeOverlayFloating(panelRect) {
+function placeOverlayFloating(panelRect, pointer) {
   if (panelWindow && !panelWindow.isDestroyed()) {
     panelWindow.setBounds(
       {
@@ -268,11 +382,11 @@ function placeOverlayFloating(panelRect) {
     );
   }
   if (!petWindow || petWindow.isDestroyed() || petAnimating) return;
-  const area = dockWorkArea({
-    x: panelRect.x + panelRect.width / 2,
-    y: panelRect.y + panelRect.height / 2,
-  });
-  const origin = petOriginBesidePanel(dock.edge, panelRect, PET_SIZE, area, DOCK_INSET);
+  const cx = Number.isFinite(pointer?.x) ? pointer.x : panelRect.x + panelRect.width / 2;
+  const cy = Number.isFinite(pointer?.y) ? pointer.y : panelRect.y + panelRect.height / 2;
+  const area = dockWorkArea({ x: cx, y: cy });
+  const edge = nearestEdge(cx, cy, area);
+  const origin = petOriginBesidePanel(edge, panelRect, PET_SIZE, area, dockOptions());
   petWindow.setBounds(
     { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
     false,
@@ -297,7 +411,7 @@ function moveDockDrag(screenX, screenY) {
   if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return;
   const x = Math.round(screenX - dockDrag.grabX);
   const y = Math.round(screenY - dockDrag.grabY);
-  placeOverlayFloating({ x, y, width: dockDrag.width, height: dockDrag.height });
+  placeOverlayFloating({ x, y, width: dockDrag.width, height: dockDrag.height }, { x: screenX, y: screenY });
 }
 
 function endDockDrag(screenX, screenY) {
@@ -431,10 +545,21 @@ function setPetVisible(visible) {
   publish();
 }
 
+function hardenOverlayWindow(win) {
+  if (!win || win.isDestroyed()) return;
+  win.setAlwaysOnTop(true, "screen-saver");
+  if (process.platform === "darwin") {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
+}
+
 function openPet() {
   if (petWindow && !petWindow.isDestroyed()) {
     placePet();
-    if (petVisible) petWindow.showInactive();
+    if (petVisible) {
+      hardenOverlayWindow(petWindow);
+      petWindow.showInactive();
+    }
     return;
   }
   const bounds = petBounds();
@@ -457,6 +582,7 @@ function openPet() {
       nodeIntegration: false,
     },
   });
+  hardenOverlayWindow(petWindow);
   petWindow.setIgnoreMouseEvents(true, { forward: true });
   petWindow.loadFile(path.join(__dirname, "pet.html"));
   petWindow.on("closed", () => {
@@ -490,12 +616,14 @@ function pasteSessionCode(win) {
 
 function openPanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
+    hardenOverlayWindow(panelWindow);
     panelWindow.show();
     return;
   }
   const bounds = panelBounds(panelOpen);
   panelWindow = new BrowserWindow({
     ...bounds,
+    show: true,
     frame: false,
     transparent: true,
     movable: false,
@@ -510,6 +638,7 @@ function openPanel() {
       nodeIntegration: false,
     },
   });
+  hardenOverlayWindow(panelWindow);
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
   panelWindow.webContents.on("context-menu", (_event, params) => {
     const win = panelWindow;
@@ -529,7 +658,11 @@ function openPanel() {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
   });
-  panelWindow.webContents.once("did-finish-load", publish);
+  panelWindow.webContents.once("did-finish-load", () => {
+    hardenOverlayWindow(panelWindow);
+    if (panelWindow && !panelWindow.isDestroyed()) panelWindow.show();
+    publish();
+  });
 }
 
 async function restoreSession() {
@@ -579,11 +712,13 @@ async function refreshPet() {
     return;
   }
   await touchPetPresence(true);
+  const refreshSeq = ++statsRefreshSeq;
   const { data, error } = await supabase
     .from("user_pets")
-    .select("pet_type, level")
+    .select("id, pet_type, level, xp")
     .eq("is_desktop_active", true)
     .maybeSingle();
+  if (refreshSeq !== statsRefreshSeq) return;
   if (error) {
     petLog(`[pet] equipped pet query failed: ${error.message}`);
     setStatus(error.message);
@@ -593,10 +728,10 @@ async function refreshPet() {
     petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
     return;
   }
+  applyEquippedPetStats(data);
   petLog(
-    `[pet] equipped ${data.pet_type} level ${data.level} for ${sessionData.session.user?.id ?? "unknown"}`,
+    `[pet] equipped ${state.petType} level ${state.level ?? "?"} into ${state.xpIntoLevel ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
   );
-  state = { ...state, petType: data.pet_type, level: data.level };
   publish();
 }
 
@@ -760,17 +895,15 @@ function beginFrontWatch(body, browser = "") {
   };
   if (body.pet_type) {
     petLog(
-      `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level}`,
+      `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level ?? "?"}`,
     );
-    state = {
-      ...state,
-      petType: body.pet_type,
-      level: typeof body.level === "number" ? body.level : state.level,
-    };
+    // Sprite type can update immediately; level/XP wait for refreshPet so fill matches the desk.
+    state = { ...state, petType: body.pet_type };
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
   state = { ...state, finishNote: "" };
+  void refreshPet();
   setDebug(
     describeCloseDebug({
       session: true,
@@ -1199,10 +1332,15 @@ if (!gotLock) {
       placePet();
     });
     {
-      const area = screen.getPrimaryDisplay().workArea;
+      const display = screen.getPrimaryDisplay();
+      const area = display.workArea;
+      console.log(
+        `[pet] display bounds=${JSON.stringify(display.bounds)} workArea=${JSON.stringify(area)} scale=${display.scaleFactor}`,
+      );
       const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, false, area, dockOptions());
       dock = { edge: "right", offset: bottomRight.offset };
       state = { ...state, dockEdge: "right" };
+      console.log(`[pet] dock panel=${JSON.stringify(bottomRight.panel)} pet=${JSON.stringify(bottomRight.pet)}`);
     }
     openPanel();
     openPet();

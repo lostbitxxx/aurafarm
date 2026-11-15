@@ -6,8 +6,8 @@ const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
 const bubble = document.getElementById("bubble");
 const toggle = document.getElementById("panel-toggle");
-const panelArrow = document.getElementById("panel-arrow");
-const timerFill = document.getElementById("timer-fill");
+const expFill = document.getElementById("exp-fill");
+const expLevel = document.getElementById("exp-level");
 const petToggle = document.getElementById("pet-toggle");
 const tokenForm = document.getElementById("session-token");
 const tokenField = document.querySelector("#session-token textarea");
@@ -25,17 +25,11 @@ function isHorizontalEdge(edge) {
 }
 
 function applyDockEdge(edge) {
-  const next = EDGE_CLASSES.includes(`edge-${edge}`) ? edge : "right";
+  // Bottom is not a dock target; fall back to right.
+  const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
   dockEdge = next;
   for (const name of EDGE_CLASSES) document.body.classList.toggle(name, name === `edge-${next}`);
   applyPanelOpen(panelIsOpen);
-}
-
-function arrowForEdge(edge, open) {
-  if (edge === "left") return open ? "‹" : "›";
-  if (edge === "top") return open ? "˄" : "˅";
-  if (edge === "bottom") return open ? "˅" : "˄";
-  return open ? "›" : "‹";
 }
 
 function applyPanelOpen(open) {
@@ -43,29 +37,41 @@ function applyPanelOpen(open) {
   document.body.classList.toggle("is-open", panelIsOpen);
   toggle.setAttribute("aria-expanded", panelIsOpen ? "true" : "false");
   toggle.setAttribute("aria-label", panelIsOpen ? "Close Aurafarm" : "Open Aurafarm");
-  panelArrow.textContent = arrowForEdge(dockEdge, panelIsOpen);
 }
 
 function applyPetVisible(visible) {
   petToggle.setAttribute("aria-checked", visible ? "true" : "false");
 }
 
-function applyTimerFill(progress) {
-  const pct = `${Math.round((Number.isFinite(progress) ? progress : 0) * 100)}%`;
-  if (isHorizontalEdge(dockEdge)) {
-    timerFill.style.width = pct;
-    timerFill.style.height = "100%";
-    timerFill.style.left = "0";
-    timerFill.style.right = "auto";
-    timerFill.style.top = "0";
-    timerFill.style.bottom = "0";
+function applyExpBar(state) {
+  const ready = state.petStatsReady === true;
+  const level = state.level;
+  if (ready && typeof level === "number" && Number.isFinite(level) && level >= 1) {
+    expLevel.textContent = `LV${Math.floor(level)}`;
   } else {
-    timerFill.style.height = pct;
-    timerFill.style.width = "auto";
-    timerFill.style.left = "0";
-    timerFill.style.right = "0";
-    timerFill.style.bottom = "0";
-    timerFill.style.top = "auto";
+    expLevel.textContent = "";
+  }
+
+  const into = state.xpIntoLevel;
+  const pct =
+    ready && typeof into === "number" && Number.isFinite(into)
+      ? `${Math.max(0, Math.min(100, Math.round(into)))}%`
+      : "0%";
+
+  if (isHorizontalEdge(dockEdge)) {
+    expFill.style.width = pct;
+    expFill.style.height = "100%";
+    expFill.style.left = "0";
+    expFill.style.right = "auto";
+    expFill.style.top = "0";
+    expFill.style.bottom = "0";
+  } else {
+    expFill.style.height = pct;
+    expFill.style.width = "auto";
+    expFill.style.left = "0";
+    expFill.style.right = "0";
+    expFill.style.bottom = "0";
+    expFill.style.top = "auto";
   }
 }
 
@@ -74,16 +80,17 @@ function screenPoint(event) {
 }
 
 function clearDockDrag() {
-  if (activePointerId !== null && dockHandle.hasPointerCapture?.(activePointerId)) {
+  const pointerId = activePointerId;
+  activePointerId = null;
+  dockDragging = false;
+  dockMoved = false;
+  if (pointerId !== null && dockHandle.hasPointerCapture?.(pointerId)) {
     try {
-      dockHandle.releasePointerCapture(activePointerId);
+      dockHandle.releasePointerCapture(pointerId);
     } catch {
       // Capture may already be cleared.
     }
   }
-  activePointerId = null;
-  dockDragging = false;
-  dockMoved = false;
 }
 
 toggle.addEventListener("click", () => {
@@ -121,7 +128,6 @@ function finishDockPointer(event, cancelled) {
   if (cancelled) window.pet.dockDragCancel();
   else window.pet.dockDragEnd(point.x, point.y);
   clearDockDrag();
-  // Suppress a synthetic click after a drag gesture.
   if (moved) {
     const blockClick = (clickEvent) => {
       clickEvent.preventDefault();
@@ -138,6 +144,16 @@ dockHandle.addEventListener("pointerup", (event) => {
 
 dockHandle.addEventListener("pointercancel", (event) => {
   finishDockPointer(event, true);
+});
+
+dockHandle.addEventListener("lostpointercapture", (event) => {
+  // pointerup/cancel already cleared state; only recover unexpected capture loss.
+  if (!dockDragging) return;
+  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  window.pet.dockDragCancel();
+  activePointerId = null;
+  dockDragging = false;
+  dockMoved = false;
 });
 
 window.addEventListener("blur", () => {
@@ -195,10 +211,10 @@ window.pet.onState((state) => {
   if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   if (typeof state.petVisible === "boolean") applyPetVisible(state.petVisible);
+  applyExpBar(state);
   timer.hidden = !state.remainingLabel;
   tokenForm.hidden = Boolean(state.remainingLabel);
   timer.textContent = state.remainingLabel || "";
-  applyTimerFill(Number(state.timerProgress));
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish focused session";
