@@ -154,6 +154,7 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.match(dialog, /FarmCrew List/);
   assert.match(dialog, /Join FarmCrew/);
   assert.match(dialog, /Create FarmCrew/);
+  assert.doesNotMatch(dialog, /Wants to join/);
   assert.match(dialog, /aria-label="FarmCrew code"/);
   assert.match(dialog, /Send Request/);
   assert.match(dialog, /href=\{`\/farmcrew\/\$\{crew\.crewId\}`\}[\s\S]*Visit/);

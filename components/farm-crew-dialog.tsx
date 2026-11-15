@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import {
-  acceptFarmCrewRequest,
   createFarmCrew,
-  declineFarmCrewRequest,
   loadFarmCrewDialog,
   requestFarmCrewByCode,
   requestPublicFarmCrew,
 } from "@/lib/actions/farm-crew";
-import type { FarmCrewCard, FarmCrewRequest, PublicFarmCrewCard } from "@/lib/farm-crew";
+import type { FarmCrewCard, PublicFarmCrewCard } from "@/lib/farm-crew";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
 
@@ -29,7 +27,6 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<FarmCrewTab>("list");
   const [crews, setCrews] = useState<FarmCrewCard[]>([]);
   const [publicCrews, setPublicCrews] = useState<PublicFarmCrewCard[]>([]);
-  const [requests, setRequests] = useState<FarmCrewRequest[]>([]);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -44,7 +41,6 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
     if (result.error) setError(result.error);
     setCrews(result.crews);
     setPublicCrews(result.publicCrews);
-    setRequests(result.requests);
   }
 
   useEffect(() => {
@@ -55,7 +51,6 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
       if (result.error) setError(result.error);
       setCrews(result.crews);
       setPublicCrews(result.publicCrews);
-      setRequests(result.requests);
     }
     void first();
     return () => {
@@ -112,34 +107,6 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     setNotice(`Request sent to ${result.crewName}.`);
-    await load();
-  }
-
-  async function onAccept(request: FarmCrewRequest) {
-    if (pending) return;
-    const key = `${request.crewId}:${request.userId}`;
-    setPending(key);
-    setError(null);
-    const result = await acceptFarmCrewRequest(request.crewId, request.userId);
-    setPending(null);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    await load();
-  }
-
-  async function onDecline(request: FarmCrewRequest) {
-    if (pending) return;
-    const key = `${request.crewId}:${request.userId}`;
-    setPending(key);
-    setError(null);
-    const result = await declineFarmCrewRequest(request.crewId, request.userId);
-    setPending(null);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
     await load();
   }
 
@@ -202,36 +169,6 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
         {notice ? <p className="panel-hint">{notice}</p> : null}
         {tab === "list" ? (
           <>
-            {requests.length > 0 ? (
-              <ul className="dialog-list">
-                {requests.map((request) => (
-                  <li key={`${request.crewId}:${request.userId}`} className="dialog-row">
-                    <div className="crew-copy">
-                      <strong>{request.displayName}</strong>
-                      <span className="panel-hint">Wants to join {request.crewName}</span>
-                    </div>
-                    <div className="dialog-row-actions">
-                      <button
-                        type="button"
-                        className="button button-small button-accept"
-                        disabled={pending !== null}
-                        onClick={() => onAccept(request)}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-small button-decline"
-                        disabled={pending !== null}
-                        onClick={() => onDecline(request)}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
             {crews.length > 0 ? (
               <ul className="dialog-list">
                 {crews.map((crew) => (

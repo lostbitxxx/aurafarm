@@ -11,7 +11,6 @@ import {
   farmCrewJoinRequestsFromRows,
   farmCrewMembersFromRows,
   farmCrewMessage,
-  farmCrewRequestsFromRows,
   normalizeCrewCode,
   publicFarmCrewsFromRows,
   type CrewOccupant,
@@ -19,7 +18,6 @@ import {
   type FarmCrewDetail,
   type FarmCrewJoinRequest,
   type FarmCrewMember,
-  type FarmCrewRequest,
   type PublicFarmCrewCard,
 } from "@/lib/farm-crew";
 import { touchSocialPresence } from "@/lib/actions/friends";
@@ -43,24 +41,21 @@ export async function loadFarmCrewDialog(): Promise<{
   error: string;
   crews: FarmCrewCard[];
   publicCrews: PublicFarmCrewCard[];
-  requests: FarmCrewRequest[];
 }> {
   const client = await signedInClient();
   if ("error" in client) {
-    return { error: client.error ?? "Sign in to use FarmCrew.", crews: [], publicCrews: [], requests: [] };
+    return { error: client.error ?? "Sign in to use FarmCrew.", crews: [], publicCrews: [] };
   }
 
-  const [mine, open, waiting] = await Promise.all([
+  const [mine, open] = await Promise.all([
     client.supabase.rpc("list_my_farm_crews"),
     client.supabase.rpc("list_public_farm_crews"),
-    client.supabase.rpc("list_farm_crew_requests"),
   ]);
-  const error = mine.error ?? open.error ?? waiting.error;
+  const error = mine.error ?? open.error;
   return {
     error: error ? farmCrewMessage(error.message) : "",
     crews: farmCrewCardsFromRows(rows(mine.data)),
     publicCrews: publicFarmCrewsFromRows(rows(open.data)),
-    requests: farmCrewRequestsFromRows(rows(waiting.data)),
   };
 }
 
