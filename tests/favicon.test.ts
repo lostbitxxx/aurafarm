@@ -4,10 +4,13 @@ import { inflateSync } from "node:zlib";
 import { test } from "node:test";
 
 const iconSvg = readFileSync(new URL("../app/icon.svg", import.meta.url), "utf8");
-const petSvg = readFileSync(
-  new URL("../public/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg", import.meta.url),
-  "utf8",
-);
+const sage = new URL("../public/pet-assets/pets/cat/colors/sage/", import.meta.url);
+const petSvg = [
+  readFileSync(new URL("shadow.svg", sage), "utf8"),
+  readFileSync(new URL("legs/stand.svg", sage), "utf8"),
+  readFileSync(new URL("body.svg", sage), "utf8"),
+  readFileSync(new URL("face/normal.svg", sage), "utf8"),
+].join("");
 
 test("the favicon draws the sage cat used for the starter pet", () => {
   assert.match(iconSvg, /fill="#14211a"/);

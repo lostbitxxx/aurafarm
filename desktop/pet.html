@@ -12,17 +12,43 @@
         background: transparent;
         overflow: hidden;
       }
-      #pet-sprite {
+      #pet-stack {
+        position: relative;
         display: block;
         width: 70px;
         height: 70px;
-        image-rendering: pixelated;
         pointer-events: none;
+      }
+      #pet-stack.is-study .pet-figure {
+        inset: 8% 17% 28% 17%;
+      }
+      .pet-figure {
+        position: absolute;
+        inset: 0;
+      }
+      .pet-layer {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
       }
     </style>
   </head>
   <body>
-    <img id="pet-sprite" alt="" draggable="false" />
+    <div id="pet-stack" aria-hidden="true">
+      <img class="pet-layer is-floor" data-layer="floor" alt="" draggable="false" hidden />
+      <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
+      <span class="pet-figure">
+        <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
+        <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
+        <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
+        <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
+      </span>
+      <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
+      <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />
+    </div>
     <script src="pet-art.js"></script>
     <script src="pet.js"></script>
   </body>

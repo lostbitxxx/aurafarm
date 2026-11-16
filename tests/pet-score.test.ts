@@ -233,7 +233,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petPage, /background: transparent/);
   assert.match(petPage, /width: 70px/);
   assert.match(petPage, /height: 70px/);
-  assert.match(petScript, /plainPetPath\(shownPet, shownPose\)/);
+  assert.match(petScript, /plainPetStack\(shownPet, shownPose\)/);
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(main, /function closeFrontTab/);
   assert.match(main, /readFrontWindowBounds/);
@@ -317,10 +317,10 @@ test("the pet aims beside the traffic lights on the tab strip", () => {
 });
 
 test("a plain pet uses the default species sprite", () => {
-  assert.equal(plainPetPath("baby_slime", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
-  assert.equal(plainPetPath("lantern_moth", "walk1"), "/pet-assets/pets/bunny/lavender/no-hat-no-clothes/walk1.svg");
-  assert.equal(plainPetPath("river_newt", "walk2"), "/pet-assets/pets/cat/honey/no-hat-no-clothes/walk2.svg");
-  assert.equal(plainPetPath("unknown", "idle"), "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg");
+  assert.equal(plainPetPath("baby_slime", "idle"), "/pet-assets/pets/cat/colors/sage/body.svg");
+  assert.equal(plainPetPath("lantern_moth", "walk1"), "/pet-assets/pets/bunny/colors/lavender/body.svg");
+  assert.equal(plainPetPath("river_newt", "walk2"), "/pet-assets/pets/cat/colors/honey/body.svg");
+  assert.equal(plainPetPath("unknown", "idle"), "/pet-assets/pets/cat/colors/sage/body.svg");
   assert.equal(clampPetX(-4, 200, 70), 0);
   assert.equal(clampPetX(180, 200, 70), 130);
   assert.equal(clampPetX(40, 200, 70), 40);

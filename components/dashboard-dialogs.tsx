@@ -17,7 +17,6 @@ import {
 import { applyPetClothes, applyPetColor, applyPetHat, buyPet, equipPetToDesktop } from "@/lib/actions/pets";
 import {
   EQUIP_DURING_SESSION_NOTE,
-  ROOM_PLACEMENT_NOTE,
   sampleAccessoryName,
   SAMPLE_CLOTHES,
   SAMPLE_COLORS,
@@ -288,7 +287,7 @@ function OwnedAccessoryPanel({
   onSelectNone,
 }: {
   previewItems: readonly PreviewReward[];
-  legacyItems: readonly { id: string; name: string }[];
+  legacyItems: readonly { id: string; name: string; icon: string }[];
   legacyKind: "hat" | "clothes";
   noneSelected: boolean;
   onApply: (id: string) => void;
@@ -337,12 +336,13 @@ function OwnedAccessoryPanel({
         {legacyItems.map((item) => (
           <li key={item.id}>
             <button type="button" className="collection-color" onClick={() => onApply(item.id)}>
-              <PixelPetArt
-                petType="baby_slime"
-                hat={legacyKind === "hat" ? item.id : null}
-                clothes={legacyKind === "clothes" ? item.id : null}
-                className="dialog-pet-art"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="collection-accessory-art"
+                src={item.icon}
                 alt=""
+                draggable={false}
+                style={{ imageRendering: "pixelated" }}
               />
               <strong>{item.name}</strong>
             </button>
@@ -601,9 +601,7 @@ export function InventoryDialog({
   }
 
   return (
-    <FarmDialog title="Inventory" onClose={onClose} wide>
-      <p className="panel-hint">Equip chooses the desktop companion. Room placement is separate.</p>
-      <p className="panel-hint">{ROOM_PLACEMENT_NOTE}</p>
+    <FarmDialog title="My Pets" onClose={onClose} wide>
       {sessionActive ? <p className="panel-hint">{EQUIP_DURING_SESSION_NOTE}</p> : null}
       {error ? (
         <p className="form-error" role="alert">

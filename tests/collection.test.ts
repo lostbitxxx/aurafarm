@@ -2,16 +2,28 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { previewRewards } from "../lib/collection-catalog";
-import { petAssetPath, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS, sampleAccessoryName, sampleClothes, sampleColor, sampleHat } from "../lib/pet-assets";
+import {
+  petAssetPath,
+  petStackLayers,
+  SAMPLE_CLOTHES,
+  SAMPLE_COLORS,
+  SAMPLE_HATS,
+  sampleAccessoryName,
+  sampleClothes,
+  sampleColor,
+  sampleHat,
+  wornClothesAsset,
+  wornHatAsset,
+} from "../lib/pet-assets";
 
 test("a saved color replaces the pet type default", () => {
   assert.equal(
     petAssetPath("baby_slime", "idle"),
-    "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
+    "/pet-assets/pets/cat/colors/sage/body.svg",
   );
   assert.equal(
     petAssetPath("baby_slime", "idle", { color: "rose" }),
-    "/pet-assets/pets/cat/rose/no-hat-no-clothes/idle.svg",
+    "/pet-assets/pets/cat/colors/rose/body.svg",
   );
   assert.equal(sampleColor("rose"), "rose");
   assert.equal(sampleColor("sage"), "sage");
@@ -60,15 +72,10 @@ test("sample colors are owned once per account and refused when missing", () => 
   assert.match(apply, /security invoker/);
 });
 
-test("a saved hat uses its folder and an empty hat does not", () => {
-  assert.equal(
-    petAssetPath("baby_slime", "idle", { hat: "hat_a" }),
-    "/pet-assets/pets/cat/sage/hat_a-no-clothes/idle.svg",
-  );
-  assert.equal(
-    petAssetPath("baby_slime", "idle", { hat: null }),
-    "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
-  );
+test("a saved hat uses a worn overlay and an empty hat does not", () => {
+  assert.equal(wornHatAsset("hat_a"), "/pet-assets/accessories/worn/hats/hat_a.svg");
+  assert.equal(petStackLayers("baby_slime", "idle", { hat: "hat_a" }).hat, "/pet-assets/accessories/worn/hats/hat_a.svg");
+  assert.equal(petStackLayers("baby_slime", "idle", { hat: null }).hat, null);
   assert.equal(sampleHat("hat_a"), "hat_a");
   assert.equal(sampleHat("hat_c"), null);
   assert.equal(sampleHat("forest"), null);
@@ -81,20 +88,21 @@ test("a saved hat uses its folder and an empty hat does not", () => {
 test("lettered hats and clothes use ordinary names", () => {
   assert.deepEqual(
     SAMPLE_HATS.map((hat) => hat.name),
-    ["Forest hat", "Blue hat"],
+    ["Forest Ranger: Green Hat", "Sky Explorer: Blue Hat"],
   );
   assert.deepEqual(
     SAMPLE_CLOTHES.map((clothes) => clothes.name),
-    ["Blue vest", "Brown vest"],
+    ["Sky Explorer: Blue Vest", "Forest Ranger: Brown Vest"],
   );
-  assert.equal(sampleAccessoryName("hat", "hat_a"), "Forest hat");
-  assert.equal(sampleAccessoryName("hat", "hat_b"), "Blue hat");
-  assert.equal(sampleAccessoryName("clothes", "clothes_a"), "Blue vest");
-  assert.equal(sampleAccessoryName("clothes", "clothes_b"), "Brown vest");
+  assert.equal(sampleAccessoryName("hat", "hat_a"), "Forest Ranger: Green Hat");
+  assert.equal(sampleAccessoryName("hat", "hat_b"), "Sky Explorer: Blue Hat");
+  assert.equal(sampleAccessoryName("clothes", "clothes_a"), "Sky Explorer: Blue Vest");
+  assert.equal(sampleAccessoryName("clothes", "clothes_b"), "Forest Ranger: Brown Vest");
   assert.equal(sampleAccessoryName("hat", "nope"), null);
   for (const item of [...SAMPLE_HATS, ...SAMPLE_CLOTHES]) {
     assert.ok(item.name.length <= 32);
     assert.notEqual(item.name, item.id);
+    assert.match(item.icon, /^\/pet-assets\/accessories\//);
   }
 
   const dialogs = readFileSync(new URL("../components/dashboard-dialogs.tsx", import.meta.url), "utf8");
@@ -138,19 +146,15 @@ test("hat ids are owned once per account and pets stay without a hat", () => {
   assert.match(apply, /security invoker/);
 });
 
-test("a saved outfit uses its folder and empty clothes do not", () => {
+test("a saved outfit uses worn overlays and empty clothes do not", () => {
   assert.equal(
-    petAssetPath("baby_slime", "idle", { clothes: "clothes_a" }),
-    "/pet-assets/pets/cat/sage/no-hat-clothes_a/idle.svg",
+    wornClothesAsset("clothes_a", "baby_slime"),
+    "/pet-assets/accessories/worn/clothes_a/cat.svg",
   );
-  assert.equal(
-    petAssetPath("baby_slime", "idle", { hat: "hat_a", clothes: "clothes_a" }),
-    "/pet-assets/pets/cat/sage/hat_a-clothes_a/idle.svg",
-  );
-  assert.equal(
-    petAssetPath("baby_slime", "idle", { clothes: null }),
-    "/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg",
-  );
+  const dressed = petStackLayers("baby_slime", "idle", { hat: "hat_a", clothes: "clothes_a" });
+  assert.equal(dressed.clothes, "/pet-assets/accessories/worn/clothes_a/cat.svg");
+  assert.equal(dressed.hat, "/pet-assets/accessories/worn/hats/hat_a.svg");
+  assert.equal(petStackLayers("baby_slime", "idle", { clothes: null }).clothes, null);
   assert.equal(sampleClothes("clothes_a"), "clothes_a");
   assert.equal(sampleClothes("clothes_c"), null);
   assert.equal(sampleClothes("blue-vest"), null);

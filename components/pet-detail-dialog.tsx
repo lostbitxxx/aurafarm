@@ -376,13 +376,13 @@ function PetAccessoryPicker({
                 disabled={pendingKey !== null}
                 onClick={() => onChoose(item.id)}
               >
-                <PixelPetArt
-                  petType={pet.pet_type}
-                  color={pet.color}
-                  hat={kind === "hat" ? item.id : pet.hat}
-                  clothes={kind === "clothes" ? item.id : pet.clothes}
-                  className="dialog-pet-art"
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="collection-accessory-art"
+                  src={item.icon}
                   alt=""
+                  draggable={false}
+                  style={{ imageRendering: "pixelated" }}
                 />
                 <strong>{pendingKey === item.id ? "…" : item.name}</strong>
               </button>

@@ -2024,11 +2024,29 @@ button.dialog-row {
   display: block;
 }
 
-.pixel-pet > .pixel-pet-body {
+.pixel-pet-figure {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.pixel-pet.is-study .pixel-pet-figure {
+  /* Lift the pet onto the chair seat inside the 64×64 study stage. */
+  inset: 8% 17% 28% 17%;
+}
+
+.pixel-pet-layer {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: none;
   image-rendering: pixelated;
+}
+
+.pixel-pet-layer.is-body {
+  pointer-events: auto;
 }
 
 .pixel-pet-accessory {
@@ -2042,34 +2060,21 @@ button.dialog-row {
 }
 
 .pixel-pet-accessory.is-hat {
-  top: 0;
+  /* Catalogue / collection hats sit in mid-canvas; pin to the head. */
+  top: -6%;
+  width: 72%;
+  height: 72%;
+}
+
+.pixel-pet-layer.is-worn-hat {
+  /* Sample hats already drawn on the head in 42×42 space. */
+  inset: 0;
 }
 
 .pixel-pet-accessory.is-clothes {
   bottom: 0;
   width: 70%;
   height: 70%;
-}
-
-.pixel-pet-accessory.is-worn-clothes {
-  inset: 0;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform: none;
-}
-
-/* Study art is 64x64. The pet is the 42x42 standing sprite at translate(11 3). */
-.pixel-pet.is-study .pixel-pet-accessory.is-worn-clothes,
-.pixel-pet.is-study .pixel-pet-accessory.is-hat,
-.pixel-pet.is-study .pixel-pet-accessory.is-clothes {
-  inset: auto;
-  left: calc(11 / 64 * 100%);
-  top: calc(3 / 64 * 100%);
-  width: calc(42 / 64 * 100%);
-  height: calc(42 / 64 * 100%);
-  transform: none;
 }
 
 .pixel-pet-art.is-walking {
