@@ -11,12 +11,15 @@ import {
   AchievementsDialog,
   CollectionDialog,
   EditPlanDialog,
+  HistoryDialog,
   InventoryDialog,
   ShopDialog,
 } from "./dashboard-dialogs";
+import { AdminReset } from "./admin-reset";
 import { FarmCrewDialog } from "./farm-crew-dialog";
 import { FriendsDialog } from "./friends-dialog";
 import { LeaderboardDialog } from "./leaderboard-dialog";
+import { PetStatus } from "./pet-status";
 import { SocialPresence } from "./social-presence";
 import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
@@ -26,19 +29,15 @@ import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
 import {
-  countSessionsInLocalMonth,
-  countSessionsOnLocalDay,
   displayStreakCount,
   farmerLocalDay,
-  monthlyPlanEncouragement,
-  monthlyPlanPercent,
   subscribeFarmerLocalDay,
   experienceProgress,
   type ActiveStudySession,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
-import { modeLabel, type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
+import { type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
 
 function roomStorageKey(userId: string) {
@@ -87,11 +86,11 @@ export function DashboardScreen({
   closeBlocked,
   closeBlockedError,
   downloadUrl,
-  studyMode,
+  studyMode: _studyMode,
   preferredSessionMinutes,
-  monthlySessionGoal,
-  planSessions,
-  dailySessionGoal,
+  monthlySessionGoal: _monthlySessionGoal,
+  planSessions: _planSessions,
+  dailySessionGoal: _dailySessionGoal,
   studyPlan,
   friendCode,
   friendInvite,
@@ -149,6 +148,8 @@ export function DashboardScreen({
     | "social-settings"
     | "leaderboard"
     | "song"
+    | "download"
+    | "dev-tools"
     | null
   >(null);
   const tour = useDeskTutorial(userId, dialog);
@@ -174,8 +175,6 @@ export function DashboardScreen({
     farmerLocalDay,
     () => "1970-01-01",
   );
-  const monthlySessionsCompleted = countSessionsInLocalMonth(planSessions, todayLocal);
-  const dailySessionsCompleted = countSessionsOnLocalDay(planSessions, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
@@ -398,6 +397,9 @@ export function DashboardScreen({
         onOpenSocialSettings={() => showSection("social-settings")}
         onOpenLeaderboard={() => showSection("leaderboard")}
         onOpenSong={() => showSection("song")}
+        onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
+        onOpenDownload={() => setDialog("download")}
+        onOpenDevTools={() => setDialog("dev-tools")}
         pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
         socialPinned={tour.socialPinned && !tour.covered}
@@ -411,65 +413,6 @@ export function DashboardScreen({
         open={dialog === "song"}
         onClose={() => setDialog(null)}
       />
-      {studyMode && monthlySessionGoal && dailySessionGoal && preferredSessionMinutes ? (
-        <div className="plan-row">
-          <section
-            className={
-              monthlySessionsCompleted >= monthlySessionGoal
-                ? "plan-banner is-complete"
-                : dailySessionsCompleted >= dailySessionGoal
-                  ? "plan-banner is-daily-done"
-                  : "plan-banner"
-            }
-            aria-label="Study plan"
-          >
-            <div
-              className="plan-banner-track"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={monthlySessionGoal}
-              aria-valuenow={Math.min(monthlySessionsCompleted, monthlySessionGoal)}
-              aria-label={`Study plan progress: ${dailySessionsCompleted} of ${dailySessionGoal} sessions today, ${monthlySessionsCompleted} of ${monthlySessionGoal} this month`}
-            >
-              <span
-                className="plan-banner-fill"
-                aria-hidden="true"
-                style={{
-                  width: `${monthlyPlanPercent(monthlySessionsCompleted, monthlySessionGoal)}%`,
-                }}
-              />
-            </div>
-            <p className="plan-banner-copy">
-              <strong>{modeLabel(studyMode)}</strong> ·{" "}
-              <span className="plan-banner-count">
-                {dailySessionsCompleted}/{dailySessionGoal}
-              </span>{" "}
-              today · {preferredSessionMinutes} min ·{" "}
-              <span className="plan-banner-count">
-                {monthlySessionsCompleted}/{monthlySessionGoal}
-              </span>{" "}
-              this month
-              <span className="plan-banner-note">
-                {" "}
-                ·{" "}
-                {monthlyPlanEncouragement(
-                  monthlySessionsCompleted,
-                  monthlySessionGoal,
-                  dailySessionsCompleted,
-                  dailySessionGoal,
-                )}
-              </span>
-            </p>
-          </section>
-          <button
-            type="button"
-            className="button button-ghost button-small plan-edit"
-            onClick={() => showSection("edit-plan")}
-          >
-            Edit plan
-          </button>
-        </div>
-      ) : null}
       <StudyPanel
         activeSession={activeSession}
         deskRefreshing={deskRefreshing}
@@ -562,6 +505,16 @@ export function DashboardScreen({
           initialPlan={studyPlan}
           onClose={() => setDialog(null)}
         />
+      ) : null}
+      {dialog === "download" ? (
+        <HistoryDialog title="Mac companion" onClose={() => setDialog(null)}>
+          <PetStatus downloadUrl={downloadUrl} />
+        </HistoryDialog>
+      ) : null}
+      {dialog === "dev-tools" ? (
+        <HistoryDialog title="Developer tools" onClose={() => setDialog(null)}>
+          <AdminReset />
+        </HistoryDialog>
       ) : null}
       {shownSong && !songBlocked ? (
         <SongUnlockCelebration
