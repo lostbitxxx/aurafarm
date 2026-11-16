@@ -2060,8 +2060,8 @@ button.dialog-row {
 }
 
 .pixel-pet-accessory.is-hat {
-  /* Catalogue / collection hats sit in mid-canvas; pin to the head. */
-  top: -6%;
+  /* Catalogue / collection hats sit in mid-canvas; pin above the face. */
+  top: -12%;
   width: 72%;
   height: 72%;
 }
