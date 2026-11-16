@@ -335,7 +335,59 @@ export function countSessionsOnLocalDay(
   return countSubmittedSessionsOnDay(sessions, (day) => day === parsed);
 }
 
-/** Short desk copy for plan progress (daily first, then monthly). */
+/** Submitted study seconds whose ended_at falls on the farmer local day. */
+export function studySecondsOnLocalDay(
+  sessions: readonly {
+    status: "submitted" | "cancelled";
+    endedAt: string;
+    durationSeconds?: number;
+  }[],
+  localDay: string,
+) {
+  const parsed = parseLocalDay(localDay);
+  if (!parsed) return 0;
+  let total = 0;
+  for (const session of sessions) {
+    if (session.status !== "submitted") continue;
+    const ended = new Date(session.endedAt);
+    if (Number.isNaN(ended.getTime())) continue;
+    if (farmerLocalDay(ended) !== parsed) continue;
+    const seconds = Number(session.durationSeconds ?? 0);
+    if (Number.isFinite(seconds) && seconds > 0) total += Math.floor(seconds);
+  }
+  return total;
+}
+
+/** Short desk copy for the weekly daily-minutes plan. */
+export function weeklyPlanEncouragement(
+  isStudyDay: boolean,
+  studiedMinutes: number,
+  goalMinutes: number,
+) {
+  const safeGoal = Number.isFinite(goalMinutes) ? Math.max(1, Math.floor(goalMinutes)) : 1;
+  const safeDone = Number.isFinite(studiedMinutes) ? Math.max(0, Math.floor(studiedMinutes)) : 0;
+
+  if (!isStudyDay) {
+    if (safeDone >= safeGoal) return "bonus day";
+    if (safeDone > 0) return "rest day focus";
+    return "rest day";
+  }
+  if (safeDone >= safeGoal) return "today done";
+  if (safeDone <= 0) return "start with one";
+  const ratio = safeDone / safeGoal;
+  if (ratio < 0.25) return "nice start";
+  if (ratio < 0.5) return "finding rhythm";
+  if (ratio < 0.75) return "past halfway";
+  return "almost there";
+}
+
+export function dailyPlanPercent(completedMinutes: number, goalMinutes: number) {
+  const safeGoal = Number.isFinite(goalMinutes) ? Math.max(1, Math.floor(goalMinutes)) : 1;
+  const safeDone = Number.isFinite(completedMinutes) ? Math.max(0, Math.floor(completedMinutes)) : 0;
+  return Math.min(100, Math.round((safeDone / safeGoal) * 100));
+}
+
+/** @deprecated Prefer weeklyPlanEncouragement — kept for older monthly-banner tests. */
 export function monthlyPlanEncouragement(
   monthlyCompleted: number,
   monthlyGoal: number,
@@ -361,10 +413,9 @@ export function monthlyPlanEncouragement(
   return `${left} left — almost`;
 }
 
+/** @deprecated Prefer dailyPlanPercent. */
 export function monthlyPlanPercent(completed: number, goal: number) {
-  const safeGoal = Number.isFinite(goal) ? Math.max(1, Math.floor(goal)) : 1;
-  const safeDone = Number.isFinite(completed) ? Math.max(0, Math.floor(completed)) : 0;
-  return Math.min(100, Math.round((safeDone / safeGoal) * 100));
+  return dailyPlanPercent(completed, goal);
 }
 
 export function formatStreakLabel(streakCount: number) {
@@ -428,6 +479,9 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/weekly_study_days/i.test(message)) {
+    return "Run migration 0044 in the Supabase SQL editor before using weekly study days.";
+  }
   if (/collection_rewards|claim_collection_reward/i.test(message)) {
     return "Run migration 0024 before choosing a level reward.";
   }

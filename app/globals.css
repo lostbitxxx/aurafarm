@@ -3083,7 +3083,8 @@ button.dialog-row {
 
 .customize-embed .customize-option,
 .customize-embed .customize-mode,
-.customize-embed .daily-day {
+.customize-embed .daily-day,
+.customize-embed .weekday-day {
   background: #f7f3e8;
 }
 
@@ -3141,6 +3142,11 @@ button.dialog-row {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.customize-note-underline {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .customize-lede,
@@ -3310,6 +3316,60 @@ button.dialog-row {
   gap: 0.7rem;
 }
 
+.goal-visual-weekly {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.weekday-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.weekday-day {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+  padding: 0.7rem 0.35rem;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: inherit;
+  cursor: pointer;
+}
+
+.weekday-day strong {
+  font-size: 0.92rem;
+}
+
+.weekday-day span {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.weekday-day.is-selected {
+  box-shadow: inset 0 0 0 2px var(--slime-deep);
+  background: rgba(198, 239, 74, 0.18);
+}
+
+.session-minute-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .weekday-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .session-minute-options,
+  .goal-visual-weekly {
+    grid-template-columns: 1fr;
+  }
+}
+
 .goal-stat {
   display: grid;
   gap: 0.2rem;
@@ -3411,6 +3471,17 @@ button.dialog-row {
 
 .plan-banner.is-complete .plan-banner-fill {
   background: rgba(198, 239, 74, 0.56);
+}
+
+.plan-banner.is-rest-day {
+  background: rgba(20, 33, 26, 0.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(20, 33, 26, 0.08),
+    0 0 0 2px rgba(20, 33, 26, 0.06);
+}
+
+.plan-banner.is-rest-day .plan-banner-fill {
+  background: rgba(90, 140, 200, 0.35);
 }
 
 .plan-banner-copy {
