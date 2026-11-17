@@ -652,6 +652,300 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .tracker-card-wide { width: min(38rem, 100%); }
 
+.tracker-card-start { width: min(44rem, 100%); }
+
+.length-choices .length-type {
+  width: 6.2rem;
+  border: 0;
+  border-bottom: 1.5px solid #23392d;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.35rem 0.15rem;
+  color: var(--dialog-ink);
+  font: inherit;
+}
+
+.length-choices .length-type:focus-visible {
+  outline: 3px solid #8261a7;
+  outline-offset: 3px;
+}
+
+.tracker-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.tracker-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.75rem 0.75rem 0.85rem;
+  border: 1.5px solid #c5cbb9;
+  border-radius: 1.15rem;
+  background: #fffdf8;
+}
+
+.tracker-option.is-selected { border-color: #23392d; }
+
+.tracker-option-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.tracker-option-pick:disabled { cursor: not-allowed; opacity: 0.7; }
+
+.tracker-option-name {
+  border: 1px solid #c5cbb9;
+  border-radius: 999px;
+  background: #f3efe2;
+  padding: 0.38rem 0.95rem;
+  font-weight: 700;
+}
+
+.tracker-option.is-selected .tracker-option-name {
+  border-color: #97b839;
+  background: #c5ef47;
+}
+
+.tracker-option-copy {
+  color: var(--dialog-ink);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.tracker-download {
+  margin-top: auto;
+  color: #6d7a62;
+  font-size: 0.88rem;
+  text-align: center;
+  text-underline-offset: 0.14rem;
+}
+
+a.tracker-download { color: #6d7a62; }
+
+.tracker-demo {
+  width: 100%;
+  height: 8.5rem;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: #1b2420;
+}
+
+.demo-browser,
+.demo-os {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.demo-chrome,
+.demo-menubar {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  height: 1.15rem;
+  padding: 0 0.4rem;
+  background: #2c3832;
+}
+
+.demo-chrome i,
+.demo-menubar::before {
+  display: inline-block;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: #c5ef47;
+  content: "";
+}
+
+.demo-chrome span {
+  margin-left: 0.25rem;
+  color: #efe8d4;
+  font-size: 0.62rem;
+}
+
+.demo-stage,
+.demo-os {
+  position: relative;
+  flex: 1;
+  background:
+    linear-gradient(180deg, rgba(197, 239, 71, 0.16), transparent 42%),
+    #fff9ed;
+}
+
+.demo-clock {
+  position: relative;
+  height: 2.4rem;
+  margin-top: 0.35rem;
+  color: #23392d;
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.demo-clock span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  animation: demo-tick 8s infinite;
+}
+
+.demo-clock span:nth-child(2) { animation-delay: 2s; }
+.demo-clock span:nth-child(3) { animation-delay: 4s; }
+.demo-clock span:nth-child(4) { animation-delay: 6s; }
+
+.demo-study-pet.pixel-pet-art {
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0.05rem;
+  width: 4.8rem;
+  height: 4.8rem;
+  animation: demo-bob 2.4s ease-in-out infinite;
+}
+
+.demo-window {
+  position: absolute;
+  top: 1.7rem;
+  left: 0.7rem;
+  display: grid;
+  gap: 0.28rem;
+  width: 58%;
+  padding: 0.45rem;
+  border-radius: 0.35rem;
+  background: #fffdf8;
+  box-shadow: 0 4px 0 rgba(35, 57, 45, 0.08);
+}
+
+.demo-window span {
+  display: block;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #d9ddcb;
+}
+
+.demo-window span:first-child { width: 70%; background: #c5ef47; }
+
+.demo-farm {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.55rem;
+  border-radius: 999px;
+  background: #c5ef47;
+  padding: 0.22rem 0.45rem;
+  color: #23392d;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  animation: demo-press 8s infinite;
+}
+
+.demo-cursor {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.15rem;
+  width: 0;
+  height: 0;
+  border-top: 0.45rem solid transparent;
+  border-bottom: 0.15rem solid transparent;
+  border-left: 0.55rem solid #23392d;
+  animation: demo-cursor 8s infinite;
+}
+
+.demo-walker {
+  position: absolute;
+  left: 0.45rem;
+  bottom: 0.1rem;
+  width: 3.1rem;
+  height: 3.1rem;
+  animation: demo-walk 8s infinite;
+}
+
+.demo-walker .pixel-pet-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.demo-walker .is-step { animation: demo-frame 0.45s steps(1) infinite; }
+
+.start-actions { justify-content: flex-end; }
+
+.button-farm {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+@keyframes demo-tick {
+  0%, 24% { opacity: 1; }
+  25%, 100% { opacity: 0; }
+}
+
+@keyframes demo-bob {
+  50% { transform: translateY(4px); }
+}
+
+@keyframes demo-press {
+  0%, 28% { transform: none; }
+  34% { transform: scale(0.94); }
+  42%, 100% { transform: none; }
+}
+
+@keyframes demo-cursor {
+  0% { transform: translate(1.4rem, -1.6rem); opacity: 0; }
+  12% { opacity: 1; }
+  30% { transform: translate(0, 0); }
+  36% { transform: translate(0.1rem, 0.15rem); }
+  44%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+
+@keyframes demo-walk {
+  0% { transform: translateX(-2.4rem); opacity: 0; }
+  10% { opacity: 1; transform: translateX(0); }
+  72%, 100% { transform: translateX(4.4rem); opacity: 1; }
+}
+
+@keyframes demo-frame {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@media (max-width: 720px) {
+  .tracker-cards { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-clock span,
+  .demo-study-pet,
+  .demo-farm,
+  .demo-cursor,
+  .demo-walker,
+  .demo-walker .is-step {
+    animation: none;
+  }
+
+  .demo-clock span:first-child,
+  .demo-walker { opacity: 1; }
+  .demo-walker .is-step { opacity: 0; }
+}
+
 .tracker-card-wide:has(.customize-embed) {
   width: min(46rem, 100%);
   max-height: min(90vh, 54rem);
