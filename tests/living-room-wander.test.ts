@@ -8,6 +8,8 @@ import {
   pxToTopPercent,
   ROOM_CARPET_SRC,
   ROOM_FLOOR_START_Y,
+  BOOKSHELF_DEPTH_TOP,
+  depthTopFromBounds,
   ROOM_DEPTH_Z_MAX,
   ROOM_DRAG_Z,
   ROOM_FURNITURE,
@@ -189,6 +191,18 @@ test("furniture depth sorts so lower footprints draw in front", () => {
   assert.ok(loveseat && plant);
   assert.ok(plant.depthTop > loveseat.depthTop);
   assert.ok(roomDepthZ(plant.depthTop) > roomDepthZ(loveseat.depthTop));
+});
+
+test("bookshelf sorts behind the walk band without growing its no-walk box", () => {
+  const shelf = ROOM_FURNITURE.find((item) => item.id === "bookshelf");
+  assert.ok(shelf);
+  assert.equal(shelf.depthTop, BOOKSHELF_DEPTH_TOP);
+  assert.ok(shelf.depthTop < ROOM_WALK_BOUNDS.minTop);
+  assert.ok(shelf.depthTop < depthTopFromBounds(shelf.bounds));
+  // Collision footprint stays the default bottom-half of the bbox.
+  assert.deepEqual(shelf.block, footprintObstacle(shelf.bounds, 0.5));
+  // A pet standing at the walk-band top near the shelf paints over it.
+  assert.ok(roomDepthZ(ROOM_WALK_BOUNDS.minTop) > roomDepthZ(shelf.depthTop));
 });
 
 test("drag z-index sits above every depth-sorted room layer", () => {

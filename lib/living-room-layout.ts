@@ -109,11 +109,28 @@ function loveseatBlock(): RoomObstacle {
   };
 }
 
+/**
+ * Tall wall unit: its drawn bbox reaches the floor, but pets use wrap-center for
+ * depth. Sorting from the full bbox bottom tucked floor pets under the shelf.
+ * Keep the collision footprint unchanged; only pull draw order toward the wall.
+ */
+export const BOOKSHELF_DEPTH_TOP = pxToTopPercent(ROOM_FLOOR_START_Y) - 1;
+
+function bookshelfPiece(): RoomFurniturePiece {
+  return {
+    id: "bookshelf",
+    src: "/pet-assets/room/furniture/bookshelf.svg",
+    bounds: BOOKSHELF_BOUNDS,
+    depthTop: BOOKSHELF_DEPTH_TOP,
+    block: footprintObstacle(BOOKSHELF_BOUNDS, 0.5),
+  };
+}
+
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   piece("loveseat", "loveseat.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
   piece("lamp", "lamp.svg", LAMP_BOUNDS),
-  piece("bookshelf", "bookshelf.svg", BOOKSHELF_BOUNDS),
+  bookshelfPiece(),
   piece("plant", "plant.svg", PLANT_BOUNDS),
 ];
 
