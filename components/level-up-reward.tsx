@@ -281,12 +281,16 @@ function RewardChoiceButton({
       ) : preview ? (
         <RewardAccessoryArt item={preview} />
       ) : (
-        <PixelPetArt
-          petType="baby_slime"
-          hat={kind === "Hat" ? itemId : null}
-          clothes={kind === "Clothes" ? itemId : null}
-          className="dialog-pet-art"
-          alt=""
+        <RewardAccessoryArt
+          item={{
+            kind: kind === "Hat" ? "hat" : "clothes",
+            id: itemId,
+            name: legacyName ?? itemId,
+            icon:
+              (kind === "Hat"
+                ? SAMPLE_HATS.find((hat) => hat.id === itemId)?.icon
+                : SAMPLE_CLOTHES.find((item) => item.id === itemId)?.icon) ?? "",
+          }}
         />
       )}
       <strong>{pending ? "…" : name}</strong>

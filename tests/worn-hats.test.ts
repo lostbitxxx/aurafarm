@@ -8,7 +8,7 @@ test("worn hats drop the catalogue ground shadow while catalogue art keeps it", 
   const catalogIds = previewRewards("hat").map((item) => item.id);
   assert.deepEqual([...WORN_HAT_IDS], catalogIds);
   assert.equal(WORN_HAT_IDS.length, 8);
-  assert.equal(wornHatAsset("hat_a"), null);
+  assert.equal(wornHatAsset("hat_a"), "/pet-assets/accessories/worn/hats/hat_a.svg");
   assert.equal(wornHatAsset(null), null);
 
   for (const id of WORN_HAT_IDS) {

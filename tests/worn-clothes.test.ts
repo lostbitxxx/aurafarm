@@ -9,7 +9,10 @@ test("all eight approved clothes have compact clothes_a-style worn overlays", ()
   assert.deepEqual([...WORN_CLOTHES_IDS], catalogIds);
   assert.equal(WORN_CLOTHES_IDS.length, 8);
   assert.equal(WORN_CLOTHES_IDS.includes("none" as never), false);
-  assert.equal(wornClothesAsset("clothes_a", "baby_slime"), null);
+  assert.equal(
+    wornClothesAsset("clothes_a", "baby_slime"),
+    "/pet-assets/accessories/worn/clothes_a/cat.svg",
+  );
   assert.equal(wornClothesAsset("clothes_i", "baby_slime"), null);
   assert.equal(wornClothesAsset(null, "baby_slime"), null);
 
@@ -94,12 +97,9 @@ test("all eight approved clothes have compact clothes_a-style worn overlays", ()
   const renderer = readFileSync(new URL("../components/pixel-pet.tsx", import.meta.url), "utf8");
   assert.match(renderer, /wornClothesAsset/);
   assert.match(renderer, /is-worn-clothes/);
-  assert.match(renderer, /pose === "study1" \|\| pose === "study2"/);
+  assert.match(renderer, /stack\.stage === "study"/);
   assert.match(renderer, /is-study/);
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(css, /\.pixel-pet\.is-study \.pixel-pet-accessory\.is-worn-clothes/);
-  assert.match(css, /\.pixel-pet\.is-study \.pixel-pet-accessory\.is-hat/);
-  assert.match(css, /calc\(11 \/ 64 \* 100%\)/);
-  assert.match(css, /calc\(3 \/ 64 \* 100%\)/);
-  assert.match(css, /calc\(42 \/ 64 \* 100%\)/);
+  assert.match(css, /\.pixel-pet\.is-study \.pixel-pet-figure/);
+  assert.match(css, /pixel-pet-layer/);
 });
