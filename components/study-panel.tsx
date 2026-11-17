@@ -500,7 +500,7 @@ export function StudyPanel({
                   <span className="tracker-option-name">Desktop pet</span>
                   <TrackerDemo kind="desktop" />
                   <span className="tracker-option-copy">
-                    Farm Aura opens the pet on your computer. It keeps the time while you use other apps.
+                    The pet stays in the corner, closes a distracting tab, and brings you back for the reward.
                   </span>
                 </button>
                 {downloadUrl ? (
@@ -522,7 +522,7 @@ export function StudyPanel({
                   <span className="tracker-option-name">Website timer</span>
                   <TrackerDemo kind="website" />
                   <span className="tracker-option-copy">
-                    Leave this page open. The countdown finishes the session when it reaches zero.
+                    The countdown stays beside your PDF, then the site comes back with the reward.
                   </span>
                 </button>
               </div>
