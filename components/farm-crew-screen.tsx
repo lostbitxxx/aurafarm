@@ -29,17 +29,25 @@ export function FarmCrewScreen({ room }: { room: FarmCrewRoom }) {
   useEffect(() => {
     if (!room.crew) return;
     let stopped = false;
+    let loading = false;
     async function load() {
-      const result = await refreshFarmCrewRoom(room.crew!.crewId);
-      if (stopped) return;
-      if (result.error || !result.crew) {
-        setError(result.error || "This FarmCrew is not open to you.");
-        return;
+      if (loading) return;
+      loading = true;
+      try {
+        const result = await refreshFarmCrewRoom(room.crew!.crewId);
+        if (stopped) return;
+        if (result.error || !result.crew) {
+          setError(result.error || "This FarmCrew is not open to you.");
+          return;
+        }
+        setDetail(result.crew);
+        setOccupants(result.occupants);
+        setError(null);
+      } finally {
+        loading = false;
       }
-      setDetail(result.crew);
-      setOccupants(result.occupants);
-      setError(null);
     }
+    void load();
     const timer = window.setInterval(() => {
       void load();
     }, 10_000);

@@ -15,24 +15,24 @@ export function SocialPresence() {
       if (result.error) console.error(result.error);
     }
 
-    function onVisibility() {
-      void beat(document.visibilityState === "visible");
+    function onVisible() {
+      if (document.visibilityState === "visible") void beat(true);
     }
 
     function onHide() {
       void beat(false);
     }
 
-    onVisibility();
+    void beat(true);
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void beat(true);
+      void beat(true);
     }, DESK_PRESENCE_MS);
-    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pagehide", onHide);
     return () => {
       stopped = true;
       window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pagehide", onHide);
     };
   }, []);
