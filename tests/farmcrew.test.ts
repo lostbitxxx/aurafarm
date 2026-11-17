@@ -174,6 +174,11 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /managesFarmCrew\(detail\.role\)/);
   assert.match(screen, />\s*Admin\s*</);
   assert.match(screen, /<CrewAdminDialog/);
+  assert.match(screen, /StudyClock/);
+  assert.match(screen, /Website timer is tracking this session/);
+  const crewDesk = readFileSync(new URL("../lib/farm-crew-desk.ts", import.meta.url), "utf8");
+  assert.match(crewDesk, /study_sessions/);
+  assert.match(crewDesk, /\.eq\("status", "active"\)/);
   const admin = readFileSync(new URL("../components/crew-admin-dialog.tsx", import.meta.url), "utf8");
   assert.match(admin, /<FarmDialog title="Admin"/);
   assert.match(admin, />\s*General\s*</);

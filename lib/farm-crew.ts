@@ -1,4 +1,5 @@
 import { sampleClothes, sampleColor, sampleHat, wornClothesAsset, wornHatAsset } from "./pet-assets";
+import type { ActiveStudySession } from "./study";
 
 export const CREW_CODE_PATTERN = /^[ABCDEFGHIJKLMNPQRSTUVWXYZ23456789]{8}$/;
 export const CREW_ID_PATTERN =
@@ -74,6 +75,7 @@ export type FarmCrewRoom = {
   occupants: CrewOccupant[];
   displayName: string;
   userId: string;
+  activeSession: ActiveStudySession | null;
   error: string | null;
 };
 

@@ -8,6 +8,7 @@ import {
   farmCrewMessage,
   type FarmCrewRoom,
 } from "./farm-crew";
+import { DEFAULT_STUDY_SECONDS, storedStudySeconds, type ActiveStudySession } from "./study";
 import { createClient } from "./supabase/server";
 
 export async function loadFarmCrewRoom(crewId: string): Promise<FarmCrewRoom> {
@@ -17,6 +18,7 @@ export async function loadFarmCrewRoom(crewId: string): Promise<FarmCrewRoom> {
     occupants: [],
     displayName: "Farmer",
     userId: "",
+    activeSession: null,
     error: "Sign in to visit a FarmCrew.",
   };
   if (!CREW_ID_PATTERN.test(crewId)) {
@@ -35,18 +37,24 @@ export async function loadFarmCrewRoom(crewId: string): Promise<FarmCrewRoom> {
       : "Farmer";
 
   await touchSocialPresence(true);
-  const [crewResult, roomResult] = await Promise.all([
+  const [crewResult, roomResult, sessionResult] = await Promise.all([
     supabase.rpc("get_farm_crew", { target: crewId }),
     supabase.rpc("list_farm_crew_room", { target: crewId }),
+    supabase
+      .from("study_sessions")
+      .select("id, started_at, planned_seconds, use_desktop_pet")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle(),
   ]);
   const rawError = crewResult.error?.message ?? roomResult.error?.message ?? "";
   if (crewResult.error || roomResult.error) {
-    return { crew: null, occupants: [], displayName, userId, error: farmCrewMessage(rawError) };
+    return { crew: null, occupants: [], displayName, userId, activeSession: null, error: farmCrewMessage(rawError) };
   }
 
   const crew = farmCrewDetailFromRows(Array.isArray(crewResult.data) ? crewResult.data : []);
   if (!crew) {
-    return { crew: null, occupants: [], displayName, userId, error: "This FarmCrew is not open to you." };
+    return { crew: null, occupants: [], displayName, userId, activeSession: null, error: "This FarmCrew is not open to you." };
   }
 
   return {
@@ -54,6 +62,22 @@ export async function loadFarmCrewRoom(crewId: string): Promise<FarmCrewRoom> {
     occupants: crewOccupantsFromRows(Array.isArray(roomResult.data) ? roomResult.data : []),
     displayName,
     userId,
+    activeSession: activeSessionFromRow(sessionResult.data),
     error: null,
+  };
+}
+
+function activeSessionFromRow(row: {
+  id?: unknown;
+  started_at?: unknown;
+  planned_seconds?: unknown;
+  use_desktop_pet?: unknown;
+} | null): ActiveStudySession | null {
+  if (!row || typeof row.id !== "string" || typeof row.started_at !== "string") return null;
+  return {
+    id: row.id,
+    startedAt: row.started_at,
+    plannedSeconds: storedStudySeconds(Number(row.planned_seconds)) ?? DEFAULT_STUDY_SECONDS,
+    useDesktopPet: row.use_desktop_pet === true,
   };
 }
