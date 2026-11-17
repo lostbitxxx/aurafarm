@@ -12,11 +12,8 @@ import {
   plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
-  buildStudyHistory,
   formatClock,
   formatDuration,
-  formatHistoryTime,
-  formatHistoryXp,
   formatTimestamp,
   experienceForSession,
   farmerLocalDay,
@@ -48,8 +45,8 @@ export function StudyPanel({
   closeBlocked,
   closeBlockedError,
   pets,
-  petLevel,
-  petXp,
+  petLevel: _petLevel,
+  petXp: _petXp,
   downloadUrl,
   placedIds,
   placementReady,
@@ -140,7 +137,6 @@ export function StudyPanel({
   const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
   const [desktopStep, setDesktopStep] = useState<0 | 1 | 2>(0);
   const [hiddenSessionId, setHiddenSessionId] = useState("");
-  const [railOpen, setRailOpen] = useState(false);
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
   const [devOpen, setDevOpen] = useState(false);
@@ -149,9 +145,6 @@ export function StudyPanel({
   const [devRejected, setDevRejected] = useState(false);
   const [rushed, setRushed] = useState(false);
   const [detailPetId, setDetailPetId] = useState<string | null>(null);
-  const [history, setHistory] = useState<"activity" | "download" | "dev-info" | null>(null);
-  const drawerHandleRef = useRef<HTMLButtonElement>(null);
-  const drawerRef = useRef<HTMLDivElement>(null);
 
   if (signature !== snapshot) {
     setSnapshot(signature);
@@ -189,7 +182,6 @@ export function StudyPanel({
   const railError = error;
   if (railError !== trackedError) {
     setTrackedError(railError);
-    if (railError) setRailOpen(true);
   }
 
   async function finishSession(devPasswordValue: string) {
@@ -293,7 +285,6 @@ export function StudyPanel({
     setLocalStartedAt(new Date().toISOString());
     setLocalPlanned(chosenSeconds);
     setLocalDesktop(trackerChoice);
-    if (trackerChoice) setRailOpen(false);
   }
 
   async function onToggleClose() {
@@ -379,23 +370,6 @@ export function StudyPanel({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [desktopPetSession, router]);
 
-  useEffect(() => {
-    if (!railOpen) return;
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      const drawer = drawerRef.current;
-      const active = document.activeElement;
-      if (!drawer || !(active instanceof Node) || !drawer.contains(active)) return;
-      event.preventDefault();
-      setRailOpen(false);
-      drawerHandleRef.current?.focus();
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [railOpen]);
-
   return (
     <main className="desk">
       <section className="scene" aria-label="Study scene">
@@ -479,81 +453,6 @@ export function StudyPanel({
           )}
         </div>
       </section>
-      <div
-        ref={drawerRef}
-        className={railOpen ? "companion-drawer is-open" : "companion-drawer"}
-      >
-        <div className="level-dock">
-          <button
-            ref={drawerHandleRef}
-            type="button"
-            className="level-bar"
-            aria-expanded={railOpen}
-            aria-controls="study-rail"
-            aria-label={railOpen ? "Collapse companion panel" : "Expand companion panel"}
-            onClick={() => setRailOpen((open) => !open)}
-          >
-            <span className="level-bar-handle" aria-hidden="true">
-              <span className={`level-bar-arrow${railOpen ? " is-expanded" : ""}`}>
-                <svg viewBox="0 0 24 24" width="14" height="14" focusable="false">
-                  <path
-                    fill="currentColor"
-                    d="M6.7 14.7a1 1 0 0 1 0-1.4l4.6-4.6a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 1 1-1.4 1.4L12 10.8l-3.9 3.9a1 1 0 0 1-1.4 0z"
-                  />
-                </svg>
-              </span>
-              <span className="level-bar-rule">
-                <span className="level-bar-line" />
-                <span className="level-bar-gear">
-                  <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
-                    <path
-                      fill="currentColor"
-                      d="M19.4 13a7.7 7.7 0 0 0 .1-1 7.7 7.7 0 0 0-.1-1l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.4 8.8a.5.5 0 0 0 .1.6l2 1.6a7.7 7.7 0 0 0-.1 1 7.7 7.7 0 0 0 .1 1l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7 7 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"
-                    />
-                  </svg>
-                </span>
-                <span className="level-bar-line" />
-              </span>
-            </span>
-          </button>
-          <div className="level-bar-stats">
-            <span className="bar-level">{petLevel === null ? "—" : `LV${petLevel}`}</span>
-            <div
-              className="level-bar-track"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={petXp}
-              aria-label={petLevel === null ? "Equipped pet experience" : `Level ${petLevel} experience`}
-            >
-              <span className="level-bar-fill" style={{ width: `${petXp}%` }} />
-            </div>
-          </div>
-        </div>
-        <div
-          id="study-rail"
-          className="study-rail"
-          role="region"
-          aria-label="Personalization"
-          aria-hidden={!railOpen}
-          {...(!railOpen ? { inert: true } : {})}
-        >
-          <div className="study-rail-inner">
-            <h2 className="drawer-heading">Personalization</h2>
-            <div className="personalization-actions">
-              <button type="button" className="button button-ghost" onClick={() => setHistory("activity")}>
-                Sessions & Experience
-              </button>
-              <button type="button" className="button button-ghost" onClick={() => setHistory("download")}>
-                Download the Mac pet
-              </button>
-              <button type="button" className="button button-ghost" onClick={() => setHistory("dev-info")}>
-                Dev tools
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
       {lengthOpen ? (
         <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
           <div
@@ -856,128 +755,7 @@ export function StudyPanel({
           onClothesApplied={onClothesApplied}
         />
       ) : null}
-      {history === "activity" ? (
-        <StudyHistoryDialog
-          recordedSessions={recordedSessions}
-          scores={scores}
-          onClose={() => setHistory(null)}
-        />
-      ) : null}
-      {history === "download" ? (
-        <HistoryDialog title="Mac companion" onClose={() => setHistory(null)}>
-          <PetStatus downloadUrl={downloadUrl} />
-        </HistoryDialog>
-      ) : null}
-      {history === "dev-info" ? (
-        <HistoryDialog title="Developer tools" onClose={() => setHistory(null)}>
-          <p className="panel-hint">Finish a website timer early for testing.</p>
-          {shownSession && !shownSession.useDesktopPet ? (
-            <button type="button" className="button" onClick={() => { setHistory(null); onOpenDev(); }}>
-              Open Dev finish
-            </button>
-          ) : (
-            <p className="panel-hint">Start a website timer session to unlock the finish helper.</p>
-          )}
-        </HistoryDialog>
-      ) : null}
     </main>
-  );
-}
-
-function StudyHistoryDialog({
-  recordedSessions,
-  scores,
-  onClose,
-}: {
-  recordedSessions: RecordedStudySession[];
-  scores: StudyScoreCard[];
-  onClose: () => void;
-}) {
-  const { cards, unmatchedScores } = buildStudyHistory(recordedSessions, scores);
-
-  return (
-    <HistoryDialog title="Sessions & Experience" onClose={onClose}>
-      <section className="study-history-section" aria-labelledby="study-history-title">
-        <h3 id="study-history-title" className="history-section-title">
-          Study history
-        </h3>
-        {cards.length === 0 ? (
-          <p className="empty-pets">No study time recorded yet.</p>
-        ) : (
-          <ul className="study-history">
-            {cards.map((card) => {
-              const distractionKnown = card.distractionSeconds !== null && card.distractionSeconds > 0;
-              return (
-                <li key={card.id} className="study-history-card">
-                  <div className="study-history-top">
-                    <div className="study-history-status">
-                      <span className="study-history-badge">
-                        {card.status === "cancelled" ? "Cancelled" : "Finished"}
-                      </span>
-                      <span className="study-history-duration">{formatDuration(card.durationSeconds)}</span>
-                    </div>
-                    <span className="study-history-xp">{formatHistoryXp(card.xp)}</span>
-                  </div>
-                  <span
-                    className={
-                      card.modeLabel === "Mode unknown"
-                        ? "study-history-mode is-unknown"
-                        : "study-history-mode"
-                    }
-                  >
-                    {card.modeLabel}
-                  </span>
-                  {card.showFocusDistraction ? (
-                    <div className="study-history-times">
-                      <div className="study-history-time-row">
-                        <span>Focus time</span>
-                        <span>{formatHistoryTime(card.focusSeconds)}</span>
-                      </div>
-                      <div
-                        className={
-                          distractionKnown
-                            ? "study-history-time-row is-distracted"
-                            : "study-history-time-row"
-                        }
-                      >
-                        <span>Distraction time</span>
-                        <span>{formatHistoryTime(card.distractionSeconds)}</span>
-                      </div>
-                    </div>
-                  ) : null}
-                  {card.endedAt ? (
-                    <time className="study-history-date" dateTime={card.endedAt}>
-                      {formatTimestamp(card.endedAt)}
-                    </time>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-      {unmatchedScores.length > 0 ? (
-        <section className="history-section" aria-labelledby="unmatched-xp-title">
-          <h3 id="unmatched-xp-title" className="history-section-title">
-            Experience not linked in this list
-          </h3>
-          <p className="panel-hint">
-            These XP rows share a session id that is not in the loaded study-history page.
-          </p>
-          <ul className="score-list">
-            {unmatchedScores.map((score) => (
-              <li key={score.id}>
-                <strong>{formatHistoryXp(score.xp)}</strong>
-                <span>Session {score.id}</span>
-                {score.createdAt ? (
-                  <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </HistoryDialog>
   );
 }
 

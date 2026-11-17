@@ -79,15 +79,15 @@ test("Living Room uses stroll helpers, idle legs, and no dedicated Pet button", 
   const source = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   const idle = readFileSync(
-    new URL("../public/pet-assets/pets/cat/sage/no-hat-no-clothes/idle.svg", import.meta.url),
+    new URL("../public/pet-assets/pets/cat/colors/sage/legs/stand.svg", import.meta.url),
     "utf8",
   );
   const blush = readFileSync(
-    new URL("../public/pet-assets/pets/cat/sage/no-hat-no-clothes/blush.svg", import.meta.url),
+    new URL("../public/pet-assets/pets/cat/colors/sage/face/blush.svg", import.meta.url),
     "utf8",
   );
   const walk1 = readFileSync(
-    new URL("../public/pet-assets/pets/cat/sage/no-hat-no-clothes/walk1.svg", import.meta.url),
+    new URL("../public/pet-assets/pets/cat/colors/sage/legs/left-up.svg", import.meta.url),
     "utf8",
   );
   assert.match(source, /stepWanderSpot/);
@@ -111,7 +111,7 @@ test("Living Room uses stroll helpers, idle legs, and no dedicated Pet button", 
   assert.doesNotMatch(css, /\.room-pet-hand/);
   assert.match(css, /\.room-equipped/);
   assert.match(idle, /M9 34h6v4H9M27 34h6v4h-6/);
-  assert.match(blush, /M9 34h6v4H9M27 34h6v4h-6/);
+  assert.match(blush, /M11 20h5M26 20h5/);
   assert.match(walk1, /M9 35h6v4H9M27 33h6v4h-6/);
 
   const renderer = readFileSync(new URL("../components/pixel-pet.tsx", import.meta.url), "utf8");

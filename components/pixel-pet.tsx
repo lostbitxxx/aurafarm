@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { previewReward } from "@/lib/collection-catalog";
 import {
-  petAssetPath,
+  petStackLayers,
   sampleClothes,
   sampleColor,
   sampleHat,
@@ -11,6 +11,30 @@ import {
   wornHatAsset,
   type PetPose,
 } from "@/lib/pet-assets";
+
+function LayerImg({
+  src,
+  className,
+  alt = "",
+  onError,
+}: {
+  src: string;
+  className: string;
+  alt?: string;
+  onError?: () => void;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={className}
+      src={src}
+      alt={alt}
+      draggable={false}
+      style={{ imageRendering: "pixelated" }}
+      onError={onError}
+    />
+  );
+}
 
 export function PixelPetArt({
   petType,
@@ -35,61 +59,69 @@ export function PixelPetArt({
   const clothesId = sampleClothes(clothes);
   const previewHat = !hatId && hat ? previewReward(hat) : null;
   const previewClothes = !clothesId && clothes ? previewReward(clothes) : null;
-  const fittedHat = !hatId && hat && !dropHat ? wornHatAsset(hat) : null;
-  const fittedClothes = !clothesId && clothes && !dropClothes ? wornClothesAsset(clothes, petType) : null;
-  const hatIcon = fittedHat ?? (previewHat?.kind === "hat" ? previewHat.icon : null);
-  const clothesIcon =
-    fittedClothes ?? (previewClothes?.kind === "clothes" ? previewClothes.icon : null);
-  const clothesFitted = Boolean(fittedClothes);
-  const src = petAssetPath(petType, pose, {
+  const fittedHat = !dropHat ? wornHatAsset(hat) : null;
+  const fittedClothes = !dropClothes ? wornClothesAsset(clothes, petType) : null;
+  // Collection preview cards that lack a fitted worn asset still use the catalogue icon.
+  const previewHatIcon = !fittedHat && previewHat?.kind === "hat" ? previewHat.icon : null;
+  const previewClothesIcon =
+    !fittedClothes && previewClothes?.kind === "clothes" ? previewClothes.icon : null;
+
+  const stack = petStackLayers(petType, pose, {
     color: sampleColor(color) ?? undefined,
-    hat: dropHat ? null : hatId,
-    clothes: dropClothes ? null : clothesId,
+    hat: dropHat ? null : hat,
+    clothes: dropClothes ? null : clothes,
   });
-  const studying = pose === "study1" || pose === "study2";
-  const frameClass = ["pixel-pet-art", studying ? "is-study" : "", className].filter(Boolean).join(" ");
+
+  const frameClass = [
+    "pixel-pet",
+    "pixel-pet-art",
+    stack.stage === "study" ? "is-study" : null,
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   useEffect(() => {
     setDropClothes(false);
     setDropHat(false);
   }, [petType, pose, color, hat, clothes]);
 
-  const body = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      className={hatIcon || clothesIcon ? "pixel-pet-body" : frameClass}
-      src={src}
-      alt={alt}
-      draggable={false}
-      style={{ imageRendering: "pixelated" }}
-      onError={() => {
-        if (clothesId && !dropClothes) setDropClothes(true);
-        else if (hatId && !dropHat) setDropHat(true);
-      }}
-    />
-  );
-
-  if (!hatIcon && !clothesIcon) return body;
-
   return (
-    <span className={`pixel-pet ${frameClass}`}>
-      {body}
-      {clothesIcon ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className={clothesFitted ? "pixel-pet-accessory is-worn-clothes" : "pixel-pet-accessory is-clothes"}
-          src={clothesIcon}
-          alt=""
-          draggable={false}
-          onError={() => {
-            if (fittedClothes) setDropClothes(true);
-          }}
-        />
-      ) : null}
-      {hatIcon ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="pixel-pet-accessory is-hat" src={hatIcon} alt="" draggable={false} />
-      ) : null}
+    <span className={frameClass}>
+      {stack.floor ? <LayerImg className="pixel-pet-layer is-floor" src={stack.floor} /> : null}
+      {stack.chair ? <LayerImg className="pixel-pet-layer is-chair" src={stack.chair} /> : null}
+      <span className="pixel-pet-figure">
+        {stack.shadow ? <LayerImg className="pixel-pet-layer is-shadow" src={stack.shadow} /> : null}
+        <LayerImg className="pixel-pet-layer is-legs" src={stack.legs} />
+        <LayerImg className="pixel-pet-layer is-body" src={stack.body} alt={alt} />
+        {stack.clothes ? (
+          <LayerImg
+            className="pixel-pet-layer is-worn-clothes"
+            src={stack.clothes}
+            onError={() => setDropClothes(true)}
+          />
+        ) : previewClothesIcon ? (
+          <LayerImg
+            className="pixel-pet-accessory is-clothes"
+            src={previewClothesIcon}
+            onError={() => setDropClothes(true)}
+          />
+        ) : null}
+        <LayerImg className="pixel-pet-layer is-face" src={stack.face} />
+        {stack.hat ? (
+          <LayerImg
+            // Sample hats (hat_a/hat_b) are body-aligned 42×42 overlays.
+            // Collection worn hats are catalogue-framed art — pin/scale to the head.
+            className={hatId ? "pixel-pet-layer is-worn-hat" : "pixel-pet-accessory is-hat"}
+            src={stack.hat}
+            onError={() => setDropHat(true)}
+          />
+        ) : previewHatIcon ? (
+          <LayerImg className="pixel-pet-accessory is-hat" src={previewHatIcon} />
+        ) : null}
+      </span>
+      {stack.desk ? <LayerImg className="pixel-pet-layer is-desk" src={stack.desk} /> : null}
+      {stack.pen ? <LayerImg className="pixel-pet-layer is-pen" src={stack.pen} /> : null}
     </span>
   );
 }

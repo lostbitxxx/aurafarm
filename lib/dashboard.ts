@@ -17,10 +17,13 @@ import {
   type StudyScoreCard,
 } from "./study";
 import {
+  defaultWeekdaysForLifestyle,
   isStudyMode,
+  normalizeStudyWeekdays,
   parseBehaviorAnswers,
   type BehaviorAnswers,
   type StudyMode,
+  type Weekday,
 } from "./study-mode";
 import { createClient } from "./supabase/server";
 
@@ -32,8 +35,13 @@ export async function loadDashboard() {
 
   const { error: evaluateError } = await supabase.rpc("evaluate_achievements");
 
+  const PROFILE_SELECT_WITH_WEEKLY =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date";
+  const PROFILE_SELECT_LEGACY =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date";
+
   const [
-    profileResult,
+    profileResultInitial,
     closeBlockedResult,
     petsResult,
     collectionsResult,
@@ -44,13 +52,7 @@ export async function loadDashboard() {
     songsResult,
     achievementsResult,
   ] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select(
-          "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date",
-        )
-        .eq("id", userId)
-        .maybeSingle(),
+      supabase.from("profiles").select(PROFILE_SELECT_WITH_WEEKLY).eq("id", userId).maybeSingle(),
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
@@ -91,9 +93,27 @@ export async function loadDashboard() {
         : supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
     ]);
 
+  const weeklyColumnMissing = /weekly_study_days/i.test(profileResultInitial.error?.message ?? "");
+  const profileResult = weeklyColumnMissing
+    ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+    : profileResultInitial;
+
   const profile = profileResult.data;
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
   const behaviorAnswers: BehaviorAnswers | null = parseBehaviorAnswers(profile?.behavior_answers);
+  const preferredMinutes = Number(profile?.preferred_session_minutes ?? 0) || null;
+  const weeklyStudyDays: Weekday[] =
+    normalizeStudyWeekdays(
+      weeklyColumnMissing ? null : (profile as { weekly_study_days?: unknown } | null)?.weekly_study_days,
+    ) ??
+    (behaviorAnswers
+      ? defaultWeekdaysForLifestyle(behaviorAnswers.lifestyle)
+      : studyMode && preferredMinutes
+        ? defaultWeekdaysForLifestyle("steady")
+        : []);
+  const planMigrationHint = weeklyColumnMissing
+    ? "Run migration 0044 in the Supabase SQL editor so weekly study days can save."
+    : null;
 
   function wornItem(value: unknown, kind: "hat" | "clothes") {
     const legacy = kind === "hat" ? sampleHat(value) : sampleClothes(value);
@@ -202,6 +222,7 @@ export async function loadDashboard() {
     .map((session) => ({
       status: "submitted" as const,
       endedAt: session.endedAt,
+      durationSeconds: session.durationSeconds,
     }));
 
   const scores: StudyScoreCard[] = (scoresResult.data ?? []).map((score) => ({
@@ -220,7 +241,7 @@ export async function loadDashboard() {
       recordedResult.error?.message ??
       petsResult.error?.message ??
       collectionsResult.error?.message ??
-      profileResult.error?.message ??
+      (weeklyColumnMissing ? null : profileResult.error?.message) ??
       null,
   );
 
@@ -265,17 +286,28 @@ export async function loadDashboard() {
     closeBlocked: closeBlockedResult.data?.close_blocked === true,
     closeBlockedError: closeBlockedMigrationMessage(closeBlockedResult.error?.message ?? null),
     studyMode,
-    preferredSessionMinutes: Number(profile?.preferred_session_minutes ?? 0) || null,
-    monthlySessionGoal: Number(profile?.monthly_session_goal ?? 0) || null,
+    preferredSessionMinutes: preferredMinutes,
+    weeklyStudyDays,
     planSessions,
-    dailySessionGoal: Number(profile?.daily_session_goal ?? 0) || null,
+    planMigrationHint,
     studyPlan:
-      studyMode && Number(profile?.monthly_session_goal ?? 0) > 0
+      studyMode && preferredMinutes && weeklyStudyDays.length > 0
         ? {
             mode: studyMode,
-            monthlySessions: Number(profile?.monthly_session_goal ?? 1),
+            sessionMinutes: preferredMinutes,
+            studyWeekdays: weeklyStudyDays,
             answers: behaviorAnswers,
           }
-        : null,
+        : studyMode
+          ? {
+              mode: studyMode,
+              sessionMinutes: preferredMinutes ?? 60,
+              studyWeekdays:
+                weeklyStudyDays.length > 0
+                  ? weeklyStudyDays
+                  : defaultWeekdaysForLifestyle(behaviorAnswers?.lifestyle ?? "steady"),
+              answers: behaviorAnswers,
+            }
+          : null,
   };
 }

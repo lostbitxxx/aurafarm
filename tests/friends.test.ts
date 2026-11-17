@@ -103,13 +103,20 @@ test("the desk opens Friends and Leaderboard from Social", () => {
   assert.match(header, /pendingFriendRequest \? <span className="request-dot"/);
   assert.match(header, /aria-haspopup="menu"[\s\S]*?>\s*Social\s*<\/button>/);
   assert.doesNotMatch(header, /aria-haspopup="menu"[\s\S]{0,40}request-dot/);
-  assert.match(header, />\s*Social Settings\s*</);
-  assert.match(header, /onClick=\{onOpenSocialSettings\}/);
+  assert.doesNotMatch(
+    header.slice(header.indexOf('role="menu"'), header.indexOf("Leaderboard") + 40),
+    /Social [Ss]ettings/,
+  );
+  assert.match(header, /Social settings/);
+  assert.match(header, /onOpenSocialSettings/);
   assert.match(header, /onClick=\{onOpenLeaderboard\}[\s\S]*Leaderboard/);
   assert.match(desk, /onOpenFriends=\{\(\) => showSection\("friends"\)\}/);
   assert.match(desk, /pendingFriendRequest=\{incomingFriendRequests\(friendRows\)\.length > 0\}/);
   assert.match(desk, /onOpenSocialSettings=\{\(\) => showSection\("social-settings"\)\}/);
   assert.match(desk, /onOpenLeaderboard=\{\(\) => showSection\("leaderboard"\)\}/);
+  assert.match(desk, /onOpenEditPlan=\{studyPlan \? \(\) => showSection\("edit-plan"\) : undefined\}/);
+  assert.match(desk, /onOpenDownload=\{\(\) => setDialog\("download"\)\}/);
+  assert.match(desk, /onOpenDevTools=\{\(\) => setDialog\("dev-tools"\)\}/);
   assert.match(desk, /<LeaderboardDialog/);
   assert.match(desk, /<FriendsDialog[\s\S]*friendCode=\{friendCode\}/);
   assert.match(desk, /<SocialSettingsDialog/);

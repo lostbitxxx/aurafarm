@@ -2,16 +2,21 @@
  * Centralized temporary visual mappings for the living-room redesign.
  * Catalog pet_type IDs, names, ownership, levels and XP stay unchanged.
  * Species here are artwork folders only (cat / bunny — no slime).
+ *
+ * Pets are layered SVGs stacked at render time:
+ * shadow → legs → body → clothes → face → hat
+ * Study adds floor + chair behind and desk + pen in front.
  */
 
 export type PetSpecies = "cat" | "bunny";
 export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "wait" | "study1" | "study2";
+export type PetLegMode = "stand" | "left-up" | "right-up";
+export type PetFaceMode = "normal" | "blush";
 
 /**
  * One id per color range. A lighter or darker shade of the same range is an SVG
  * fill change, not a new id and not a migration.
- * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-no-clothes/{pose}.svg
- * A worn hat or clothes replaces no-hat or no-clothes in that folder name.
+ * Files: public/pet-assets/pets/{cat|bunny}/colors/{color}/
  */
 export const SAMPLE_COLORS = [
   { id: "honey", name: "Honey" },
@@ -39,14 +44,21 @@ export function sampleColor(value: unknown): SampleColorId | null {
 }
 
 /**
- * Legacy sample hats with pose folders under each pet color.
- * Ids stay hat_a and hat_b (folders and the database). name is the label.
- * Files: public/pet-assets/pets/{cat|bunny}/{color}/hat_a-no-clothes/{pose}.svg
- * hat_b uses the same pose set. With clothes: hat_a-clothes_a and hat_a-clothes_b.
+ * Sample hats. Ids stay hat_a and hat_b (database).
+ * Display: public/pet-assets/accessories/hats/{id}.svg
+ * Worn: public/pet-assets/accessories/worn/hats/{id}.svg
  */
 export const SAMPLE_HATS = [
-  { id: "hat_a", name: "Forest hat" },
-  { id: "hat_b", name: "Blue hat" },
+  {
+    id: "hat_a",
+    name: "Forest Ranger: Green Hat",
+    icon: "/pet-assets/accessories/hats/hat_a.svg",
+  },
+  {
+    id: "hat_b",
+    name: "Sky Explorer: Blue Hat",
+    icon: "/pet-assets/accessories/hats/hat_b.svg",
+  },
 ] as const;
 
 export type SampleHatId = (typeof SAMPLE_HATS)[number]["id"];
@@ -57,14 +69,21 @@ export function sampleHat(value: unknown): SampleHatId | null {
 }
 
 /**
- * Legacy sample clothes with pose folders under each pet color.
- * Ids stay clothes_a and clothes_b (folders and the database). name is the label.
- * Files: public/pet-assets/pets/{cat|bunny}/{color}/no-hat-clothes_a/{pose}.svg
- * clothes_b uses the same pose set. With a hat: hat_a-clothes_a and hat_b-clothes_a.
+ * Sample clothes. Ids stay clothes_a and clothes_b (database).
+ * Display: public/pet-assets/accessories/clothes/{id}.svg
+ * Worn: public/pet-assets/accessories/worn/{id}/{cat|bunny}.svg
  */
 export const SAMPLE_CLOTHES = [
-  { id: "clothes_a", name: "Blue vest" },
-  { id: "clothes_b", name: "Brown vest" },
+  {
+    id: "clothes_a",
+    name: "Sky Explorer: Blue Vest",
+    icon: "/pet-assets/accessories/clothes/clothes_a.svg",
+  },
+  {
+    id: "clothes_b",
+    name: "Forest Ranger: Brown Vest",
+    icon: "/pet-assets/accessories/clothes/clothes_b.svg",
+  },
 ] as const;
 
 export type SampleClothesId = (typeof SAMPLE_CLOTHES)[number]["id"];
@@ -78,6 +97,13 @@ export function sampleAccessoryName(kind: "hat" | "clothes", id: string | null |
   if (!id) return null;
   const items = kind === "hat" ? SAMPLE_HATS : SAMPLE_CLOTHES;
   return items.find((item) => item.id === id)?.name ?? null;
+}
+
+/** Standalone Collection / reward thumbnail (not the worn overlay). */
+export function sampleAccessoryIcon(kind: "hat" | "clothes", id: string | null | undefined) {
+  if (!id) return null;
+  const items = kind === "hat" ? SAMPLE_HATS : SAMPLE_CLOTHES;
+  return items.find((item) => item.id === id)?.icon ?? null;
 }
 
 /** Temporary frontend artwork mapping — not a database change. */
@@ -110,17 +136,21 @@ export const WORN_HAT_IDS = [
 ] as const;
 
 const WORN_HAT_ID_SET = new Set<string>(WORN_HAT_IDS);
+const SAMPLE_HAT_ID_SET = new Set<string>(SAMPLE_HATS.map((hat) => hat.id));
 
 /**
- * Worn hat overlays for approved collection hats.
- * Same artwork as the catalogue icon, without the baked ground-shadow ellipse.
+ * Worn hat overlays for sample + approved collection hats.
+ * Catalogue icons live under accessories/hats/; worn art drops the ground shadow.
  */
 export function wornHatAsset(hatId: string | null | undefined): string | null {
-  if (!hatId || !WORN_HAT_ID_SET.has(hatId)) return null;
-  return `/pet-assets/accessories/worn/hats/${hatId}.svg`;
+  if (!hatId) return null;
+  if (SAMPLE_HAT_ID_SET.has(hatId) || WORN_HAT_ID_SET.has(hatId)) {
+    return `/pet-assets/accessories/worn/hats/${hatId}.svg`;
+  }
+  return null;
 }
 
-/** The eight approved collection clothes with compact worn overlays (clothes_a placement). */
+/** The eight approved collection clothes with compact worn overlays. */
 export const WORN_CLOTHES_IDS = [
   "little-gentleman-suit",
   "summer-garden-vest",
@@ -133,13 +163,15 @@ export const WORN_CLOTHES_IDS = [
 ] as const;
 
 const WORN_CLOTHES_ID_SET = new Set<string>(WORN_CLOTHES_IDS);
+const SAMPLE_CLOTHES_ID_SET = new Set<string>(SAMPLE_CLOTHES.map((item) => item.id));
 
 /**
- * Body-fitted worn overlays for approved clothes (not catalogue thumbnails).
+ * Body-fitted worn overlays for sample + approved clothes.
  * Aligned to the clothes_a belly band so face, cheeks, and feet stay clear.
  */
 export function wornClothesAsset(clothesId: string | null | undefined, petType: string): string | null {
-  if (!clothesId || !WORN_CLOTHES_ID_SET.has(clothesId)) return null;
+  if (!clothesId) return null;
+  if (!SAMPLE_CLOTHES_ID_SET.has(clothesId) && !WORN_CLOTHES_ID_SET.has(clothesId)) return null;
   const species = speciesForPetType(petType);
   return `/pet-assets/accessories/worn/${clothesId}/${species}.svg`;
 }
@@ -148,29 +180,91 @@ export function colorForPetType(petType: string): PetColor {
   return DEFAULT_PET_COLOR[petType] ?? "sage";
 }
 
-export function outfitFolder(hat: string | null | undefined, clothes: string | null | undefined) {
-  const hatPart = sampleHat(hat) ?? "no-hat";
-  const clothesPart = sampleClothes(clothes) ?? "no-clothes";
-  return `${hatPart}-${clothesPart}`;
+export function petColorDir(species: PetSpecies, color: PetColor) {
+  return `/pet-assets/pets/${species}/colors/${color}`;
+}
+
+export function legModeForPose(pose: PetPose): PetLegMode {
+  if (pose === "walk2" || pose === "study2") return "right-up";
+  if (pose === "walk1" || pose === "wait" || pose === "study1") return "left-up";
+  return "stand";
+}
+
+export function faceModeForPose(pose: PetPose): PetFaceMode {
+  return pose === "blush" ? "blush" : "normal";
+}
+
+export function isStudyPose(pose: PetPose) {
+  return pose === "study1" || pose === "study2";
+}
+
+export type PetStackLayers = {
+  stage: "pet" | "study";
+  /** Under legs on the pet stage; omitted during study (floor replaces it). */
+  shadow: string | null;
+  legs: string;
+  body: string;
+  clothes: string | null;
+  face: string;
+  hat: string | null;
+  floor: string | null;
+  chair: string | null;
+  desk: string | null;
+  pen: string | null;
+};
+
+/**
+ * Layer paths for stacking a dressed pet.
+ * Order (back → front): floor?, chair?, shadow?, legs, body, clothes?, face, hat?, desk?, pen?
+ */
+export function petStackLayers(
+  petType: string,
+  pose: PetPose,
+  options: { color?: PetColor; hat?: string | null; clothes?: string | null } = {},
+): PetStackLayers {
+  const species = speciesForPetType(petType);
+  const color = options.color ?? colorForPetType(petType);
+  const base = petColorDir(species, color);
+  const legs = legModeForPose(pose);
+  const face = faceModeForPose(pose);
+  const study = isStudyPose(pose);
+  const clothes = wornClothesAsset(options.clothes, petType);
+  const hat = wornHatAsset(options.hat);
+
+  return {
+    stage: study ? "study" : "pet",
+    shadow: study ? null : `${base}/shadow.svg`,
+    legs: `${base}/legs/${legs}.svg`,
+    body: `${base}/body.svg`,
+    clothes,
+    face: `${base}/face/${face}.svg`,
+    hat,
+    floor: study ? "/pet-assets/props/study/floor.svg" : null,
+    chair: study ? "/pet-assets/props/study/chair.svg" : null,
+    desk: study ? "/pet-assets/props/study/desk.svg" : null,
+    pen: study ? `/pet-assets/props/study/pen-${pose === "study2" ? "2" : "1"}.svg` : null,
+  };
 }
 
 /**
- * Route for all three accessories:
- * /pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
- * The file is public/pet-assets/pets/{cat|bunny}/{color}/{hat}-{clothes}/{pose}.svg
- * color is the directory. hat is no-hat, hat_a, or hat_b.
- * clothes is no-clothes, clothes_a, or clothes_b.
- * pose is idle, walk1, walk2, blush, wait, study1, or study2.
+ * Body-layer path for the pet's color (pose and accessories are separate layers).
+ * Prefer petStackLayers for rendering.
  */
 export function petAssetPath(
   petType: string,
-  pose: PetPose,
+  _pose: PetPose,
   options: { color?: PetColor; hat?: string | null; clothes?: string | null } = {},
 ) {
   const species = speciesForPetType(petType);
   const color = options.color ?? colorForPetType(petType);
-  const folder = outfitFolder(options.hat, options.clothes);
-  return `/pet-assets/pets/${species}/${color}/${folder}/${pose}.svg`;
+  return `${petColorDir(species, color)}/body.svg`;
+}
+
+/** @deprecated Combo outfit folders are gone; accessories are overlays. */
+export function outfitFolder(hat: string | null | undefined, clothes: string | null | undefined) {
+  const hatPart = sampleHat(hat) ?? "no-hat";
+  const clothesPart = sampleClothes(clothes) ?? "no-clothes";
+  return `${hatPart}-${clothesPart}`;
 }
 
 export const ROOM_ASSET_PATH = "/pet-assets/room/living-room.svg";

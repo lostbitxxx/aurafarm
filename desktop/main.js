@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell } = require("electron");
+const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
@@ -20,6 +20,14 @@ const {
 const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
+const {
+  DEFAULTS: DOCK_DEFAULTS,
+  nearestEdge,
+  overlayLayout,
+  petOriginBesidePanel,
+  snapOverlay,
+} = require("./dock");
+const { petDisplayProgress } = require("./xp");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
 const { formatStudyClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
@@ -61,11 +69,13 @@ async function loadRemoteConfig() {
   }
 }
 
-const PANEL_COLLAPSED_WIDTH = 24;
-const PANEL_EXPANDED_WIDTH = 320;
-const PANEL_HEIGHT = 275;
-const PANEL_COLLAPSED_HEIGHT = 239;
-const PET_SIZE = 70;
+const PANEL_COLLAPSED_WIDTH = DOCK_DEFAULTS.barThickness;
+const PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS.panelSpan;
+const PANEL_HEIGHT = DOCK_DEFAULTS.panelLength;
+const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
+const PET_SIZE = DOCK_DEFAULTS.petSize;
+const DOCK_INSET = DOCK_DEFAULTS.inset;
+const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
 let panelWindow = null;
 let panelOpen = false;
@@ -82,14 +92,26 @@ let frontTimer = null;
 let studyClock = null;
 let frontPoll = null;
 let appQuitting = false;
+/** @type {{ edge: "left"|"right"|"top", offset: number }} */
+let dock = { edge: "right", offset: 0 };
+/** @type {null | { grabX: number, grabY: number, width: number, height: number }} */
+let dockDrag = null;
+let panelToggleSeq = 0;
+/** @type {string | null} */
+let statsPetId = null;
+let statsRefreshSeq = 0;
 let state = {
   petType: "baby_slime",
-  level: 1,
+  level: null,
+  xpIntoLevel: null,
+  petStatsReady: false,
+  statsPetId: null,
   status: "Paste a session token.",
   panelOpen: false,
   petVisible: true,
   petPose: "idle",
   petFlip: false,
+  dockEdge: "right",
 };
 const pendingLinks = [];
 
@@ -175,16 +197,90 @@ function setDebug(debug) {
   publish();
 }
 
-function panelBounds(open) {
-  const area = screen.getPrimaryDisplay().workArea;
-  const width = open ? PANEL_EXPANDED_WIDTH : PANEL_COLLAPSED_WIDTH;
-  const height = Math.min(open ? PANEL_HEIGHT : PANEL_COLLAPSED_HEIGHT, area.height);
+function dockOptions() {
   return {
-    x: area.x + area.width - width,
-    y: area.y + area.height - height,
-    width,
-    height,
+    inset: DOCK_INSET,
+    insetBottom: DOCK_INSET_BOTTOM,
+    petSize: PET_SIZE,
+    barThickness: PANEL_COLLAPSED_WIDTH,
+    barLength: PANEL_COLLAPSED_HEIGHT,
+    panelSpan: PANEL_EXPANDED_WIDTH,
+    panelLength: PANEL_HEIGHT,
+    handleSize: DOCK_DEFAULTS.handleSize,
+    levelSize: DOCK_DEFAULTS.levelSize,
+    chromePad: DOCK_DEFAULTS.chromePad,
   };
+}
+
+function applyEquippedPetStats(row) {
+  const display = petDisplayProgress(row);
+  const petType = typeof row?.pet_type === "string" && row.pet_type ? row.pet_type : state.petType;
+  statsPetId = display.petId;
+  state = {
+    ...state,
+    petType,
+    level: display.level,
+    xpIntoLevel: display.xpIntoLevel,
+    petStatsReady: display.ready,
+    statsPetId: display.petId,
+  };
+}
+
+function prefersReducedMotion() {
+  try {
+    if (typeof systemPreferences.getAnimationSettings === "function") {
+      const settings = systemPreferences.getAnimationSettings();
+      if (settings && settings.shouldRenderRichAnimation === false) return true;
+    }
+  } catch {
+    // Fall through to no preference.
+  }
+  return false;
+}
+
+function syncPanelOpenState() {
+  if (state.panelOpen === panelOpen) {
+    publish();
+    return;
+  }
+  state = { ...state, panelOpen };
+  publish();
+}
+
+const PANEL_SURFACE_MS = 200;
+/** Pause between "extend down" and "extend out" native resizes. */
+const PANEL_STAGE_MS = 140;
+
+/** Instant native resize — content fade runs in the renderer inside the same cream shell. */
+function applyPanelBounds(mode) {
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return;
+  win.setBounds(panelBounds(mode), false);
+  placePet();
+}
+
+function dockWorkArea(point) {
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    return screen.getDisplayNearestPoint({ x: Math.round(point.x), y: Math.round(point.y) }).workArea;
+  }
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    const bounds = panelWindow.getBounds();
+    return screen.getDisplayNearestPoint({
+      x: Math.round(bounds.x + bounds.width / 2),
+      y: Math.round(bounds.y + bounds.height / 2),
+    }).workArea;
+  }
+  return screen.getPrimaryDisplay().workArea;
+}
+
+function currentOverlay(open = panelOpen, point) {
+  const area = dockWorkArea(point);
+  const mode = open === true ? "open" : open === false ? "closed" : open;
+  return overlayLayout(dock.edge, dock.offset, mode, area, dockOptions());
+}
+
+function panelBounds(open) {
+  return currentOverlay(open).panel;
 }
 
 function placePanel() {
@@ -194,35 +290,149 @@ function placePanel() {
   win.setBounds(panelBounds(panelOpen), true);
 }
 
-function setPanelOpen(open) {
-  panelOpen = Boolean(open);
-  placePanel();
-  placePet();
-  if (state.panelOpen === panelOpen) return;
-  state = { ...state, panelOpen };
+function setDockEdgeState(edge) {
+  if (state.dockEdge === edge) return;
+  state = { ...state, dockEdge: edge };
   publish();
 }
 
+function setPanelOpen(open) {
+  const next = Boolean(open);
+  if (next === panelOpen && !dockDrag) {
+    placePanel();
+    placePet();
+    syncPanelOpenState();
+    return;
+  }
+  const seq = ++panelToggleSeq;
+  const reduced = prefersReducedMotion();
+  if (next) {
+    // Extend the bar down, then out (EXP rail stays on the dock edge; pet stays beside it).
+    void (async () => {
+      if (reduced) {
+        applyPanelBounds("open");
+      } else {
+        applyPanelBounds("tall");
+        await waitMs(PANEL_STAGE_MS);
+        if (seq !== panelToggleSeq) return;
+        applyPanelBounds("open");
+      }
+      if (seq !== panelToggleSeq) return;
+      panelOpen = true;
+      syncPanelOpenState();
+    })();
+    return;
+  }
+  // Fade content inside the shell, then reverse: narrow, then shorten.
+  panelOpen = false;
+  syncPanelOpenState();
+  void (async () => {
+    if (!reduced) {
+      await waitMs(PANEL_SURFACE_MS);
+      if (seq !== panelToggleSeq) return;
+      applyPanelBounds("tall");
+      await waitMs(PANEL_STAGE_MS);
+      if (seq !== panelToggleSeq) return;
+    }
+    applyPanelBounds("closed");
+  })();
+}
+
 function petBounds() {
-  const area = screen.getPrimaryDisplay().workArea;
-  const panel = panelBounds(panelOpen);
-  const width = PET_SIZE;
-  const height = Math.min(PET_SIZE, area.height);
-  const x = Math.max(area.x, panel.x - width);
-  const y = area.y + area.height - height;
-  return {
-    x: Math.min(x, area.x + Math.max(0, area.width - width)),
-    y,
-    width,
-    height,
-  };
+  return currentOverlay(panelOpen).pet;
 }
 
 function placePet() {
-  if (petAnimating) return;
+  if (petAnimating || dockDrag) return;
   const win = petWindow;
   if (!win || win.isDestroyed()) return;
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    const panelRect = panelWindow.getBounds();
+    const area = dockWorkArea({
+      x: panelRect.x + panelRect.width / 2,
+      y: panelRect.y + panelRect.height / 2,
+    });
+    const origin = petOriginBesidePanel(dock.edge, panelRect, PET_SIZE, area, dockOptions());
+    win.setBounds(
+      { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
+      false,
+    );
+    return;
+  }
   win.setBounds(petBounds(), true);
+}
+
+function placeOverlayFloating(panelRect, pointer) {
+  if (panelWindow && !panelWindow.isDestroyed()) {
+    panelWindow.setBounds(
+      {
+        x: Math.round(panelRect.x),
+        y: Math.round(panelRect.y),
+        width: Math.round(panelRect.width),
+        height: Math.round(panelRect.height),
+      },
+      false,
+    );
+  }
+  if (!petWindow || petWindow.isDestroyed() || petAnimating) return;
+  const cx = Number.isFinite(pointer?.x) ? pointer.x : panelRect.x + panelRect.width / 2;
+  const cy = Number.isFinite(pointer?.y) ? pointer.y : panelRect.y + panelRect.height / 2;
+  const area = dockWorkArea({ x: cx, y: cy });
+  const edge = nearestEdge(cx, cy, area);
+  const origin = petOriginBesidePanel(edge, panelRect, PET_SIZE, area, dockOptions());
+  petWindow.setBounds(
+    { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
+    false,
+  );
+}
+
+function beginDockDrag(screenX, screenY) {
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return;
+  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return;
+  const bounds = win.getBounds();
+  dockDrag = {
+    grabX: screenX - bounds.x,
+    grabY: screenY - bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+  };
+}
+
+function moveDockDrag(screenX, screenY) {
+  if (!dockDrag) return;
+  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) return;
+  const x = Math.round(screenX - dockDrag.grabX);
+  const y = Math.round(screenY - dockDrag.grabY);
+  placeOverlayFloating({ x, y, width: dockDrag.width, height: dockDrag.height }, { x: screenX, y: screenY });
+}
+
+function endDockDrag(screenX, screenY) {
+  if (!dockDrag) return;
+  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
+    cancelDockDrag();
+    return;
+  }
+  const floating = {
+    x: Math.round(screenX - dockDrag.grabX),
+    y: Math.round(screenY - dockDrag.grabY),
+    width: dockDrag.width,
+    height: dockDrag.height,
+  };
+  dockDrag = null;
+  const area = dockWorkArea({ x: screenX, y: screenY });
+  const snapped = snapOverlay(floating, { x: screenX, y: screenY }, area, panelOpen, dockOptions());
+  dock = { edge: snapped.edge, offset: snapped.offset };
+  setDockEdgeState(snapped.edge);
+  placePanel();
+  placePet();
+}
+
+function cancelDockDrag() {
+  if (!dockDrag) return;
+  dockDrag = null;
+  placePanel();
+  placePet();
 }
 
 function waitMs(ms) {
@@ -328,10 +538,21 @@ function setPetVisible(visible) {
   publish();
 }
 
+function hardenOverlayWindow(win) {
+  if (!win || win.isDestroyed()) return;
+  win.setAlwaysOnTop(true, "screen-saver");
+  if (process.platform === "darwin") {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
+}
+
 function openPet() {
   if (petWindow && !petWindow.isDestroyed()) {
     placePet();
-    if (petVisible) petWindow.showInactive();
+    if (petVisible) {
+      hardenOverlayWindow(petWindow);
+      petWindow.showInactive();
+    }
     return;
   }
   const bounds = petBounds();
@@ -354,6 +575,7 @@ function openPet() {
       nodeIntegration: false,
     },
   });
+  hardenOverlayWindow(petWindow);
   petWindow.setIgnoreMouseEvents(true, { forward: true });
   petWindow.loadFile(path.join(__dirname, "pet.html"));
   petWindow.on("closed", () => {
@@ -387,12 +609,14 @@ function pasteSessionCode(win) {
 
 function openPanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
+    hardenOverlayWindow(panelWindow);
     panelWindow.show();
     return;
   }
   const bounds = panelBounds(panelOpen);
   panelWindow = new BrowserWindow({
     ...bounds,
+    show: true,
     frame: false,
     transparent: true,
     movable: false,
@@ -407,6 +631,7 @@ function openPanel() {
       nodeIntegration: false,
     },
   });
+  hardenOverlayWindow(panelWindow);
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
   panelWindow.webContents.on("context-menu", (_event, params) => {
     const win = panelWindow;
@@ -426,7 +651,11 @@ function openPanel() {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
   });
-  panelWindow.webContents.once("did-finish-load", publish);
+  panelWindow.webContents.once("did-finish-load", () => {
+    hardenOverlayWindow(panelWindow);
+    if (panelWindow && !panelWindow.isDestroyed()) panelWindow.show();
+    publish();
+  });
 }
 
 async function restoreSession() {
@@ -476,11 +705,13 @@ async function refreshPet() {
     return;
   }
   await touchPetPresence(true);
+  const refreshSeq = ++statsRefreshSeq;
   const { data, error } = await supabase
     .from("user_pets")
-    .select("pet_type, level")
+    .select("id, pet_type, level, xp")
     .eq("is_desktop_active", true)
     .maybeSingle();
+  if (refreshSeq !== statsRefreshSeq) return;
   if (error) {
     petLog(`[pet] equipped pet query failed: ${error.message}`);
     setStatus(error.message);
@@ -490,10 +721,10 @@ async function refreshPet() {
     petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
     return;
   }
+  applyEquippedPetStats(data);
   petLog(
-    `[pet] equipped ${data.pet_type} level ${data.level} for ${sessionData.session.user?.id ?? "unknown"}`,
+    `[pet] equipped ${state.petType} level ${state.level ?? "?"} into ${state.xpIntoLevel ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
   );
-  state = { ...state, petType: data.pet_type, level: data.level };
   publish();
 }
 
@@ -657,17 +888,15 @@ function beginFrontWatch(body, browser = "") {
   };
   if (body.pet_type) {
     petLog(
-      `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level}`,
+      `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level ?? "?"}`,
     );
-    state = {
-      ...state,
-      petType: body.pet_type,
-      level: typeof body.level === "number" ? body.level : state.level,
-    };
+    // Sprite type can update immediately; level/XP wait for refreshPet so fill matches the desk.
+    state = { ...state, petType: body.pet_type };
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
   state = { ...state, finishNote: "" };
+  void refreshPet();
   setDebug(
     describeCloseDebug({
       session: true,
@@ -1004,6 +1233,18 @@ ipcMain.on("set-panel-open", (_event, open) => {
 ipcMain.on("set-pet-visible", (_event, visible) => {
   setPetVisible(visible);
 });
+ipcMain.on("dock-drag-start", (_event, point) => {
+  beginDockDrag(Number(point?.x), Number(point?.y));
+});
+ipcMain.on("dock-drag-move", (_event, point) => {
+  moveDockDrag(Number(point?.x), Number(point?.y));
+});
+ipcMain.on("dock-drag-end", (_event, point) => {
+  endDockDrag(Number(point?.x), Number(point?.y));
+});
+ipcMain.on("dock-drag-cancel", () => {
+  cancelDockDrag();
+});
 
 async function checkForUpdate() {
   try {
@@ -1075,9 +1316,25 @@ if (!gotLock) {
       ]),
     );
     screen.on("display-metrics-changed", () => {
+      if (dockDrag) cancelDockDrag();
+      const area = dockWorkArea();
+      const layout = overlayLayout(dock.edge, dock.offset, panelOpen, area, dockOptions());
+      dock = { edge: layout.edge, offset: layout.offset };
+      setDockEdgeState(layout.edge);
       placePanel();
       placePet();
     });
+    {
+      const display = screen.getPrimaryDisplay();
+      const area = display.workArea;
+      console.log(
+        `[pet] display bounds=${JSON.stringify(display.bounds)} workArea=${JSON.stringify(area)} scale=${display.scaleFactor}`,
+      );
+      const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, false, area, dockOptions());
+      dock = { edge: "right", offset: bottomRight.offset };
+      state = { ...state, dockEdge: "right" };
+      console.log(`[pet] dock panel=${JSON.stringify(bottomRight.panel)} pet=${JSON.stringify(bottomRight.pet)}`);
+    }
     openPanel();
     openPet();
     void noteFrontApp();

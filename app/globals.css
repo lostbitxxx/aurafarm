@@ -39,7 +39,7 @@ button, input { font: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.1rem 6vw;
+  padding: 1.1rem max(1rem, 2vw);
 }
 
 .wordmark {
@@ -62,6 +62,17 @@ button.wordmark {
   display: flex;
   align-items: center;
   gap: 0.9rem;
+}
+
+.topbar-nav {
+  align-items: flex-start;
+}
+
+.topbar-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
 }
 
 .topbar-nav a { text-decoration: none; }
@@ -250,6 +261,11 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 .desk-page .wordmark,
 .desk-page .topbar a {
   color: var(--ink);
+}
+
+.desk-page .wordmark {
+  font-size: clamp(2.2rem, 4.5vw, 3rem);
+  line-height: 1;
 }
 
 .desk-page .points-balance span { color: #4d7a16; }
@@ -474,9 +490,9 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .desk {
   flex: 1;
-  width: 100%;
+  width: min(1680px, calc(100% - 2vw));
   min-height: 0;
-  margin: 0;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   color: var(--ink);
@@ -492,7 +508,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   gap: 0.85rem;
   min-width: 0;
   min-height: 0;
-  padding: 0.25rem 1.5rem calc(5.75rem + env(safe-area-inset-bottom, 0px)) 6vw;
+  padding: 0.25rem max(1rem, 2vw) calc(1.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .desk-page .button.is-cancelled,
@@ -542,7 +558,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 .pet-name {
   margin: 0;
   font-family: var(--serif);
-  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
   line-height: 0.95;
   letter-spacing: -0.03em;
 }
@@ -1467,11 +1483,85 @@ button.dialog-row {
 .topbar-desktop-links {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 0.9rem;
 }
 
 .topbar-name {
   min-width: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.topbar-settings {
+  position: relative;
+}
+
+.topbar-settings-button {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.topbar-settings-gear {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: inherit;
+}
+
+.topbar-settings-list {
+  display: grid;
+  gap: 0.15rem;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  left: auto;
+  z-index: 30;
+  min-width: 13.5rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(20, 33, 26, 0.12);
+  border-radius: 12px;
+  background: #fff9ed;
+  box-shadow: var(--shadow);
+}
+
+.topbar-settings-list button,
+.topbar-settings-list a {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  display: block;
+}
+
+.topbar-settings-list form {
+  margin: 0;
+}
+
+.topbar-settings-list form button {
+  width: 100%;
+}
+
+.topbar-settings-list button:hover,
+.topbar-settings-list button:focus-visible,
+.topbar-settings-list a:hover,
+.topbar-settings-list a:focus-visible {
+  background: #efe8d4;
 }
 
 .topbar-menu-button {
@@ -1901,7 +1991,7 @@ button.dialog-row {
 .room-title {
   margin: 0;
   font-family: var(--serif);
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
 }
 
 .room-subtitle {
@@ -1912,7 +2002,7 @@ button.dialog-row {
 
 .living-room {
   position: relative;
-  height: 315px;
+  height: 472px;
   overflow: hidden;
   border: 3px solid #a7b392;
   border-radius: 11px;
@@ -2024,11 +2114,29 @@ button.dialog-row {
   display: block;
 }
 
-.pixel-pet > .pixel-pet-body {
+.pixel-pet-figure {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.pixel-pet.is-study .pixel-pet-figure {
+  /* Lift the pet onto the chair seat inside the 64×64 study stage. */
+  inset: 8% 17% 28% 17%;
+}
+
+.pixel-pet-layer {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: none;
   image-rendering: pixelated;
+}
+
+.pixel-pet-layer.is-body {
+  pointer-events: auto;
 }
 
 .pixel-pet-accessory {
@@ -2042,34 +2150,21 @@ button.dialog-row {
 }
 
 .pixel-pet-accessory.is-hat {
-  top: 0;
+  /* Catalogue / collection hats sit in mid-canvas; pin above the face. */
+  top: -12%;
+  width: 72%;
+  height: 72%;
+}
+
+.pixel-pet-layer.is-worn-hat {
+  /* Sample hats already drawn on the head in 42×42 space. */
+  inset: 0;
 }
 
 .pixel-pet-accessory.is-clothes {
   bottom: 0;
   width: 70%;
   height: 70%;
-}
-
-.pixel-pet-accessory.is-worn-clothes {
-  inset: 0;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform: none;
-}
-
-/* Study art is 64x64. The pet is the 42x42 standing sprite at translate(11 3). */
-.pixel-pet.is-study .pixel-pet-accessory.is-worn-clothes,
-.pixel-pet.is-study .pixel-pet-accessory.is-hat,
-.pixel-pet.is-study .pixel-pet-accessory.is-clothes {
-  inset: auto;
-  left: calc(11 / 64 * 100%);
-  top: calc(3 / 64 * 100%);
-  width: calc(42 / 64 * 100%);
-  height: calc(42 / 64 * 100%);
-  transform: none;
 }
 
 .pixel-pet-art.is-walking {
@@ -2988,7 +3083,8 @@ button.dialog-row {
 
 .customize-embed .customize-option,
 .customize-embed .customize-mode,
-.customize-embed .daily-day {
+.customize-embed .daily-day,
+.customize-embed .weekday-day {
   background: #f7f3e8;
 }
 
@@ -3046,6 +3142,11 @@ button.dialog-row {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.customize-note-underline {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .customize-lede,
@@ -3215,6 +3316,60 @@ button.dialog-row {
   gap: 0.7rem;
 }
 
+.goal-visual-weekly {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.weekday-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.weekday-day {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+  padding: 0.7rem 0.35rem;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: inherit;
+  cursor: pointer;
+}
+
+.weekday-day strong {
+  font-size: 0.92rem;
+}
+
+.weekday-day span {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.weekday-day.is-selected {
+  box-shadow: inset 0 0 0 2px var(--slime-deep);
+  background: rgba(198, 239, 74, 0.18);
+}
+
+.session-minute-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .weekday-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .session-minute-options,
+  .goal-visual-weekly {
+    grid-template-columns: 1fr;
+  }
+}
+
 .goal-stat {
   display: grid;
   gap: 0.2rem;
@@ -3318,6 +3473,17 @@ button.dialog-row {
   background: rgba(198, 239, 74, 0.56);
 }
 
+.plan-banner.is-rest-day {
+  background: rgba(20, 33, 26, 0.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(20, 33, 26, 0.08),
+    0 0 0 2px rgba(20, 33, 26, 0.06);
+}
+
+.plan-banner.is-rest-day .plan-banner-fill {
+  background: rgba(90, 140, 200, 0.35);
+}
+
 .plan-banner-copy {
   position: relative;
   z-index: 1;
@@ -3365,7 +3531,7 @@ button.dialog-row {
   .level-dock {
     padding: 0.3rem 1rem 0.65rem;
   }
-  .scene { padding: 0.25rem 1.25rem calc(5.75rem + env(safe-area-inset-bottom, 0px)); }
+  .scene { padding: 0.25rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
   .goal-visual { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .plan-row { margin: 0 1.25rem 0.5rem; }
   .plan-banner-note { display: none; }
@@ -3376,7 +3542,7 @@ button.dialog-row {
     padding: 0 1rem 0.9rem;
   }
   .below-room { flex-direction: column; align-items: flex-start; }
-  .living-room { height: 280px; }
+  .living-room { height: 420px; }
   .pet-detail { grid-template-columns: 1fr; }
   .big-pet { min-height: 140px; }
   .big-pet-art { width: 120px; height: 120px; }
@@ -3385,8 +3551,8 @@ button.dialog-row {
 
 @media (max-width: 1120px) {
   .desk-page .topbar {
-    --topbar-pad-x: max(1rem, env(safe-area-inset-left));
-    --topbar-pad-r: max(1rem, env(safe-area-inset-right));
+    --topbar-pad-x: max(1rem, 2vw, env(safe-area-inset-left));
+    --topbar-pad-r: max(1rem, 2vw, env(safe-area-inset-right));
     position: relative;
     flex-wrap: nowrap;
     align-items: center;
@@ -3405,7 +3571,6 @@ button.dialog-row {
   .desk-page .wordmark {
     display: block;
     flex: none;
-    font-size: 1.25rem;
   }
 
   .desk-page .topbar-desktop-links,
