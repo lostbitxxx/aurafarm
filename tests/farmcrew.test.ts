@@ -213,6 +213,11 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.match(sql, /function public\.request_farm_crew_by_code/);
   assert.match(sql, /function public\.list_farm_crew_room/);
   assert.match(sql, /allow_status_seen in \('friend_and_group', 'group_only'\)/);
+  const presenceSql = readFileSync(new URL("../supabase/migrations/0045_crew_room_presence.sql", import.meta.url), "utf8");
+  assert.match(presenceSql, /interval '3 minutes'/);
+  assert.match(presenceSql, /interval '15 seconds'/);
+  assert.match(presenceSql, /allow_status_seen <> 'none'/);
+  assert.match(presenceSql, /current_status in \('online', 'aurafarming'\)/);
   assert.match(sql, /revoke all on function public\.join_farm_crew\(uuid, boolean\)/);
   assert.doesNotMatch(sql, /grant execute on function public\.join_farm_crew/);
 
