@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   CYLINDER_RULER_LINES,
   CYLINDER_TICK_MS,
+  cylinderCaption,
   cylinderHeat,
   cylinderProgress,
   cylinderTone,
@@ -40,6 +41,13 @@ test("cylinder heat steps at each ruler band; rest tone stays separate", () => {
 
 test("seven ruler lines divide the tube into eight bands", () => {
   assert.deepEqual([...CYLINDER_RULER_LINES], [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test("cylinder caption covers study progress, goal met, and rest day copy", () => {
+  assert.equal(cylinderCaption(12, 60, true), "12/60 mins studied");
+  assert.equal(cylinderCaption(60, 60, true), "You did it!");
+  assert.equal(cylinderCaption(0, 60, false), "Rest day · Study if you like");
+  assert.equal(cylinderCaption(12, 60, false), "Rest day · 12 mins studied");
 });
 
 test("cylinder reset ignores sessions ended before the wipe", () => {
@@ -80,9 +88,31 @@ test("living room hosts the daily cylinder in the top-right", () => {
   assert.match(css, /--cylinder-wall-hot/);
   assert.match(css, /linear-gradient\(\s*to top/);
   assert.match(css, /max\(0%, calc\(var\(--cylinder-ratio\) \* 100% - 6%\)\)/);
+  assert.match(css, /room-cylinder-shell/);
+  assert.match(cylinder, /room-cylinder-shell/);
+  assert.match(cylinder, /room-cylinder-caption/);
+  assert.match(cylinder, /cylinderCaption/);
+  assert.match(css, /room-cylinder-caption/);
+  assert.match(cylinder, /is-in-liquid/);
+  assert.match(css, /is-in-liquid/);
   assert.match(css, /cylinder-fire/);
+  assert.match(css, /800ms/);
+  assert.match(css, /room-cylinder-fire-strip/);
+  assert.match(css, /--fire-unit/);
+  assert.match(css, /translateX\(-413px\)/);
+  assert.match(css, /\.room-cylinder-fire[\s\S]*overflow:\s*hidden/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(css, /room-cylinder-rim|room-cylinder-base|room-cylinder-glass/);
+  assert.match(cylinder, /room-cylinder-fire/);
+  assert.match(cylinder, /room-cylinder-fire-strip/);
+  assert.match(cylinder, /room-cylinder-fire\.svg/);
+  assert.match(cylinder, /goalMet/);
+  const fireSvg = readFileSync(new URL("../public/room-cylinder-fire.svg", import.meta.url), "utf8");
+  assert.match(fireSvg, /viewBox="0 0 160 22"/);
+  assert.match(fireSvg, /Original Aurafarm desk pixel fire/);
+  // Eight equal 20px-wide frames on a 160×22 sheet.
+  assert.match(fireSvg, /width="160"/);
+  assert.match(fireSvg, /height="22"/);
   assert.match(panel, /dailyStudiedMinutes/);
   assert.match(panel, /focusedSeconds/);
   assert.match(panel, /CYLINDER_TICK_MS/);

@@ -39,5 +39,16 @@ export function cylinderTone(isStudyDay: boolean): CylinderTone {
   return isStudyDay ? "study" : "rest";
 }
 
+/** Short label shown above the living-room capsule. */
+export function cylinderCaption(studiedMinutes: number, goalMinutes: number, isStudyDay: boolean) {
+  const progress = cylinderProgress(studiedMinutes, goalMinutes);
+  if (isStudyDay) {
+    if (progress.goalMet) return "You did it!";
+    return `${progress.studiedMinutes}/${progress.goalMinutes} mins studied`;
+  }
+  if (progress.studiedMinutes <= 0) return "Rest day · Study if you like";
+  return `Rest day · ${progress.studiedMinutes} mins studied`;
+}
+
 /** Seven ruler marks that split the tube into eight equal bands. */
 export const CYLINDER_RULER_LINES = [1, 2, 3, 4, 5, 6, 7] as const;
