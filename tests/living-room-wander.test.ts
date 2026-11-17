@@ -16,15 +16,26 @@ import {
   spotHitsObstacle,
 } from "../lib/living-room-layout";
 import {
+  DRAG_START_PX,
+  DRAG_STRUGGLE_AFTER_MS,
+  DRAG_STRUGGLE_DEG,
+  dragPastThreshold,
   facingFromDirection,
+  FOREHEAD_OFFSET_Y_RATIO,
   IDLE_DURATION_MS,
   normalize2d,
   PETTING_HOLD_MS,
   pickWalkDirection,
+  pointerPercentInRoom,
+  clearSessionWanderSpots,
   randomIdleMs,
   randomWalkMs,
+  randomWanderSpot,
   resolveWanderSpot,
+  sessionOrRandomWanderSpot,
+  spotFromForeheadPointer,
   stepWanderSpot,
+  writeSessionWanderSpot,
   WALK_BOUNDS,
   WALK_DURATION_MS,
   WANDER_MAX_DT_SEC,
@@ -185,6 +196,70 @@ test("facing ignores mostly vertical motion", () => {
   assert.equal(facingFromDirection({ x: 0.9, y: 0.1 }, true), false);
 });
 
+test("randomWanderSpot stays on the walkable floor", () => {
+  let seq = 0;
+  const rand = () => {
+    seq += 1;
+    return (seq % 10) / 10;
+  };
+  for (let i = 0; i < 20; i += 1) {
+    const spot = randomWanderSpot(rand);
+    assert.equal(spotHitsObstacle(spot), false);
+    assert.ok(spot.left >= WALK_BOUNDS.minLeft && spot.left <= WALK_BOUNDS.maxLeft);
+    assert.ok(spot.top >= WALK_BOUNDS.minTop && spot.top <= WALK_BOUNDS.maxTop);
+  }
+});
+
+test("session wander spots are in-memory only and reused until cleared", () => {
+  clearSessionWanderSpots();
+  const first = sessionOrRandomWanderSpot("pet-session-a", () => 0.25);
+  const again = sessionOrRandomWanderSpot("pet-session-a", () => 0.9);
+  assert.deepEqual(again, first);
+  writeSessionWanderSpot("pet-session-a", { left: 55, top: 50 });
+  const placed = sessionOrRandomWanderSpot("pet-session-a", () => 0.1);
+  assert.equal(placed.left, 55);
+  assert.equal(placed.top, 50);
+  clearSessionWanderSpots();
+  const afterClear = sessionOrRandomWanderSpot("pet-session-a", () => 0.25);
+  assert.deepEqual(afterClear, first);
+});
+
+test("drag helpers use forehead offset and a movement threshold", () => {
+  assert.equal(DRAG_START_PX, 8);
+  assert.equal(DRAG_STRUGGLE_AFTER_MS, 1500);
+  assert.equal(DRAG_STRUGGLE_DEG, 10);
+  assert.equal(FOREHEAD_OFFSET_Y_RATIO, 0.12);
+
+  assert.equal(dragPastThreshold(0, 0, 3, 4), false);
+  assert.equal(dragPastThreshold(0, 0, 6, 8), true);
+
+  const pct = pointerPercentInRoom(120, 80, { left: 100, top: 50, width: 200, height: 100 });
+  assert.equal(pct.left, 10);
+  assert.equal(pct.top, 30);
+
+  const room = { width: 400, height: 200 };
+  const wrapHeight = 86;
+  const grabbed = spotFromForeheadPointer(40, 50, room, wrapHeight);
+  assert.equal(grabbed.left, 40);
+  // Body center sits below the forehead so the cursor holds the hat/forehead band.
+  assert.ok(grabbed.top > 50);
+  const expectedOffset = ((FOREHEAD_OFFSET_Y_RATIO * wrapHeight) / room.height) * 100;
+  assert.ok(Math.abs(grabbed.top - (50 + expectedOffset)) < 1e-9);
+});
+
+test("dropping on furniture resolves to a walkable spot", () => {
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  assert.ok(loveseat);
+  const ontoSofa = {
+    left: (loveseat.block.minLeft + loveseat.block.maxLeft) / 2,
+    top: (loveseat.block.minTop + loveseat.block.maxTop) / 2,
+  };
+  assert.equal(spotHitsObstacle(ontoSofa), true);
+  const placed = resolveWanderSpot(ontoSofa);
+  assert.equal(spotHitsObstacle(placed), false);
+  assert.ok(placed.top >= WALK_BOUNDS.minTop && placed.top <= WALK_BOUNDS.maxTop);
+});
+
 test("Living Room uses layered room art, stroll helpers, and no dedicated Pet button", () => {
   const source = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -223,11 +298,23 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /requestAnimationFrame/);
   assert.match(source, /onPointerCancel/);
   assert.match(source, /usePetting\(beginPetting\)/);
+  assert.match(source, /spotFromForeheadPointer/);
+  assert.match(source, /sessionOrRandomWanderSpot/);
+  assert.match(source, /writeSessionWanderSpot/);
+  assert.match(source, /dragPastThreshold/);
+  assert.match(source, /DRAG_STRUGGLE_AFTER_MS/);
+  assert.match(source, /"dragging"/);
+  assert.match(source, /is-struggling/);
+  assert.match(source, /clearPettingFx/);
+  assert.doesNotMatch(source, /roomStartSpot/);
   assert.doesNotMatch(css, /\.room-pet-actions/);
   assert.doesNotMatch(css, /\.room-pet-button/);
   assert.doesNotMatch(css, /\.room-pet-hand/);
   assert.match(css, /\.room-equipped/);
   assert.match(css, /\.living-room-layer/);
+  assert.match(css, /\.room-pet-wrap\.is-dragging/);
+  assert.match(css, /room-pet-struggle/);
+  assert.match(css, /rotate\(-10deg\)/);
   // [^}] already spans newlines; avoid /s (needs a newer TS target than ES2017).
   assert.match(css, /\.living-room\s*\{[^}]*isolation:\s*isolate/);
   assert.match(layout, /ROOM_FLOOR_START_Y/);

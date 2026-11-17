@@ -25,6 +25,21 @@ export const IDLE_DURATION_MS = { min: 2000, max: 6000 } as const;
 /** How long after the last stroke/button press before petting ends (existing blush hold). */
 export const PETTING_HOLD_MS = 1500;
 
+/** Pointer travel (px) before a press becomes a drag instead of click/petting. */
+export const DRAG_START_PX = 8;
+
+/** Continuous grab duration before the pet starts the struggle swing. */
+export const DRAG_STRUGGLE_AFTER_MS = 1500;
+
+/** Struggle swing amplitude (degrees) around the forehead pivot. */
+export const DRAG_STRUGGLE_DEG = 10;
+
+/**
+ * Forehead grab point above the wrap center (translate -50%/-50%).
+ * Fraction of the room-pet wrap height — lower values sit the pet higher under the cursor.
+ */
+export const FOREHEAD_OFFSET_Y_RATIO = 0.12;
+
 /** Clearance past an obstacle edge when ejecting a stuck pet (% of room). */
 export const OBSTACLE_EJECT_PAD = 1.25;
 
@@ -52,6 +67,69 @@ export function randomWalkMs(rand: () => number = Math.random) {
 
 export function randomIdleMs(rand: () => number = Math.random) {
   return randomBetween(IDLE_DURATION_MS.min, IDLE_DURATION_MS.max, rand);
+}
+
+/**
+ * Pick a walkable floor spot for spawn / refresh (avoids furniture footprints).
+ * Falls back through start corridors, then resolveWanderSpot, if sampling fails.
+ */
+export function randomWanderSpot(
+  rand: () => number = Math.random,
+  bounds = WALK_BOUNDS,
+  obstacles: readonly RoomObstacle[] = ROOM_OBSTACLES,
+  attempts = 48,
+): WanderSpot {
+  for (let i = 0; i < attempts; i += 1) {
+    const candidate = {
+      left: randomBetween(bounds.minLeft, bounds.maxLeft, rand),
+      top: randomBetween(bounds.minTop, bounds.maxTop, rand),
+    };
+    if (!spotHitsObstacle(candidate, obstacles)) return candidate;
+  }
+  for (const candidate of ROOM_START_SPOTS) {
+    const next = clampSpotToWalkBand(candidate, bounds);
+    if (!spotHitsObstacle(next, obstacles)) return next;
+  }
+  return resolveWanderSpot(
+    {
+      left: randomBetween(bounds.minLeft, bounds.maxLeft, rand),
+      top: randomBetween(bounds.minTop, bounds.maxTop, rand),
+    },
+    bounds,
+    obstacles,
+  );
+}
+
+/** In-memory only — survives Living Room remounts, cleared on full page refresh. */
+const sessionWanderSpots = new Map<string, WanderSpot>();
+
+/** Test helper: wipe session spots between cases. */
+export function clearSessionWanderSpots() {
+  sessionWanderSpots.clear();
+}
+
+export function writeSessionWanderSpot(petId: string, spot: WanderSpot) {
+  sessionWanderSpots.set(petId, spot);
+}
+
+export function readSessionWanderSpot(petId: string): WanderSpot | null {
+  return sessionWanderSpots.get(petId) ?? null;
+}
+
+/**
+ * Session-only placement: reuse this tab's last spot for the pet, else roll a random walkable one.
+ * Not written to localStorage / the account.
+ */
+export function sessionOrRandomWanderSpot(petId: string, rand: () => number = Math.random): WanderSpot {
+  const saved = sessionWanderSpots.get(petId);
+  if (saved) {
+    const freed = resolveWanderSpot(saved);
+    sessionWanderSpots.set(petId, freed);
+    return freed;
+  }
+  const rolled = randomWanderSpot(rand);
+  sessionWanderSpots.set(petId, rolled);
+  return rolled;
 }
 
 /**
@@ -197,4 +275,49 @@ export function resolveWanderSpot(
   }
 
   return clampSpotToWalkBand({ left: bounds.maxLeft, top: (bounds.minTop + bounds.maxTop) / 2 }, bounds);
+}
+
+/**
+ * Map a pointer position inside the room box to a pet spot whose forehead sits under the cursor.
+ * `wrapHeightPx` is the room-pet wrap height; offset is converted into room-% space.
+ */
+export function spotFromForeheadPointer(
+  pointerLeftPct: number,
+  pointerTopPct: number,
+  room: { width: number; height: number },
+  wrapHeightPx: number,
+  foreheadRatio = FOREHEAD_OFFSET_Y_RATIO,
+): WanderSpot {
+  const height = Math.max(room.height, 1);
+  const wrap = Math.max(wrapHeightPx, 1);
+  const offsetTopPct = ((foreheadRatio * wrap) / height) * 100;
+  return {
+    left: pointerLeftPct,
+    top: pointerTopPct + offsetTopPct,
+  };
+}
+
+/** Convert a client point to % of a room element's content box. */
+export function pointerPercentInRoom(
+  clientX: number,
+  clientY: number,
+  room: DOMRect | { left: number; top: number; width: number; height: number },
+): { left: number; top: number } {
+  const width = Math.max(room.width, 1);
+  const height = Math.max(room.height, 1);
+  return {
+    left: ((clientX - room.left) / width) * 100,
+    top: ((clientY - room.top) / height) * 100,
+  };
+}
+
+/** True once the pointer has moved far enough to count as a drag. */
+export function dragPastThreshold(
+  startX: number,
+  startY: number,
+  clientX: number,
+  clientY: number,
+  thresholdPx = DRAG_START_PX,
+) {
+  return Math.hypot(clientX - startX, clientY - startY) >= thresholdPx;
 }

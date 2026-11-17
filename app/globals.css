@@ -2624,6 +2624,33 @@ button.dialog-row {
   z-index: 2;
 }
 
+.room-pet-wrap.is-dragging {
+  /* Lift above Y-sorted furniture while carrying; still under room UI chips. */
+  cursor: grabbing;
+}
+
+.room-pet-wrap.is-dragging .room-pet {
+  cursor: grabbing;
+}
+
+.room-pet-wrap.is-struggling .room-pet {
+  /* Pivot near the forehead (matches FOREHEAD_OFFSET_Y_RATIO ≈ 0.12 → ~38% from top). */
+  transform-origin: 50% 38%;
+  animation: room-pet-struggle 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes room-pet-struggle {
+  from { transform: rotate(-10deg); }
+  to { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-pet-wrap.is-struggling .room-pet {
+    animation: none;
+    transform: none;
+  }
+}
+
 .room-pet {
   display: grid;
   justify-items: center;
@@ -2634,6 +2661,8 @@ button.dialog-row {
   padding: 0;
   cursor: pointer;
   color: inherit;
+  touch-action: none;
+  user-select: none;
 }
 
 .room-pet-sprite {
