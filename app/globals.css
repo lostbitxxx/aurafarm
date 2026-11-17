@@ -2314,6 +2314,195 @@ button.dialog-row {
 
 .living-room-pets { position: absolute; inset: 0; }
 
+/* Daily progress capsule — soft pill like the desk meter mock, cozy linen wall. */
+.room-cylinder {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.7rem;
+  z-index: 4;
+  pointer-events: none;
+  --cylinder-heat: 0;
+  --cylinder-ratio: 0;
+  --cylinder-wall: #fffcf7;
+  --cylinder-edge: #c5ceb5;
+  --cylinder-track: #e8ebe0;
+}
+
+.room-cylinder-tube {
+  position: relative;
+  width: 44px;
+  height: 352px;
+  border: 2px solid var(--cylinder-edge);
+  border-radius: 18px;
+  /*
+    Wall heat follows the liquid: solid hot below, a small soft blend exactly
+    at the liquid surface, cool glass above.
+  */
+  background: linear-gradient(
+    to top,
+    var(--cylinder-wall-hot) 0%,
+    var(--cylinder-wall-hot) max(0%, calc(var(--cylinder-ratio) * 100% - 6%)),
+    var(--cylinder-wall) calc(var(--cylinder-ratio) * 100%),
+    var(--cylinder-wall) 100%
+  );
+  box-shadow: 3px 4px 0 rgba(157, 169, 138, 0.22);
+  overflow: hidden;
+  --cylinder-wall-hot: #f0d5c4;
+}
+
+.room-cylinder-track {
+  position: absolute;
+  inset: 5px;
+  border-radius: 13px;
+  background: var(--cylinder-track);
+  z-index: 0;
+}
+
+.room-cylinder-liquid {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  height: calc((100% - 10px) * var(--cylinder-ratio));
+  /* Flat top; only the foot follows the tube curve. */
+  border-radius: 0 0 11px 11px;
+  z-index: 1;
+  background: var(--cylinder-liquid, #e8b090);
+  transition:
+    height 0.45s steps(8, end),
+    background-color 0.35s linear,
+    opacity 0.35s linear;
+}
+
+.room-cylinder.is-study {
+  --flame-hot: #c43b2e;
+  --flame-mid: #e4a05a;
+  --cylinder-wall-hot: color-mix(
+    in srgb,
+    #e8a090 calc(40% + var(--cylinder-heat) * 60%),
+    #f0d5c4 calc(60% - var(--cylinder-heat) * 40%)
+  );
+}
+
+.room-cylinder.is-study .room-cylinder-tube {
+  border-color: color-mix(
+    in srgb,
+    #c48a6a calc(var(--cylinder-heat) * 100%),
+    var(--cylinder-edge) calc((1 - var(--cylinder-heat)) * 100%)
+  );
+}
+
+/* Single liquid color — cooler / more transparent early, warmer red per band. */
+.room-cylinder.is-study .room-cylinder-liquid {
+  opacity: calc(0.4 + var(--cylinder-heat) * 0.6);
+  background: color-mix(
+    in srgb,
+    #c43b2e calc(20% + var(--cylinder-heat) * 80%),
+    #e8b090 calc(80% - var(--cylinder-heat) * 60%)
+  );
+}
+
+.room-cylinder.is-rest {
+  --flame-hot: #4a79b8;
+  --flame-mid: #9eb6d4;
+  --cylinder-wall-hot: color-mix(
+    in srgb,
+    #9eb6d4 calc(40% + var(--cylinder-heat) * 60%),
+    #dde6ee calc(60% - var(--cylinder-heat) * 40%)
+  );
+}
+
+.room-cylinder.is-rest .room-cylinder-tube {
+  border-color: color-mix(
+    in srgb,
+    #6a8fb0 calc(var(--cylinder-heat) * 100%),
+    #b0aea4 calc((1 - var(--cylinder-heat)) * 100%)
+  );
+  box-shadow: 3px 4px 0 rgba(140, 138, 128, 0.22);
+}
+
+/* Single liquid color — cool translucent blue → warmer blue per band. */
+.room-cylinder.is-rest .room-cylinder-liquid {
+  opacity: calc(0.38 + var(--cylinder-heat) * 0.62);
+  background: color-mix(
+    in srgb,
+    #3f78c8 calc(20% + var(--cylinder-heat) * 80%),
+    #b7cce0 calc(80% - var(--cylinder-heat) * 60%)
+  );
+}
+
+.room-cylinder.is-rest.is-burning .room-cylinder-tube {
+  border-color: #6a8fb0;
+}
+
+.room-cylinder-ruler {
+  position: absolute;
+  inset: 5px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.room-cylinder-ruler i {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 1px;
+  background: rgba(117, 108, 80, 0.28);
+  display: block;
+}
+
+.room-cylinder.is-rest .room-cylinder-ruler i {
+  background: rgba(90, 90, 85, 0.28);
+}
+
+.room-cylinder-fire {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  transform: translateX(-50%);
+  z-index: 4;
+  image-rendering: pixelated;
+  box-shadow:
+    6px 20px 0 var(--flame-mid),
+    14px 16px 0 var(--flame-hot),
+    10px 12px 0 var(--flame-mid),
+    18px 12px 0 var(--flame-hot),
+    14px 8px 0 var(--flame-mid),
+    10px 4px 0 var(--flame-hot),
+    18px 4px 0 var(--flame-mid);
+  animation: cylinder-fire 500ms steps(2, jump-none) infinite;
+}
+
+@keyframes cylinder-fire {
+  0% {
+    box-shadow:
+      6px 20px 0 var(--flame-mid),
+      14px 16px 0 var(--flame-hot),
+      10px 12px 0 var(--flame-mid),
+      18px 12px 0 var(--flame-hot),
+      14px 8px 0 var(--flame-mid),
+      10px 4px 0 var(--flame-hot),
+      18px 4px 0 var(--flame-mid);
+  }
+  100% {
+    box-shadow:
+      10px 20px 0 var(--flame-hot),
+      14px 16px 0 var(--flame-mid),
+      6px 12px 0 var(--flame-hot),
+      18px 12px 0 var(--flame-mid),
+      14px 8px 0 var(--flame-hot),
+      10px 4px 0 var(--flame-mid),
+      18px 2px 0 var(--flame-hot);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-cylinder-liquid { transition: none; }
+  .room-cylinder-fire { animation: none; }
+}
+
 .room-pet-wrap {
   position: absolute;
   width: 86px;

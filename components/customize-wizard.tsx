@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   BEHAVIOR_QUESTIONS,
+  SESSION_MINUTE_COPY,
   SESSION_MINUTE_OPTIONS,
   STUDY_MODES,
   WEEKDAYS,
@@ -327,7 +328,7 @@ export function CustomizeWizard({
               <div className="customize-options session-minute-options">
                 {SESSION_MINUTE_OPTIONS.map((minutes) => {
                   const selected = sessionMinutes === minutes;
-                  const seeded = minutes === modeSessionMinutes(activeMode);
+                  const recommended = minutes === modeSessionMinutes(activeMode);
                   return (
                     <button
                       key={minutes}
@@ -336,7 +337,7 @@ export function CustomizeWizard({
                       onClick={() => setSessionMinutes(minutes)}
                     >
                       <strong>{minutes} min</strong>
-                      <span>{seeded ? "From your study mode" : "Custom length"}</span>
+                      <span>{recommended ? "✦Recommended✦" : SESSION_MINUTE_COPY[minutes]}</span>
                     </button>
                   );
                 })}
