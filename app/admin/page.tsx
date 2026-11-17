@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Admin",
 };
 
+export const instant = false;
+
 export default async function AdminPage() {
   await connection();
   const supabase = await createClient();
