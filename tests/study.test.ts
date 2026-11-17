@@ -70,12 +70,15 @@ test("a study link shows the equipped pet for that session's user", () => {
     desktop.indexOf("async function signIn"),
   );
   assert.match(refresh, /\.eq\("is_desktop_active", true\)/);
-  assert.match(refresh, /petType: data\.pet_type/);
+  assert.match(refresh, /select\("id, pet_type, level, xp"\)/);
+  assert.match(refresh, /applyEquippedPetStats\(data\)/);
+  assert.match(refresh, /statsRefreshSeq/);
   assert.match(refresh, /\[pet\] equipped /);
   assert.match(refresh, /no signed-in pet session/);
   assert.doesNotMatch(refresh, /searchParams|link\.pet|body\.pet_type/);
   assert.match(desktop, /PET_REFRESH_MS/);
   assert.match(desktop, /void refreshPet\(\)/);
+  assert.match(desktop, /function applyEquippedPetStats/);
   const panel = readFileSync(new URL("../desktop/panel.html", import.meta.url), "utf8");
   const panelScript = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   assert.match(panel, /id="finish"/);

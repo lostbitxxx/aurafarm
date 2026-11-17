@@ -165,11 +165,21 @@ export const STUDY_TIME_ZONE = "Asia/Hong_Kong";
 export function formatTimestamp(iso: string) {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
+  // Format date and time as separate fields, then join with a fixed ", ".
+  // dateStyle+timeStyle can emit "," (Node) vs "at" (Chromium) for the same en-GB locale.
+  const date = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
     timeZone: STUDY_TIME_ZONE,
   }).format(parsed);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: STUDY_TIME_ZONE,
+  }).format(parsed);
+  return `${date}, ${time}`;
 }
 
 export function formatDuration(seconds: number) {

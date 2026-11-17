@@ -15,4 +15,8 @@ contextBridge.exposeInMainWorld("pet", {
   quit: () => ipcRenderer.send("quit-app"),
   setOpen: (open) => ipcRenderer.send("set-panel-open", open),
   setPetVisible: (visible) => ipcRenderer.send("set-pet-visible", visible),
+  dockDragStart: (x, y) => ipcRenderer.send("dock-drag-start", { x, y }),
+  dockDragMove: (x, y) => ipcRenderer.send("dock-drag-move", { x, y }),
+  dockDragEnd: (x, y) => ipcRenderer.send("dock-drag-end", { x, y }),
+  dockDragCancel: () => ipcRenderer.send("dock-drag-cancel"),
 });
