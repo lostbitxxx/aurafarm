@@ -2,6 +2,23 @@ export const STUDY_MODES = ["assassin", "knight", "lord"] as const;
 
 export type StudyMode = (typeof STUDY_MODES)[number];
 
+/** Monday = 1 … Sunday = 7 (ISO weekday). */
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export const WEEKDAYS: readonly Weekday[] = [1, 2, 3, 4, 5, 6, 7];
+
+export const WEEKDAY_LABELS: Record<Weekday, string> = {
+  1: "Mon",
+  2: "Tue",
+  3: "Wed",
+  4: "Thu",
+  5: "Fri",
+  6: "Sat",
+  7: "Sun",
+};
+
+export const SESSION_MINUTE_OPTIONS = [30, 60, 90] as const;
+
 export type BehaviorAnswers = {
   attention: "short" | "medium" | "long";
   lifestyle: "few" | "steady" | "daily";
@@ -10,9 +27,10 @@ export type BehaviorAnswers = {
 
 export type StudyPlan = {
   mode: StudyMode;
+  /** Daily study goal in minutes on a selected weekday (seeded from mode). */
   sessionMinutes: number;
-  monthlySessions: number;
-  dailySessions: number;
+  /** Which weekdays the farmer plans to study. */
+  studyWeekdays: Weekday[];
   studyDaysPerWeek: number;
 };
 
@@ -49,7 +67,7 @@ export const BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
     prompt: "When you study, how often do phones or social pull you away?",
     hint: "This shapes how strict your study mode should feel.",
     options: [
-      { value: "often", label: "Often", detail: "Distractions pretty easily." },
+      { value: "often", label: "Often", detail: "Distracted pretty easily." },
       { value: "sometimes", label: "Sometimes", detail: "It depends on the day." },
       { value: "rare", label: "Rarely", detail: "You usually stay on track." },
     ],
@@ -58,42 +76,45 @@ export const BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
 
 const MODE_META: Record<
   StudyMode,
-  { name: string; tagline: string; sessionMinutes: number; baseMonthly: number }
+  { name: string; tagline: string; sessionMinutes: number }
 > = {
   assassin: {
     name: "Assassin",
     tagline: "Short strikes for heavy distractors.",
     sessionMinutes: 30,
-    baseMonthly: 40,
   },
   knight: {
     name: "Knight",
     tagline: "Steady blocks for a normal focus day.",
     sessionMinutes: 60,
-    baseMonthly: 20,
   },
   lord: {
     name: "Lord",
     tagline: "Long sessions for high-focus farmers.",
     sessionMinutes: 90,
-    baseMonthly: 12,
   },
 };
 
-const LIFESTYLE_DAYS: Record<BehaviorAnswers["lifestyle"], number> = {
-  few: 3,
-  steady: 5,
-  daily: 6,
-};
-
-const LIFESTYLE_MONTHLY_FACTOR: Record<BehaviorAnswers["lifestyle"], number> = {
-  few: 0.75,
-  steady: 1,
-  daily: 1.2,
+/** Default study weekdays from the lifestyle behavior answer. */
+export const LIFESTYLE_WEEKDAYS: Record<BehaviorAnswers["lifestyle"], readonly Weekday[]> = {
+  few: [1, 3, 5],
+  steady: [1, 2, 3, 4, 5],
+  daily: [1, 2, 3, 4, 5, 6, 7],
 };
 
 export function isStudyMode(value: unknown): value is StudyMode {
   return typeof value === "string" && (STUDY_MODES as readonly string[]).includes(value);
+}
+
+export function isWeekday(value: unknown): value is Weekday {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 7;
+}
+
+export function isSessionMinutes(value: unknown): value is (typeof SESSION_MINUTE_OPTIONS)[number] {
+  return (
+    typeof value === "number" &&
+    (SESSION_MINUTE_OPTIONS as readonly number[]).includes(value)
+  );
 }
 
 export function modeLabel(mode: StudyMode) {
@@ -104,15 +125,63 @@ export function modeTagline(mode: StudyMode) {
   return MODE_META[mode].tagline;
 }
 
-export function studyDaysPerWeek(lifestyle: BehaviorAnswers["lifestyle"]) {
-  return LIFESTYLE_DAYS[lifestyle];
+export function modeSessionMinutes(mode: StudyMode) {
+  return MODE_META[mode].sessionMinutes;
 }
 
-export function dailySessionsFromMonthly(monthlySessions: number, daysPerWeek: number) {
-  const monthly = Math.max(1, Math.floor(monthlySessions));
-  const weeks = 4;
-  const studyDays = Math.max(1, daysPerWeek) * weeks;
-  return Math.max(1, Math.round(monthly / studyDays));
+export function defaultWeekdaysForLifestyle(lifestyle: BehaviorAnswers["lifestyle"]): Weekday[] {
+  return [...LIFESTYLE_WEEKDAYS[lifestyle]];
+}
+
+/** @deprecated Prefer defaultWeekdaysForLifestyle — kept for callers that only need a count. */
+export function studyDaysPerWeek(lifestyle: BehaviorAnswers["lifestyle"]) {
+  return LIFESTYLE_WEEKDAYS[lifestyle].length;
+}
+
+export function normalizeStudyWeekdays(value: unknown): Weekday[] | null {
+  if (!Array.isArray(value)) return null;
+  const unique = new Set<Weekday>();
+  for (const entry of value) {
+    const num = typeof entry === "string" ? Number(entry) : entry;
+    if (!isWeekday(num)) return null;
+    unique.add(num);
+  }
+  if (unique.size === 0) return null;
+  return WEEKDAYS.filter((day) => unique.has(day));
+}
+
+export function parseStudyWeekdaysInput(raw: string): Weekday[] | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  return normalizeStudyWeekdays(trimmed.split(",").map((part) => Number(part.trim())));
+}
+
+/** ISO weekday for a farmer local day string (YYYY-MM-DD). */
+export function weekdayFromLocalDay(localDay: string): Weekday | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(localDay)) return null;
+  const year = Number(localDay.slice(0, 4));
+  const month = Number(localDay.slice(5, 7));
+  const day = Number(localDay.slice(8, 10));
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  const jsDay = utc.getUTCDay();
+  return (jsDay === 0 ? 7 : jsDay) as Weekday;
+}
+
+export function isScheduledStudyDay(studyWeekdays: readonly Weekday[], localDay: string) {
+  const weekday = weekdayFromLocalDay(localDay);
+  if (!weekday) return false;
+  return studyWeekdays.includes(weekday);
+}
+
+export function formatStudyWeekdays(studyWeekdays: readonly Weekday[]) {
+  return studyWeekdays.map((day) => WEEKDAY_LABELS[day]).join(" ");
 }
 
 export function recommendStudyMode(answers: BehaviorAnswers): StudyMode {
@@ -140,35 +209,34 @@ export function recommendStudyMode(answers: BehaviorAnswers): StudyMode {
 export function planForMode(
   mode: StudyMode,
   lifestyle: BehaviorAnswers["lifestyle"] = "steady",
+  studyWeekdays?: readonly Weekday[],
+  sessionMinutes?: number,
 ): StudyPlan {
-  const meta = MODE_META[mode];
-  const daysPerWeek = studyDaysPerWeek(lifestyle);
-  const monthlySessions = Math.max(
-    1,
-    Math.round(meta.baseMonthly * LIFESTYLE_MONTHLY_FACTOR[lifestyle]),
-  );
+  const weekdays = normalizeStudyWeekdays(studyWeekdays ?? defaultWeekdaysForLifestyle(lifestyle));
+  const days = weekdays ?? defaultWeekdaysForLifestyle(lifestyle);
+  const minutes = isSessionMinutes(sessionMinutes) ? sessionMinutes : MODE_META[mode].sessionMinutes;
   return {
     mode,
-    sessionMinutes: meta.sessionMinutes,
-    monthlySessions,
-    dailySessions: dailySessionsFromMonthly(monthlySessions, daysPerWeek),
-    studyDaysPerWeek: daysPerWeek,
+    sessionMinutes: minutes,
+    studyWeekdays: days,
+    studyDaysPerWeek: days.length,
   };
 }
 
 export function adjustPlan(
   mode: StudyMode,
-  monthlySessions: number,
-  daysPerWeek: number,
+  sessionMinutes: number,
+  studyWeekdays: readonly Weekday[],
 ): StudyPlan {
-  const monthly = Math.max(1, Math.min(120, Math.floor(monthlySessions)));
-  const days = Math.max(1, Math.min(7, Math.floor(daysPerWeek)));
+  const days = normalizeStudyWeekdays(studyWeekdays) ?? defaultWeekdaysForLifestyle("steady");
+  const minutes = isSessionMinutes(sessionMinutes)
+    ? sessionMinutes
+    : MODE_META[mode].sessionMinutes;
   return {
     mode,
-    sessionMinutes: MODE_META[mode].sessionMinutes,
-    monthlySessions: monthly,
-    dailySessions: dailySessionsFromMonthly(monthly, days),
-    studyDaysPerWeek: days,
+    sessionMinutes: minutes,
+    studyWeekdays: days,
+    studyDaysPerWeek: days.length,
   };
 }
 
@@ -193,35 +261,39 @@ export function parseCustomizationInput(formData: FormData) {
     distraction: String(formData.get("distraction") ?? ""),
   });
   const modeValue = String(formData.get("studyMode") ?? "");
-  const monthly = Number(formData.get("monthlySessions"));
+  const minutes = Number(formData.get("sessionMinutes"));
+  const weekdays = parseStudyWeekdaysInput(String(formData.get("studyWeekdays") ?? ""));
   if (!answers) return { error: "Answer all three behavior questions." } as const;
   if (!isStudyMode(modeValue)) return { error: "Choose a study mode." } as const;
-  if (!Number.isInteger(monthly) || monthly < 1 || monthly > 120) {
-    return { error: "Pick a monthly goal between 1 and 120 sessions." } as const;
+  if (!isSessionMinutes(minutes)) {
+    return { error: "Pick a daily goal of 30, 60, or 90 minutes." } as const;
   }
-  const plan = adjustPlan(modeValue, monthly, studyDaysPerWeek(answers.lifestyle));
+  if (!weekdays) return { error: "Pick at least one study day this week." } as const;
+  const plan = adjustPlan(modeValue, minutes, weekdays);
   return { error: "", answers, plan } as const;
 }
 
 export function customizationMigrationMessage(message: string | null) {
   if (!message) return null;
   if (/permission denied/i.test(message)) {
-    return "The study plan could not be saved. Run migration 0022 in the Supabase SQL editor, then try again.";
+    return "The study plan could not be saved. Run migration 0022 (and 0044 if needed) in the Supabase SQL editor, then try again.";
   }
-  if (/study_mode|monthly_session_goal|customization_completed|behavior_answers|schema cache/i.test(message)) {
-    return "The study-mode columns are missing. Run migration 0021 in the Supabase SQL editor, then refresh.";
+  if (
+    /study_mode|monthly_session_goal|weekly_study_days|customization_completed|behavior_answers|schema cache/i.test(
+      message,
+    )
+  ) {
+    return "The study-mode columns are missing. Run migrations 0021 and 0044 in the Supabase SQL editor, then refresh.";
   }
   return null;
 }
 
-export function describeDailyBreakdown(plan: StudyPlan) {
-  const studyDays = plan.studyDaysPerWeek * 4;
+export function describeWeeklyBreakdown(plan: StudyPlan) {
   return {
     sessionMinutes: plan.sessionMinutes,
-    monthlySessions: plan.monthlySessions,
-    dailySessions: plan.dailySessions,
+    studyWeekdays: plan.studyWeekdays,
     studyDaysPerWeek: plan.studyDaysPerWeek,
-    studyDaysPerMonth: studyDays,
-    monthlyMinutes: plan.monthlySessions * plan.sessionMinutes,
+    weeklyMinutes: plan.studyDaysPerWeek * plan.sessionMinutes,
+    weekdayLabels: formatStudyWeekdays(plan.studyWeekdays),
   };
 }

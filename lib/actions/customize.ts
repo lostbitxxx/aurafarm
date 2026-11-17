@@ -44,14 +44,18 @@ export async function saveCustomization(
   }
   const firstCompletion = !existing.data?.customization_completed_at;
 
+  // daily_session_goal stays 1 (one daily minutes target). monthly_session_goal is a
+  // 4-week estimate kept for older readers until the desk fully drops monthly goals.
+  const monthlyEstimate = parsed.plan.studyDaysPerWeek * 4;
   const { data: saved, error } = await supabase
     .from("profiles")
     .update({
       study_mode: parsed.plan.mode,
       preferred_session_minutes: parsed.plan.sessionMinutes,
-      monthly_session_goal: parsed.plan.monthlySessions,
-      daily_session_goal: parsed.plan.dailySessions,
+      monthly_session_goal: monthlyEstimate,
+      daily_session_goal: 1,
       study_days_per_week: parsed.plan.studyDaysPerWeek,
+      weekly_study_days: parsed.plan.studyWeekdays,
       behavior_answers: parsed.answers,
       customization_completed_at: new Date().toISOString(),
     })

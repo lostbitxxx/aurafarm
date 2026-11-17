@@ -1,18 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   BEHAVIOR_QUESTIONS,
+  SESSION_MINUTE_OPTIONS,
   STUDY_MODES,
-  adjustPlan,
-  describeDailyBreakdown,
+  WEEKDAYS,
+  WEEKDAY_LABELS,
+  defaultWeekdaysForLifestyle,
   modeLabel,
+  modeSessionMinutes,
   modeTagline,
   planForMode,
   recommendStudyMode,
-  studyDaysPerWeek,
   type BehaviorAnswers,
   type StudyMode,
+  type Weekday,
 } from "@/lib/study-mode";
 import { saveCustomization, type CustomizeFormState } from "@/lib/actions/customize";
 
@@ -32,7 +35,8 @@ export function CustomizeWizard({
   migrationError: string | null;
   initialPlan: {
     mode: StudyMode;
-    monthlySessions: number;
+    sessionMinutes: number;
+    studyWeekdays: readonly Weekday[];
     answers: BehaviorAnswers | null;
   } | null;
   embedded?: boolean;
@@ -50,8 +54,13 @@ export function CustomizeWizard({
   );
   const [pickedMode, setPickedMode] = useState<StudyMode | null>(initialPlan?.mode ?? null);
   const [modePickedByUser, setModePickedByUser] = useState(Boolean(initialPlan?.mode));
-  const [monthlySessions, setMonthlySessions] = useState<number | "">(
-    initialPlan?.monthlySessions ?? 20,
+  const [sessionMinutes, setSessionMinutes] = useState(
+    initialPlan?.sessionMinutes ?? modeSessionMinutes(initialPlan?.mode ?? "knight"),
+  );
+  const [studyWeekdays, setStudyWeekdays] = useState<Weekday[]>(
+    initialPlan?.studyWeekdays?.length
+      ? [...initialPlan.studyWeekdays]
+      : defaultWeekdaysForLifestyle(initialPlan?.answers?.lifestyle ?? "steady"),
   );
   const [state, action, pending] = useActionState(saveCustomization, initialState);
   const onSavedRef = useRef(onSaved);
@@ -81,18 +90,6 @@ export function CustomizeWizard({
 
   // Highlight follows the recommendation until the user taps a mode card.
   const activeMode = (modePickedByUser ? pickedMode : null) ?? recommended ?? "knight";
-  const lifestyle = answers.lifestyle ?? "steady";
-  const suggestedMonthly = planForMode(activeMode, lifestyle).monthlySessions;
-  const plan = useMemo(
-    () =>
-      adjustPlan(
-        activeMode,
-        monthlySessions === "" ? suggestedMonthly : monthlySessions,
-        studyDaysPerWeek(lifestyle),
-      ),
-    [activeMode, monthlySessions, lifestyle, suggestedMonthly],
-  );
-  const breakdown = describeDailyBreakdown(plan);
 
   function chooseAnswer<K extends keyof BehaviorAnswers>(id: K, value: BehaviorAnswers[K]) {
     const next = { ...answers, [id]: value };
@@ -102,26 +99,41 @@ export function CustomizeWizard({
       // New answers unlock a fresh recommendation; clear any old manual pick.
       setModePickedByUser(false);
       setPickedMode(pick);
-      setMonthlySessions(planForMode(pick, next.lifestyle).monthlySessions);
+      setSessionMinutes(modeSessionMinutes(pick));
+      if (id === "lifestyle") {
+        setStudyWeekdays(defaultWeekdaysForLifestyle(next.lifestyle));
+      }
+    } else if (id === "lifestyle") {
+      setStudyWeekdays(defaultWeekdaysForLifestyle(value as BehaviorAnswers["lifestyle"]));
     }
   }
 
   function chooseMode(nextMode: StudyMode) {
     setModePickedByUser(true);
     setPickedMode(nextMode);
-    setMonthlySessions(planForMode(nextMode, lifestyle).monthlySessions);
+    setSessionMinutes(modeSessionMinutes(nextMode));
+  }
+
+  function toggleWeekday(day: Weekday) {
+    setStudyWeekdays((current) => {
+      if (current.includes(day)) {
+        if (current.length === 1) return current;
+        return WEEKDAYS.filter((entry) => entry !== day && current.includes(entry));
+      }
+      return WEEKDAYS.filter((entry) => entry === day || current.includes(entry));
+    });
   }
 
   function openRecommendedMode() {
     if (!recommended) return;
     setModePickedByUser(false);
     setPickedMode(recommended);
-    setMonthlySessions(planForMode(recommended, lifestyle).monthlySessions);
+    setSessionMinutes(modeSessionMinutes(recommended));
     goToStep(1);
   }
 
   if (migrationError) {
-    const needsMigration = /migration 0021|study-mode columns/i.test(migrationError);
+    const needsMigration = /migration 0021|study-mode columns|0044/i.test(migrationError);
     return (
       <section className="customize-card">
         <p className="eyebrow">Study mode</p>
@@ -132,7 +144,8 @@ export function CustomizeWizard({
         {needsMigration ? (
           <p className="customize-note">
             Open the Supabase SQL editor, paste{" "}
-            <code>supabase/migrations/0021_study_customization.sql</code>, run it, then refresh
+            <code>supabase/migrations/0021_study_customization.sql</code> and{" "}
+            <code>supabase/migrations/0044_weekly_study_days.sql</code>, run them, then refresh
             this page.
           </p>
         ) : null}
@@ -180,14 +193,14 @@ export function CustomizeWizard({
             ? "How do you study?"
             : step === 1
               ? "Choose your study mode"
-              : "Set this month’s goal"}
+              : "Set this week’s goal"}
         </h1>
         <p className="customize-lede">
           {step === 0
             ? "Three short questions. We’ll recommend a study style you can still change."
             : step === 1
               ? "Assassin, Knight, or Lord — pick the one that fits, even if we guessed wrong."
-              : "We’ll break the monthly target into a daily view so the desk stays clear."}
+              : "Pick which days you study and how long. Rest days stay optional."}
         </p>
 
         {step === 0 ? (
@@ -272,7 +285,7 @@ export function CustomizeWizard({
                 disabled={fading}
                 onClick={() => goToStep(2)}
               >
-                Set monthly goal
+                Set weekly goal
               </button>
             </div>
           </div>
@@ -285,65 +298,53 @@ export function CustomizeWizard({
             <input type="hidden" name="lifestyle" value={answers.lifestyle ?? ""} />
             <input type="hidden" name="distraction" value={answers.distraction ?? ""} />
             <input type="hidden" name="studyMode" value={activeMode} />
+            <input type="hidden" name="studyWeekdays" value={studyWeekdays.join(",")} />
+            <input type="hidden" name="sessionMinutes" value={sessionMinutes} />
 
-            <label className="field">
-              <span>
-                Monthly sessions as {modeLabel(activeMode)} ({plan.sessionMinutes} min each)
-              </span>
-              <input
-                name="monthlySessions"
-                type="number"
-                min={1}
-                max={120}
-                value={monthlySessions}
-                placeholder={String(suggestedMonthly)}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  if (raw === "") {
-                    setMonthlySessions("");
-                    return;
-                  }
-                  const next = Number(raw);
-                  if (Number.isFinite(next)) setMonthlySessions(Math.floor(next));
-                }}
-                required
-              />
-            </label>
+            <fieldset className="customize-question">
+              <legend>Which days will you study?</legend>
+              <div className="weekday-strip" role="group" aria-label="Study days">
+                {WEEKDAYS.map((day) => {
+                  const selected = studyWeekdays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      className={`weekday-day${selected ? " is-selected" : ""}`}
+                      aria-pressed={selected}
+                      onClick={() => toggleWeekday(day)}
+                    >
+                      <strong>{WEEKDAY_LABELS[day]}</strong>
+                      <span>{selected ? "Study" : "Rest"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
 
-            <div className="goal-visual" aria-live="polite">
-              <div className="goal-stat">
-                <strong>{breakdown.monthlySessions}</strong>
-                <span>sessions / month</span>
+            <fieldset className="customize-question">
+              <legend>Daily minutes</legend>
+              <div className="customize-options session-minute-options">
+                {SESSION_MINUTE_OPTIONS.map((minutes) => {
+                  const selected = sessionMinutes === minutes;
+                  const seeded = minutes === modeSessionMinutes(activeMode);
+                  return (
+                    <button
+                      key={minutes}
+                      type="button"
+                      className={`customize-option${selected ? " is-selected" : ""}`}
+                      onClick={() => setSessionMinutes(minutes)}
+                    >
+                      <strong>{minutes} min</strong>
+                      <span>{seeded ? "From your study mode" : "Custom length"}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="goal-stat">
-                <strong>{breakdown.dailySessions}</strong>
-                <span>per study day</span>
-              </div>
-              <div className="goal-stat">
-                <strong>{breakdown.studyDaysPerWeek}</strong>
-                <span>days / week</span>
-              </div>
-              <div className="goal-stat">
-                <strong>{Math.round(breakdown.monthlyMinutes / 60)}h</strong>
-                <span>focus this month</span>
-              </div>
-            </div>
+            </fieldset>
 
-            <div className="daily-strip" aria-label="Daily goal visualization">
-              {Array.from({ length: breakdown.studyDaysPerWeek }, (_, day) => (
-                <div key={day} className="daily-day">
-                  <span>Day {day + 1}</span>
-                  <div className="daily-pips">
-                    {Array.from({ length: breakdown.dailySessions }, (_, pip) => (
-                      <i key={pip} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="customize-note">
-              On a study day, aim for {breakdown.dailySessions}×{breakdown.sessionMinutes} min.
-              Across ~{breakdown.studyDaysPerMonth} study days, that reaches your monthly goal.
+            <p className="customize-note customize-note-underline">
+              You can still study on rest days and grow your streak!
             </p>
 
             {state.error ? (

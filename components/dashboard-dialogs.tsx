@@ -24,7 +24,7 @@ import {
 } from "@/lib/pet-assets";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
-import type { BehaviorAnswers, StudyMode } from "@/lib/study-mode";
+import type { BehaviorAnswers, StudyMode, Weekday } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -691,7 +691,8 @@ export function EditPlanDialog({
   displayName: string;
   initialPlan: {
     mode: StudyMode;
-    monthlySessions: number;
+    sessionMinutes: number;
+    studyWeekdays: readonly Weekday[];
     answers: BehaviorAnswers | null;
   };
   onClose: () => void;

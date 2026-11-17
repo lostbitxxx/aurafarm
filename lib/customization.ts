@@ -3,7 +3,9 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import {
   customizationMigrationMessage,
+  defaultWeekdaysForLifestyle,
   isStudyMode,
+  normalizeStudyWeekdays,
   parseBehaviorAnswers,
   type BehaviorAnswers,
   type StudyMode,
@@ -24,15 +26,18 @@ export async function loadCustomizationGate() {
   const userId = data?.claims.sub;
   if (error || !userId) redirect("/login");
 
-  const profileResult = await supabase
-    .from("profiles")
-    .select(
-      "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, behavior_answers, customization_completed_at",
-    )
-    .eq("id", userId)
-    .maybeSingle();
+  const selectWithWeekly =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, weekly_study_days, behavior_answers, customization_completed_at";
+  const selectLegacy =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, behavior_answers, customization_completed_at";
 
-  const profileError = profileResult.error?.message ?? null;
+  let profileResult = await supabase.from("profiles").select(selectWithWeekly).eq("id", userId).maybeSingle();
+  const weeklyColumnMissing = /weekly_study_days/i.test(profileResult.error?.message ?? "");
+  if (weeklyColumnMissing) {
+    profileResult = await supabase.from("profiles").select(selectLegacy).eq("id", userId).maybeSingle();
+  }
+
+  const profileError = weeklyColumnMissing ? null : (profileResult.error?.message ?? null);
   const migrationError = customizationMigrationMessage(profileError);
   if (migrationError || profileError) {
     return {
@@ -49,14 +54,18 @@ export async function loadCustomizationGate() {
   await touchSocialPresence(true);
   const mode = profile?.study_mode;
   const answers = parseBehaviorAnswers(profile?.behavior_answers);
+  const weekdays =
+    normalizeStudyWeekdays(
+      weeklyColumnMissing ? null : (profile as { weekly_study_days?: unknown } | null)?.weekly_study_days,
+    ) ??
+    (answers ? defaultWeekdaysForLifestyle(answers.lifestyle) : defaultWeekdaysForLifestyle("steady"));
   const plan =
     completed && isStudyMode(mode)
       ? ({
           mode,
           sessionMinutes: Number(profile?.preferred_session_minutes ?? 60),
-          monthlySessions: Number(profile?.monthly_session_goal ?? 1),
-          dailySessions: Number(profile?.daily_session_goal ?? 1),
-          studyDaysPerWeek: Number(profile?.study_days_per_week ?? 5),
+          studyWeekdays: weekdays,
+          studyDaysPerWeek: weekdays.length,
           completed: true,
           answers,
         } satisfies SavedStudyPlan)

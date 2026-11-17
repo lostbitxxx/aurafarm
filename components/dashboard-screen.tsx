@@ -37,7 +37,7 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
-import { type BehaviorAnswers, type StudyMode } from "@/lib/study-mode";
+import { type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
 
 function roomStorageKey(userId: string) {
@@ -88,9 +88,9 @@ export function DashboardScreen({
   downloadUrl,
   studyMode: _studyMode,
   preferredSessionMinutes,
-  monthlySessionGoal: _monthlySessionGoal,
+  weeklyStudyDays: _weeklyStudyDays,
   planSessions: _planSessions,
-  dailySessionGoal: _dailySessionGoal,
+  planMigrationHint: _planMigrationHint = null,
   studyPlan,
   friendCode,
   friendInvite,
@@ -122,12 +122,17 @@ export function DashboardScreen({
   downloadUrl: string | null;
   studyMode: StudyMode | null;
   preferredSessionMinutes: number | null;
-  monthlySessionGoal: number | null;
-  planSessions: readonly { status: "submitted" | "cancelled"; endedAt: string }[];
-  dailySessionGoal: number | null;
+  weeklyStudyDays: readonly Weekday[];
+  planSessions: readonly {
+    status: "submitted" | "cancelled";
+    endedAt: string;
+    durationSeconds?: number;
+  }[];
+  planMigrationHint?: string | null;
   studyPlan: {
     mode: StudyMode;
-    monthlySessions: number;
+    sessionMinutes: number;
+    studyWeekdays: readonly Weekday[];
     answers: BehaviorAnswers | null;
   } | null;
   friendCode: string;

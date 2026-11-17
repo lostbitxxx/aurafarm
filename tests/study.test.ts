@@ -11,6 +11,9 @@ import {
   DEFAULT_STUDY_SECONDS,
   monthlyPlanEncouragement,
   monthlyPlanPercent,
+  studySecondsOnLocalDay,
+  weeklyPlanEncouragement,
+  dailyPlanPercent,
   displayStreakCount,
   devTimerPasswordMatches,
   DISTRACTED_PENALTY,
@@ -243,6 +246,44 @@ test("monthly plan encouragement tracks progress without overshooting percent", 
   assert.match(monthlyPlanEncouragement(20, 20), /reached/i);
   assert.match(monthlyPlanEncouragement(5, 20, 1, 1), /today done/i);
   assert.match(monthlyPlanEncouragement(20, 20, 1, 1), /reached/i);
+});
+
+test("weekly plan encouragement and daily minutes percent", () => {
+  assert.equal(dailyPlanPercent(0, 60), 0);
+  assert.equal(dailyPlanPercent(30, 60), 50);
+  assert.equal(dailyPlanPercent(90, 60), 100);
+  assert.match(weeklyPlanEncouragement(true, 0, 60), /start with one/i);
+  assert.match(weeklyPlanEncouragement(true, 60, 60), /today done/i);
+  assert.match(weeklyPlanEncouragement(false, 0, 60), /rest day/i);
+  assert.match(weeklyPlanEncouragement(false, 60, 60), /bonus day/i);
+});
+
+test("studySecondsOnLocalDay sums submitted durations on the farmer day", () => {
+  const sessions = [
+    {
+      status: "submitted" as const,
+      endedAt: "2026-11-14T04:00:00.000Z",
+      durationSeconds: 1800,
+    },
+    {
+      status: "submitted" as const,
+      endedAt: "2026-11-14T08:00:00.000Z",
+      durationSeconds: 600,
+    },
+    {
+      status: "cancelled" as const,
+      endedAt: "2026-11-14T09:00:00.000Z",
+      durationSeconds: 999,
+    },
+    {
+      status: "submitted" as const,
+      endedAt: "2026-11-15T04:00:00.000Z",
+      durationSeconds: 1200,
+    },
+  ];
+  assert.equal(studySecondsOnLocalDay(sessions, "2026-11-14"), 2400);
+  assert.equal(studySecondsOnLocalDay(sessions, "2026-11-15"), 1200);
+  assert.equal(studySecondsOnLocalDay(sessions, "bad-day"), 0);
 });
 
 test("the dev timer password is a plain comparison", () => {

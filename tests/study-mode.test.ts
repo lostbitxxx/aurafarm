@@ -4,11 +4,13 @@ import { test } from "node:test";
 import {
   adjustPlan,
   customizationMigrationMessage,
-  dailySessionsFromMonthly,
+  defaultWeekdaysForLifestyle,
+  isScheduledStudyDay,
   parseBehaviorAnswers,
   parseCustomizationInput,
   planForMode,
   recommendStudyMode,
+  weekdayFromLocalDay,
 } from "../lib/study-mode";
 
 test("study mode cards keep a fixed recommended label on the suggested mode", () => {
@@ -55,29 +57,35 @@ test("behavior answers recommend assassin for short focus and frequent distracti
   );
 });
 
-test("each study mode suggests its own session length and monthly goal", () => {
-  const assassin = planForMode("assassin", "steady");
-  const knight = planForMode("knight", "steady");
-  const lord = planForMode("lord", "steady");
-
-  assert.equal(assassin.sessionMinutes, 30);
-  assert.equal(assassin.monthlySessions, 40);
-  assert.equal(assassin.dailySessions, dailySessionsFromMonthly(40, 5));
-
-  assert.equal(knight.sessionMinutes, 60);
-  assert.equal(knight.monthlySessions, 20);
-  assert.equal(knight.dailySessions, 1);
-
-  assert.equal(lord.sessionMinutes, 90);
-  assert.equal(lord.monthlySessions, 12);
-  assert.equal(lord.dailySessions, 1);
+test("lifestyle presets pick Mon/Wed/Fri, weekdays, or every day", () => {
+  assert.deepEqual(defaultWeekdaysForLifestyle("few"), [1, 3, 5]);
+  assert.deepEqual(defaultWeekdaysForLifestyle("steady"), [1, 2, 3, 4, 5]);
+  assert.deepEqual(defaultWeekdaysForLifestyle("daily"), [1, 2, 3, 4, 5, 6, 7]);
 });
 
-test("editing the monthly goal recalculates the daily slice", () => {
-  const plan = adjustPlan("knight", 40, 5);
-  assert.equal(plan.monthlySessions, 40);
-  assert.equal(plan.dailySessions, 2);
-  assert.equal(plan.sessionMinutes, 60);
+test("each study mode seeds its own daily minutes and lifestyle weekdays", () => {
+  const assassin = planForMode("assassin", "steady");
+  const knight = planForMode("knight", "few");
+  const lord = planForMode("lord", "daily");
+
+  assert.equal(assassin.sessionMinutes, 30);
+  assert.deepEqual(assassin.studyWeekdays, [1, 2, 3, 4, 5]);
+  assert.equal(assassin.studyDaysPerWeek, 5);
+
+  assert.equal(knight.sessionMinutes, 60);
+  assert.deepEqual(knight.studyWeekdays, [1, 3, 5]);
+  assert.equal(knight.studyDaysPerWeek, 3);
+
+  assert.equal(lord.sessionMinutes, 90);
+  assert.deepEqual(lord.studyWeekdays, [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(lord.studyDaysPerWeek, 7);
+});
+
+test("editing daily minutes and weekdays keeps the mode block length options", () => {
+  const plan = adjustPlan("knight", 90, [1, 2, 3, 4, 5, 6]);
+  assert.equal(plan.sessionMinutes, 90);
+  assert.deepEqual(plan.studyWeekdays, [1, 2, 3, 4, 5, 6]);
+  assert.equal(plan.studyDaysPerWeek, 6);
 });
 
 test("customization form data is validated before save", () => {
@@ -86,24 +94,57 @@ test("customization form data is validated before save", () => {
   form.set("lifestyle", "steady");
   form.set("distraction", "sometimes");
   form.set("studyMode", "knight");
-  form.set("monthlySessions", "20");
+  form.set("sessionMinutes", "60");
+  form.set("studyWeekdays", "1,2,3,4,5");
 
   const parsed = parseCustomizationInput(form);
   assert.equal(parsed.error, "");
   if (parsed.error) return;
   assert.equal(parsed.plan.mode, "knight");
-  assert.equal(parsed.plan.monthlySessions, 20);
+  assert.equal(parsed.plan.sessionMinutes, 60);
+  assert.deepEqual(parsed.plan.studyWeekdays, [1, 2, 3, 4, 5]);
   assert.equal(parsed.answers.lifestyle, "steady");
 
   assert.equal(parseBehaviorAnswers({ attention: "nope" }), null);
+
+  const emptyDays = new FormData();
+  emptyDays.set("attention", "medium");
+  emptyDays.set("lifestyle", "steady");
+  emptyDays.set("distraction", "sometimes");
+  emptyDays.set("studyMode", "knight");
+  emptyDays.set("sessionMinutes", "60");
+  emptyDays.set("studyWeekdays", "");
+  assert.match(parseCustomizationInput(emptyDays).error, /at least one study day/i);
 });
 
-test("saving a study plan needs the column grant from migration 0022", () => {
-  const sql = readFileSync(
+test("local calendar days map to ISO weekdays and scheduled study checks", () => {
+  // 2026-11-16 is Monday in the Gregorian calendar.
+  assert.equal(weekdayFromLocalDay("2026-11-16"), 1);
+  assert.equal(weekdayFromLocalDay("2026-11-22"), 7);
+  assert.equal(isScheduledStudyDay([1, 3, 5], "2026-11-16"), true);
+  assert.equal(isScheduledStudyDay([1, 3, 5], "2026-11-17"), false);
+});
+
+test("goals step uses weekday toggles instead of a monthly session field", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  assert.match(wizard, /Set this week’s goal/);
+  assert.match(wizard, /weekday-strip/);
+  assert.match(wizard, /studyWeekdays/);
+  assert.match(wizard, /sessionMinutes/);
+  assert.doesNotMatch(wizard, /name="monthlySessions"/);
+  assert.doesNotMatch(wizard, /Set this month’s goal/);
+});
+
+test("saving a study plan needs weekly_study_days from migration 0044", () => {
+  const grant = readFileSync(
     new URL("../supabase/migrations/0022_study_customization_grant.sql", import.meta.url),
     "utf8",
   );
-  assert.match(sql, /grant update \(/);
+  const weekly = readFileSync(
+    new URL("../supabase/migrations/0044_weekly_study_days.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(grant, /grant update \(/);
   for (const column of [
     "study_mode",
     "preferred_session_minutes",
@@ -113,17 +154,20 @@ test("saving a study plan needs the column grant from migration 0022", () => {
     "behavior_answers",
     "customization_completed_at",
   ]) {
-    assert.match(sql, new RegExp(column));
+    assert.match(grant, new RegExp(column));
   }
-  assert.doesNotMatch(sql.slice(sql.indexOf("grant update")), /\bpoints\b/);
+  assert.match(weekly, /weekly_study_days/);
+  assert.match(weekly, /grant update \(/);
+  assert.match(weekly, /weekly_study_days/);
+  assert.doesNotMatch(grant.slice(grant.indexOf("grant update")), /\bpoints\b/);
   const permissionDenied = customizationMigrationMessage(
     "permission denied for column study_mode",
   );
   assert.ok(permissionDenied);
   assert.match(permissionDenied, /0022/);
   const missingColumn = customizationMigrationMessage(
-    'column "study_mode" does not exist',
+    'column "weekly_study_days" does not exist',
   );
   assert.ok(missingColumn);
-  assert.match(missingColumn, /0021/);
+  assert.match(missingColumn, /0044/);
 });
