@@ -37,7 +37,7 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
-import { type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
+import { isScheduledStudyDay, type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
 
 function roomStorageKey(userId: string) {
@@ -88,8 +88,8 @@ export function DashboardScreen({
   downloadUrl,
   studyMode: _studyMode,
   preferredSessionMinutes,
-  weeklyStudyDays: _weeklyStudyDays,
-  planSessions: _planSessions,
+  weeklyStudyDays,
+  planSessions,
   planMigrationHint: _planMigrationHint = null,
   studyPlan,
   friendCode,
@@ -180,6 +180,7 @@ export function DashboardScreen({
     farmerLocalDay,
     () => "1970-01-01",
   );
+  const studyDayToday = isScheduledStudyDay(weeklyStudyDays, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
@@ -419,6 +420,7 @@ export function DashboardScreen({
         onClose={() => setDialog(null)}
       />
       <StudyPanel
+        userId={userId}
         activeSession={activeSession}
         deskRefreshing={deskRefreshing}
         scores={scores}
@@ -435,6 +437,9 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        planSessions={planSessions}
+        isStudyDay={studyDayToday}
+        showDailyCylinder={Boolean(preferredSessionMinutes && weeklyStudyDays.length > 0)}
         streakBoostActive={liveStreakCount > 0}
         streakQualifiedToday={streakQualifiedToday}
         ownedColorIds={ownedColors}
@@ -518,7 +523,7 @@ export function DashboardScreen({
       ) : null}
       {dialog === "dev-tools" ? (
         <HistoryDialog title="Developer tools" onClose={() => setDialog(null)}>
-          <AdminReset />
+          <AdminReset userId={userId} />
         </HistoryDialog>
       ) : null}
       {shownSong && !songBlocked ? (

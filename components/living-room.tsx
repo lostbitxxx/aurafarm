@@ -14,6 +14,7 @@ import {
 import { describePet, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
 import { ROOM_ASSET_PATH } from "@/lib/pet-assets";
+import { DailyProgressCylinder } from "./daily-progress-cylinder";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Mode = "idle" | "walking" | "petting";
@@ -215,14 +216,22 @@ export function LivingRoom({
   placementReady,
   onOpenPet,
   onOpenInventory,
+  dailyStudiedMinutes = null,
+  dailyGoalMinutes = null,
+  isStudyDay = true,
 }: {
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   onOpenPet: (petId: string) => void;
   onOpenInventory: () => void;
+  dailyStudiedMinutes?: number | null;
+  dailyGoalMinutes?: number | null;
+  isStudyDay?: boolean;
 }) {
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
+  const showCylinder =
+    dailyGoalMinutes != null && dailyGoalMinutes > 0 && dailyStudiedMinutes != null;
 
   return (
     <section className="living-room-block" aria-label="Your little living room">
@@ -233,6 +242,13 @@ export function LivingRoom({
       <div className="living-room">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="living-room-art" src={ROOM_ASSET_PATH} alt="" draggable={false} />
+        {showCylinder ? (
+          <DailyProgressCylinder
+            studiedMinutes={dailyStudiedMinutes}
+            goalMinutes={dailyGoalMinutes}
+            isStudyDay={isStudyDay}
+          />
+        ) : null}
         <div className="living-room-pets">
           {placed.map((pet, index) => (
             <RoomPet

@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { CYLINDER_TICK_MS } from "@/lib/daily-cylinder";
+import {
+  filterSessionsAfterCylinderReset,
+  liveSessionCountsAfterCylinderReset,
+  readCylinderReset,
+  subscribeCylinderReset,
+} from "@/lib/cylinder-reset";
 import type { PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
@@ -17,8 +24,11 @@ import {
   formatTimestamp,
   experienceForSession,
   farmerLocalDay,
+  focusedSeconds,
   remainingSeconds,
   sessionCountsForStreak,
+  studySecondsOnLocalDay,
+  subscribeFarmerLocalDay,
   STUDY_LENGTHS,
   type ActiveStudySession,
   type RecordedStudySession,
@@ -37,6 +47,7 @@ function preferredStudySeconds(minutes: number | null | undefined) {
 }
 
 export function StudyPanel({
+  userId,
   activeSession,
   scores,
   recordedSessions,
@@ -50,6 +61,9 @@ export function StudyPanel({
   placedIds,
   placementReady,
   preferredSessionMinutes,
+  planSessions = [],
+  isStudyDay = true,
+  showDailyCylinder = false,
   streakBoostActive = false,
   streakQualifiedToday = false,
   ownedColorIds,
@@ -64,6 +78,7 @@ export function StudyPanel({
   tutorialCurrent = false,
   onTutorialStart,
 }: {
+  userId: string;
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   recordedSessions: RecordedStudySession[];
@@ -79,6 +94,13 @@ export function StudyPanel({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   preferredSessionMinutes?: number | null;
+  planSessions?: readonly {
+    status: "submitted" | "cancelled";
+    endedAt: string;
+    durationSeconds?: number;
+  }[];
+  isStudyDay?: boolean;
+  showDailyCylinder?: boolean;
   streakBoostActive?: boolean;
   streakQualifiedToday?: boolean;
   ownedColorIds: readonly string[];
@@ -352,6 +374,41 @@ export function StudyPanel({
 
   const lengthSeconds = selectedLengthSeconds();
   const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
+  const todayLocal = useSyncExternalStore(subscribeFarmerLocalDay, farmerLocalDay, () => "1970-01-01");
+  const cylinderReset = useSyncExternalStore(
+    subscribeCylinderReset,
+    () => readCylinderReset(userId),
+    () => null,
+  );
+  const [cylinderNow, setCylinderNow] = useState<number | null>(null);
+  useEffect(() => {
+    if (!shownSession) {
+      setCylinderNow(null);
+      return;
+    }
+    const tick = () => setCylinderNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, CYLINDER_TICK_MS);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
+  }, [shownSession?.id, shownSession?.startedAt, shownSession?.plannedSeconds]);
+
+  const countedSessions = filterSessionsAfterCylinderReset(planSessions, cylinderReset, todayLocal);
+  const submittedTodaySeconds = studySecondsOnLocalDay(countedSessions, todayLocal);
+  const liveCounts =
+    shownSession != null && liveSessionCountsAfterCylinderReset(shownSession.startedAt, cylinderReset, todayLocal);
+  const liveSessionSeconds =
+    liveCounts && shownSession && cylinderNow != null
+      ? focusedSeconds(new Date(shownSession.startedAt).getTime(), cylinderNow, shownSession.plannedSeconds)
+      : 0;
+  const dailyStudiedMinutes = Math.floor((submittedTodaySeconds + liveSessionSeconds) / 60);
+  const dailyGoalMinutes =
+    showDailyCylinder && preferredSessionMinutes != null && preferredSessionMinutes > 0
+      ? preferredSessionMinutes
+      : null;
+
   const desktopPetSession = shownSession?.useDesktopPet === true;
   const router = useRouter();
   const [sessionRefreshing, startSessionRefresh] = useTransition();
@@ -378,6 +435,9 @@ export function StudyPanel({
           placementReady={placementReady}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
+          dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
+          dailyGoalMinutes={dailyGoalMinutes}
+          isStudyDay={isStudyDay}
         />
         <div className="below-room">
           <div className="session-copy">

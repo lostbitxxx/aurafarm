@@ -1,18 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { resetAllPets, setDailyStreak } from "@/lib/actions/admin";
+import { writeCylinderReset } from "@/lib/cylinder-reset";
 import { farmerLocalDay, devTimerPasswordMatches } from "@/lib/study";
 
-export function AdminReset() {
+export function AdminReset({ userId }: { userId: string }) {
+  const router = useRouter();
   const [streakPassword, setStreakPassword] = useState("");
   const [resetPassword, setResetPassword] = useState("");
+  const [cylinderPassword, setCylinderPassword] = useState("");
   const [streakDays, setStreakDays] = useState("30");
-  const [pending, setPending] = useState<"streak" | "reset" | null>(null);
+  const [pending, setPending] = useState<"streak" | "reset" | "cylinder" | null>(null);
   const [streakError, setStreakError] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [cylinderError, setCylinderError] = useState<string | null>(null);
   const [streakDone, setStreakDone] = useState<number | null>(null);
   const [resetDone, setResetDone] = useState(false);
+  const [cylinderDone, setCylinderDone] = useState(false);
 
   async function onSetStreak() {
     if (pending) return;
@@ -54,6 +60,26 @@ export function AdminReset() {
       return;
     }
     setResetDone(true);
+  }
+
+  function onResetCylinder() {
+    if (pending) return;
+    if (!userId) {
+      setCylinderDone(false);
+      setCylinderError("Sign in before clearing the cylinder.");
+      return;
+    }
+    if (!devTimerPasswordMatches(cylinderPassword)) {
+      setCylinderDone(false);
+      setCylinderError("That password does not match.");
+      return;
+    }
+    setPending("cylinder");
+    setCylinderError(null);
+    writeCylinderReset(userId, farmerLocalDay());
+    setCylinderDone(true);
+    setPending(null);
+    router.refresh();
   }
 
   return (
@@ -129,6 +155,34 @@ export function AdminReset() {
         {streakError ? (
           <p className="form-error" role="alert">
             {streakError}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="admin-tool" aria-labelledby="admin-cylinder-title">
+        <h3 id="admin-cylinder-title">Reset daily cylinder</h3>
+        <p>
+          For testing only. Clears today&apos;s living-room progress meter on this browser. Does not delete
+          study history or change streak.
+        </p>
+        <label className="field">
+          Password
+          <input
+            type="password"
+            value={cylinderPassword}
+            autoComplete="off"
+            onChange={(event) => setCylinderPassword(event.target.value)}
+          />
+        </label>
+        <button type="button" className="button" disabled={pending !== null} onClick={onResetCylinder}>
+          Clear today&apos;s cylinder
+        </button>
+        {cylinderDone ? (
+          <p className="form-success">Daily cylinder cleared for today on this device.</p>
+        ) : null}
+        {cylinderError ? (
+          <p className="form-error" role="alert">
+            {cylinderError}
           </p>
         ) : null}
       </section>
