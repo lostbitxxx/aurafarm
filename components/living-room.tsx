@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   ROOM_CARPET_SRC,
+  ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
   ROOM_TRIM_SRC,
@@ -349,7 +350,9 @@ function RoomPet({
       style={{
         left: `${position.left}%`,
         top: `${position.top}%`,
-        zIndex: dragging ? 210 : roomDepthZ(position.top),
+        // Pets share the room stacking context with furniture (see `.living-room-pets`).
+        // Drag lifts above ROOM_DEPTH_Z_MAX so the carried pet is never tucked under a sofa.
+        zIndex: dragging ? ROOM_DRAG_Z : roomDepthZ(position.top),
       }}
       data-mode={mode}
     >

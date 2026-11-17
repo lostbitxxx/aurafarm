@@ -8,6 +8,8 @@ import {
   pxToTopPercent,
   ROOM_CARPET_SRC,
   ROOM_FLOOR_START_Y,
+  ROOM_DEPTH_Z_MAX,
+  ROOM_DRAG_Z,
   ROOM_FURNITURE,
   ROOM_OBSTACLES,
   ROOM_WALK_BOUNDS,
@@ -189,6 +191,15 @@ test("furniture depth sorts so lower footprints draw in front", () => {
   assert.ok(roomDepthZ(plant.depthTop) > roomDepthZ(loveseat.depthTop));
 });
 
+test("drag z-index sits above every depth-sorted room layer", () => {
+  assert.equal(ROOM_DEPTH_Z_MAX, 200);
+  assert.ok(ROOM_DRAG_Z > ROOM_DEPTH_Z_MAX);
+  assert.ok(ROOM_DRAG_Z > roomDepthZ(100));
+  for (const item of ROOM_FURNITURE) {
+    assert.ok(ROOM_DRAG_Z > roomDepthZ(item.depthTop), item.id);
+  }
+});
+
 test("facing ignores mostly vertical motion", () => {
   assert.equal(facingFromDirection({ x: 0.1, y: 0.9 }, false), false);
   assert.equal(facingFromDirection({ x: -0.1, y: 0.9 }, true), true);
@@ -306,6 +317,7 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /"dragging"/);
   assert.match(source, /is-struggling/);
   assert.match(source, /clearPettingFx/);
+  assert.match(source, /ROOM_DRAG_Z/);
   assert.doesNotMatch(source, /roomStartSpot/);
   assert.doesNotMatch(css, /\.room-pet-actions/);
   assert.doesNotMatch(css, /\.room-pet-button/);
@@ -315,6 +327,9 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(css, /\.room-pet-wrap\.is-dragging/);
   assert.match(css, /room-pet-struggle/);
   assert.match(css, /rotate\(-10deg\)/);
+  // Pets must not sit in a low stacking context or drag order cannot beat furniture.
+  assert.match(css, /\.living-room-pets\s*\{[^}]*pointer-events:\s*none/);
+  assert.doesNotMatch(css, /\.living-room-pets\s*\{[^}]*\bz-index\s*:/);
   // [^}] already spans newlines; avoid /s (needs a newer TS target than ES2017).
   assert.match(css, /\.living-room\s*\{[^}]*isolation:\s*isolate/);
   assert.match(layout, /ROOM_FLOOR_START_Y/);

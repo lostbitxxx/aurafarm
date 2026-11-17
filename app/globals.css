@@ -2332,9 +2332,9 @@ button.dialog-row {
 }
 
 .living-room-pets {
+  /* Leave stacking auto so pet depth / drag order can compete with furniture. */
   position: absolute;
   inset: 0;
-  z-index: 1;
   pointer-events: none;
 }
 
@@ -2625,7 +2625,7 @@ button.dialog-row {
 }
 
 .room-pet-wrap.is-dragging {
-  /* Lift above Y-sorted furniture while carrying; still under room UI chips. */
+  /* Inline style sets ROOM_DRAG_Z; keep grabbing cursor here. */
   cursor: grabbing;
 }
 

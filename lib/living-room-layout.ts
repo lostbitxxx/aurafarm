@@ -162,8 +162,17 @@ export function spotHitsObstacle(
   );
 }
 
+/** Ceiling for Y-sorted furniture / idle pets inside `.living-room`. */
+export const ROOM_DEPTH_Z_MAX = 200;
+
+/**
+ * While dragging, paint above every depth-sorted layer (and the daily capsule).
+ * Safe inside `.living-room { isolation: isolate }` — does not cover page dialogs.
+ */
+export const ROOM_DRAG_Z = ROOM_DEPTH_Z_MAX + 40;
+
 /** z-index for Y-sort: larger top% draws in front. */
 export function roomDepthZ(depthTop: number) {
   const safe = Number.isFinite(depthTop) ? depthTop : 0;
-  return Math.max(1, Math.min(200, Math.round(safe * 2)));
+  return Math.max(1, Math.min(ROOM_DEPTH_Z_MAX, Math.round(safe * 2)));
 }
