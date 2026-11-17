@@ -19,6 +19,12 @@ export const WEEKDAY_LABELS: Record<Weekday, string> = {
 
 export const SESSION_MINUTE_OPTIONS = [30, 60, 90] as const;
 
+export const SESSION_MINUTE_COPY: Record<(typeof SESSION_MINUTE_OPTIONS)[number], string> = {
+  30: "good for cumulative time",
+  60: "Great for focused study sessions",
+  90: "Ideal for deep focus",
+};
+
 export type BehaviorAnswers = {
   attention: "short" | "medium" | "long";
   lifestyle: "few" | "steady" | "daily";

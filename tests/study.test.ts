@@ -583,6 +583,8 @@ test("the admin reset clears only the signed-in farmer", () => {
   assert.match(panel, /resetAllPets/);
   assert.match(panel, /Set my streak/);
   assert.match(panel, /setDailyStreak/);
+  assert.match(panel, /Reset daily cylinder/);
+  assert.match(panel, /writeCylinderReset/);
   assert.match(action, /set_daily_streak/);
   assert.ok(panel.indexOf("Reset account") < panel.indexOf("Set streak"));
   const streakBlock = panel.slice(panel.indexOf("admin-streak-title"));

@@ -131,6 +131,10 @@ test("goals step uses weekday toggles instead of a monthly session field", () =>
   assert.match(wizard, /weekday-strip/);
   assert.match(wizard, /studyWeekdays/);
   assert.match(wizard, /sessionMinutes/);
+  assert.match(wizard, /SESSION_MINUTE_OPTIONS/);
+  assert.match(wizard, /✦Recommended✦/);
+  assert.match(wizard, /SESSION_MINUTE_COPY/);
+  assert.doesNotMatch(wizard, /session-minute-custom/);
   assert.doesNotMatch(wizard, /name="monthlySessions"/);
   assert.doesNotMatch(wizard, /Set this month’s goal/);
 });
