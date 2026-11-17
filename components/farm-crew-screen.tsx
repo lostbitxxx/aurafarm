@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { refreshFarmCrewRoom } from "@/lib/actions/farm-crew";
+import { completeStudyTimer } from "@/lib/actions/study";
+import { farmerLocalDay, formatClock, formatTimestamp, type ActiveStudySession } from "@/lib/study";
 import { loadFarmCrewLeaderboard } from "@/lib/actions/leaderboard";
 import { managesFarmCrew, type FarmCrewRoom } from "@/lib/farm-crew";
 import type { LeaderboardMode, LeaderboardRow } from "@/lib/leaderboard";
@@ -14,11 +16,14 @@ import { FarmDialog } from "./farm-dialog";
 import { LeaderboardPanel } from "./leaderboard-dialog";
 import { PixelPetArt } from "./pixel-pet";
 import { SocialPresence } from "./social-presence";
+import { StudyClock } from "./study-clock";
 
 export function FarmCrewScreen({ room }: { room: FarmCrewRoom }) {
   const [detail, setDetail] = useState(room.crew);
   const [occupants, setOccupants] = useState(room.occupants);
   const [error, setError] = useState(room.error);
+  const [session, setSession] = useState(room.activeSession);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [panel, setPanel] = useState<"board" | "admin" | null>(null);
 
   useEffect(() => {
@@ -130,6 +135,22 @@ export function FarmCrewScreen({ room }: { room: FarmCrewRoom }) {
               </div>
             </div>
             <CrewRoom occupants={occupants} />
+            {session ? (
+              <CrewSessionTimer
+                session={session}
+                onFinished={async () => {
+                  const result = await completeStudyTimer(session.id, "", farmerLocalDay());
+                  if (!result.error) setSession(null);
+                  else setSessionError(result.error);
+                  return result;
+                }}
+              />
+            ) : null}
+            {sessionError ? (
+              <p className="form-error" role="alert">
+                {sessionError}
+              </p>
+            ) : null}
           </section>
         ) : (
           <section className="living-room-block" aria-label="FarmCrew">
@@ -143,6 +164,37 @@ export function FarmCrewScreen({ room }: { room: FarmCrewRoom }) {
           </section>
         )}
       </main>
+    </div>
+  );
+}
+
+function CrewSessionTimer({
+  session,
+  onFinished,
+}: {
+  session: ActiveStudySession;
+  onFinished: () => Promise<{ error: string }>;
+}) {
+  return (
+    <div className="below-room">
+      <div className="session-copy">
+        <p className="pet-name">Studying with you</p>
+        <p className="growth-label">
+          {session.useDesktopPet
+            ? "Desktop pet is tracking this session."
+            : "Website timer is tracking this session."}
+        </p>
+        {session.useDesktopPet ? (
+          <div className="study-active">
+            <p>
+              Started <time dateTime={session.startedAt}>{formatTimestamp(session.startedAt)}</time>
+            </p>
+            <p>{formatClock(session.plannedSeconds)} chosen</p>
+          </div>
+        ) : (
+          <StudyClock session={session} rushed={false} onFinished={onFinished} />
+        )}
+      </div>
     </div>
   );
 }
