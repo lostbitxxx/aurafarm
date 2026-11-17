@@ -617,12 +617,9 @@ test("study history merges session and XP rows by session id", () => {
   assert.equal(formatHistoryTime(0), "0m");
 
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  assert.match(panel, /Study history/);
-  assert.match(panel, /Focus time/);
-  assert.match(panel, /Distraction time/);
-  assert.match(panel, /modeLabel/);
-  assert.match(panel, /showFocusDistraction/);
-  assert.match(panel, /buildStudyHistory/);
+  assert.doesNotMatch(panel, /Study history/);
+  assert.doesNotMatch(panel, /companion-drawer/);
+  assert.doesNotMatch(panel, /buildStudyHistory/);
   assert.doesNotMatch(panel, /No blocked sites/);
   assert.doesNotMatch(panel, /history-sessions-title/);
 
