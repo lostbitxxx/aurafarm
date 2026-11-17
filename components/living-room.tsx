@@ -2,28 +2,31 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ROOM_CARPET_SRC,
+  ROOM_FLOOR_SRC,
+  ROOM_FURNITURE,
+  ROOM_TRIM_SRC,
+  ROOM_WALL_SRC,
+  roomDepthZ,
+  roomStartSpot,
+} from "@/lib/living-room-layout";
+import {
   facingFromDirection,
   PETTING_HOLD_MS,
   pickWalkDirection,
   randomIdleMs,
   randomWalkMs,
+  resolveWanderSpot,
   stepWanderSpot,
   type WanderDir,
   type WanderSpot,
 } from "@/lib/living-room-wander";
 import { describePet, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
-import { ROOM_ASSET_PATH } from "@/lib/pet-assets";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Mode = "idle" | "walking" | "petting";
-
-function spotForIndex(index: number): WanderSpot {
-  const left = 18 + (index % 4) * 18;
-  const top = 46 + (index % 3) * 4;
-  return { left, top };
-}
 
 function RoomPet({
   pet,
@@ -38,13 +41,13 @@ function RoomPet({
 }) {
   const copy = describePet(pet.pet_type);
   const progress = experienceProgress(pet.xp);
-  const [position, setPosition] = useState(spot);
+  const [position, setPosition] = useState(() => resolveWanderSpot(spot));
   const [mode, setMode] = useState<Mode>("idle");
   const [faceLeft, setFaceLeft] = useState(false);
   const [heart, setHeart] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const modeRef = useRef<Mode>("idle");
-  const positionRef = useRef(spot);
+  const positionRef = useRef(resolveWanderSpot(spot));
   const dirRef = useRef<WanderDir>({ x: 1, y: 0 });
   const faceLeftRef = useRef(false);
   const phaseUntilRef = useRef(0);
@@ -82,6 +85,11 @@ function RoomPet({
   }, []);
 
   useEffect(() => {
+    // Hard unstick on mount (covers pets left in an expanded sofa footprint).
+    const freed = resolveWanderSpot(positionRef.current);
+    positionRef.current = freed;
+    setPosition(freed);
+
     let frame = 0;
     let last = performance.now();
     phaseUntilRef.current = last + randomIdleMs();
@@ -118,6 +126,13 @@ function RoomPet({
       const current = modeRef.current;
 
       if (current === "petting") return;
+
+      // Unstick pets trapped in a no-go zone (e.g. sofa footprint grew after they sat there).
+      const freed = resolveWanderSpot(positionRef.current);
+      if (freed.left !== positionRef.current.left || freed.top !== positionRef.current.top) {
+        positionRef.current = freed;
+        setPosition(freed);
+      }
 
       if (pausedRef.current || reducedRef.current) {
         if (current === "walking") enterIdle(now);
@@ -176,7 +191,11 @@ function RoomPet({
     <div
       ref={wrapRef}
       className={pet.is_desktop_active ? "room-pet-wrap is-equipped" : "room-pet-wrap"}
-      style={{ left: `${position.left}%`, top: `${position.top}%` }}
+      style={{
+        left: `${position.left}%`,
+        top: `${position.top}%`,
+        zIndex: roomDepthZ(position.top),
+      }}
       data-mode={mode}
     >
       <button
@@ -241,7 +260,25 @@ export function LivingRoom({
       </div>
       <div className="living-room">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="living-room-art" src={ROOM_ASSET_PATH} alt="" draggable={false} />
+        <img className="living-room-layer is-wall" src={ROOM_WALL_SRC} alt="" draggable={false} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="living-room-layer is-floor" src={ROOM_FLOOR_SRC} alt="" draggable={false} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="living-room-layer is-carpet" src={ROOM_CARPET_SRC} alt="" draggable={false} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="living-room-layer is-trim" src={ROOM_TRIM_SRC} alt="" draggable={false} />
+        {ROOM_FURNITURE.map((item) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={item.id}
+            className="living-room-layer is-furniture"
+            src={item.src}
+            alt=""
+            draggable={false}
+            data-furniture={item.id}
+            style={{ zIndex: roomDepthZ(item.depthTop) }}
+          />
+        ))}
         {showCylinder ? (
           <DailyProgressCylinder
             studiedMinutes={dailyStudiedMinutes}
@@ -254,7 +291,7 @@ export function LivingRoom({
             <RoomPet
               key={`${pet.id}-${index}`}
               pet={pet}
-              spot={spotForIndex(index)}
+              spot={roomStartSpot(index)}
               paused={false}
               onOpen={onOpenPet}
             />

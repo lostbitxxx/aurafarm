@@ -267,7 +267,18 @@ export function outfitFolder(hat: string | null | undefined, clothes: string | n
   return `${hatPart}-${clothesPart}`;
 }
 
+/** Full composite room art (crew room and any single-image use). */
 export const ROOM_ASSET_PATH = "/pet-assets/room/living-room.svg";
+
+/** Layered desk room pieces (wall / floor / carpet / furniture folders). */
+export {
+  ROOM_CARPET_SRC,
+  ROOM_FLOOR_SRC,
+  ROOM_FURNITURE,
+  ROOM_TRIM_SRC,
+  ROOM_WALL_SRC,
+} from "@/lib/living-room-layout";
+
 
 export const ROOM_PLACEMENT_NOTE =
   "This arrangement stays in this browser. It is not saved to your account.";
