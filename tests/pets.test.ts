@@ -27,7 +27,7 @@ test("registration inserts a profile and a desktop-active baby slime", () => {
   });
   assert.equal(STARTER_PET_TYPE, "baby_slime");
   assert.equal(STARTER_PET_LEVEL, 1);
-  assert.equal(describePet("baby_slime").name, "Baby Slime");
+  assert.equal(describePet("baby_slime").name, "Cat");
 });
 
 test("the desk iframe points at the equipped pet", () => {
@@ -69,8 +69,8 @@ test("the shop catalog lists the sale pets and skips the starter", () => {
     assert.equal(describePet(pet.pet_type).name, pet.name);
   }
   assert.equal(catalog.some((pet) => pet.pet_type === STARTER_PET_TYPE), false);
-  assert.equal(describePet("lantern_moth").name, "Lantern Moth");
-  assert.equal(describePet("river_newt").name, "River Newt");
+  assert.equal(describePet("lantern_moth").name, "Bunny");
+  assert.equal(describePet("river_newt").name, "Bear");
 });
 
 test("buying a pet spends the shared price and cannot mint one", () => {
