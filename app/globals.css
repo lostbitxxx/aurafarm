@@ -1194,17 +1194,15 @@ a.tracker-download { color: #6d7a62; }
   transition:
     background 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
+    color 0.18s ease,
     filter 0.18s ease;
 }
 
 .tracker-card .pet-love-button.is-lit {
-  background: var(--dialog-lime);
-  border-color: #97b839;
+  background: #f3c4c8;
+  border-color: #e3a0a7;
   color: var(--dialog-ink);
-  box-shadow:
-    0 0 0 3px rgba(197, 239, 71, 0.4),
-    0 0 16px rgba(155, 199, 45, 0.55);
+  box-shadow: none;
   filter: none;
 }
 

@@ -28,8 +28,8 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /pet-love-button/);
   assert.match(detail, /pose === "blush"/);
   assert.match(detail, /Pet ♡/);
-  assert.match(css, /\.tracker-card \.pet-love-button\.is-lit/);
-  assert.match(css, /var\(--dialog-lime\)/);
+  assert.match(css, /\.tracker-card \.pet-love-button\.is-lit[\s\S]*#f3c4c8/);
+  assert.doesNotMatch(css, /\.pet-love-button\.is-lit[\s\S]*dialog-lime/);
   assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
   assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);
   assert.match(detail, /className="accessory-slot-art"/);
