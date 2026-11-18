@@ -108,10 +108,12 @@ test("pet detail spends a rename coupon and settings default to showing names", 
   assert.match(inventory, /PetRenameCircleButton/);
   assert.match(inventory, /inventory-pet-name/);
   assert.match(inventory, /Level \{pet\.level\}/);
-  assert.match(room, /showPetNames \? displayName : `Lv\.\$\{progress\.level\}`/);
-  assert.match(settings, /Show pet names/);
+  assert.match(room, /room-pet-label-line/);
+  assert.match(room, /!showPetNames \?/);
+  assert.match(room, /Lv\.\$\{progress\.level\}/);
+  assert.match(settings, /Display Lv/);
   assert.match(settings, /updateShowPetNames/);
-  assert.match(settings, /aria-checked=\{namesVisible\}/);
+  assert.match(settings, /aria-checked=\{displayLv\}/);
   assert.match(dashboard, /show_pet_names/);
   assert.match(dashboard, /showPetNames/);
   assert.match(dashboard, /renameCoupons/);

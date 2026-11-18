@@ -110,7 +110,7 @@ export function PetDetailDialog({
 
   async function onToggleDisplayLevel() {
     if (pending) return;
-    // Display Level on => room shows Lv.; off => room shows names (showPetNames).
+    // Display Lv on => room shows name + level; off => name only (showPetNames).
     const nextShowNames = !showPetNames;
     setPending(true);
     setError(null);
@@ -201,7 +201,7 @@ export function PetDetailDialog({
               disabled={pending}
               onClick={onToggleDisplayLevel}
             >
-              Display Level
+              Display Lv
             </button>
           </div>
           <div

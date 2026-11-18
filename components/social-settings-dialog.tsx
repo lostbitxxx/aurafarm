@@ -37,7 +37,8 @@ export function SocialSettingsDialog({
 }) {
   const [invite, setInvite] = useState(friendInvite);
   const [seen, setSeen] = useState(allowStatusSeen);
-  const [namesVisible, setNamesVisible] = useState(showPetNames);
+  // showPetNames=false means Display Lv is on (name + level in the living room).
+  const [displayLv, setDisplayLv] = useState(!showPetNames);
   const [error, setError] = useState<string | null>(friendsError);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -50,7 +51,7 @@ export function SocialSettingsDialog({
     setSnap(settingsKey);
     setInvite(friendInvite);
     setSeen(allowStatusSeen);
-    setNamesVisible(showPetNames);
+    setDisplayLv(!showPetNames);
     setError(friendsError);
   }
 
@@ -77,13 +78,14 @@ export function SocialSettingsDialog({
       setError(social.error);
       return;
     }
-    const names = await updateShowPetNames(namesVisible);
+    const nextShowNames = !displayLv;
+    const names = await updateShowPetNames(nextShowNames);
     setPending(false);
     if (names.error) {
       setError(names.error);
       return;
     }
-    onShowPetNamesChange?.(namesVisible);
+    onShowPetNamesChange?.(nextShowNames);
     setNotice("Saved.");
   }
 
@@ -127,17 +129,17 @@ export function SocialSettingsDialog({
             mark={seenMark}
           />
           <div className="reward-apply-row">
-            <span className="reward-apply-label" id="show-pet-names-label">
-              Show pet names
+            <span className="reward-apply-label" id="display-lv-label">
+              Display Lv
             </span>
             <button
               type="button"
               className="reward-apply-toggle"
               role="switch"
-              aria-checked={namesVisible}
-              aria-labelledby="show-pet-names-label"
+              aria-checked={displayLv}
+              aria-labelledby="display-lv-label"
               disabled={pending}
-              onClick={() => setNamesVisible((current) => !current)}
+              onClick={() => setDisplayLv((current) => !current)}
             >
               <span className="reward-apply-knob" aria-hidden="true" />
             </button>
