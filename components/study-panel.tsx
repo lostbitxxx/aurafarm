@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { completeStudyTimer, endStudyEarly, startStudySession } from "@/lib/actions/study";
 import { CYLINDER_TICK_MS } from "@/lib/daily-cylinder";
@@ -33,11 +33,15 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
-import { HistoryDialog } from "./dashboard-dialogs";
 import { StudyClock } from "./study-clock";
 import { LivingRoom } from "./living-room";
 import { PetDetailDialog } from "./pet-detail-dialog";
 import { TrackerDemo } from "./study-tracker-demo";
+
+export type DevFinishApi = {
+  canFinish: boolean;
+  finish: (password: string) => Promise<{ error: string }>;
+};
 
 function preferredStudySeconds(minutes: number | null | undefined) {
   if (minutes == null || !Number.isFinite(minutes) || minutes < MIN_STUDY_MINUTES) {
@@ -78,6 +82,7 @@ export function StudyPanel({
   deskRefreshing = false,
   tutorialCurrent = false,
   onTutorialStart,
+  onRegisterDevFinish,
 }: {
   userId: string;
   activeSession: ActiveStudySession | null;
@@ -115,6 +120,7 @@ export function StudyPanel({
   deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
   onTutorialStart?: () => void;
+  onRegisterDevFinish?: (api: DevFinishApi | null) => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -322,6 +328,38 @@ export function StudyPanel({
     setDevOpen(false);
   }
 
+  async function runDevFinish(password: string) {
+    if (pending || !shownSession || shownSession.useDesktopPet) {
+      return { error: "Start a website timer session first." };
+    }
+    if (!devTimerPasswordMatches(password)) {
+      return { error: "That password does not match." };
+    }
+    setRushed(true);
+    const result = await finishSession(DEV_TIMER_PASSWORD);
+    if (!result.error) {
+      setDevPassword("");
+      setDevOpen(false);
+    }
+    return result;
+  }
+
+  const canDevFinish = Boolean(shownSession && !shownSession.useDesktopPet);
+  const finishDevRef = useRef(runDevFinish);
+  finishDevRef.current = runDevFinish;
+
+  useEffect(() => {
+    if (!onRegisterDevFinish) return;
+    onRegisterDevFinish({
+      canFinish: canDevFinish,
+      finish: (password) => finishDevRef.current(password),
+    });
+  }, [onRegisterDevFinish, canDevFinish]);
+
+  useEffect(() => {
+    return () => onRegisterDevFinish?.(null);
+  }, [onRegisterDevFinish]);
+
   async function onDevFinish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending || !shownSession || shownSession.useDesktopPet) return;
@@ -330,12 +368,8 @@ export function StudyPanel({
       return;
     }
     setDevRejected(false);
-    setRushed(true);
-    const result = await finishSession(DEV_TIMER_PASSWORD);
-    if (!result.error) {
-      setDevPassword("");
-      setDevOpen(false);
-    }
+    const result = await runDevFinish(devPassword);
+    if (result.error) setError(result.error);
   }
 
   const lengthSeconds = selectedLengthSeconds();
