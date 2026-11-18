@@ -3181,10 +3181,24 @@ button.dialog-row {
 }
 
 .room-pet-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08rem;
   font: 10px ui-monospace, monospace;
+  line-height: 1.15;
+  text-align: center;
   background: #fff9ed;
   padding: 0.2rem 0.4rem;
   border-radius: 0.4rem;
+}
+
+.room-pet-label-line {
+  display: block;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-equipped {

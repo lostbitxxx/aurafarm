@@ -381,7 +381,10 @@ function RoomPet({
         onPointerCancel={onPointerCancel}
         onPointerLeave={petting.onPointerLeave}
       >
-        <span className="room-pet-label">{showPetNames ? displayName : `Lv.${progress.level}`}</span>
+        <span className="room-pet-label">
+          <span className="room-pet-label-line">{displayName}</span>
+          {!showPetNames ? <span className="room-pet-label-line">Lv.{progress.level}</span> : null}
+        </span>
         <span className={faceLeft ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
           <PixelPetArt
             petType={pet.pet_type}
