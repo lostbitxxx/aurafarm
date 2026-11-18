@@ -170,11 +170,11 @@ test("loveseat no-walk zone starts higher than a plain bottom half", () => {
   // Sealed up to the walk-band top so pets cannot hide in the wall strip.
   assert.equal(loveseat.block.minTop, WALK_BOUNDS.minTop);
   assert.equal(loveseat.block.maxLeft, raw.maxLeft);
-  assert.ok(ROOM_OBSTACLES.length === ROOM_FURNITURE.length);
+  assert.ok(ROOM_OBSTACLES.length === ROOM_FURNITURE.filter((item) => item.id !== "blackboard").length);
   // Purple rug is floor/carpet, not a solid furniture id (former "sofa" art).
   assert.deepEqual(
     [...ROOM_FURNITURE.map((item) => item.id)].sort(),
-    ["bookshelf", "lamp", "loveseat", "plant", "storage-rack"],
+    ["blackboard", "bookshelf", "lamp", "loveseat", "plant", "storage-rack"],
   );
   assert.ok(ROOM_FURNITURE.every((item) => !item.src.includes("carpet")));
   assert.match(ROOM_CARPET_SRC, /\/base\/carpet\.svg$/);

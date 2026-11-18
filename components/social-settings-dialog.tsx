@@ -24,6 +24,7 @@ export function SocialSettingsDialog({
   friendsError,
   onShowPetNamesChange,
   onClose,
+  embedded = false,
 }: {
   friendCode: string;
   friendInvite: FriendInvite;
@@ -32,6 +33,7 @@ export function SocialSettingsDialog({
   friendsError: string | null;
   onShowPetNamesChange?: (enabled: boolean) => void;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const [invite, setInvite] = useState(friendInvite);
   const [seen, setSeen] = useState(allowStatusSeen);
@@ -85,65 +87,74 @@ export function SocialSettingsDialog({
     setNotice("Saved.");
   }
 
-  return (
-    <FarmDialog title="Social Settings" onClose={onClose} wide>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <div className="friend-code-row">
-        <p className="panel-hint">
-          Your friend code <strong className="friend-code">{friendCode || "Unavailable"}</strong>
-        </p>
-        <button type="button" className="button button-small" onClick={onCopy} disabled={!friendCode}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <form className="social-settings-form" onSubmit={onSave}>
-        <SettingPicker
-          label="Who can add you"
-          value={invite}
-          options={FRIEND_INVITE_OPTIONS}
-          open={openPicker === "invite"}
-          onOpenChange={(open) => setOpenPicker(open ? "invite" : null)}
-          onChange={(value) => {
-            if (isFriendInvite(value)) setInvite(value);
-          }}
-          mark={inviteMark}
-        />
-        <SettingPicker
-          label="Who can see your status"
-          value={seen}
-          options={STATUS_SEEN_OPTIONS}
-          open={openPicker === "seen"}
-          onOpenChange={(open) => setOpenPicker(open ? "seen" : null)}
-          onChange={(value) => {
-            if (isStatusSeen(value)) setSeen(value);
-          }}
-          mark={seenMark}
-        />
-        <div className="reward-apply-row">
-          <span className="reward-apply-label" id="show-pet-names-label">
-            Show pet names
-          </span>
-          <button
-            type="button"
-            className="reward-apply-toggle"
-            role="switch"
-            aria-checked={namesVisible}
-            aria-labelledby="show-pet-names-label"
-            disabled={pending}
-            onClick={() => setNamesVisible((current) => !current)}
-          >
-            <span className="reward-apply-knob" aria-hidden="true" />
+  const body = (
+    <div className={embedded ? "social-board-panel" : undefined}>
+      <div className={embedded ? "social-board-scroll" : undefined}>
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="friend-code-row">
+          <p className="panel-hint">
+            Your friend code <strong className="friend-code">{friendCode || "Unavailable"}</strong>
+          </p>
+          <button type="button" className="button button-small" onClick={onCopy} disabled={!friendCode}>
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <button type="submit" className="button button-small" disabled={pending}>
-          Save
-        </button>
-      </form>
-      {notice ? <p className="panel-hint">{notice}</p> : null}
+        <form className="social-settings-form" onSubmit={onSave}>
+          <SettingPicker
+            label="Who can add you"
+            value={invite}
+            options={FRIEND_INVITE_OPTIONS}
+            open={openPicker === "invite"}
+            onOpenChange={(open) => setOpenPicker(open ? "invite" : null)}
+            onChange={(value) => {
+              if (isFriendInvite(value)) setInvite(value);
+            }}
+            mark={inviteMark}
+          />
+          <SettingPicker
+            label="Who can see your status"
+            value={seen}
+            options={STATUS_SEEN_OPTIONS}
+            open={openPicker === "seen"}
+            onOpenChange={(open) => setOpenPicker(open ? "seen" : null)}
+            onChange={(value) => {
+              if (isStatusSeen(value)) setSeen(value);
+            }}
+            mark={seenMark}
+          />
+          <div className="reward-apply-row">
+            <span className="reward-apply-label" id="show-pet-names-label">
+              Show pet names
+            </span>
+            <button
+              type="button"
+              className="reward-apply-toggle"
+              role="switch"
+              aria-checked={namesVisible}
+              aria-labelledby="show-pet-names-label"
+              disabled={pending}
+              onClick={() => setNamesVisible((current) => !current)}
+            >
+              <span className="reward-apply-knob" aria-hidden="true" />
+            </button>
+          </div>
+          <button type="submit" className="button button-small" disabled={pending}>
+            Save
+          </button>
+        </form>
+        {notice ? <p className="panel-hint">{notice}</p> : null}
+      </div>
+    </div>
+  );
+
+  if (embedded) return body;
+  return (
+    <FarmDialog title="Social Settings" onClose={onClose} wide>
+      {body}
     </FarmDialog>
   );
 }

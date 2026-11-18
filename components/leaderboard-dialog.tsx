@@ -17,9 +17,11 @@ import { FarmDialog } from "./farm-dialog";
 export function LeaderboardDialog({
   userId,
   onClose,
+  embedded = false,
 }: {
   userId: string;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const [scope, setScope] = useState<LeaderboardScope>("friends");
   const [mode, setMode] = useState<LeaderboardMode>("all_time");
@@ -48,6 +50,26 @@ export function LeaderboardDialog({
     };
   }, [mode, scope]);
 
+  const panel = (
+    <div className={embedded ? "social-board-panel" : undefined}>
+      {embedded ? (
+        <div className="social-board-sticky-controls social-board-leaderboard-scope">
+          <LeaderboardScopeSwitch scope={scope} onChange={setScope} />
+        </div>
+      ) : null}
+      <LeaderboardPanel
+        userId={userId}
+        mode={mode}
+        onModeChange={setMode}
+        rows={rows}
+        error={error}
+        loading={loading}
+        scrollBody={embedded}
+      />
+    </div>
+  );
+
+  if (embedded) return panel;
   return (
     <FarmDialog
       title="Leaderboard"
@@ -55,7 +77,7 @@ export function LeaderboardDialog({
       wide
       extra={<LeaderboardScopeSwitch scope={scope} onChange={setScope} />}
     >
-      <LeaderboardPanel userId={userId} mode={mode} onModeChange={setMode} rows={rows} error={error} loading={loading} />
+      {panel}
     </FarmDialog>
   );
 }
@@ -67,6 +89,7 @@ export function LeaderboardPanel({
   rows,
   error,
   loading,
+  scrollBody = false,
 }: {
   userId: string;
   mode: LeaderboardMode;
@@ -74,10 +97,10 @@ export function LeaderboardPanel({
   rows: readonly LeaderboardRow[];
   error: string | null;
   loading: boolean;
+  scrollBody?: boolean;
 }) {
-  return (
+  const list = (
     <>
-      <LeaderboardModePicker mode={mode} onChange={onModeChange} />
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -107,6 +130,15 @@ export function LeaderboardPanel({
       ) : null}
     </>
   );
+
+  return (
+    <>
+      <div className={scrollBody ? "social-board-sticky-controls" : undefined}>
+        <LeaderboardModePicker mode={mode} onChange={onModeChange} />
+      </div>
+      {scrollBody ? <div className="social-board-scroll">{list}</div> : list}
+    </>
+  );
 }
 
 function LeaderboardScopeSwitch({
@@ -134,12 +166,6 @@ function LeaderboardScopeSwitch({
   );
 }
 
-function splitModeLabel(label: string) {
-  const splitAt = label.indexOf(" - ");
-  if (splitAt === -1) return { title: label, detail: "" };
-  return { title: label.slice(0, splitAt), detail: label.slice(splitAt + 3) };
-}
-
 function LeaderboardModePicker({
   mode,
   onChange,
@@ -154,7 +180,6 @@ function LeaderboardModePicker({
   const menuRef = useRef<HTMLUListElement>(null);
   const listId = useId();
   const current = LEADERBOARD_MODES.find((option) => option.id === mode) ?? LEADERBOARD_MODES[0];
-  const currentLabel = splitModeLabel(current.label);
 
   function placeMenu() {
     const rect = triggerRef.current?.getBoundingClientRect();
@@ -228,8 +253,7 @@ function LeaderboardModePicker({
       >
         <span>
           <span className="board-picker-kicker">Rank by</span>
-          <strong>{currentLabel.title}</strong>
-          {currentLabel.detail ? <em>{currentLabel.detail}</em> : null}
+          <strong>{current.label}</strong>
         </span>
         <Chevron />
       </button>
@@ -251,7 +275,6 @@ function LeaderboardModePicker({
           }}
         >
           {LEADERBOARD_MODES.map((option) => {
-            const label = splitModeLabel(option.label);
             const selected = option.id === mode;
             return (
               <li key={option.id} role="presentation">
@@ -268,8 +291,7 @@ function LeaderboardModePicker({
                 >
                   <ModeMark mode={option.id} />
                   <span>
-                    <strong>{label.detail || label.title}</strong>
-                    {label.detail ? <em>{label.title}</em> : null}
+                    <strong>{option.label}</strong>
                   </span>
                   {selected ? <Check /> : <span className="board-picker-check" aria-hidden="true" />}
                 </button>

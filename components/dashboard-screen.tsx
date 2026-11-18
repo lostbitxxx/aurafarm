@@ -16,12 +16,9 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { AdminReset } from "./admin-reset";
-import { FarmCrewDialog } from "./farm-crew-dialog";
-import { FriendsDialog } from "./friends-dialog";
-import { LeaderboardDialog } from "./leaderboard-dialog";
 import { PetStatus } from "./pet-status";
+import { SocialBoardDialog } from "./social-board-dialog";
 import { SocialPresence } from "./social-presence";
-import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
 import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
@@ -153,10 +150,7 @@ export function DashboardScreen({
     | "inventory"
     | "achievements"
     | "edit-plan"
-    | "friends"
-    | "farmcrew"
-    | "social-settings"
-    | "leaderboard"
+    | "social"
     | "song"
     | "download"
     | "dev-tools"
@@ -426,17 +420,10 @@ export function DashboardScreen({
         streakCount={liveStreakCount}
         onOpenShop={() => showSection("shop")}
         onOpenInventory={() => showSection("inventory")}
-        onOpenFriends={() => showSection("friends")}
-        onOpenFarmCrew={() => showSection("farmcrew")}
-        onOpenSocialSettings={() => showSection("social-settings")}
-        onOpenLeaderboard={() => showSection("leaderboard")}
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
-        pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
-        socialPinned={tour.socialPinned && !tour.covered}
-        onSocialClick={tour.onSocialClick}
       />
       <DeskSong
         userId={userId}
@@ -478,6 +465,7 @@ export function DashboardScreen({
         onOpenSong={() => showSection("song")}
         onOpenAchievements={() => showSection("achievements")}
         onOpenCollection={() => showSection("collection")}
+        onOpenSocial={() => showSection("social")}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
@@ -522,26 +510,17 @@ export function DashboardScreen({
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog === "friends" ? (
-        <FriendsDialog
+      {dialog === "social" ? (
+        <SocialBoardDialog
           friends={friends}
           friendCode={friendCode}
           friendsError={friendsError}
-          onFriendsChange={setFriendRows}
-          onClose={() => setDialog(null)}
-        />
-      ) : null}
-      {dialog === "farmcrew" ? <FarmCrewDialog onClose={() => setDialog(null)} /> : null}
-      {dialog === "leaderboard" ? (
-        <LeaderboardDialog userId={userId} onClose={() => setDialog(null)} />
-      ) : null}
-      {dialog === "social-settings" ? (
-        <SocialSettingsDialog
-          friendCode={friendCode}
           friendInvite={friendInvite}
           allowStatusSeen={allowStatusSeen}
           showPetNames={showPetNames}
-          friendsError={friendsError}
+          userId={userId}
+          pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
+          onFriendsChange={setFriendRows}
           onShowPetNamesChange={setShowPetNames}
           onClose={() => setDialog(null)}
         />

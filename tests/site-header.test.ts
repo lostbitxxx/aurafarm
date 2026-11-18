@@ -20,7 +20,7 @@ test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
   assert.match(css, /\.topbar-settings-list[\s\S]*right:\s*0/);
 });
 
-test("Settings lists Edit plan, Download, Privacy, Social settings, Dev tools, then Sign out", () => {
+test("Settings lists Edit plan, Download, Privacy, Dev tools, then Sign out", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const settingsBlock = header.slice(
     header.indexOf("const settingsItems"),
@@ -37,19 +37,16 @@ test("Settings lists Edit plan, Download, Privacy, Social settings, Dev tools, t
   assert.ok(editPlan >= 0);
   assert.ok(download > editPlan);
   assert.ok(privacy > download);
-  assert.ok(social > privacy);
-  assert.ok(devTools > social);
+  assert.equal(social, -1);
+  assert.ok(devTools > privacy);
   assert.ok(signOut > devTools);
 });
 
-test("Social submenu keeps Friends, FarmCrew, and Leaderboard only", () => {
+test("header no longer hosts Social; blackboard owns it", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
-  const socialMenu = header.slice(
-    header.indexOf('data-tutorial="social"'),
-    header.indexOf("</div>\n            ) : null}", header.indexOf('data-tutorial="social"')),
-  );
-  assert.match(socialMenu, /Friends/);
-  assert.match(socialMenu, /FarmCrew/);
-  assert.match(socialMenu, /Leaderboard/);
-  assert.doesNotMatch(socialMenu, /Social [Ss]ettings/);
+  assert.doesNotMatch(header, /data-tutorial="social"/);
+  assert.doesNotMatch(header, /onOpenFriends/);
+  assert.doesNotMatch(header, /onOpenFarmCrew/);
+  assert.doesNotMatch(header, /onOpenLeaderboard/);
+  assert.doesNotMatch(header, /Social settings/);
 });

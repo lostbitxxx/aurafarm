@@ -652,29 +652,31 @@ export function AchievementsDialog({
 }) {
   const earned = new Set(earnedIds);
   return (
-    <FarmDialog title="Achievements" onClose={onClose}>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <ul className="dialog-list achievement-list">
-        {ACHIEVEMENTS.map((achievement) => {
-          const done = earned.has(achievement.id);
-          return (
-            <li
-              key={achievement.id}
-              className={done ? "achievement-row achievement-row-earned" : "achievement-row achievement-row-locked"}
-            >
-              <div>
-                <strong>{achievement.title}</strong>
-                {done ? <span className="achievement-earned">Earned</span> : null}
-                <p className="panel-hint">{achievement.description}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+    <FarmDialog title="Achievements" onClose={onClose} wide>
+      <div className="achievements-board-body">
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <ul className="dialog-list achievement-list">
+          {ACHIEVEMENTS.map((achievement) => {
+            const done = earned.has(achievement.id);
+            return (
+              <li
+                key={achievement.id}
+                className={done ? "achievement-row achievement-row-earned" : "achievement-row achievement-row-locked"}
+              >
+                <div>
+                  <strong>{achievement.title}</strong>
+                  {done ? <span className="achievement-earned">Earned</span> : null}
+                  <p className="panel-hint">{achievement.description}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </FarmDialog>
   );
 }

@@ -42,9 +42,10 @@ export const DESK_TUTORIAL_STEPS = [
   {
     id: "social",
     target: "social",
-    kind: "social",
-    title: "Social",
-    body: "Click Social to see what is inside.",
+    kind: "dialog",
+    section: "social",
+    title: "Blackboard",
+    body: "Click the blackboard to open it.",
   },
   {
     id: "start",
@@ -56,8 +57,6 @@ export const DESK_TUTORIAL_STEPS = [
 ] as const;
 
 export type DeskTutorialStep = (typeof DESK_TUTORIAL_STEPS)[number];
-
-const SOCIAL_SECTIONS = ["friends", "farmcrew", "social-settings", "leaderboard"] as const;
 
 export type TutorialRecord = { status: "active"; step: number } | { status: "done" };
 
@@ -72,7 +71,6 @@ export function tutorialStorageKey(userId: string) {
 
 export function sectionMatchesStep(step: DeskTutorialStep, section: string) {
   if (step.kind === "dialog") return step.section === section;
-  if (step.kind === "social") return (SOCIAL_SECTIONS as readonly string[]).includes(section);
   return false;
 }
 

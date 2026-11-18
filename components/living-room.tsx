@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
+  BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
   ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
   ROOM_RACK_HOTSPOTS,
   ROOM_TRIM_SRC,
+  ROOM_WALL_HOTSPOTS,
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
   roomDepthZ,
@@ -416,6 +418,7 @@ export function LivingRoom({
   onOpenSong,
   onOpenAchievements,
   onOpenCollection,
+  onOpenSocial,
   tutorialTarget = null,
   dailyStudiedMinutes = null,
   dailyGoalMinutes = null,
@@ -430,6 +433,7 @@ export function LivingRoom({
   onOpenSong?: () => void;
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
+  onOpenSocial?: () => void;
   tutorialTarget?: string | null;
   dailyStudiedMinutes?: number | null;
   dailyGoalMinutes?: number | null;
@@ -444,6 +448,7 @@ export function LivingRoom({
     collection: onOpenCollection,
   };
   const rackZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) + 1;
+  const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
 
   return (
     <section className="living-room-block" aria-label="Your little living room">
@@ -496,6 +501,28 @@ export function LivingRoom({
             );
           })}
         </div>
+        {onOpenSocial ? (
+          <div className="living-room-wall-hotspots" style={{ zIndex: blackboardZ }}>
+            {ROOM_WALL_HOTSPOTS.map((spot) => (
+              <button
+                key={spot.id}
+                type="button"
+                className="room-rack-hotspot"
+                aria-label={spot.label}
+                data-tutorial={spot.tutorialTarget}
+                data-tutorial-current={tutorialTarget === spot.tutorialTarget ? "true" : undefined}
+                data-wall-hotspot={spot.id}
+                style={{
+                  left: `${spot.box.minLeft}%`,
+                  top: `${spot.box.minTop}%`,
+                  width: `${spot.box.maxLeft - spot.box.minLeft}%`,
+                  height: `${spot.box.maxTop - spot.box.minTop}%`,
+                }}
+                onClick={onOpenSocial}
+              />
+            ))}
+          </div>
+        ) : null}
         {showCylinder ? (
           <DailyProgressCylinder
             studiedMinutes={dailyStudiedMinutes}
