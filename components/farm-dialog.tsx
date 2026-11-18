@@ -12,7 +12,6 @@ export function FarmDialog({
   wide = false,
   titleId: titleIdProp,
   extra,
-  closeOnBackdrop = true,
 }: {
   title: string;
   onClose: () => void;
@@ -20,7 +19,6 @@ export function FarmDialog({
   wide?: boolean;
   titleId?: string;
   extra?: ReactNode;
-  closeOnBackdrop?: boolean;
 }) {
   const generatedId = useId();
   const titleId = titleIdProp ?? generatedId;
@@ -74,11 +72,7 @@ export function FarmDialog({
   }, []);
 
   return (
-    <div
-      className="tracker-pop"
-      role="presentation"
-      onClick={closeOnBackdrop ? () => onCloseRef.current() : undefined}
-    >
+    <div className="tracker-pop" role="presentation" onClick={() => onCloseRef.current()}>
       <div
         ref={cardRef}
         className={wide ? "tracker-card tracker-card-wide" : "tracker-card"}

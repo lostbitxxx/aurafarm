@@ -3258,6 +3258,63 @@ button.dialog-row {
   color: var(--dialog-muted, #5c6b62);
 }
 
+.reward-apply-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.reward-apply-label {
+  color: var(--dialog-ink, #23392d);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.reward-apply-toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.2rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d5d8cc;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.reward-apply-toggle[aria-checked="true"] {
+  background: #34c759;
+}
+
+.reward-apply-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reward-apply-toggle:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.reward-apply-knob {
+  position: absolute;
+  top: 0.16rem;
+  left: 0.16rem;
+  width: 1.58rem;
+  height: 1.58rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.22);
+  transition: transform 0.2s ease;
+}
+
+.reward-apply-toggle[aria-checked="true"] .reward-apply-knob {
+  transform: translateX(1.3rem);
+}
+
 .reward-shuffle {
   display: flex;
   justify-content: flex-end;

@@ -219,31 +219,9 @@ export function DashboardScreen({
   }
 
   if (rewardSignature !== rewardSnap) {
-    // #region agent log
-    fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
-      body: JSON.stringify({
-        sessionId: "8dfc",
-        hypothesisId: "H1",
-        location: "dashboard-screen.tsx:rewardSignature",
-        message: "pendingRewards prop changed",
-        data: {
-          pickerOpen,
-          prevSnap: rewardSnap,
-          nextSig: rewardSignature,
-          localRewardCount: rewards.length,
-          pendingCount: pendingRewards.length,
-          willOverwriteLocal: !pickerOpen,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setRewardSnap(rewardSignature);
     // Claiming revalidates the dashboard and drops the banked reward from props.
-    // Keep local rewards while the picker (and equip prompt) is open so the dialog
-    // is not unmounted mid-choice.
+    // Keep local rewards while the picker is open so the dialog is not unmounted mid-choice.
     if (!pickerOpen) setRewards(pendingRewards);
   }
 

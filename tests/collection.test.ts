@@ -353,24 +353,23 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(claimed, /return \{ \.\.\.pet, color \}/);
   assert.match(claimed, /return \{ \.\.\.pet, hat \}/);
   assert.match(claimed, /return \{ \.\.\.pet, clothes \}/);
-  assert.match(picker, /Do you want to equip the accessory now\?/);
-  assert.match(picker, /Equip now/);
-  assert.match(picker, /Not now/);
+  assert.match(picker, /Apply now\?/);
+  assert.match(picker, /useState\(true\)/);
+  assert.match(picker, /role="switch"/);
+  assert.match(picker, /aria-checked=\{applyNow\}/);
+  assert.match(picker, /finishClaim\(itemId, applyNow/);
   assert.match(picker, /applyPetColor/);
   assert.match(picker, /applyPetHat/);
   assert.match(picker, /applyPetClothes/);
   assert.match(picker, /finishClaim/);
-  assert.match(picker, /opening equip prompt before claim|setEquipPrompt/);
-  assert.match(picker, /closeOnBackdrop=\{!equipPrompt\}/);
+  assert.doesNotMatch(picker, /setEquipPrompt/);
+  assert.doesNotMatch(picker, /Equip reward\?/);
+  assert.doesNotMatch(picker, /Not now/);
   assert.doesNotMatch(picker, /worn by this pet/);
   assert.match(screen, /petId=\{rewards\[0\]\.petId\}/);
-  // Claim revalidates pendingRewards; do not overwrite local rewards while the picker is open
-  // or the equip prompt unmounts immediately.
+  // Claim revalidates pendingRewards; do not overwrite local rewards while the picker is open.
   assert.match(
     screen,
     /if \(rewardSignature !== rewardSnap\) \{[\s\S]*if \(!pickerOpen\) setRewards\(pendingRewards\);/,
   );
-  const dialog = readFileSync(new URL("../components/farm-dialog.tsx", import.meta.url), "utf8");
-  assert.match(dialog, /closeOnBackdrop/);
-  assert.match(dialog, /onClick=\{closeOnBackdrop \? \(\) => onCloseRef\.current\(\) : undefined\}/);
 });
