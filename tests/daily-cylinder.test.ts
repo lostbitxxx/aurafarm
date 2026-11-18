@@ -98,8 +98,10 @@ test("living room hosts the daily cylinder in the top-right", () => {
   assert.match(css, /cylinder-fire/);
   assert.match(css, /800ms/);
   assert.match(css, /room-cylinder-fire-strip/);
-  assert.match(css, /--fire-unit/);
-  assert.match(css, /translateX\(-413px\)/);
+  assert.doesNotMatch(css, /--fire-unit/);
+  assert.match(css, /translateX\(-60px\)/);
+  assert.match(css, /translateX\(-420px\)/);
+  assert.doesNotMatch(css, /translateX\(-413px\)/);
   assert.match(css, /\.room-cylinder-fire[\s\S]*overflow:\s*hidden/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(css, /room-cylinder-rim|room-cylinder-base|room-cylinder-glass/);

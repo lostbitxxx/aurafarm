@@ -2792,23 +2792,22 @@ button.dialog-row {
 
 /*
   Fire on the lowest part of the capsule (catching the foot).
-  Sheet: 160×22 = 8 frames × 20×22 (L→R). Shared baseline y=21.
-  Viewport is exactly one frame (3× → 60×66); strip steps one frame at a time.
+  Sheet: 160×22 = 8 frames × 20×22 (L→R). Shared base mid at cell x=9.5, y=21.
+  Viewport is exactly one frame (3× → 60×66); strip steps exact frame widths
+  so the dark base stays put while tips flicker.
 */
 .room-cylinder-fire {
   --fire-frame-w: 60px; /* 20 × 3 */
   --fire-frame-h: 66px; /* 22 × 3 */
   --fire-frames: 8;
-  /* Per-frame right nudge; frame N shifts by (N−1) units. */
-  --fire-unit: 1px;
   position: absolute;
   left: 50%;
   /* Sit higher on the capsule foot so flames climb the lower body. */
   bottom: 28px;
   width: var(--fire-frame-w);
   height: var(--fire-frame-h);
-  /* Center under the tube, then nudge the whole loop a bit left. */
-  transform: translateX(calc(-50% - 5px));
+  /* Center the flame under the capsule. */
+  transform: translateX(-50%);
   /* In front of the tube so the foot reads as catching fire. */
   z-index: 3;
   overflow: hidden;
@@ -2834,8 +2833,8 @@ button.dialog-row {
 }
 
 /*
-  Discrete holds: frame f (1…8) → strip −(f−1)×60px + (f−1)×1px.
-  Frame 1 unshifted; each later frame sits one unit further right.
+  Discrete holds: frame f (1…8) → strip −(f−1)×60px.
+  Exact steps keep each cell's shared base mid locked in the viewport.
 */
 @keyframes cylinder-fire {
   0%,
@@ -2844,31 +2843,31 @@ button.dialog-row {
   }
   12.5%,
   24.999% {
-    transform: translateX(-59px); /* -60 + 1×1 */
+    transform: translateX(-60px);
   }
   25%,
   37.499% {
-    transform: translateX(-118px); /* -120 + 2×1 */
+    transform: translateX(-120px);
   }
   37.5%,
   49.999% {
-    transform: translateX(-177px); /* -180 + 3×1 */
+    transform: translateX(-180px);
   }
   50%,
   62.499% {
-    transform: translateX(-236px); /* -240 + 4×1 */
+    transform: translateX(-240px);
   }
   62.5%,
   74.999% {
-    transform: translateX(-295px); /* -300 + 5×1 */
+    transform: translateX(-300px);
   }
   75%,
   87.499% {
-    transform: translateX(-354px); /* -360 + 6×1 */
+    transform: translateX(-360px);
   }
   87.5%,
   100% {
-    transform: translateX(-413px); /* -420 + 7×1 */
+    transform: translateX(-420px);
   }
 }
 
