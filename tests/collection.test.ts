@@ -358,6 +358,10 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(picker, /role="switch"/);
   assert.match(picker, /aria-checked=\{applyNow\}/);
   assert.match(picker, /finishClaim\(itemId, applyNow/);
+  assert.match(
+    readFileSync(new URL("../app/globals.css", import.meta.url), "utf8"),
+    /\.reward-apply-row \{[\s\S]*justify-content:\s*flex-end;/,
+  );
   assert.match(picker, /applyPetColor/);
   assert.match(picker, /applyPetHat/);
   assert.match(picker, /applyPetClothes/);
