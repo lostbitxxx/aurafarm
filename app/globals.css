@@ -3268,6 +3268,18 @@ button.dialog-row {
   gap: 0.65rem;
 }
 
+.reward-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.collection-color.is-maxed,
+.collection-color:disabled.is-maxed {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f0eee4;
+  color: var(--dialog-muted, #596650);
+}
+
 .reward-offer-kind {
   font-size: 0.72rem;
   letter-spacing: 0.04em;

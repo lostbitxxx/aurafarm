@@ -23,7 +23,7 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
+import { petDisplayName, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode, Weekday } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
@@ -397,12 +397,11 @@ function ApplyColorDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -464,12 +463,11 @@ function ApplyHatDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -534,7 +532,6 @@ function ApplyClothesDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt
@@ -545,7 +542,7 @@ function ApplyClothesDialog({
                   className="dialog-pet-art"
                 />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -610,14 +607,13 @@ export function InventoryDialog({
       ) : null}
       <ul className="dialog-list">
         {items.map((pet) => {
-          const copy = describePet(pet.pet_type);
           const inRoom = placedIds.has(pet.id);
           const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
           return (
             <li key={pet.id} className="dialog-row">
               <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
               <div>
-                <strong>{copy.name}</strong>
+                <strong>{petDisplayName(pet)}</strong>
                 <p className="panel-hint">
                   Level {pet.level}
                   {pet.is_desktop_active ? " · Equipped" : ""}

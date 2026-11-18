@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { previewReward } from "@/lib/collection-catalog";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { highestPetLevel, shopPurchaseBlock, wholePoints } from "@/lib/pets";
+import { normalizePetName, petNameError, RENAME_COUPON_ID } from "@/lib/rename-coupon";
 import { levelFromExperience } from "@/lib/study";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -162,7 +163,13 @@ export async function applyPetClothes(petId: string, clothesId: string | null) {
 }
 
 export async function claimCollectionReward(itemId: string) {
-  if (!sampleColor(itemId) && !sampleHat(itemId) && !sampleClothes(itemId) && !previewReward(itemId)) {
+  if (
+    itemId !== RENAME_COUPON_ID &&
+    !sampleColor(itemId) &&
+    !sampleHat(itemId) &&
+    !sampleClothes(itemId) &&
+    !previewReward(itemId)
+  ) {
     return { error: "That item could not be chosen." };
   }
   if (!isSupabaseConfigured()) {
@@ -179,13 +186,77 @@ export async function claimCollectionReward(itemId: string) {
     target_item: itemId,
   });
   if (error) {
-    if (/collection_rewards|claim_collection_reward/i.test(error.message)) {
-      return { error: "Run migration 0024 before choosing a level reward." };
+    if (/collection_rewards|claim_collection_reward|rename_coupons/i.test(error.message)) {
+      return { error: "Run migration 0047 before choosing a level reward." };
     }
     if (/already owned/i.test(error.message)) return { error: "You already own that item." };
+    if (/maximum coupon reached/i.test(error.message)) return { error: "Maximum coupon reached." };
     if (/no reward to claim/i.test(error.message)) return { error: "You do not have a reward to choose." };
     if (/not in the collection/i.test(error.message)) return { error: "That item could not be chosen." };
     if (/not authenticated/i.test(error.message)) return { error: "Sign in to choose a reward." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { error: "" };
+}
+
+export async function renamePet(petId: string, newName: string) {
+  if (!petIdPattern.test(petId)) {
+    return { error: "That pet could not be renamed." };
+  }
+  const trimmed = normalizePetName(newName);
+  const invalid = petNameError(trimmed);
+  if (invalid) return { error: invalid };
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to rename a pet." };
+  }
+
+  const { error } = await supabase.rpc("rename_pet", {
+    target_pet: petId,
+    new_name: trimmed,
+  });
+  if (error) {
+    if (/rename_pet|rename_coupons/i.test(error.message)) {
+      return { error: "Run migration 0047 before renaming a pet." };
+    }
+    if (/no rename coupon/i.test(error.message)) return { error: "You need a rename coupon." };
+    if (/between 1 and 16/i.test(error.message)) return { error: petNameError(trimmed) || error.message };
+    if (/pet not found/i.test(error.message)) return { error: "That pet could not be found." };
+    if (/not authenticated/i.test(error.message)) return { error: "Sign in to rename a pet." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return { error: "", name: trimmed };
+}
+
+export async function updateShowPetNames(enabled: boolean) {
+  if (typeof enabled !== "boolean") {
+    return { error: "Choose whether to show pet names." };
+  }
+  if (!isSupabaseConfigured()) {
+    return { error: "Supabase is not configured." };
+  }
+
+  const supabase = await createClient();
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError || !data?.claims.sub) {
+    return { error: "Sign in to save settings." };
+  }
+
+  const { error } = await supabase.rpc("update_show_pet_names", { enabled });
+  if (error) {
+    if (/update_show_pet_names|show_pet_names/i.test(error.message)) {
+      return { error: "Run migration 0047 before saving pet name settings." };
+    }
+    if (/not authenticated/i.test(error.message)) return { error: "Sign in to save settings." };
     return { error: error.message };
   }
 

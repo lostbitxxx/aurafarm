@@ -326,7 +326,7 @@ test("choosing a level reward asks before equipping on the pet", () => {
     "utf8",
   );
   const claimOnly = readFileSync(
-    new URL("../supabase/migrations/0046_claim_without_apply.sql", import.meta.url),
+    new URL("../supabase/migrations/0047_rename_coupons.sql", import.meta.url),
     "utf8",
   );
   const claim = claimOnly.slice(claimOnly.indexOf("function public.claim_collection_reward"));
@@ -345,6 +345,8 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(claim, /set item_id = target_item/);
   assert.match(claim, /for update/);
   assert.match(claim, /security definer/);
+  assert.match(claim, /item_kind = 'rename_coupon'/);
+  assert.match(claim, /Maximum coupon reached/);
   assert.doesNotMatch(claim, /set color = target_item/);
   assert.doesNotMatch(claim, /set hat = target_item/);
   assert.doesNotMatch(claim, /set clothes = target_item/);
@@ -358,6 +360,7 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(picker, /role="switch"/);
   assert.match(picker, /aria-checked=\{applyNow\}/);
   assert.match(picker, /finishClaim\(itemId, applyNow/);
+  assert.match(picker, /Pick one color, hat, outfit, or rename coupon/);
   assert.match(
     readFileSync(new URL("../app/globals.css", import.meta.url), "utf8"),
     /\.reward-apply-row \{[\s\S]*justify-content:\s*flex-end;/,

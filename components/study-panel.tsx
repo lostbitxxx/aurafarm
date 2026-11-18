@@ -74,6 +74,8 @@ export function StudyPanel({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  renameCoupons = 0,
+  showPetNames = true,
   onOpenInventory,
   onOpenSong,
   onOpenAchievements,
@@ -82,6 +84,7 @@ export function StudyPanel({
   onColorApplied,
   onHatApplied,
   onClothesApplied,
+  onPetRenamed,
   deskRefreshing = false,
   tutorialCurrent = false,
   tutorialTarget = null,
@@ -116,6 +119,8 @@ export function StudyPanel({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  renameCoupons?: number;
+  showPetNames?: boolean;
   onOpenInventory: () => void;
   onOpenSong?: () => void;
   onOpenAchievements?: () => void;
@@ -124,6 +129,7 @@ export function StudyPanel({
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
+  onPetRenamed?: (petId: string, name: string) => void;
   deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
   tutorialTarget?: string | null;
@@ -441,6 +447,7 @@ export function StudyPanel({
           pets={pets}
           placedIds={placedIds}
           placementReady={placementReady}
+          showPetNames={showPetNames}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
           onOpenSong={onOpenSong}
@@ -754,12 +761,14 @@ export function StudyPanel({
           ownedColorIds={ownedColorIds}
           ownedHatIds={ownedHatIds}
           ownedClothesIds={ownedClothesIds}
+          renameCoupons={renameCoupons}
           sessionActive={Boolean(shownSession)}
           onClose={() => setDetailPetId(null)}
           onEquipped={onEquipped}
           onColorApplied={onColorApplied}
           onHatApplied={onHatApplied}
           onClothesApplied={onClothesApplied}
+          onPetRenamed={onPetRenamed}
         />
       ) : null}
     </main>
