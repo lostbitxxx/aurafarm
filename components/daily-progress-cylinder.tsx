@@ -36,9 +36,19 @@ export function DailyProgressCylinder({
       aria-valuemin={0}
       aria-valuemax={progress.goalMinutes}
       aria-valuenow={Math.min(progress.studiedMinutes, progress.goalMinutes)}
-      aria-label={caption}
+      aria-label={
+        caption.subtitle
+          ? `${caption.title}. ${caption.subtitle}. ${caption.detail}`
+          : `${caption.title}. ${caption.detail}`
+      }
     >
-      <p className="room-cylinder-caption">{caption}</p>
+      <p className="room-cylinder-caption">
+        <span className="room-cylinder-caption-title">{caption.title}</span>
+        {caption.subtitle ? (
+          <span className="room-cylinder-caption-subtitle">{caption.subtitle}</span>
+        ) : null}
+        <span className="room-cylinder-caption-detail">{caption.detail}</span>
+      </p>
       <div className="room-cylinder-tube" aria-hidden="true">
         <span className="room-cylinder-track">
           {/* Clipped by the track’s rounded top so full fill stays inside the pill. */}
