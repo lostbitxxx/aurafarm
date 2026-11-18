@@ -10,7 +10,7 @@ import {
   tutorialStorageKey,
 } from "../lib/desk-tutorial";
 
-test("desk tutorial walks every header from shop to social, then start studying", () => {
+test("desk tutorial walks shop, rack props, pets, social, then start studying", () => {
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((step) => step.id),
     ["shop", "collection", "pets", "achievements", "song", "social", "start"],
@@ -20,12 +20,15 @@ test("desk tutorial walks every header from shop to social, then start studying"
     ["shop", "collection", "pets", "achievements", "song", "social", "start"],
   );
 
+  const headerCopy = new Set(["shop", "pets", "social"]);
   for (const step of DESK_TUTORIAL_STEPS) {
     if (step.kind === "start") {
       assert.doesNotMatch(step.body, /inside/i);
       assert.match(step.body, /start a study session/i);
-    } else {
+    } else if (headerCopy.has(step.id)) {
       assert.match(step.body, new RegExp(`^Click ${step.title} to see what is inside\\.$`));
+    } else {
+      assert.match(step.body, /storage rack/);
     }
   }
 

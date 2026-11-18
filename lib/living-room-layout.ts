@@ -25,7 +25,7 @@ export type RoomObstacle = {
   maxTop: number;
 };
 
-export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant";
+export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant" | "storage-rack";
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
@@ -37,6 +37,16 @@ export type RoomFurniturePiece = {
   depthTop: number;
   /** Footprint pets cannot enter (percent space). */
   block: RoomObstacle;
+};
+
+/** Clickable prop on the storage rack (opens a desk dialog). */
+export type RoomRackHotspotId = "song" | "achievements" | "collection";
+
+export type RoomRackHotspot = {
+  id: RoomRackHotspotId;
+  label: string;
+  /** Hit area in room percent space (matches CSS absolute box). */
+  box: RoomObstacle;
 };
 
 export function pxToLeftPercent(x: number) {
@@ -77,6 +87,8 @@ const LOVESEAT_BOUNDS: RoomRectPx = { x: 33, y: 110, width: 147, height: 59 };
 const BOOKSHELF_BOUNDS: RoomRectPx = { x: 471, y: 48, width: 75, height: 88 };
 const LAMP_BOUNDS: RoomRectPx = { x: 183, y: 116, width: 42, height: 60 };
 const PLANT_BOUNDS: RoomRectPx = { x: 509, y: 139, width: 35, height: 82 };
+/** Between the lamp and the bookshelf, mid-back wall. Pixel art is 320×160 (2:1). */
+const STORAGE_RACK_BOUNDS: RoomRectPx = { x: 292, y: 78, width: 130, height: 65 };
 
 /**
  * Loveseat/sofa: no-walk starts high. We also seal up to the walk-band top so pets
@@ -126,10 +138,73 @@ function bookshelfPiece(): RoomFurniturePiece {
   };
 }
 
+/**
+ * Back-wall storage rack: same depth treatment as the bookshelf so floor pets
+ * paint in front. Collision is the drawer band only (bottom half).
+ */
+export const STORAGE_RACK_DEPTH_TOP = pxToTopPercent(ROOM_FLOOR_START_Y) - 1;
+
+function storageRackPiece(): RoomFurniturePiece {
+  return {
+    id: "storage-rack",
+    src: "/pet-assets/room/furniture/storage-rack.svg",
+    bounds: STORAGE_RACK_BOUNDS,
+    depthTop: STORAGE_RACK_DEPTH_TOP,
+    block: footprintObstacle(STORAGE_RACK_BOUNDS, 0.55),
+  };
+}
+
+function hotspotBox(bounds: RoomRectPx): RoomObstacle {
+  return {
+    minLeft: pxToLeftPercent(bounds.x),
+    maxLeft: pxToLeftPercent(bounds.x + bounds.width),
+    minTop: pxToTopPercent(bounds.y),
+    maxTop: pxToTopPercent(bounds.y + bounds.height),
+  };
+}
+
+/** Gramophone / trophy / clothes-shelf+drawer hit areas on the storage rack. */
+export const ROOM_RACK_HOTSPOTS: readonly RoomRackHotspot[] = [
+  {
+    id: "song",
+    label: "Song",
+    // Left top: gramophone
+    box: hotspotBox({
+      x: STORAGE_RACK_BOUNDS.x,
+      y: STORAGE_RACK_BOUNDS.y,
+      width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
+    }),
+  },
+  {
+    id: "achievements",
+    label: "Achievements",
+    // Right top: trophy
+    box: hotspotBox({
+      x: STORAGE_RACK_BOUNDS.x + Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+      y: STORAGE_RACK_BOUNDS.y,
+      width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
+    }),
+  },
+  {
+    id: "collection",
+    label: "Collection",
+    // Open clothes shelf + wide drawer
+    box: hotspotBox({
+      x: STORAGE_RACK_BOUNDS.x,
+      y: STORAGE_RACK_BOUNDS.y + Math.round(STORAGE_RACK_BOUNDS.height * 0.45),
+      width: STORAGE_RACK_BOUNDS.width,
+      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.55),
+    }),
+  },
+];
+
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   piece("loveseat", "loveseat.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
   piece("lamp", "lamp.svg", LAMP_BOUNDS),
+  storageRackPiece(),
   bookshelfPiece(),
   piece("plant", "plant.svg", PLANT_BOUNDS),
 ];

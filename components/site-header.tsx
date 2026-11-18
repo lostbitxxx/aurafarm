@@ -12,14 +12,11 @@ export function SiteHeader({
   studySeconds,
   streakCount,
   onOpenShop,
-  onOpenCollection,
   onOpenInventory,
-  onOpenAchievements,
   onOpenFriends,
   onOpenFarmCrew,
   onOpenSocialSettings,
   onOpenLeaderboard,
-  onOpenSong,
   onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
@@ -32,14 +29,11 @@ export function SiteHeader({
   studySeconds?: number;
   streakCount?: number;
   onOpenShop?: () => void;
-  onOpenCollection?: () => void;
   onOpenInventory?: () => void;
-  onOpenAchievements?: () => void;
   onOpenFriends?: () => void;
   onOpenFarmCrew?: () => void;
   onOpenSocialSettings?: () => void;
   onOpenLeaderboard?: () => void;
-  onOpenSong?: () => void;
   onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
@@ -136,19 +130,6 @@ export function SiteHeader({
             ) : (
               <Link href="/dashboard">Shop</Link>
             )}
-            {onOpenCollection ? (
-              <button
-                type="button"
-                className="topbar-link"
-                data-tutorial="collection"
-                data-tutorial-current={tutorialCurrent("collection")}
-                onClick={onOpenCollection}
-              >
-                Collection
-              </button>
-            ) : (
-              <Link href="/dashboard">Collection</Link>
-            )}
             {onOpenInventory ? (
               <button
                 type="button"
@@ -162,30 +143,6 @@ export function SiteHeader({
             ) : (
               <Link href="/dashboard">Pets</Link>
             )}
-            {onOpenAchievements ? (
-              <button
-                type="button"
-                className="topbar-link"
-                data-tutorial="achievements"
-                data-tutorial-current={tutorialCurrent("achievements")}
-                onClick={onOpenAchievements}
-              >
-                Achievements
-              </button>
-            ) : (
-              <Link href="/dashboard">Achievements</Link>
-            )}
-            {onOpenSong ? (
-              <button
-                type="button"
-                className="topbar-link"
-                data-tutorial="song"
-                data-tutorial-current={tutorialCurrent("song")}
-                onClick={onOpenSong}
-              >
-                Song
-              </button>
-            ) : null}
             {onOpenFriends ? (
               <div
                 className={socialPinned ? "topbar-menu is-pinned" : "topbar-menu"}
@@ -227,11 +184,6 @@ export function SiteHeader({
         </div>
       </div>
       <div className="topbar-user">
-        {onOpenSong ? (
-          <button type="button" className="topbar-song" onClick={onOpenSong} aria-label="Song">
-            <span aria-hidden="true">♪</span>
-          </button>
-        ) : null}
         <span className="streak-pill" title={streakLabel}>
           <span aria-hidden="true">🔥</span> {streakLabel}
         </span>
@@ -281,15 +233,6 @@ export function SiteHeader({
               Shop
             </Link>
           )}
-          {onOpenCollection ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenCollection}>
-              Collection
-            </button>
-          ) : (
-            <Link href="/dashboard" className="topbar-drawer-link">
-              Collection
-            </Link>
-          )}
           {onOpenInventory ? (
             <button type="button" className="topbar-drawer-link" onClick={onOpenInventory}>
               Pets
@@ -299,20 +242,6 @@ export function SiteHeader({
               Pets
             </Link>
           )}
-          {onOpenAchievements ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenAchievements}>
-              Achievements
-            </button>
-          ) : (
-            <Link href="/dashboard" className="topbar-drawer-link">
-              Achievements
-            </Link>
-          )}
-          {onOpenSong ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenSong}>
-              Song
-            </button>
-          ) : null}
           {onOpenFriends ? (
             <button
               type="button"

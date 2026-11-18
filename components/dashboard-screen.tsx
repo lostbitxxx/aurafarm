@@ -404,14 +404,11 @@ export function DashboardScreen({
         studySeconds={totalStudySeconds}
         streakCount={liveStreakCount}
         onOpenShop={() => showSection("shop")}
-        onOpenCollection={() => showSection("collection")}
         onOpenInventory={() => showSection("inventory")}
-        onOpenAchievements={() => showSection("achievements")}
         onOpenFriends={() => showSection("friends")}
         onOpenFarmCrew={() => showSection("farmcrew")}
         onOpenSocialSettings={() => showSection("social-settings")}
         onOpenLeaderboard={() => showSection("leaderboard")}
-        onOpenSong={() => showSection("song")}
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
@@ -455,11 +452,15 @@ export function DashboardScreen({
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
         onOpenInventory={() => showSection("inventory")}
+        onOpenSong={() => showSection("song")}
+        onOpenAchievements={() => showSection("achievements")}
+        onOpenCollection={() => showSection("collection")}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
         tutorialCurrent={tour.step?.target === "start" && !tour.covered}
+        tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
         onTutorialStart={tour.onStart}
         onRegisterDevFinish={onRegisterDevFinish}
       />

@@ -75,12 +75,16 @@ export function StudyPanel({
   ownedHatIds,
   ownedClothesIds,
   onOpenInventory,
+  onOpenSong,
+  onOpenAchievements,
+  onOpenCollection,
   onEquipped,
   onColorApplied,
   onHatApplied,
   onClothesApplied,
   deskRefreshing = false,
   tutorialCurrent = false,
+  tutorialTarget = null,
   onTutorialStart,
   onRegisterDevFinish,
 }: {
@@ -113,12 +117,16 @@ export function StudyPanel({
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
   onOpenInventory: () => void;
+  onOpenSong?: () => void;
+  onOpenAchievements?: () => void;
+  onOpenCollection?: () => void;
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
   deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
+  tutorialTarget?: string | null;
   onTutorialStart?: () => void;
   onRegisterDevFinish?: (api: DevFinishApi | null) => void;
 }) {
@@ -435,6 +443,10 @@ export function StudyPanel({
           placementReady={placementReady}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
+          onOpenSong={onOpenSong}
+          onOpenAchievements={onOpenAchievements}
+          onOpenCollection={onOpenCollection}
+          tutorialTarget={tutorialTarget}
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}

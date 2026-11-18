@@ -13,7 +13,7 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "collection",
     title: "Collection",
-    body: "Click Collection to see what is inside.",
+    body: "Click the clothes drawer on the storage rack to open Collection.",
   },
   {
     id: "pets",
@@ -29,7 +29,7 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "achievements",
     title: "Achievements",
-    body: "Click Achievements to see what is inside.",
+    body: "Click the trophy on the storage rack to open Achievements.",
   },
   {
     id: "song",
@@ -37,7 +37,7 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "song",
     title: "Song",
-    body: "Click Song to see what is inside.",
+    body: "Click the gramophone on the storage rack to open Song.",
   },
   {
     id: "social",
