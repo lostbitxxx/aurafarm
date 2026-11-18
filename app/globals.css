@@ -2639,7 +2639,11 @@ button.dialog-row {
 }
 
 .room-cylinder-caption {
-  width: 6.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  width: 7.4rem;
   margin: 0 0 0.35rem;
   text-align: center;
   font-family: var(--sans);
@@ -2648,6 +2652,12 @@ button.dialog-row {
   line-height: 1.25;
   letter-spacing: 0.01em;
   color: var(--ink-soft);
+}
+
+.room-cylinder-caption-title,
+.room-cylinder-caption-subtitle,
+.room-cylinder-caption-detail {
+  display: block;
 }
 
 .room-cylinder.is-study.is-burning .room-cylinder-caption {

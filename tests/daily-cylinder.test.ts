@@ -44,10 +44,24 @@ test("seven ruler lines divide the tube into eight bands", () => {
 });
 
 test("cylinder caption covers study progress, goal met, and rest day copy", () => {
-  assert.equal(cylinderCaption(12, 60, true), "12/60 mins studied");
-  assert.equal(cylinderCaption(60, 60, true), "You did it!");
-  assert.equal(cylinderCaption(0, 60, false), "Rest day · Study if you like");
-  assert.equal(cylinderCaption(12, 60, false), "Rest day · 12 mins studied");
+  assert.deepEqual(cylinderCaption(12, 60, true), {
+    title: "Keep going!",
+    detail: "12/60 mins",
+  });
+  assert.deepEqual(cylinderCaption(60, 60, true), {
+    title: "You did it!",
+    detail: "60/60 mins",
+  });
+  assert.deepEqual(cylinderCaption(0, 60, false), {
+    title: "Rest day",
+    subtitle: "Feel free to study~",
+    detail: "0/60 mins",
+  });
+  assert.deepEqual(cylinderCaption(12, 60, false), {
+    title: "Rest day",
+    subtitle: "Feel free to study~",
+    detail: "12/60 mins",
+  });
 });
 
 test("cylinder reset ignores sessions ended before the wipe", () => {
@@ -91,8 +105,14 @@ test("living room hosts the daily cylinder in the top-right", () => {
   assert.match(css, /room-cylinder-shell/);
   assert.match(cylinder, /room-cylinder-shell/);
   assert.match(cylinder, /room-cylinder-caption/);
+  assert.match(cylinder, /room-cylinder-caption-title/);
+  assert.match(cylinder, /room-cylinder-caption-subtitle/);
+  assert.match(cylinder, /room-cylinder-caption-detail/);
   assert.match(cylinder, /cylinderCaption/);
   assert.match(css, /room-cylinder-caption/);
+  assert.match(css, /room-cylinder-caption-title/);
+  assert.match(css, /room-cylinder-caption-subtitle/);
+  assert.match(css, /room-cylinder-caption-detail/);
   assert.match(cylinder, /is-in-liquid/);
   assert.match(css, /is-in-liquid/);
   assert.match(css, /cylinder-fire/);

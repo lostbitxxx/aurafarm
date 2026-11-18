@@ -39,15 +39,30 @@ export function cylinderTone(isStudyDay: boolean): CylinderTone {
   return isStudyDay ? "study" : "rest";
 }
 
-/** Short label shown above the living-room capsule. */
-export function cylinderCaption(studiedMinutes: number, goalMinutes: number, isStudyDay: boolean) {
+export type CylinderCaption = {
+  /** Mood / status line above the capsule. */
+  title: string;
+  /** Optional second mood line (rest day). */
+  subtitle?: string;
+  /** Always `x/y mins` for studied vs daily target. */
+  detail: string;
+};
+
+/** Label shown above the living-room capsule (two or three lines). */
+export function cylinderCaption(
+  studiedMinutes: number,
+  goalMinutes: number,
+  isStudyDay: boolean,
+): CylinderCaption {
   const progress = cylinderProgress(studiedMinutes, goalMinutes);
-  if (isStudyDay) {
-    if (progress.goalMet) return "You did it!";
-    return `${progress.studiedMinutes}/${progress.goalMinutes} mins studied`;
+  const detail = `${progress.studiedMinutes}/${progress.goalMinutes} mins`;
+  if (!isStudyDay) {
+    return { title: "Rest day", subtitle: "Feel free to study~", detail };
   }
-  if (progress.studiedMinutes <= 0) return "Rest day · Study if you like";
-  return `Rest day · ${progress.studiedMinutes} mins studied`;
+  if (progress.goalMet) {
+    return { title: "You did it!", detail };
+  }
+  return { title: "Keep going!", detail };
 }
 
 /** Seven ruler marks that split the tube into eight equal bands. */
