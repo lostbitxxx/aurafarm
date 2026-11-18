@@ -138,19 +138,20 @@ test("farm crew errors point at migration 0039", () => {
   );
 });
 
-test("Social opens FarmCrew and Visit goes to the crew room", () => {
+test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const board = readFileSync(new URL("../components/social-board-dialog.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/farm-crew-dialog.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/farmcrew/[id]/page.tsx", import.meta.url), "utf8");
   const room = readFileSync(new URL("../components/crew-room.tsx", import.meta.url), "utf8");
   const sql = readFileSync(new URL("../supabase/migrations/0039_farm_crew.sql", import.meta.url), "utf8");
   const visibility = readFileSync(new URL("../supabase/migrations/0040_farm_crew_visibility.sql", import.meta.url), "utf8");
 
-  assert.match(header, /onClick=\{onOpenFarmCrew\}[\s\S]*FarmCrew/);
-  assert.match(header, /aria-haspopup="menu"[\s\S]*?>\s*Social\s*<\/button>/);
-  assert.match(desk, /onOpenFarmCrew=\{\(\) => showSection\("farmcrew"\)\}/);
-  assert.match(desk, /<FarmCrewDialog/);
+  assert.doesNotMatch(header, /onOpenFarmCrew/);
+  assert.match(desk, /onOpenSocial=\{\(\) => showSection\("social"\)\}/);
+  assert.match(desk, /<SocialBoardDialog/);
+  assert.match(board, /<FarmCrewDialog[\s\S]*embedded/);
   assert.match(dialog, /FarmCrew List/);
   assert.match(dialog, /Join FarmCrew/);
   assert.match(dialog, /Create FarmCrew/);

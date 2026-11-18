@@ -23,7 +23,7 @@ function CrewPet({ petType, color }: { petType: string; color: string | null }) 
   return <PixelPetArt petType={petType} color={color} className="dialog-pet-art" alt="" />;
 }
 
-export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
+export function FarmCrewDialog({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
   const [tab, setTab] = useState<FarmCrewTab>("list");
   const [crews, setCrews] = useState<FarmCrewCard[]>([]);
   const [publicCrews, setPublicCrews] = useState<PublicFarmCrewCard[]>([]);
@@ -119,9 +119,13 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
-  return (
-    <FarmDialog title="FarmCrew" onClose={onClose} wide>
-      <div className="collection-tabs" role="tablist" aria-label="FarmCrew">
+  const body = (
+    <div className={embedded ? "social-board-panel" : undefined}>
+      <div
+        className={embedded ? "collection-tabs social-board-sticky-controls" : "collection-tabs"}
+        role="tablist"
+        aria-label="FarmCrew"
+      >
         <button
           type="button"
           role="tab"
@@ -157,7 +161,9 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div
-        className="collection-panel friends-panel"
+        className={
+          embedded ? "collection-panel friends-panel social-board-scroll" : "collection-panel friends-panel"
+        }
         role="tabpanel"
         aria-labelledby={tab === "list" ? "crew-tab-list" : tab === "join" ? "crew-tab-join" : "crew-tab-create"}
       >
@@ -301,6 +307,13 @@ export function FarmCrewDialog({ onClose }: { onClose: () => void }) {
           </form>
         ) : null}
       </div>
+    </div>
+  );
+
+  if (embedded) return body;
+  return (
+    <FarmDialog title="FarmCrew" onClose={onClose} wide>
+      {body}
     </FarmDialog>
   );
 }

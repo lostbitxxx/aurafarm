@@ -20,11 +20,15 @@ test("desk tutorial walks shop, rack props, pets, social, then start studying", 
     ["shop", "collection", "pets", "achievements", "song", "social", "start"],
   );
 
-  const headerCopy = new Set(["shop", "pets", "social"]);
+  const headerCopy = new Set(["shop", "pets"]);
   for (const step of DESK_TUTORIAL_STEPS) {
     if (step.kind === "start") {
       assert.doesNotMatch(step.body, /inside/i);
       assert.match(step.body, /start a study session/i);
+    } else if (step.id === "social") {
+      assert.match(step.body, /blackboard/i);
+      assert.equal(step.kind, "dialog");
+      assert.equal(step.section, "social");
     } else if (headerCopy.has(step.id)) {
       assert.match(step.body, new RegExp(`^Click ${step.title} to see what is inside\\.$`));
     } else {
@@ -52,8 +56,8 @@ test("tutorial storage resumes an active step and remembers when it is done", ()
     step: DESK_TUTORIAL_STEPS.length - 1,
   });
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[2], "inventory"), true);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "friends"), true);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "leaderboard"), true);
+  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "social"), true);
+  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "friends"), false);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[6], "shop"), false);
 });
 

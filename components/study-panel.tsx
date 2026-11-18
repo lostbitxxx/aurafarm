@@ -80,6 +80,7 @@ export function StudyPanel({
   onOpenSong,
   onOpenAchievements,
   onOpenCollection,
+  onOpenSocial,
   onEquipped,
   onColorApplied,
   onHatApplied,
@@ -125,6 +126,7 @@ export function StudyPanel({
   onOpenSong?: () => void;
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
+  onOpenSocial?: () => void;
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
@@ -453,6 +455,7 @@ export function StudyPanel({
           onOpenSong={onOpenSong}
           onOpenAchievements={onOpenAchievements}
           onOpenCollection={onOpenCollection}
+          onOpenSocial={onOpenSocial}
           tutorialTarget={tutorialTarget}
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}

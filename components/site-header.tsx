@@ -13,34 +13,20 @@ export function SiteHeader({
   streakCount,
   onOpenShop,
   onOpenInventory,
-  onOpenFriends,
-  onOpenFarmCrew,
-  onOpenSocialSettings,
-  onOpenLeaderboard,
   onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
-  pendingFriendRequest = false,
   tutorialTarget = null,
-  socialPinned = false,
-  onSocialClick,
 }: {
   displayName: string;
   studySeconds?: number;
   streakCount?: number;
   onOpenShop?: () => void;
   onOpenInventory?: () => void;
-  onOpenFriends?: () => void;
-  onOpenFarmCrew?: () => void;
-  onOpenSocialSettings?: () => void;
-  onOpenLeaderboard?: () => void;
   onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
-  pendingFriendRequest?: boolean;
   tutorialTarget?: string | null;
-  socialPinned?: boolean;
-  onSocialClick?: () => void;
 }) {
   const streakLabel = streakPillLabel(streakCount);
   const tutorialCurrent = (target: string) => (tutorialTarget === target ? "true" : undefined);
@@ -91,11 +77,6 @@ export function SiteHeader({
       <Link href="/privacy" role="menuitem" onClick={() => setSettingsOpen(false)}>
         Privacy
       </Link>
-      {onOpenSocialSettings ? (
-        <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenSocialSettings)}>
-          Social settings
-        </button>
-      ) : null}
       {onOpenDevTools ? (
         <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenDevTools)}>
           Dev tools
@@ -143,43 +124,6 @@ export function SiteHeader({
             ) : (
               <Link href="/dashboard">Pets</Link>
             )}
-            {onOpenFriends ? (
-              <div
-                className={socialPinned ? "topbar-menu is-pinned" : "topbar-menu"}
-                data-tutorial="social"
-                data-tutorial-current={tutorialCurrent("social")}
-              >
-                <button
-                  type="button"
-                  className="topbar-link"
-                  aria-haspopup="menu"
-                  aria-expanded={socialPinned}
-                  onClick={onSocialClick}
-                >
-                  Social
-                </button>
-                <div className="topbar-menu-list" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="topbar-menu-item"
-                    onClick={onOpenFriends}
-                    aria-label={pendingFriendRequest ? "Friends, pending request" : undefined}
-                  >
-                    <span>Friends</span>
-                    {pendingFriendRequest ? <span className="request-dot" aria-hidden="true" /> : null}
-                  </button>
-                  {onOpenFarmCrew ? (
-                    <button type="button" role="menuitem" onClick={onOpenFarmCrew}>
-                      FarmCrew
-                    </button>
-                  ) : null}
-                  <button type="button" role="menuitem" onClick={onOpenLeaderboard}>
-                    Leaderboard
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -223,7 +167,7 @@ export function SiteHeader({
             </div>
           ) : null}
         </div>
-        <HeaderMenu alert={pendingFriendRequest}>
+        <HeaderMenu>
           {onOpenShop ? (
             <button type="button" className="topbar-drawer-link" onClick={onOpenShop}>
               Shop
@@ -242,27 +186,6 @@ export function SiteHeader({
               Pets
             </Link>
           )}
-          {onOpenFriends ? (
-            <button
-              type="button"
-              className="topbar-drawer-link"
-              onClick={onOpenFriends}
-              aria-label={pendingFriendRequest ? "Friends, pending request" : undefined}
-            >
-              <span>Friends</span>
-              {pendingFriendRequest ? <span className="request-dot" aria-hidden="true" /> : null}
-            </button>
-          ) : null}
-          {onOpenFriends && onOpenFarmCrew ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenFarmCrew}>
-              FarmCrew
-            </button>
-          ) : null}
-          {onOpenFriends ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenLeaderboard}>
-              Leaderboard
-            </button>
-          ) : null}
           {studyLabel ? (
             <p className="points-balance topbar-drawer-study">
               Study <span>{studyLabel}</span>
@@ -281,11 +204,6 @@ export function SiteHeader({
           <Link href="/privacy" className="topbar-drawer-link">
             Privacy
           </Link>
-          {onOpenSocialSettings ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenSocialSettings}>
-              Social settings
-            </button>
-          ) : null}
           {onOpenDevTools ? (
             <button type="button" className="topbar-drawer-link" onClick={onOpenDevTools}>
               Dev tools

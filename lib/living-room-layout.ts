@@ -25,7 +25,7 @@ export type RoomObstacle = {
   maxTop: number;
 };
 
-export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant" | "storage-rack";
+export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant" | "storage-rack" | "blackboard";
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
@@ -46,6 +46,17 @@ export type RoomRackHotspot = {
   id: RoomRackHotspotId;
   label: string;
   /** Hit area in room percent space (matches CSS absolute box). */
+  box: RoomObstacle;
+};
+
+/** Wall blackboard hotspot (Blackboard panel). */
+export type RoomWallHotspotId = "blackboard";
+
+export type RoomWallHotspot = {
+  id: RoomWallHotspotId;
+  label: string;
+  /** Tutorial target id (kept as "social" for the desk tour). */
+  tutorialTarget: "social";
   box: RoomObstacle;
 };
 
@@ -89,6 +100,8 @@ const LAMP_BOUNDS: RoomRectPx = { x: 183, y: 116, width: 42, height: 60 };
 const PLANT_BOUNDS: RoomRectPx = { x: 509, y: 139, width: 35, height: 82 };
 /** Between the lamp and the bookshelf, mid-back wall. Pixel art is 320×160 (2:1). */
 const STORAGE_RACK_BOUNDS: RoomRectPx = { x: 292, y: 78, width: 130, height: 65 };
+/** On the wall above and slightly left of the storage rack. */
+const BLACKBOARD_BOUNDS: RoomRectPx = { x: 248, y: 22, width: 100, height: 48 };
 
 /**
  * Loveseat/sofa: no-walk starts high. We also seal up to the walk-band top so pets
@@ -154,6 +167,24 @@ function storageRackPiece(): RoomFurniturePiece {
   };
 }
 
+/** Wall board hangs above the floor; no walk collision. */
+export const BLACKBOARD_DEPTH_TOP = BOOKSHELF_DEPTH_TOP;
+
+function blackboardPiece(): RoomFurniturePiece {
+  return {
+    id: "blackboard",
+    src: "/pet-assets/room/furniture/blackboard.svg",
+    bounds: BLACKBOARD_BOUNDS,
+    depthTop: BLACKBOARD_DEPTH_TOP,
+    block: {
+      minLeft: 0,
+      maxLeft: 0,
+      minTop: 0,
+      maxTop: 0,
+    },
+  };
+}
+
 function hotspotBox(bounds: RoomRectPx): RoomObstacle {
   return {
     minLeft: pxToLeftPercent(bounds.x),
@@ -200,14 +231,32 @@ export const ROOM_RACK_HOTSPOTS: readonly RoomRackHotspot[] = [
   },
 ];
 
+/** Blackboard on the wall. */
+export const ROOM_WALL_HOTSPOTS: readonly RoomWallHotspot[] = [
+  {
+    id: "blackboard",
+    label: "Blackboard",
+    tutorialTarget: "social",
+    box: hotspotBox(BLACKBOARD_BOUNDS),
+  },
+];
+
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   piece("loveseat", "loveseat.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
   piece("lamp", "lamp.svg", LAMP_BOUNDS),
   storageRackPiece(),
+  blackboardPiece(),
   bookshelfPiece(),
   piece("plant", "plant.svg", PLANT_BOUNDS),
 ];
+
+/** Walk obstacles — skip zero-size wall props (blackboard). */
+export function furnitureWalkObstacles(pieces: readonly RoomFurniturePiece[] = ROOM_FURNITURE): RoomObstacle[] {
+  return pieces
+    .map((item) => item.block)
+    .filter((block) => block.maxLeft > block.minLeft && block.maxTop > block.minTop);
+}
 
 export const ROOM_WALL_SRC = "/pet-assets/room/base/wall.svg";
 export const ROOM_FLOOR_SRC = "/pet-assets/room/base/floor.svg";
@@ -216,7 +265,7 @@ export const ROOM_TRIM_SRC = "/pet-assets/room/base/trim.svg";
 export const ROOM_CARPET_SRC = "/pet-assets/room/base/carpet.svg";
 
 /** Obstacles used by wander (furniture footprints only; carpet excluded). */
-export const ROOM_OBSTACLES: readonly RoomObstacle[] = ROOM_FURNITURE.map((item) => item.block);
+export const ROOM_OBSTACLES: readonly RoomObstacle[] = furnitureWalkObstacles();
 
 /**
  * Walk band on the floor only (includes carpet).
