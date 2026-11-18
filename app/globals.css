@@ -3430,6 +3430,12 @@ button.dialog-row {
   height: 168px;
 }
 
+.level-up-music-player {
+  display: block;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
 .level-up-copy {
   position: relative;
   z-index: 1;

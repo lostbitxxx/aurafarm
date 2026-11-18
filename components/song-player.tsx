@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { markSongSeen } from "@/lib/actions/songs";
-import { describePet, type PetCard } from "@/lib/pets";
 import {
   NO_OTHER_SONGS,
   STARTER_SONG_ID,
@@ -12,7 +11,8 @@ import {
   songById,
 } from "@/lib/songs";
 import { FarmDialog } from "./farm-dialog";
-import { PixelPetArt } from "./pixel-pet";
+
+export const MUSIC_PLAYER_ASSET = "/pet-assets/props/music-player.svg";
 
 const CONFETTI = [
   { left: "6%", delay: "0s", duration: "1.7s", color: "#c6ef4a", rotate: "-16deg" },
@@ -390,17 +390,14 @@ export function DeskSong({
 export function SongUnlockCelebration({
   songTitle,
   songId,
-  pet,
   onContinue,
 }: {
   songTitle: string;
   songId: string;
-  pet: PetCard;
   onContinue: () => void;
 }) {
   const titleId = useId();
   const continueRef = useRef<HTMLButtonElement>(null);
-  const copy = describePet(pet.pet_type);
 
   useEffect(() => {
     void markSongSeen(songId);
@@ -455,13 +452,12 @@ export function SongUnlockCelebration({
         </div>
         <div className="level-up-rays" aria-hidden="true" />
         <div className="level-up-light" aria-hidden="true" />
-        <PixelPetArt
-          petType={pet.pet_type}
-          color={pet.color}
-          hat={pet.hat}
-          clothes={pet.clothes}
-          className="level-up-pet"
-          alt={copy.name}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="level-up-pet level-up-music-player"
+          src={MUSIC_PLAYER_ASSET}
+          alt=""
+          draggable={false}
         />
         <div className="level-up-copy">
           <p className="level-up-kicker">{songTitle}</p>
