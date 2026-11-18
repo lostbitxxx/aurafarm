@@ -5,6 +5,7 @@ import {
   bottomHalfObstacle,
   footprintObstacle,
   LOVESEAT_BLOCK_FROM,
+  pxToLeftPercent,
   pxToTopPercent,
   ROOM_CARPET_SRC,
   ROOM_FLOOR_START_Y,
@@ -14,7 +15,9 @@ import {
   ROOM_DRAG_Z,
   ROOM_FURNITURE,
   ROOM_OBSTACLES,
+  ROOM_RACK_HOTSPOTS,
   ROOM_WALK_BOUNDS,
+  STORAGE_RACK_DEPTH_TOP,
   roomDepthZ,
   roomStartSpot,
   spotHitsObstacle,
@@ -171,7 +174,7 @@ test("loveseat no-walk zone starts higher than a plain bottom half", () => {
   // Purple rug is floor/carpet, not a solid furniture id (former "sofa" art).
   assert.deepEqual(
     [...ROOM_FURNITURE.map((item) => item.id)].sort(),
-    ["bookshelf", "lamp", "loveseat", "plant"],
+    ["bookshelf", "lamp", "loveseat", "plant", "storage-rack"],
   );
   assert.ok(ROOM_FURNITURE.every((item) => !item.src.includes("carpet")));
   assert.match(ROOM_CARPET_SRC, /\/base\/carpet\.svg$/);
@@ -203,6 +206,25 @@ test("bookshelf sorts behind the walk band without growing its no-walk box", () 
   assert.deepEqual(shelf.block, footprintObstacle(shelf.bounds, 0.5));
   // A pet standing at the walk-band top near the shelf paints over it.
   assert.ok(roomDepthZ(ROOM_WALK_BOUNDS.minTop) > roomDepthZ(shelf.depthTop));
+});
+
+test("storage rack sits between sofa and shelf with drawer hotspots", () => {
+  const rack = ROOM_FURNITURE.find((item) => item.id === "storage-rack");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const shelf = ROOM_FURNITURE.find((item) => item.id === "bookshelf");
+  assert.ok(rack && loveseat && shelf);
+  assert.equal(rack.depthTop, STORAGE_RACK_DEPTH_TOP);
+  assert.ok(rack.bounds.x > loveseat.bounds.x + loveseat.bounds.width);
+  assert.ok(rack.bounds.x + rack.bounds.width < shelf.bounds.x);
+  assert.deepEqual(rack.block, footprintObstacle(rack.bounds, 0.55));
+  assert.deepEqual(
+    ROOM_RACK_HOTSPOTS.map((spot) => spot.id),
+    ["song", "achievements", "collection"],
+  );
+  for (const spot of ROOM_RACK_HOTSPOTS) {
+    assert.ok(spot.box.minLeft >= pxToLeftPercent(rack.bounds.x) - 0.01);
+    assert.ok(spot.box.maxLeft <= pxToLeftPercent(rack.bounds.x + rack.bounds.width) + 0.01);
+  }
 });
 
 test("drag z-index sits above every depth-sorted room layer", () => {
@@ -313,6 +335,11 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /ROOM_FLOOR_SRC/);
   assert.match(source, /ROOM_CARPET_SRC/);
   assert.match(source, /ROOM_FURNITURE/);
+  assert.match(source, /ROOM_RACK_HOTSPOTS/);
+  assert.match(source, /room-rack-hotspot/);
+  assert.match(source, /onOpenSong/);
+  assert.match(source, /onOpenAchievements/);
+  assert.match(source, /onOpenCollection/);
   assert.match(source, /roomDepthZ/);
   assert.doesNotMatch(source, /PettingHandIcon/);
   assert.doesNotMatch(source, /room-pet-button/);
@@ -341,6 +368,7 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(css, /\.room-pet-wrap\.is-dragging/);
   assert.match(css, /room-pet-struggle/);
   assert.match(css, /rotate\(-10deg\)/);
+  assert.match(css, /\.room-rack-hotspot/);
   // Pets must not sit in a low stacking context or drag order cannot beat furniture.
   assert.match(css, /\.living-room-pets\s*\{[^}]*pointer-events:\s*none/);
   assert.doesNotMatch(css, /\.living-room-pets\s*\{[^}]*\bz-index\s*:/);
@@ -348,6 +376,8 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(css, /\.living-room\s*\{[^}]*isolation:\s*isolate/);
   assert.match(layout, /ROOM_FLOOR_START_Y/);
   assert.match(layout, /bottomHalfObstacle/);
+  assert.match(layout, /ROOM_RACK_HOTSPOTS/);
+  assert.match(layout, /storage-rack/);
   assert.match(idle, /M9 34h6v4H9M27 34h6v4h-6/);
   assert.match(blush, /M11 20h5M26 20h5/);
   assert.match(walk1, /M9 35h6v4H9M27 33h6v4h-6/);
@@ -362,10 +392,16 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
     "furniture/bookshelf.svg",
     "furniture/lamp.svg",
     "furniture/plant.svg",
+    "furniture/storage-rack.svg",
   ]) {
     const svg = readFileSync(new URL(`../public/pet-assets/room/${file}`, import.meta.url), "utf8");
     assert.match(svg, /viewBox="0 0 600 300"/);
   }
+
+  const wall = readFileSync(new URL("../public/pet-assets/room/base/wall.svg", import.meta.url), "utf8");
+  // Window sits behind the sofa (left), not the old center slot.
+  assert.match(wall, /x="70"/);
+  assert.doesNotMatch(wall, /x="274"/);
 
   const renderer = readFileSync(new URL("../components/pixel-pet.tsx", import.meta.url), "utf8");
   assert.match(renderer, /if \(!active \|\| reduceMotion\) return "idle"/);

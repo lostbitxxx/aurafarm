@@ -6,9 +6,12 @@ import {
   ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
+  ROOM_RACK_HOTSPOTS,
   ROOM_TRIM_SRC,
   ROOM_WALL_SRC,
+  STORAGE_RACK_DEPTH_TOP,
   roomDepthZ,
+  type RoomRackHotspotId,
 } from "@/lib/living-room-layout";
 import {
   DRAG_STRUGGLE_AFTER_MS,
@@ -395,6 +398,10 @@ export function LivingRoom({
   placementReady,
   onOpenPet,
   onOpenInventory,
+  onOpenSong,
+  onOpenAchievements,
+  onOpenCollection,
+  tutorialTarget = null,
   dailyStudiedMinutes = null,
   dailyGoalMinutes = null,
   isStudyDay = true,
@@ -404,6 +411,10 @@ export function LivingRoom({
   placementReady: boolean;
   onOpenPet: (petId: string) => void;
   onOpenInventory: () => void;
+  onOpenSong?: () => void;
+  onOpenAchievements?: () => void;
+  onOpenCollection?: () => void;
+  tutorialTarget?: string | null;
   dailyStudiedMinutes?: number | null;
   dailyGoalMinutes?: number | null;
   isStudyDay?: boolean;
@@ -411,6 +422,12 @@ export function LivingRoom({
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const showCylinder =
     dailyGoalMinutes != null && dailyGoalMinutes > 0 && dailyStudiedMinutes != null;
+  const rackActions: Partial<Record<RoomRackHotspotId, (() => void) | undefined>> = {
+    song: onOpenSong,
+    achievements: onOpenAchievements,
+    collection: onOpenCollection,
+  };
+  const rackZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) + 1;
 
   return (
     <section className="living-room-block" aria-label="Your little living room">
@@ -439,6 +456,30 @@ export function LivingRoom({
             style={{ zIndex: roomDepthZ(item.depthTop) }}
           />
         ))}
+        <div className="living-room-rack-hotspots" style={{ zIndex: rackZ }}>
+          {ROOM_RACK_HOTSPOTS.map((spot) => {
+            const action = rackActions[spot.id];
+            if (!action) return null;
+            return (
+              <button
+                key={spot.id}
+                type="button"
+                className="room-rack-hotspot"
+                aria-label={spot.label}
+                data-tutorial={spot.id}
+                data-tutorial-current={tutorialTarget === spot.id ? "true" : undefined}
+                data-rack-hotspot={spot.id}
+                style={{
+                  left: `${spot.box.minLeft}%`,
+                  top: `${spot.box.minTop}%`,
+                  width: `${spot.box.maxLeft - spot.box.minLeft}%`,
+                  height: `${spot.box.maxTop - spot.box.minTop}%`,
+                }}
+                onClick={action}
+              />
+            );
+          })}
+        </div>
         {showCylinder ? (
           <DailyProgressCylinder
             studiedMinutes={dailyStudiedMinutes}

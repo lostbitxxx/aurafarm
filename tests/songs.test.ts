@@ -112,11 +112,15 @@ test("song migration grants, backfills, and resets ownership", () => {
 test("the desk opens songs and celebrates an unlock", () => {
   const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const livingRoom = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const player = readFileSync(new URL("../components/song-player.tsx", import.meta.url), "utf8");
   const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 
-  assert.match(header, /onOpenSong/);
-  assert.match(header, />\s*Song\s*</);
+  assert.doesNotMatch(header, /onOpenSong/);
+  assert.doesNotMatch(header, />\s*Song\s*</);
+  assert.match(screen, /onOpenSong=\{\(\) => showSection\("song"\)\}/);
+  assert.match(livingRoom, /onOpenSong/);
+  assert.match(livingRoom, /data-rack-hotspot=\{spot\.id\}/);
   assert.match(screen, /DeskSong/);
   assert.match(screen, /SongUnlockCelebration/);
   assert.match(screen, /featuredSongId=\{shownSong && !songBlocked \? shownSong\.id : null\}/);
