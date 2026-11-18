@@ -556,20 +556,21 @@ export function StudyPanel({
               >
                 Custom
               </button>
-              <input
-                className="length-type"
-                type="number"
-                inputMode="numeric"
-                min={MIN_STUDY_MINUTES}
-                max={MAX_STUDY_MINUTES}
-                step={1}
-                value={customMinutes}
-                placeholder="type here"
-                aria-label="Custom minutes"
-                disabled={pending || Boolean(desktopLink)}
-                onFocus={onChooseCustom}
-                onChange={(event) => onCustomMinutes(event.target.value)}
-              />
+              {customOpen ? (
+                <input
+                  className="length-type"
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_STUDY_MINUTES}
+                  max={MAX_STUDY_MINUTES}
+                  step={1}
+                  value={customMinutes}
+                  placeholder="type here"
+                  aria-label="Custom minutes"
+                  disabled={pending || Boolean(desktopLink)}
+                  onChange={(event) => onCustomMinutes(event.target.value)}
+                />
+              ) : null}
             </div>
             {lengthSeconds === null ? (
               <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>

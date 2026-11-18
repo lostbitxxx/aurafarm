@@ -173,7 +173,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /Copy Terminal command/);
   assert.doesNotMatch(desk, /navigator\.clipboard\.writeText/);
   assert.doesNotMatch(desk, /xattr -cr/);
-  assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*type here[\s\S]*Desktop pet[\s\S]*Website timer[\s\S]*FARM AURA/);
+  assert.match(
+    desk,
+    /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*\{customOpen \? \([\s\S]*placeholder="type here"[\s\S]*\) : null\}[\s\S]*Desktop pet[\s\S]*Website timer[\s\S]*FARM AURA/,
+  );
   assert.match(desk, /TrackerDemo kind="desktop"/);
   assert.match(desk, /TrackerDemo kind="website"/);
   assert.match(desk, /First time aurafarming\? Download here!/);
