@@ -86,15 +86,28 @@ test("reward picker always offers a rename coupon and greys it out at max", () =
 
 test("pet detail spends a rename coupon and settings default to showing names", () => {
   const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
+  const renameUi = readFileSync(new URL("../components/pet-rename-controls.tsx", import.meta.url), "utf8");
+  const inventory = readFileSync(new URL("../components/dashboard-dialogs.tsx", import.meta.url), "utf8");
+  const icon = readFileSync(new URL("../lib/rename-coupon.ts", import.meta.url), "utf8");
   const room = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const settings = readFileSync(new URL("../components/social-settings-dialog.tsx", import.meta.url), "utf8");
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const actions = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
 
-  assert.match(detail, /renamePet/);
+  assert.match(detail, /PetRenameForm/);
+  assert.match(detail, /PetRenameCircleButton/);
   assert.match(detail, /Rename coupons:/);
-  assert.match(detail, /title=\{displayName\}/);
-  assert.match(detail, /Save name/);
+  assert.match(detail, /pet-detail-dialog-title/);
+  assert.doesNotMatch(detail, /pet-detail-display-name/);
+  assert.match(renameUi, /renamePet/);
+  assert.match(renameUi, /aria-label="Rename"/);
+  assert.match(renameUi, /Confirm rename, spend one coupon/);
+  assert.match(renameUi, /RENAME_COUPON_ICON/);
+  assert.match(renameUi, />-1</);
+  assert.match(icon, /rename-coupon\.png/);
+  assert.match(inventory, /PetRenameCircleButton/);
+  assert.match(inventory, /inventory-pet-name/);
+  assert.match(inventory, /Level \{pet\.level\}/);
   assert.match(room, /showPetNames \? displayName : `Lv\.\$\{progress\.level\}`/);
   assert.match(settings, /Show pet names/);
   assert.match(settings, /updateShowPetNames/);

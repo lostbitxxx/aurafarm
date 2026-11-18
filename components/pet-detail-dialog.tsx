@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
-import { applyPetClothes, applyPetColor, applyPetHat, equipPetToDesktop, renamePet } from "@/lib/actions/pets";
+import { useState } from "react";
+import { applyPetClothes, applyPetColor, applyPetHat, equipPetToDesktop, updateShowPetNames } from "@/lib/actions/pets";
 import {
   collectionNoneCard,
   ownedPreviewRewards,
@@ -11,7 +11,6 @@ import {
 import {
   colorForPetType,
   EQUIP_DURING_SESSION_NOTE,
-  PIXEL_HEART_SRC,
   sampleAccessoryIcon,
   sampleAccessoryName,
   SAMPLE_CLOTHES,
@@ -19,10 +18,10 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { petDisplayName, type PetCard } from "@/lib/pets";
-import { RENAME_PET_NAME_MAX } from "@/lib/rename-coupon";
 import { experienceProgress } from "@/lib/study";
 import { FarmDialog } from "./farm-dialog";
-import { PixelPetArt, usePetting } from "./pixel-pet";
+import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
+import { PixelPetArt } from "./pixel-pet";
 
 const COLLECTION_NONE = collectionNoneCard();
 
@@ -56,6 +55,7 @@ export function PetDetailDialog({
   ownedHatIds,
   ownedClothesIds,
   renameCoupons = 0,
+  showPetNames = true,
   sessionActive,
   onClose,
   onEquipped,
@@ -63,12 +63,14 @@ export function PetDetailDialog({
   onHatApplied,
   onClothesApplied,
   onPetRenamed,
+  onShowPetNamesChange,
 }: {
   pet: PetCard;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
   renameCoupons?: number;
+  showPetNames?: boolean;
   sessionActive: boolean;
   onClose: () => void;
   onEquipped?: (petId: string) => void;
@@ -76,35 +78,15 @@ export function PetDetailDialog({
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
   onPetRenamed?: (petId: string, name: string) => void;
+  onShowPetNamesChange?: (enabled: boolean) => void;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
-  const [pose, setPose] = useState<"idle" | "blush">("idle");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [equipped, setEquipped] = useState(pet.is_desktop_active);
   const [picker, setPicker] = useState<SlotPicker | null>(null);
-  const [hearts, setHearts] = useState<{ id: number; drift: number }[]>([]);
-  const heartIdRef = useRef(0);
   const [renaming, setRenaming] = useState(false);
-  const [draftName, setDraftName] = useState(displayName);
-
-  function spawnHeart() {
-    const id = ++heartIdRef.current;
-    const drift = (Math.random() - 0.5) * 36;
-    setHearts((current) => [...current, { id, drift }]);
-    window.setTimeout(() => {
-      setHearts((current) => current.filter((heart) => heart.id !== id));
-    }, 1200);
-  }
-
-  function blush() {
-    setPose("blush");
-    spawnHeart();
-    window.setTimeout(() => setPose("idle"), 1500);
-  }
-
-  const petting = usePetting(blush);
 
   async function onEquip() {
     if (pending || equipped || sessionActive) return;
@@ -123,24 +105,22 @@ export function PetDetailDialog({
   function startRename() {
     if (pending || renameCoupons < 1) return;
     setError(null);
-    setDraftName(displayName);
     setRenaming(true);
   }
 
-  async function onRename(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending || renameCoupons < 1) return;
+  async function onToggleDisplayLevel() {
+    if (pending) return;
+    // Display Level on => room shows Lv.; off => room shows names (showPetNames).
+    const nextShowNames = !showPetNames;
     setPending(true);
     setError(null);
-    const result = await renamePet(pet.id, draftName);
+    const result = await updateShowPetNames(nextShowNames);
     setPending(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    const nextName = result.name ?? draftName.trim();
-    onPetRenamed?.(pet.id, nextName);
-    setRenaming(false);
+    onShowPetNamesChange?.(nextShowNames);
   }
 
   if (picker === "color") {
@@ -189,43 +169,41 @@ export function PetDetailDialog({
     );
   }
 
+  const displayLevelActive = !showPetNames;
+
   return (
-    <FarmDialog title={displayName} onClose={onClose} wide>
+    <FarmDialog
+      title={
+        <span className="pet-detail-dialog-title">
+          <span>{displayName}</span>
+          {!renaming ? (
+            <PetRenameCircleButton disabled={pending || renameCoupons < 1} onClick={startRename} />
+          ) : null}
+        </span>
+      }
+      onClose={onClose}
+      wide
+    >
       <div className="pet-detail">
-        <div>
-          <div className="big-pet" onPointerMove={petting.onPointerMove} onPointerLeave={petting.onPointerLeave}>
-            <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} pose={pose} className="big-pet-art" />
-            {hearts.map((heart) => (
-              <span
-                key={heart.id}
-                className="room-heart big-pet-heart"
-                style={{ left: `calc(48% + ${heart.drift}px)` }}
-                aria-hidden="true"
-              >
-                <img src={PIXEL_HEART_SRC} alt="" width={16} height={16} draggable={false} />
-              </span>
-            ))}
+        <div className="pet-detail-stage">
+          <div className="big-pet">
+            <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="big-pet-art" />
           </div>
-          <p className="panel-hint" style={{ textAlign: "center" }}>
-            Stroke left ↔ right to pet
-          </p>
-          <button
-            type="button"
-            className={
-              pose === "blush"
-                ? "button pet-love-button pet-heart-button is-lit"
-                : "button button-ghost pet-love-button pet-heart-button"
-            }
-            aria-pressed={pose === "blush"}
-            onClick={blush}
-          >
-            Pet
-            <img src={PIXEL_HEART_SRC} alt="" width={16} height={16} draggable={false} />
-          </button>
         </div>
         <div>
           <p className="panel-kicker">Unique pet instance</p>
-          <h3 className="panel-name">Lv.{progress.level}</h3>
+          <div className="pet-detail-level-row">
+            <h3 className="panel-name">Lv.{progress.level}</h3>
+            <button
+              type="button"
+              className={displayLevelActive ? "button button-small" : "button button-small button-ghost"}
+              aria-pressed={displayLevelActive}
+              disabled={pending}
+              onClick={onToggleDisplayLevel}
+            >
+              Display Level
+            </button>
+          </div>
           <div
             className="xp-track xp-track-purple"
             role="meter"
@@ -289,44 +267,23 @@ export function PetDetailDialog({
             Rename coupons: {renameCoupons}
           </p>
           {renaming ? (
-            <form className="pet-rename-form" onSubmit={onRename}>
-              <label className="field">
-                <span>New name</span>
-                <input
-                  type="text"
-                  value={draftName}
-                  maxLength={RENAME_PET_NAME_MAX}
-                  autoFocus
-                  onChange={(event) => setDraftName(event.target.value)}
-                />
-              </label>
-              <div className="tracker-actions">
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  disabled={pending}
-                  onClick={() => {
-                    setRenaming(false);
-                    setError(null);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button" disabled={pending || renameCoupons < 1}>
-                  Save name
-                </button>
-              </div>
-            </form>
+            <PetRenameForm
+              pet={pet}
+              renameCoupons={renameCoupons}
+              pending={pending}
+              onPendingChange={setPending}
+              onError={setError}
+              onRenamed={(name) => {
+                onPetRenamed?.(pet.id, name);
+                setRenaming(false);
+              }}
+              onCancel={() => {
+                setRenaming(false);
+                setError(null);
+              }}
+            />
           ) : (
             <div className="tracker-actions">
-              <button
-                type="button"
-                className="button button-ghost"
-                disabled={pending || renameCoupons < 1}
-                onClick={startRename}
-              >
-                Rename
-              </button>
               <button
                 type="button"
                 className="button"
@@ -387,26 +344,22 @@ function PetColorPicker({
         </p>
       ) : null}
       {ownedColors.length === 0 ? (
-        <p className="collection-empty-title">You don&apos;t own any colors yet.</p>
+        <p className="panel-hint">No colors owned yet. Level up for collection rewards.</p>
       ) : (
-        <ul className="collection-color-grid">
-          {ownedColors.map((color) => {
-            const selected = pet.color === color.id;
-            return (
-              <li key={color.id}>
-                <button
-                  type="button"
-                  className={selected ? "collection-color is-selected" : "collection-color"}
-                  aria-pressed={selected}
-                  disabled={pendingId !== null}
-                  onClick={() => onChoose(color.id)}
-                >
-                  <PixelPetArt petType={pet.pet_type} color={color.id} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
-                  <strong>{pendingId === color.id ? "…" : color.name}</strong>
-                </button>
-              </li>
-            );
-          })}
+        <ul className="dialog-list collection-color-grid">
+          {ownedColors.map((color) => (
+            <li key={color.id}>
+              <button
+                type="button"
+                className="collection-color"
+                disabled={pendingId !== null}
+                onClick={() => onChoose(color.id)}
+              >
+                <PixelPetArt petType={pet.pet_type} color={color.id} className="collection-color-art" alt="" />
+                <strong>{pendingId === color.id ? "…" : color.name}</strong>
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </FarmDialog>
@@ -428,16 +381,21 @@ function PetAccessoryPicker({
   onClose: () => void;
   onApplied: (id: string | null) => void;
 }) {
-  const previewItems = ownedPreviewRewards(kind, ownedIds);
-  const legacyItems =
-    kind === "hat"
-      ? SAMPLE_HATS.filter((hat) => ownedIds.includes(hat.id))
-      : SAMPLE_CLOTHES.filter((item) => ownedIds.includes(item.id));
-  const hasOwned = previewItems.length > 0 || legacyItems.length > 0;
+  const owned = ownedPreviewRewards(kind, ownedIds);
+  const samples = kind === "hat" ? SAMPLE_HATS : SAMPLE_CLOTHES;
+  const fallback = samples.filter((item) => ownedIds.includes(item.id));
+  const items: PreviewReward[] =
+    owned.length > 0
+      ? owned
+      : fallback.map((item) => ({
+          id: item.id,
+          kind,
+          name: item.name,
+          icon: item.icon,
+        }));
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const title = kind === "hat" ? "Hat" : "Clothes";
-  const emptyTitle = kind === "hat" ? "You don't own any hats yet." : "You don't own any clothes yet.";
 
   async function onChoose(id: string | null) {
     if (pendingKey) return;
@@ -462,75 +420,33 @@ function PetAccessoryPicker({
           {error}
         </p>
       ) : null}
-      {!hasOwned ? <p className="collection-empty-title">{emptyTitle}</p> : null}
-      <ul className="collection-color-grid collection-accessory-grid">
+      <ul className="dialog-list collection-color-grid">
         <li>
           <button
             type="button"
             className={selectedId === null ? "collection-color is-selected" : "collection-color"}
-            aria-pressed={selectedId === null}
             disabled={pendingKey !== null}
             onClick={() => onChoose(null)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              className="collection-accessory-art"
-              src={COLLECTION_NONE.icon}
-              alt=""
-              draggable={false}
-              style={{ imageRendering: "pixelated" }}
-            />
+            <img className="collection-accessory-art" src={COLLECTION_NONE.icon} alt="" draggable={false} />
             <strong>{pendingKey === "none" ? "…" : COLLECTION_NONE.name}</strong>
           </button>
         </li>
-        {previewItems.map((item: PreviewReward) => {
-          const selected = selectedId === item.id;
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                className={selected ? "collection-color is-selected" : "collection-color"}
-                aria-pressed={selected}
-                disabled={pendingKey !== null}
-                onClick={() => onChoose(item.id)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="collection-accessory-art"
-                  src={item.icon}
-                  alt=""
-                  draggable={false}
-                  style={{ imageRendering: "pixelated" }}
-                />
-                <strong>{pendingKey === item.id ? "…" : item.name}</strong>
-              </button>
-            </li>
-          );
-        })}
-        {legacyItems.map((item) => {
-          const selected = selectedId === item.id;
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                className={selected ? "collection-color is-selected" : "collection-color"}
-                aria-pressed={selected}
-                disabled={pendingKey !== null}
-                onClick={() => onChoose(item.id)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="collection-accessory-art"
-                  src={item.icon}
-                  alt=""
-                  draggable={false}
-                  style={{ imageRendering: "pixelated" }}
-                />
-                <strong>{pendingKey === item.id ? "…" : item.name}</strong>
-              </button>
-            </li>
-          );
-        })}
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              className={selectedId === item.id ? "collection-color is-selected" : "collection-color"}
+              disabled={pendingKey !== null}
+              onClick={() => onChoose(item.id)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="collection-accessory-art" src={item.icon} alt="" draggable={false} />
+              <strong>{pendingKey === item.id ? "…" : item.name}</strong>
+            </button>
+          </li>
+        ))}
       </ul>
     </FarmDialog>
   );

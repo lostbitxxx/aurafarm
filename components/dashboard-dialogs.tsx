@@ -27,6 +27,7 @@ import { petDisplayName, shopCatalog, shopPurchaseBlock, type PetCard, type Shop
 import type { BehaviorAnswers, StudyMode, Weekday } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
+import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
 import { PixelPetArt } from "./pixel-pet";
 
 export function ShopDialog({
@@ -566,19 +567,25 @@ export function InventoryDialog({
   pets,
   placedIds,
   sessionActive,
+  renameCoupons = 0,
   onClose,
   onToggleRoom,
   onEquipped,
+  onPetRenamed,
 }: {
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
   sessionActive: boolean;
+  renameCoupons?: number;
   onClose: () => void;
   onToggleRoom: (petId: string) => void;
   onEquipped?: (petId: string) => void;
+  onPetRenamed?: (petId: string, name: string) => void;
 }) {
   const [items, setItems] = useState(pets);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renamePending, setRenamePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onEquip(petId: string) {
@@ -609,17 +616,25 @@ export function InventoryDialog({
         {items.map((pet) => {
           const inRoom = placedIds.has(pet.id);
           const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
+          const renaming = renamingId === pet.id;
           return (
-            <li key={pet.id} className="dialog-row">
+            <li key={pet.id} className="dialog-row inventory-pet-row">
               <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
-              <div>
-                <strong>{petDisplayName(pet)}</strong>
+              <div className="inventory-pet-copy">
                 <p className="panel-hint">
                   Level {pet.level}
                   {pet.is_desktop_active ? " · Equipped" : ""}
                 </p>
+                <strong className="inventory-pet-name">{petDisplayName(pet)}</strong>
               </div>
               <div className="dialog-row-actions">
+                <PetRenameCircleButton
+                  disabled={renamePending || renameCoupons < 1 || renaming}
+                  onClick={() => {
+                    setError(null);
+                    setRenamingId(pet.id);
+                  }}
+                />
                 <button type="button" className="button button-small button-ghost" onClick={() => onToggleRoom(pet.id)}>
                   {inRoom ? "Remove from room" : "Show in room"}
                 </button>
@@ -633,6 +648,28 @@ export function InventoryDialog({
                   {pet.is_desktop_active ? "Equipped" : sessionActive ? "Locked" : "Equip"}
                 </button>
               </div>
+              {renaming ? (
+                <div className="inventory-pet-rename">
+                  <PetRenameForm
+                    pet={pet}
+                    renameCoupons={renameCoupons}
+                    pending={renamePending}
+                    onPendingChange={setRenamePending}
+                    onError={setError}
+                    onRenamed={(name) => {
+                      setItems((current) =>
+                        current.map((row) => (row.id === pet.id ? { ...row, name } : row)),
+                      );
+                      onPetRenamed?.(pet.id, name);
+                      setRenamingId(null);
+                    }}
+                    onCancel={() => {
+                      setRenamingId(null);
+                      setError(null);
+                    }}
+                  />
+                </div>
+              ) : null}
             </li>
           );
         })}

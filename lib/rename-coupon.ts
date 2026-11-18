@@ -1,7 +1,7 @@
 export const RENAME_COUPON_ID = "rename_coupon";
 export const RENAME_COUPON_MAX = 3;
 export const RENAME_COUPON_NAME = "Rename coupon";
-export const RENAME_COUPON_ICON = "/pet-assets/accessories/rename-coupon.svg";
+export const RENAME_COUPON_ICON = "/pet-assets/accessories/rename-coupon.png";
 export const RENAME_PET_NAME_MAX = 16;
 
 export function clampRenameCoupons(value: unknown) {

@@ -1843,6 +1843,102 @@ button.dialog-row {
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-left: auto;
+  align-items: center;
+}
+
+.inventory-pet-row {
+  align-items: flex-start;
+}
+
+.inventory-pet-copy {
+  min-width: 0;
+  flex: 1 1 8rem;
+}
+
+.inventory-pet-copy .panel-hint {
+  margin: 0;
+}
+
+.inventory-pet-name {
+  display: block;
+  margin: 0.1rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-pet-rename {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.dialog-head h2:has(.pet-detail-dialog-title) {
+  font-size: 2.45rem;
+  line-height: 1.1;
+}
+
+.pet-detail-dialog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  font-size: inherit;
+}
+
+.pet-detail-level-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin: 0.15rem 0 0.55rem;
+}
+
+.pet-detail-level-row .panel-name {
+  margin: 0;
+}
+
+.pet-rename-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #c9d0b8;
+  border-radius: 999px;
+  background: #fff9ed;
+  color: var(--dialog-ink, #2f3a28);
+  cursor: pointer;
+}
+
+.pet-rename-circle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pet-rename-circle:not(:disabled):hover {
+  background: #fff3d9;
+}
+
+.pet-rename-spend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.pet-rename-spend img {
+  width: 1.35rem;
+  height: 1.35rem;
+  image-rendering: pixelated;
+}
+
+.pet-rename-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
 }
 
 .shop-lock {
@@ -1868,16 +1964,44 @@ button.dialog-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch;
+}
+
+.pet-detail-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .big-pet {
   position: relative;
+  isolation: isolate;
+  width: 100%;
   min-height: 180px;
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: radial-gradient(ellipse, #e5e6d5, transparent 70%);
+  background: transparent;
+}
+
+.big-pet::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  z-index: 0;
+  width: 72%;
+  height: 34%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #e5e6d5 0%, transparent 72%);
+  pointer-events: none;
+}
+
+.big-pet > .pixel-pet {
+  position: relative;
+  z-index: 1;
 }
 
 .pet-heart-button {
@@ -1894,9 +2018,10 @@ button.dialog-row {
   image-rendering: crisp-edges;
 }
 
-.big-pet-art {
-  width: 160px;
-  height: 160px;
+.pixel-pet-art.big-pet-art {
+  width: min(180px, 100%);
+  height: min(180px, 100%);
+  aspect-ratio: 1;
   image-rendering: pixelated;
 }
 
@@ -3149,13 +3274,35 @@ button.dialog-row {
   image-rendering: pixelated;
 }
 
+.pixel-pet-layer.is-shadow {
+  z-index: 0;
+}
+
+.pixel-pet-layer.is-legs {
+  z-index: 1;
+}
+
 .pixel-pet-layer.is-body {
+  z-index: 2;
   pointer-events: auto;
+}
+
+.pixel-pet-layer.is-worn-clothes {
+  z-index: 3;
+}
+
+.pixel-pet-layer.is-face {
+  z-index: 4;
+}
+
+.pixel-pet-layer.is-worn-hat {
+  z-index: 5;
 }
 
 .pixel-pet-accessory {
   position: absolute;
   left: 50%;
+  z-index: 3;
   width: 62%;
   height: 62%;
   transform: translateX(-50%);
@@ -3166,13 +3313,9 @@ button.dialog-row {
 .pixel-pet-accessory.is-hat {
   /* Catalogue / collection hats sit in mid-canvas; pin above the face. */
   top: -12%;
+  z-index: 5;
   width: 72%;
   height: 72%;
-}
-
-.pixel-pet-layer.is-worn-hat {
-  /* Sample hats already drawn on the head in 42×42 space. */
-  inset: 0;
 }
 
 .pixel-pet-accessory.is-clothes {
@@ -4633,8 +4776,9 @@ button.dialog-row {
   .below-room { flex-direction: column; align-items: flex-start; }
   .living-room { height: 420px; }
   .pet-detail { grid-template-columns: 1fr; }
+  .pet-detail-stage { min-height: 0; }
   .big-pet { min-height: 140px; }
-  .big-pet-art { width: 120px; height: 120px; }
+  .pixel-pet-art.big-pet-art { width: min(140px, 55vw); height: min(140px, 55vw); }
   .level-up-pet { width: 132px; height: 132px; }
 }
 
