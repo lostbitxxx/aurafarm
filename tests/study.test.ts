@@ -430,8 +430,8 @@ test("daily streak migration advances on full finish with a streak XP boost", ()
 
 test("the desk title is the equipped pet rather than the first row", () => {
   const pets: PetCard[] = [
-    { id: "slime", pet_type: "baby_slime", level: 1, xp: 0, is_desktop_active: false, color: null, hat: null, clothes: null },
-    { id: "moth", pet_type: "lantern_moth", level: 1, xp: 25, is_desktop_active: true, color: null, hat: null, clothes: null },
+    { id: "slime", pet_type: "baby_slime", level: 1, xp: 0, is_desktop_active: false, color: null, hat: null, clothes: null, name: null },
+    { id: "moth", pet_type: "lantern_moth", level: 1, xp: 25, is_desktop_active: true, color: null, hat: null, clothes: null, name: null },
   ];
   assert.equal(equippedPet(pets)?.pet_type, "lantern_moth");
   assert.equal(equippedPet([{ ...pets[0], is_desktop_active: true }])?.pet_type, "baby_slime");

@@ -29,6 +29,7 @@ export type PetCard = {
   color: string | null;
   hat: string | null;
   clothes: string | null;
+  name: string | null;
 };
 
 export type CollectionReward = {
@@ -136,4 +137,10 @@ export function describePet(petType: string) {
     name: name || "Pet",
     note: "A companion from your farm.",
   };
+}
+
+export function petDisplayName(pet: { pet_type: string; name?: string | null }) {
+  const custom = typeof pet.name === "string" ? pet.name.trim() : "";
+  if (custom) return custom;
+  return describePet(pet.pet_type).name;
 }

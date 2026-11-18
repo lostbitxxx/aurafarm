@@ -30,7 +30,7 @@ import {
   type WanderDir,
   type WanderSpot,
 } from "@/lib/living-room-wander";
-import { describePet, type PetCard } from "@/lib/pets";
+import { petDisplayName, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
@@ -40,13 +40,15 @@ type Mode = "idle" | "walking" | "petting" | "dragging";
 function RoomPet({
   pet,
   paused,
+  showPetNames,
   onOpen,
 }: {
   pet: PetCard;
   paused: boolean;
+  showPetNames: boolean;
   onOpen: (petId: string) => void;
 }) {
-  const copy = describePet(pet.pet_type);
+  const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
   const [position, setPosition] = useState(() => sessionOrRandomWanderSpot(pet.id));
   const [mode, setMode] = useState<Mode>("idle");
@@ -362,7 +364,7 @@ function RoomPet({
       <button
         type="button"
         className="room-pet"
-        aria-label={`View ${copy.name}, level ${progress.level}${pet.is_desktop_active ? ", equipped" : ""}`}
+        aria-label={`View ${displayName}, level ${progress.level}${pet.is_desktop_active ? ", equipped" : ""}`}
         onClick={onClick}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -370,7 +372,7 @@ function RoomPet({
         onPointerCancel={onPointerCancel}
         onPointerLeave={petting.onPointerLeave}
       >
-        <span className="room-pet-label">Lv.{progress.level}</span>
+        <span className="room-pet-label">{showPetNames ? displayName : `Lv.${progress.level}`}</span>
         <span className={faceLeft ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
           <PixelPetArt
             petType={pet.pet_type}
@@ -396,6 +398,7 @@ export function LivingRoom({
   pets,
   placedIds,
   placementReady,
+  showPetNames = true,
   onOpenPet,
   onOpenInventory,
   onOpenSong,
@@ -409,6 +412,7 @@ export function LivingRoom({
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
+  showPetNames?: boolean;
   onOpenPet: (petId: string) => void;
   onOpenInventory: () => void;
   onOpenSong?: () => void;
@@ -489,7 +493,7 @@ export function LivingRoom({
         ) : null}
         <div className="living-room-pets">
           {placed.map((pet) => (
-            <RoomPet key={pet.id} pet={pet} paused={false} onOpen={onOpenPet} />
+            <RoomPet key={pet.id} pet={pet} paused={false} showPetNames={showPetNames} onOpen={onOpenPet} />
           ))}
         </div>
         {placementReady && placed.length === 0 ? (

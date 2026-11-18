@@ -23,11 +23,13 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /setPicker\("hat"\)/);
   assert.match(detail, /setPicker\("clothes"\)/);
   assert.match(detail, /onChoose\(null\)/);
-  assert.match(detail, /title=\{copy\.name\}/);
+  assert.match(detail, /title=\{displayName\}/);
   assert.match(detail, /Lv\.\{progress\.level\}/);
   assert.match(detail, /pet-love-button/);
   assert.match(detail, /pose === "blush"/);
   assert.match(detail, /Pet ♡/);
+  assert.match(detail, /renamePet/);
+  assert.match(detail, /Rename coupons:/);
   assert.match(css, /\.tracker-card \.pet-love-button\.is-lit \{[\s\S]*?background:\s*#f3c4c8;/);
   assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
   assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);

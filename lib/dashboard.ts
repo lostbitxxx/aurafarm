@@ -5,6 +5,7 @@ import { previewReward } from "./collection-catalog";
 import { requireCustomizationComplete } from "./customization";
 import { sampleClothes, sampleColor, sampleHat } from "./pet-assets";
 import { wholePoints, type CollectionReward, type PetCard } from "./pets";
+import { clampRenameCoupons } from "./rename-coupon";
 import { SONGS, songById, type OwnedSong } from "./songs";
 import {
   closeBlockedMigrationMessage,
@@ -36,9 +37,11 @@ export async function loadDashboard() {
   const { error: evaluateError } = await supabase.rpc("evaluate_achievements");
 
   const PROFILE_SELECT_WITH_WEEKLY =
-    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date";
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date, rename_coupons, show_pet_names";
   const PROFILE_SELECT_LEGACY =
     "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date";
+  const PROFILE_SELECT_WITH_RENAME =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date";
 
   const [
     profileResultInitial,
@@ -56,7 +59,7 @@ export async function loadDashboard() {
       supabase.from("profiles").select("close_blocked").eq("id", userId).maybeSingle(),
       supabase
         .from("user_pets")
-        .select("id, pet_type, level, xp, is_desktop_active, color, hat, clothes")
+        .select("id, pet_type, level, xp, is_desktop_active, color, hat, clothes, name")
         .eq("user_id", userId)
         .order("id", { ascending: true }),
       supabase.from("user_collections").select("item_id").eq("user_id", userId),
@@ -93,10 +96,30 @@ export async function loadDashboard() {
         : supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
     ]);
 
+  const renameColumnsMissing = /rename_coupons|show_pet_names/i.test(
+    profileResultInitial.error?.message ?? "",
+  );
   const weeklyColumnMissing = /weekly_study_days/i.test(profileResultInitial.error?.message ?? "");
-  const profileResult = weeklyColumnMissing
-    ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
-    : profileResultInitial;
+  const profileResult = renameColumnsMissing
+    ? weeklyColumnMissing
+      ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+      : await supabase.from("profiles").select(PROFILE_SELECT_WITH_RENAME).eq("id", userId).maybeSingle()
+    : weeklyColumnMissing
+      ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+      : profileResultInitial;
+
+  const petsNameMissing = /column .*name.* does not exist|Could not find the .*name.* column/i.test(
+    petsResult.error?.message ?? "",
+  );
+  const petsFallback = petsNameMissing
+    ? await supabase
+        .from("user_pets")
+        .select("id, pet_type, level, xp, is_desktop_active, color, hat, clothes")
+        .eq("user_id", userId)
+        .order("id", { ascending: true })
+    : null;
+  const petsData = petsFallback?.data ?? petsResult.data;
+  const petsLoadError = petsNameMissing ? petsFallback?.error?.message ?? null : petsResult.error?.message;
 
   const profile = profileResult.data;
   const studyMode: StudyMode | null = isStudyMode(profile?.study_mode) ? profile.study_mode : null;
@@ -122,8 +145,10 @@ export async function loadDashboard() {
     return preview?.kind === kind ? preview.id : null;
   }
 
-  const pets: PetCard[] = (petsResult.data ?? []).map((pet) => {
+  const pets: PetCard[] = (petsData ?? []).map((pet) => {
     const xp = wholePoints(pet.xp);
+    const customName =
+      "name" in pet && typeof pet.name === "string" && pet.name.trim() ? pet.name.trim() : null;
     return {
       id: String(pet.id),
       pet_type: String(pet.pet_type),
@@ -133,6 +158,7 @@ export async function loadDashboard() {
       color: sampleColor(pet.color),
       hat: wornItem(pet.hat, "hat"),
       clothes: wornItem(pet.clothes, "clothes"),
+      name: customName,
     };
   });
 
@@ -239,9 +265,9 @@ export async function loadDashboard() {
       sessionResult.error?.message ??
       scoresResult.error?.message ??
       recordedResult.error?.message ??
-      petsResult.error?.message ??
+      petsLoadError ??
       collectionsResult.error?.message ??
-      (weeklyColumnMissing ? null : profileResult.error?.message) ??
+      (weeklyColumnMissing || renameColumnsMissing ? null : profileResult.error?.message) ??
       null,
   );
 
@@ -258,6 +284,9 @@ export async function loadDashboard() {
     evaluateError?.message ?? achievementsResult.error?.message ?? null,
   );
 
+  const renameCoupons = clampRenameCoupons((profile as { rename_coupons?: unknown } | null)?.rename_coupons);
+  const showPetNames = (profile as { show_pet_names?: unknown } | null)?.show_pet_names !== false;
+
   return {
     userId,
     displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
@@ -265,6 +294,8 @@ export async function loadDashboard() {
     streakCount,
     streakLocalDate,
     pets,
+    renameCoupons,
+    showPetNames,
     ownedColorIds,
     ownedHatIds,
     ownedClothesIds,
@@ -276,7 +307,7 @@ export async function loadDashboard() {
     petsError: studyTimerMigrationMessage(
       rewardsResult.error?.message ??
         collectionsResult.error?.message ??
-        petsResult.error?.message ??
+        petsLoadError ??
         null,
     ),
     activeSession,

@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { updateSocialSettings } from "@/lib/actions/friends";
+import { updateShowPetNames } from "@/lib/actions/pets";
 import {
   FRIEND_INVITE_OPTIONS,
   STATUS_SEEN_OPTIONS,
@@ -19,29 +20,35 @@ export function SocialSettingsDialog({
   friendCode,
   friendInvite,
   allowStatusSeen,
+  showPetNames,
   friendsError,
+  onShowPetNamesChange,
   onClose,
 }: {
   friendCode: string;
   friendInvite: FriendInvite;
   allowStatusSeen: StatusSeen;
+  showPetNames: boolean;
   friendsError: string | null;
+  onShowPetNamesChange?: (enabled: boolean) => void;
   onClose: () => void;
 }) {
   const [invite, setInvite] = useState(friendInvite);
   const [seen, setSeen] = useState(allowStatusSeen);
+  const [namesVisible, setNamesVisible] = useState(showPetNames);
   const [error, setError] = useState<string | null>(friendsError);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openPicker, setOpenPicker] = useState<"invite" | "seen" | null>(null);
-  const settingsKey = `${friendInvite}|${allowStatusSeen}|${friendsError ?? ""}`;
+  const settingsKey = `${friendInvite}|${allowStatusSeen}|${showPetNames ? 1 : 0}|${friendsError ?? ""}`;
   const [snap, setSnap] = useState(settingsKey);
 
   if (settingsKey !== snap) {
     setSnap(settingsKey);
     setInvite(friendInvite);
     setSeen(allowStatusSeen);
+    setNamesVisible(showPetNames);
     setError(friendsError);
   }
 
@@ -62,12 +69,19 @@ export function SocialSettingsDialog({
     setPending(true);
     setError(null);
     setNotice(null);
-    const result = await updateSocialSettings(invite, seen);
-    setPending(false);
-    if (result.error) {
-      setError(result.error);
+    const social = await updateSocialSettings(invite, seen);
+    if (social.error) {
+      setPending(false);
+      setError(social.error);
       return;
     }
+    const names = await updateShowPetNames(namesVisible);
+    setPending(false);
+    if (names.error) {
+      setError(names.error);
+      return;
+    }
+    onShowPetNamesChange?.(namesVisible);
     setNotice("Saved.");
   }
 
@@ -109,6 +123,22 @@ export function SocialSettingsDialog({
           }}
           mark={seenMark}
         />
+        <div className="reward-apply-row">
+          <span className="reward-apply-label" id="show-pet-names-label">
+            Show pet names
+          </span>
+          <button
+            type="button"
+            className="reward-apply-toggle"
+            role="switch"
+            aria-checked={namesVisible}
+            aria-labelledby="show-pet-names-label"
+            disabled={pending}
+            onClick={() => setNamesVisible((current) => !current)}
+          >
+            <span className="reward-apply-knob" aria-hidden="true" />
+          </button>
+        </div>
         <button type="submit" className="button button-small" disabled={pending}>
           Save
         </button>
