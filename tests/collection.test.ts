@@ -359,6 +359,9 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(picker, /applyPetColor/);
   assert.match(picker, /applyPetHat/);
   assert.match(picker, /applyPetClothes/);
+  assert.match(picker, /finishClaim/);
+  assert.match(picker, /opening equip prompt before claim|setEquipPrompt/);
+  assert.match(picker, /closeOnBackdrop=\{!equipPrompt\}/);
   assert.doesNotMatch(picker, /worn by this pet/);
   assert.match(screen, /petId=\{rewards\[0\]\.petId\}/);
   // Claim revalidates pendingRewards; do not overwrite local rewards while the picker is open
@@ -367,4 +370,7 @@ test("choosing a level reward asks before equipping on the pet", () => {
     screen,
     /if \(rewardSignature !== rewardSnap\) \{[\s\S]*if \(!pickerOpen\) setRewards\(pendingRewards\);/,
   );
+  const dialog = readFileSync(new URL("../components/farm-dialog.tsx", import.meta.url), "utf8");
+  assert.match(dialog, /closeOnBackdrop/);
+  assert.match(dialog, /onClick=\{closeOnBackdrop \? \(\) => onCloseRef\.current\(\) : undefined\}/);
 });

@@ -209,17 +209,9 @@ export function RewardPicker({
   const shufflesLeft = offer ? REWARD_SHUFFLE_LIMIT - offer.shufflesUsed : REWARD_SHUFFLE_LIMIT;
   const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
 
-  async function onChoose(itemId: string) {
-    if (pendingId || equipPrompt) return;
+  function onChoose(itemId: string) {
+    if (pendingId || equipPrompt || equipPending) return;
     setError(null);
-    setPendingId(itemId);
-    const result = await claimCollectionReward(itemId);
-    setPendingId(null);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    forgetRewardOffer(userId, rewardId);
     const kind = rewardKindForItem(itemId);
     // #region agent log
     fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
@@ -227,133 +219,179 @@ export function RewardPicker({
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
       body: JSON.stringify({
         sessionId: "8dfc",
-        hypothesisId: "H2",
+        hypothesisId: "H4",
         location: "level-up-reward.tsx:onChoose",
-        message: "claim succeeded, opening equip prompt",
+        message: "opening equip prompt before claim",
         data: { itemId, kind, rewardId, petId },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
     // #endregion
     if (!kind) {
-      onClaimed(itemId, false);
+      void finishClaim(itemId, false);
       return;
     }
+    // Defer claim until the user answers so revalidation cannot unmount this prompt,
+    // and keep the same dialog shell so the choosing click cannot hit a new backdrop.
     setEquipPrompt({ itemId, kind });
   }
 
-  async function onEquipNow() {
-    if (!equipPrompt || equipPending) return;
+  async function finishClaim(itemId: string, equip: boolean) {
     setError(null);
     setEquipPending(true);
-    const result =
-      equipPrompt.kind === "color"
-        ? await applyPetColor(petId, equipPrompt.itemId)
-        : equipPrompt.kind === "hat"
-          ? await applyPetHat(petId, equipPrompt.itemId)
-          : await applyPetClothes(petId, equipPrompt.itemId);
-    setEquipPending(false);
-    if (result.error) {
-      setError(result.error);
+    setPendingId(itemId);
+    const claim = await claimCollectionReward(itemId);
+    if (claim.error) {
+      setPendingId(null);
+      setEquipPending(false);
+      setError(claim.error);
       return;
     }
-    const itemId = equipPrompt.itemId;
+    forgetRewardOffer(userId, rewardId);
+    if (equip) {
+      const kind = rewardKindForItem(itemId);
+      const applied =
+        kind === "color"
+          ? await applyPetColor(petId, itemId)
+          : kind === "hat"
+            ? await applyPetHat(petId, itemId)
+            : kind === "clothes"
+              ? await applyPetClothes(petId, itemId)
+              : { error: "" };
+      if (applied.error) {
+        setPendingId(null);
+        setEquipPending(false);
+        setError(applied.error);
+        return;
+      }
+    }
+    setPendingId(null);
+    setEquipPending(false);
     setEquipPrompt(null);
-    onClaimed(itemId, true);
-  }
-
-  function onSkipEquip() {
-    if (!equipPrompt || equipPending) return;
-    const itemId = equipPrompt.itemId;
-    setEquipPrompt(null);
-    onClaimed(itemId, false);
-  }
-
-  function onShuffle() {
-    if (!offer || equipPrompt) return;
-    const next = shuffleRewardOffer(offer, pools);
-    if (!next) return;
-    saveRewardOffer(userId, rewardId, pools, next);
-  }
-
-  if (equipPrompt) {
     // #region agent log
     fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
       body: JSON.stringify({
         sessionId: "8dfc",
-        hypothesisId: "H3",
-        location: "level-up-reward.tsx:equipPrompt-render",
-        message: "equip dialog rendering",
-        data: { itemId: equipPrompt.itemId, kind: equipPrompt.kind, rewardId },
+        hypothesisId: "H5",
+        location: "level-up-reward.tsx:finishClaim",
+        message: "claim finished",
+        data: { itemId, equip },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
     // #endregion
-    const prompt =
-      equipPrompt.kind === "color"
-        ? "Do you want to apply this color now?"
-        : "Do you want to equip the accessory now?";
-    return (
-      <FarmDialog title="Equip reward?" onClose={onSkipEquip}>
-        <p className="panel-hint">{prompt}</p>
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="tracker-actions">
-          <button type="button" className="button" disabled={equipPending} onClick={onEquipNow}>
-            {equipPending ? "…" : equipPrompt.kind === "color" ? "Apply now" : "Equip now"}
-          </button>
-          <button type="button" className="button button-ghost" disabled={equipPending} onClick={onSkipEquip}>
-            Not now
-          </button>
-        </div>
-      </FarmDialog>
-    );
+    onClaimed(itemId, equip);
   }
 
+  function onEquipNow() {
+    if (!equipPrompt || equipPending) return;
+    void finishClaim(equipPrompt.itemId, true);
+  }
+
+  function onSkipEquip(reason: string) {
+    if (!equipPrompt || equipPending) return;
+    // #region agent log
+    fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
+      body: JSON.stringify({
+        sessionId: "8dfc",
+        hypothesisId: "H4",
+        location: "level-up-reward.tsx:onSkipEquip",
+        message: "skip equip invoked",
+        data: { reason, itemId: equipPrompt.itemId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    void finishClaim(equipPrompt.itemId, false);
+  }
+
+  function onShuffle() {
+    if (!offer || equipPrompt || equipPending) return;
+    const next = shuffleRewardOffer(offer, pools);
+    if (!next) return;
+    saveRewardOffer(userId, rewardId, pools, next);
+  }
+
+  const busy = pendingId !== null || equipPending;
+  const equipCopy =
+    equipPrompt?.kind === "color"
+      ? "Do you want to apply this color now?"
+      : "Do you want to equip the accessory now?";
+
   return (
-    <FarmDialog title="Choose a reward" onClose={onClose} wide>
-      <p className="panel-hint">
-        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit.
-      </p>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {!offer ? (
-        <p className="panel-hint">Drawing a reward…</p>
-      ) : cards.length > 0 ? (
-        <ul className="collection-color-grid">
-          {cards.map((card) => (
-            <li key={`${card.kind}-${card.id}`}>
-              <RewardChoiceButton
-                kind={card.kind}
-                itemId={card.id}
-                pending={pendingId === card.id}
-                disabled={pendingId !== null}
-                onChoose={onChoose}
-              />
-            </li>
-          ))}
-        </ul>
+    <FarmDialog
+      title={equipPrompt ? "Equip reward?" : "Choose a reward"}
+      onClose={() => (equipPrompt ? onSkipEquip("dialog-close") : onClose())}
+      wide={!equipPrompt}
+      closeOnBackdrop={!equipPrompt}
+    >
+      {equipPrompt ? (
+        <>
+          <p className="panel-hint">{equipCopy}</p>
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="tracker-actions">
+            <button type="button" className="button" disabled={busy} onClick={onEquipNow}>
+              {busy ? "…" : equipPrompt.kind === "color" ? "Apply now" : "Equip now"}
+            </button>
+            <button
+              type="button"
+              className="button button-ghost"
+              disabled={busy}
+              onClick={() => onSkipEquip("not-now")}
+            >
+              Not now
+            </button>
+          </div>
+        </>
       ) : (
-        <p className="panel-hint">You already own every color, hat, and outfit.</p>
+        <>
+          <p className="panel-hint">
+            {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit.
+          </p>
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {!offer ? (
+            <p className="panel-hint">Drawing a reward…</p>
+          ) : cards.length > 0 ? (
+            <ul className="collection-color-grid">
+              {cards.map((card) => (
+                <li key={`${card.kind}-${card.id}`}>
+                  <RewardChoiceButton
+                    kind={card.kind}
+                    itemId={card.id}
+                    pending={pendingId === card.id}
+                    disabled={busy}
+                    onChoose={onChoose}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="panel-hint">You already own every color, hat, and outfit.</p>
+          )}
+          <div className="reward-shuffle">
+            <button
+              type="button"
+              className="button button-small button-ghost"
+              disabled={!shuffleReady || busy}
+              onClick={onShuffle}
+            >
+              {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}
+            </button>
+          </div>
+        </>
       )}
-      <div className="reward-shuffle">
-        <button
-          type="button"
-          className="button button-small button-ghost"
-          disabled={!shuffleReady || pendingId !== null}
-          onClick={onShuffle}
-        >
-          {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}
-        </button>
-      </div>
     </FarmDialog>
   );
 }

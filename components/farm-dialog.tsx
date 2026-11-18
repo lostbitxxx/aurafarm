@@ -12,6 +12,7 @@ export function FarmDialog({
   wide = false,
   titleId: titleIdProp,
   extra,
+  closeOnBackdrop = true,
 }: {
   title: string;
   onClose: () => void;
@@ -19,11 +20,14 @@ export function FarmDialog({
   wide?: boolean;
   titleId?: string;
   extra?: ReactNode;
+  closeOnBackdrop?: boolean;
 }) {
   const generatedId = useId();
   const titleId = titleIdProp ?? generatedId;
   const cardRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -37,7 +41,7 @@ export function FarmDialog({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !card) return;
@@ -67,10 +71,14 @@ export function FarmDialog({
       document.body.style.overflow = previousOverflow;
       previousFocus.current?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
-    <div className="tracker-pop" role="presentation" onClick={onClose}>
+    <div
+      className="tracker-pop"
+      role="presentation"
+      onClick={closeOnBackdrop ? () => onCloseRef.current() : undefined}
+    >
       <div
         ref={cardRef}
         className={wide ? "tracker-card tracker-card-wide" : "tracker-card"}
@@ -84,7 +92,13 @@ export function FarmDialog({
         <div className="dialog-head">
           <h2 id={titleId}>{title}</h2>
           {extra}
-          <button type="button" className="dialog-close" data-tutorial="close" onClick={onClose} aria-label="Close dialog">
+          <button
+            type="button"
+            className="dialog-close"
+            data-tutorial="close"
+            onClick={() => onCloseRef.current()}
+            aria-label="Close dialog"
+          >
             ×
           </button>
         </div>
