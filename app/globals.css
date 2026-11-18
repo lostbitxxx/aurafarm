@@ -1188,6 +1188,24 @@ a.tracker-download { color: #6d7a62; }
   filter: brightness(0.97);
 }
 
+.tracker-card .pet-love-button {
+  display: block;
+  margin: 0.6rem auto;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    filter 0.18s ease;
+}
+
+.tracker-card .pet-love-button.is-lit {
+  background: #f3c4c8;
+  border-color: #e3a0a7;
+  color: var(--dialog-ink);
+  box-shadow: none;
+  filter: none;
+}
+
 .tracker-card .button:focus-visible,
 .tracker-card .button-ghost:focus-visible,
 .tracker-card .dialog-close:focus-visible,

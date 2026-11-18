@@ -6,6 +6,7 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   const colorSql = readFileSync(
     new URL("../supabase/migrations/0018_collection_colors.sql", import.meta.url),
     "utf8",
@@ -24,6 +25,10 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /onChoose\(null\)/);
   assert.match(detail, /title=\{copy\.name\}/);
   assert.match(detail, /Lv\.\{progress\.level\}/);
+  assert.match(detail, /pet-love-button/);
+  assert.match(detail, /pose === "blush"/);
+  assert.match(detail, /Pet ♡/);
+  assert.match(css, /\.tracker-card \.pet-love-button\.is-lit \{[\s\S]*?background:\s*#f3c4c8;/);
   assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
   assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);
   assert.match(detail, /className="accessory-slot-art"/);

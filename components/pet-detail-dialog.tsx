@@ -158,8 +158,12 @@ export function PetDetailDialog({
           </p>
           <button
             type="button"
-            className="button button-ghost"
-            style={{ display: "block", margin: "0.6rem auto" }}
+            className={
+              pose === "blush"
+                ? "button pet-love-button is-lit"
+                : "button button-ghost pet-love-button"
+            }
+            aria-pressed={pose === "blush"}
             onClick={blush}
           >
             Pet ♡
