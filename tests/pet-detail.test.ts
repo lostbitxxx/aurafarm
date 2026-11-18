@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+test("equip-during-session copy stays short and the pixel heart asset exists", () => {
+  const assets = readFileSync(new URL("../lib/pet-assets.ts", import.meta.url), "utf8");
+  const heart = readFileSync(new URL("../public/pet-assets/ui/pixel-heart.svg", import.meta.url), "utf8");
+  assert.match(assets, /You cannot switch equipped pet while studying!/);
+  assert.doesNotMatch(assets, /XP stays with the pet chosen when the session started/);
+  assert.match(assets, /PIXEL_HEART_SRC/);
+  assert.match(heart, /shape-rendering="crispEdges"/);
+  assert.match(heart, /#d45d83/);
+});
+
 test("pet detail dress-up reuses collection apply actions and owned pickers", () => {
   const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
@@ -27,7 +37,9 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /Lv\.\{progress\.level\}/);
   assert.match(detail, /pet-love-button/);
   assert.match(detail, /pose === "blush"/);
-  assert.match(detail, /Pet ♡/);
+  assert.match(detail, /PIXEL_HEART_SRC/);
+  assert.match(detail, /spawnHeart/);
+  assert.doesNotMatch(detail, /Pet ♡/);
   assert.match(css, /\.tracker-card \.pet-love-button\.is-lit \{[\s\S]*?background:\s*#f3c4c8;/);
   assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
   assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);

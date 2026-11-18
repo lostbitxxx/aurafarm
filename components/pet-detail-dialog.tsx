@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { applyPetClothes, applyPetColor, applyPetHat, equipPetToDesktop } from "@/lib/actions/pets";
 import {
   collectionNoneCard,
@@ -11,6 +11,7 @@ import {
 import {
   colorForPetType,
   EQUIP_DURING_SESSION_NOTE,
+  PIXEL_HEART_SRC,
   sampleAccessoryIcon,
   sampleAccessoryName,
   SAMPLE_CLOTHES,
@@ -78,9 +79,21 @@ export function PetDetailDialog({
   const [error, setError] = useState<string | null>(null);
   const [equipped, setEquipped] = useState(pet.is_desktop_active);
   const [picker, setPicker] = useState<SlotPicker | null>(null);
+  const [hearts, setHearts] = useState<{ id: number; drift: number }[]>([]);
+  const heartIdRef = useRef(0);
+
+  function spawnHeart() {
+    const id = ++heartIdRef.current;
+    const drift = (Math.random() - 0.5) * 36;
+    setHearts((current) => [...current, { id, drift }]);
+    window.setTimeout(() => {
+      setHearts((current) => current.filter((heart) => heart.id !== id));
+    }, 1200);
+  }
 
   function blush() {
     setPose("blush");
+    spawnHeart();
     window.setTimeout(() => setPose("idle"), 1500);
   }
 
@@ -152,6 +165,16 @@ export function PetDetailDialog({
         <div>
           <div className="big-pet" onPointerMove={petting.onPointerMove} onPointerLeave={petting.onPointerLeave}>
             <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} pose={pose} className="big-pet-art" />
+            {hearts.map((heart) => (
+              <span
+                key={heart.id}
+                className="room-heart big-pet-heart"
+                style={{ left: `calc(48% + ${heart.drift}px)` }}
+                aria-hidden="true"
+              >
+                <img src={PIXEL_HEART_SRC} alt="" width={16} height={16} draggable={false} />
+              </span>
+            ))}
           </div>
           <p className="panel-hint" style={{ textAlign: "center" }}>
             Stroke left ↔ right to pet
@@ -160,13 +183,14 @@ export function PetDetailDialog({
             type="button"
             className={
               pose === "blush"
-                ? "button pet-love-button is-lit"
-                : "button button-ghost pet-love-button"
+                ? "button pet-love-button pet-heart-button is-lit"
+                : "button button-ghost pet-love-button pet-heart-button"
             }
             aria-pressed={pose === "blush"}
             onClick={blush}
           >
-            Pet ♡
+            Pet
+            <img src={PIXEL_HEART_SRC} alt="" width={16} height={16} draggable={false} />
           </button>
         </div>
         <div>

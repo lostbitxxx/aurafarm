@@ -319,6 +319,10 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
     new URL("../public/pet-assets/pets/cat/colors/sage/face/blush.svg", import.meta.url),
     "utf8",
   );
+  const struggle = readFileSync(
+    new URL("../public/pet-assets/pets/cat/colors/sage/face/struggle.svg", import.meta.url),
+    "utf8",
+  );
   const walk1 = readFileSync(
     new URL("../public/pet-assets/pets/cat/colors/sage/legs/left-up.svg", import.meta.url),
     "utf8",
@@ -329,7 +333,7 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /randomWalkMs/);
   assert.match(source, /PETTING_HOLD_MS/);
   assert.match(source, /useWalkPose\(walking/);
-  assert.match(source, /walking \? walkPose : "idle"/);
+  assert.match(source, /struggling \? "struggle" : walking \? walkPose : "idle"/);
   assert.match(source, /room-equipped/);
   assert.match(source, /ROOM_WALL_SRC/);
   assert.match(source, /ROOM_FLOOR_SRC/);
@@ -350,6 +354,9 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /requestAnimationFrame/);
   assert.match(source, /onPointerCancel/);
   assert.match(source, /usePetting\(beginPetting\)/);
+  assert.match(source, /PIXEL_HEART_SRC/);
+  assert.match(source, /spawnHeart/);
+  assert.doesNotMatch(source, /♥|♡/);
   assert.match(source, /spotFromForeheadPointer/);
   assert.match(source, /sessionOrRandomWanderSpot/);
   assert.match(source, /writeSessionWanderSpot/);
@@ -380,6 +387,9 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(layout, /storage-rack/);
   assert.match(idle, /M9 34h6v4H9M27 34h6v4h-6/);
   assert.match(blush, /M11 20h5M26 20h5/);
+  assert.match(struggle, /x="13\.5"[^>]*>&gt;/);
+  assert.match(struggle, /x="28\.5"[^>]*>&lt;/);
+  assert.match(struggle, /font-family/);
   assert.match(walk1, /M9 35h6v4H9M27 33h6v4h-6/);
 
   assert.match(css, /\.is-carpet/);
