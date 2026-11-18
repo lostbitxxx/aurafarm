@@ -13,7 +13,7 @@ export function FarmDialog({
   titleId: titleIdProp,
   extra,
 }: {
-  title: string;
+  title: ReactNode;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;

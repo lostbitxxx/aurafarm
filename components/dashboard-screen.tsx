@@ -471,6 +471,7 @@ export function DashboardScreen({
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
         onPetRenamed={onPetRenamed}
+        onShowPetNamesChange={setShowPetNames}
         tutorialCurrent={tour.step?.target === "start" && !tour.covered}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
         onTutorialStart={tour.onStart}
@@ -498,9 +499,11 @@ export function DashboardScreen({
           pets={localPets}
           placedIds={placedIds}
           sessionActive={sessionActive}
+          renameCoupons={renameCoupons}
           onClose={() => setDialog(null)}
           onToggleRoom={onToggleRoom}
           onEquipped={onEquipped}
+          onPetRenamed={onPetRenamed}
         />
       ) : null}
       {dialog === "achievements" ? (
