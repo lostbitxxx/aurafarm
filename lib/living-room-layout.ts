@@ -109,11 +109,28 @@ function loveseatBlock(): RoomObstacle {
   };
 }
 
+/**
+ * Tall wall unit: its drawn bbox reaches the floor, but pets use wrap-center for
+ * depth. Sorting from the full bbox bottom tucked floor pets under the shelf.
+ * Keep the collision footprint unchanged; only pull draw order toward the wall.
+ */
+export const BOOKSHELF_DEPTH_TOP = pxToTopPercent(ROOM_FLOOR_START_Y) - 1;
+
+function bookshelfPiece(): RoomFurniturePiece {
+  return {
+    id: "bookshelf",
+    src: "/pet-assets/room/furniture/bookshelf.svg",
+    bounds: BOOKSHELF_BOUNDS,
+    depthTop: BOOKSHELF_DEPTH_TOP,
+    block: footprintObstacle(BOOKSHELF_BOUNDS, 0.5),
+  };
+}
+
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   piece("loveseat", "loveseat.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
   piece("lamp", "lamp.svg", LAMP_BOUNDS),
-  piece("bookshelf", "bookshelf.svg", BOOKSHELF_BOUNDS),
+  bookshelfPiece(),
   piece("plant", "plant.svg", PLANT_BOUNDS),
 ];
 
@@ -162,8 +179,17 @@ export function spotHitsObstacle(
   );
 }
 
+/** Ceiling for Y-sorted furniture / idle pets inside `.living-room`. */
+export const ROOM_DEPTH_Z_MAX = 200;
+
+/**
+ * While dragging, paint above every depth-sorted layer (and the daily capsule).
+ * Safe inside `.living-room { isolation: isolate }` — does not cover page dialogs.
+ */
+export const ROOM_DRAG_Z = ROOM_DEPTH_Z_MAX + 40;
+
 /** z-index for Y-sort: larger top% draws in front. */
 export function roomDepthZ(depthTop: number) {
   const safe = Number.isFinite(depthTop) ? depthTop : 0;
-  return Math.max(1, Math.min(200, Math.round(safe * 2)));
+  return Math.max(1, Math.min(ROOM_DEPTH_Z_MAX, Math.round(safe * 2)));
 }

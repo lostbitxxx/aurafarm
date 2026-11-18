@@ -1,23 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   ROOM_CARPET_SRC,
+  ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
   ROOM_TRIM_SRC,
   ROOM_WALL_SRC,
   roomDepthZ,
-  roomStartSpot,
 } from "@/lib/living-room-layout";
 import {
+  DRAG_STRUGGLE_AFTER_MS,
   facingFromDirection,
+  dragPastThreshold,
   PETTING_HOLD_MS,
   pickWalkDirection,
+  pointerPercentInRoom,
   randomIdleMs,
   randomWalkMs,
   resolveWanderSpot,
+  sessionOrRandomWanderSpot,
+  spotFromForeheadPointer,
   stepWanderSpot,
+  writeSessionWanderSpot,
   type WanderDir,
   type WanderSpot,
 } from "@/lib/living-room-wander";
@@ -26,37 +32,51 @@ import { experienceProgress } from "@/lib/study";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
-type Mode = "idle" | "walking" | "petting";
+type Mode = "idle" | "walking" | "petting" | "dragging";
 
 function RoomPet({
   pet,
-  spot,
   paused,
   onOpen,
 }: {
   pet: PetCard;
-  spot: WanderSpot;
   paused: boolean;
   onOpen: (petId: string) => void;
 }) {
   const copy = describePet(pet.pet_type);
   const progress = experienceProgress(pet.xp);
-  const [position, setPosition] = useState(() => resolveWanderSpot(spot));
+  const [position, setPosition] = useState(() => sessionOrRandomWanderSpot(pet.id));
   const [mode, setMode] = useState<Mode>("idle");
   const [faceLeft, setFaceLeft] = useState(false);
   const [heart, setHeart] = useState(false);
+  const [struggling, setStruggling] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const modeRef = useRef<Mode>("idle");
-  const positionRef = useRef(resolveWanderSpot(spot));
+  const positionRef = useRef(position);
+
+  function commitSpot(next: WanderSpot) {
+    positionRef.current = next;
+    setPosition(next);
+    writeSessionWanderSpot(pet.id, next);
+  }
   const dirRef = useRef<WanderDir>({ x: 1, y: 0 });
   const faceLeftRef = useRef(false);
   const phaseUntilRef = useRef(0);
   const pettingTimerRef = useRef(0);
   const heartTimerRef = useRef(0);
+  const struggleTimerRef = useRef(0);
   const reducedRef = useRef(false);
   const pausedRef = useRef(paused);
+  const pressRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+    suppressClick: boolean;
+  } | null>(null);
 
   const walking = mode === "walking";
+  const dragging = mode === "dragging";
   const walkPose = useWalkPose(walking);
   // Petting keeps blush reactions on the leveled standing blush frame.
   // Idle/waiting always select idle explicitly from movement state (never a leftover walk frame).
@@ -86,9 +106,7 @@ function RoomPet({
 
   useEffect(() => {
     // Hard unstick on mount (covers pets left in an expanded sofa footprint).
-    const freed = resolveWanderSpot(positionRef.current);
-    positionRef.current = freed;
-    setPosition(freed);
+    commitSpot(resolveWanderSpot(positionRef.current));
 
     let frame = 0;
     let last = performance.now();
@@ -125,13 +143,12 @@ function RoomPet({
       last = now;
       const current = modeRef.current;
 
-      if (current === "petting") return;
+      if (current === "petting" || current === "dragging") return;
 
       // Unstick pets trapped in a no-go zone (e.g. sofa footprint grew after they sat there).
       const freed = resolveWanderSpot(positionRef.current);
       if (freed.left !== positionRef.current.left || freed.top !== positionRef.current.top) {
-        positionRef.current = freed;
-        setPosition(freed);
+        commitSpot(freed);
       }
 
       if (pausedRef.current || reducedRef.current) {
@@ -157,8 +174,7 @@ function RoomPet({
         enterIdle(now);
         return;
       }
-      positionRef.current = stepped.spot;
-      setPosition(stepped.spot);
+      commitSpot(stepped.spot);
       if (stepped.hitBound) enterIdle(now);
     };
 
@@ -167,10 +183,20 @@ function RoomPet({
       window.cancelAnimationFrame(frame);
       window.clearTimeout(pettingTimerRef.current);
       window.clearTimeout(heartTimerRef.current);
+      window.clearTimeout(struggleTimerRef.current);
     };
+    // commitSpot closes over pet.id; remount when the pet identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional pet.id remount boundary
   }, [pet.id]);
 
+  function clearPettingFx() {
+    window.clearTimeout(pettingTimerRef.current);
+    window.clearTimeout(heartTimerRef.current);
+    setHeart(false);
+  }
+
   function beginPetting() {
+    if (modeRef.current === "dragging" || pressRef.current?.dragging) return;
     modeRef.current = "petting";
     setMode("petting");
     setHeart(true);
@@ -187,14 +213,146 @@ function RoomPet({
 
   const petting = usePetting(beginPetting);
 
+  function moveToForeheadPointer(clientX: number, clientY: number) {
+    const roomEl = wrapRef.current?.offsetParent as HTMLElement | null;
+    if (!roomEl) return;
+    const rect = roomEl.getBoundingClientRect();
+    const pct = pointerPercentInRoom(clientX, clientY, rect);
+    const wrapHeight = wrapRef.current?.offsetHeight ?? 86;
+    const next = spotFromForeheadPointer(pct.left, pct.top, {
+      width: rect.width,
+      height: rect.height,
+    }, wrapHeight);
+    commitSpot(next);
+  }
+
+  function startDrag() {
+    clearPettingFx();
+    window.clearTimeout(struggleTimerRef.current);
+    setStruggling(false);
+    modeRef.current = "dragging";
+    setMode("dragging");
+    if (pressRef.current) {
+      pressRef.current.dragging = true;
+      pressRef.current.suppressClick = true;
+    }
+    struggleTimerRef.current = window.setTimeout(() => {
+      if (modeRef.current !== "dragging") return;
+      if (reducedRef.current) return;
+      setStruggling(true);
+    }, DRAG_STRUGGLE_AFTER_MS);
+  }
+
+  function endDrag() {
+    window.clearTimeout(struggleTimerRef.current);
+    setStruggling(false);
+    commitSpot(resolveWanderSpot(positionRef.current));
+    const now = performance.now();
+    modeRef.current = "idle";
+    setMode("idle");
+    phaseUntilRef.current = now + randomIdleMs();
+  }
+
+  function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+    pressRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      suppressClick: false,
+    };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* ignore — capture is best-effort */
+    }
+  }
+
+  function onPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const press = pressRef.current;
+    if (!press || press.pointerId !== event.pointerId) {
+      petting.onPointerMove(event);
+      return;
+    }
+
+    if (!press.dragging) {
+      if (!dragPastThreshold(press.startX, press.startY, event.clientX, event.clientY)) {
+        petting.onPointerMove(event);
+        return;
+      }
+      startDrag();
+      moveToForeheadPointer(event.clientX, event.clientY);
+      return;
+    }
+
+    moveToForeheadPointer(event.clientX, event.clientY);
+  }
+
+  function onPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+    const press = pressRef.current;
+    if (!press || press.pointerId !== event.pointerId) return;
+    if (press.dragging) {
+      endDrag();
+    }
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      /* ignore */
+    }
+    // Keep suppressClick until onClick so a completed drag does not open the pet.
+    if (!press.suppressClick) {
+      pressRef.current = null;
+    }
+  }
+
+  function onPointerCancel(event: ReactPointerEvent<HTMLButtonElement>) {
+    const press = pressRef.current;
+    if (press?.dragging) {
+      endDrag();
+    }
+    pressRef.current = null;
+    setStruggling(false);
+    window.clearTimeout(struggleTimerRef.current);
+    petting.onPointerLeave();
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function onClick() {
+    if (pressRef.current?.suppressClick) {
+      pressRef.current = null;
+      return;
+    }
+    pressRef.current = null;
+    onOpen(pet.id);
+  }
+
+  const wrapClass = [
+    pet.is_desktop_active ? "room-pet-wrap is-equipped" : "room-pet-wrap",
+    dragging ? "is-dragging" : null,
+    struggling ? "is-struggling" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
       ref={wrapRef}
-      className={pet.is_desktop_active ? "room-pet-wrap is-equipped" : "room-pet-wrap"}
+      className={wrapClass}
       style={{
         left: `${position.left}%`,
         top: `${position.top}%`,
-        zIndex: roomDepthZ(position.top),
+        // Pets share the room stacking context with furniture (see `.living-room-pets`).
+        // Drag lifts above ROOM_DEPTH_Z_MAX so the carried pet is never tucked under a sofa.
+        zIndex: dragging ? ROOM_DRAG_Z : roomDepthZ(position.top),
       }}
       data-mode={mode}
     >
@@ -202,10 +360,12 @@ function RoomPet({
         type="button"
         className="room-pet"
         aria-label={`View ${copy.name}, level ${progress.level}${pet.is_desktop_active ? ", equipped" : ""}`}
-        onClick={() => onOpen(pet.id)}
-        onPointerMove={petting.onPointerMove}
+        onClick={onClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onPointerLeave={petting.onPointerLeave}
-        onPointerCancel={petting.onPointerLeave}
       >
         <span className="room-pet-label">Lv.{progress.level}</span>
         <span className={faceLeft ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
@@ -287,14 +447,8 @@ export function LivingRoom({
           />
         ) : null}
         <div className="living-room-pets">
-          {placed.map((pet, index) => (
-            <RoomPet
-              key={`${pet.id}-${index}`}
-              pet={pet}
-              spot={roomStartSpot(index)}
-              paused={false}
-              onOpen={onOpenPet}
-            />
+          {placed.map((pet) => (
+            <RoomPet key={pet.id} pet={pet} paused={false} onOpen={onOpenPet} />
           ))}
         </div>
         {placementReady && placed.length === 0 ? (
