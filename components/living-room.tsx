@@ -30,6 +30,7 @@ import {
   type WanderDir,
   type WanderSpot,
 } from "@/lib/living-room-wander";
+import { PIXEL_HEART_SRC } from "@/lib/pet-assets";
 import { petDisplayName, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
@@ -53,7 +54,8 @@ function RoomPet({
   const [position, setPosition] = useState(() => sessionOrRandomWanderSpot(pet.id));
   const [mode, setMode] = useState<Mode>("idle");
   const [faceLeft, setFaceLeft] = useState(false);
-  const [heart, setHeart] = useState(false);
+  const [hearts, setHearts] = useState<{ id: number; drift: number }[]>([]);
+  const heartIdRef = useRef(0);
   const [struggling, setStruggling] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const modeRef = useRef<Mode>("idle");
@@ -68,7 +70,6 @@ function RoomPet({
   const faceLeftRef = useRef(false);
   const phaseUntilRef = useRef(0);
   const pettingTimerRef = useRef(0);
-  const heartTimerRef = useRef(0);
   const struggleTimerRef = useRef(0);
   const reducedRef = useRef(false);
   const pausedRef = useRef(paused);
@@ -83,9 +84,10 @@ function RoomPet({
   const walking = mode === "walking";
   const dragging = mode === "dragging";
   const walkPose = useWalkPose(walking);
-  // Petting keeps blush reactions on the leveled standing blush frame.
+  // Petting keeps blush; long drag switches to >< struggle eyes.
   // Idle/waiting always select idle explicitly from movement state (never a leftover walk frame).
-  const pose = mode === "petting" ? "blush" : walking ? walkPose : "idle";
+  const pose =
+    mode === "petting" ? "blush" : struggling ? "struggle" : walking ? walkPose : "idle";
 
   useEffect(() => {
     modeRef.current = mode;
@@ -187,7 +189,6 @@ function RoomPet({
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(pettingTimerRef.current);
-      window.clearTimeout(heartTimerRef.current);
       window.clearTimeout(struggleTimerRef.current);
     };
     // commitSpot closes over pet.id; remount when the pet identity changes.
@@ -196,18 +197,24 @@ function RoomPet({
 
   function clearPettingFx() {
     window.clearTimeout(pettingTimerRef.current);
-    window.clearTimeout(heartTimerRef.current);
-    setHeart(false);
+    setHearts([]);
+  }
+
+  function spawnHeart() {
+    const id = ++heartIdRef.current;
+    const drift = (Math.random() - 0.5) * 28;
+    setHearts((current) => [...current, { id, drift }]);
+    window.setTimeout(() => {
+      setHearts((current) => current.filter((heart) => heart.id !== id));
+    }, 1200);
   }
 
   function beginPetting() {
     if (modeRef.current === "dragging" || pressRef.current?.dragging) return;
     modeRef.current = "petting";
     setMode("petting");
-    setHeart(true);
+    spawnHeart();
     window.clearTimeout(pettingTimerRef.current);
-    window.clearTimeout(heartTimerRef.current);
-    heartTimerRef.current = window.setTimeout(() => setHeart(false), 1200);
     pettingTimerRef.current = window.setTimeout(() => {
       const now = performance.now();
       modeRef.current = "idle";
@@ -384,11 +391,16 @@ function RoomPet({
           />
         </span>
         {pet.is_desktop_active ? <span className="room-equipped">Equipped</span> : null}
-        {heart ? (
-          <span className="room-heart" aria-hidden="true">
-            ♥
+        {hearts.map((heart) => (
+          <span
+            key={heart.id}
+            className="room-heart"
+            style={{ left: `calc(48% + ${heart.drift}px)` }}
+            aria-hidden="true"
+          >
+            <img src={PIXEL_HEART_SRC} alt="" width={16} height={16} draggable={false} />
           </span>
-        ) : null}
+        ))}
       </button>
     </div>
   );

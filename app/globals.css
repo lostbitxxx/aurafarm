@@ -1872,11 +1872,26 @@ button.dialog-row {
 }
 
 .big-pet {
+  position: relative;
   min-height: 180px;
   display: grid;
   place-items: center;
   border-radius: 12px;
   background: radial-gradient(ellipse, #e5e6d5, transparent 70%);
+}
+
+.pet-heart-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.pet-heart-button img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .big-pet-art {
@@ -2978,10 +2993,21 @@ button.dialog-row {
   position: absolute;
   top: 12%;
   left: 48%;
-  color: #d45d83;
-  font-size: 1.2rem;
   pointer-events: none;
   animation: room-heart 1.2s forwards;
+}
+
+.room-heart img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.big-pet-heart {
+  top: 18%;
+  z-index: 2;
 }
 
 @keyframes room-heart {

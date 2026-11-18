@@ -173,7 +173,7 @@ export function usePetting(onPet: () => void) {
           const next = Math.sign(dx);
           if (dir.current && dir.current !== next && travel.current > 16 && now > cooldown.current) {
             onPet();
-            cooldown.current = now + 700;
+            cooldown.current = now + 900;
             travel.current = 0;
           }
           dir.current = next;
