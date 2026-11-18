@@ -24,6 +24,12 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /onChoose\(null\)/);
   assert.match(detail, /title=\{copy\.name\}/);
   assert.match(detail, /Lv\.\{progress\.level\}/);
+  assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
+  assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);
+  assert.match(detail, /className="accessory-slot-art"/);
+  assert.match(detail, /PixelPetArt[\s\S]*color=\{resolvedColorId\(pet\.color, pet\.pet_type\)\}/);
+  assert.doesNotMatch(detail, /<b>\{colorDisplayName/);
+  assert.doesNotMatch(detail, /<b>\{accessoryDisplayName/);
   assert.doesNotMatch(detail, /\{copy\.name\} · Lv\./);
   assert.doesNotMatch(detail, /ACCESSORY_NOTE/);
   assert.doesNotMatch(detail, /Coming soon/);
