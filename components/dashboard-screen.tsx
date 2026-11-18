@@ -359,7 +359,7 @@ export function DashboardScreen({
     });
   }, []);
 
-  function onRewardClaimed(itemId: string) {
+  function onRewardClaimed(itemId: string, equip: boolean) {
     const petId = rewards[0]?.petId;
     const color = sampleColor(itemId);
     const preview = previewReward(itemId);
@@ -368,7 +368,7 @@ export function DashboardScreen({
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
-    if (petId) {
+    if (equip && petId) {
       setLocalPets((current) =>
         current.map((pet) => {
           if (pet.id !== petId) return pet;
@@ -570,6 +570,7 @@ export function DashboardScreen({
         <RewardPicker
           key={rewards[0].id}
           rewardId={rewards[0].id}
+          petId={rewards[0].petId}
           userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}

@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { claimCollectionReward } from "@/lib/actions/pets";
+import { applyPetClothes, applyPetColor, applyPetHat, claimCollectionReward } from "@/lib/actions/pets";
 import { previewReward, previewRewards, type PreviewReward } from "@/lib/collection-catalog";
-import { sampleAccessoryName, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import {
+  sampleAccessoryName,
+  sampleClothes,
+  sampleColor,
+  sampleHat,
+  SAMPLE_CLOTHES,
+  SAMPLE_COLORS,
+  SAMPLE_HATS,
+} from "@/lib/pet-assets";
 import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
 import {
   canShuffleReward,
@@ -131,8 +139,19 @@ export function LevelUpCelebration({
   );
 }
 
+type RewardKind = "color" | "hat" | "clothes";
+
+function rewardKindForItem(itemId: string): RewardKind | null {
+  if (sampleColor(itemId)) return "color";
+  const preview = previewReward(itemId);
+  if (preview?.kind === "hat" || sampleHat(itemId)) return "hat";
+  if (preview?.kind === "clothes" || sampleClothes(itemId)) return "clothes";
+  return null;
+}
+
 export function RewardPicker({
   rewardId,
+  petId,
   userId,
   choiceNumber,
   choiceTotal,
@@ -143,16 +162,19 @@ export function RewardPicker({
   onClose,
 }: {
   rewardId: string;
+  petId: string;
   userId: string;
   choiceNumber: number;
   choiceTotal: number;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
-  onClaimed: (itemId: string) => void;
+  onClaimed: (itemId: string, equip: boolean) => void;
   onClose: () => void;
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [equipPrompt, setEquipPrompt] = useState<{ itemId: string; kind: RewardKind } | null>(null);
+  const [equipPending, setEquipPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pools = useMemo<RewardPools>(
     () => ({
@@ -188,7 +210,7 @@ export function RewardPicker({
   const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
 
   async function onChoose(itemId: string) {
-    if (pendingId) return;
+    if (pendingId || equipPrompt) return;
     setError(null);
     setPendingId(itemId);
     const result = await claimCollectionReward(itemId);
@@ -198,20 +220,77 @@ export function RewardPicker({
       return;
     }
     forgetRewardOffer(userId, rewardId);
-    onClaimed(itemId);
+    const kind = rewardKindForItem(itemId);
+    if (!kind) {
+      onClaimed(itemId, false);
+      return;
+    }
+    setEquipPrompt({ itemId, kind });
+  }
+
+  async function onEquipNow() {
+    if (!equipPrompt || equipPending) return;
+    setError(null);
+    setEquipPending(true);
+    const result =
+      equipPrompt.kind === "color"
+        ? await applyPetColor(petId, equipPrompt.itemId)
+        : equipPrompt.kind === "hat"
+          ? await applyPetHat(petId, equipPrompt.itemId)
+          : await applyPetClothes(petId, equipPrompt.itemId);
+    setEquipPending(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    const itemId = equipPrompt.itemId;
+    setEquipPrompt(null);
+    onClaimed(itemId, true);
+  }
+
+  function onSkipEquip() {
+    if (!equipPrompt || equipPending) return;
+    const itemId = equipPrompt.itemId;
+    setEquipPrompt(null);
+    onClaimed(itemId, false);
   }
 
   function onShuffle() {
-    if (!offer) return;
+    if (!offer || equipPrompt) return;
     const next = shuffleRewardOffer(offer, pools);
     if (!next) return;
     saveRewardOffer(userId, rewardId, pools, next);
   }
 
+  if (equipPrompt) {
+    const prompt =
+      equipPrompt.kind === "color"
+        ? "Do you want to apply this color now?"
+        : "Do you want to equip the accessory now?";
+    return (
+      <FarmDialog title="Equip reward?" onClose={onSkipEquip}>
+        <p className="panel-hint">{prompt}</p>
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="tracker-actions">
+          <button type="button" className="button" disabled={equipPending} onClick={onEquipNow}>
+            {equipPending ? "…" : equipPrompt.kind === "color" ? "Apply now" : "Equip now"}
+          </button>
+          <button type="button" className="button button-ghost" disabled={equipPending} onClick={onSkipEquip}>
+            Not now
+          </button>
+        </div>
+      </FarmDialog>
+    );
+  }
+
   return (
     <FarmDialog title="Choose a reward" onClose={onClose} wide>
       <p className="panel-hint">
-        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit. The one you pick is worn by this pet.
+        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit.
       </p>
       {error ? (
         <p className="form-error" role="alert">
