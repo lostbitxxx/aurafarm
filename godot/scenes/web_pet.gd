@@ -39,6 +39,13 @@ func _decode(value: String) -> String:
 	return value.replace("+", " ").uri_decode()
 
 func _pretty(pet: String) -> String:
+	match pet:
+		"baby_slime":
+			return "Matcha"
+		"lantern_moth":
+			return "Taro"
+		"river_newt":
+			return "Coffee"
 	var words: PackedStringArray = []
 	for piece in pet.split("_", false):
 		if piece.is_empty():

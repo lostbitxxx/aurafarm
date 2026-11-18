@@ -15,9 +15,9 @@ export default function RegisterPage() {
       <main className="auth-layout">
         <section className="auth-aside">
           <PixelPetArt petType="baby_slime" className="auth-pet-art" alt="" />
-          <h1>Bring home a baby slime.</h1>
+          <h1>Bring home Matcha.</h1>
           <p>
-            Signup creates your user, inserts a profile, and adds a level 1 baby slime with
+            Signup creates your user, inserts a profile, and adds a level 1 Matcha with
             Equip to Desktop already on.
           </p>
         </section>
