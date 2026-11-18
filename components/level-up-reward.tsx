@@ -221,6 +221,20 @@ export function RewardPicker({
     }
     forgetRewardOffer(userId, rewardId);
     const kind = rewardKindForItem(itemId);
+    // #region agent log
+    fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
+      body: JSON.stringify({
+        sessionId: "8dfc",
+        hypothesisId: "H2",
+        location: "level-up-reward.tsx:onChoose",
+        message: "claim succeeded, opening equip prompt",
+        data: { itemId, kind, rewardId, petId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (!kind) {
       onClaimed(itemId, false);
       return;
@@ -263,6 +277,20 @@ export function RewardPicker({
   }
 
   if (equipPrompt) {
+    // #region agent log
+    fetch("http://127.0.0.1:7291/ingest/0b2428ff-e8f3-4e8e-b1c0-6b3c0e49ab1c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8dfc" },
+      body: JSON.stringify({
+        sessionId: "8dfc",
+        hypothesisId: "H3",
+        location: "level-up-reward.tsx:equipPrompt-render",
+        message: "equip dialog rendering",
+        data: { itemId: equipPrompt.itemId, kind: equipPrompt.kind, rewardId },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     const prompt =
       equipPrompt.kind === "color"
         ? "Do you want to apply this color now?"

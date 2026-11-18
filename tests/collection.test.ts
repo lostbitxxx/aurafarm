@@ -361,4 +361,10 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(picker, /applyPetClothes/);
   assert.doesNotMatch(picker, /worn by this pet/);
   assert.match(screen, /petId=\{rewards\[0\]\.petId\}/);
+  // Claim revalidates pendingRewards; do not overwrite local rewards while the picker is open
+  // or the equip prompt unmounts immediately.
+  assert.match(
+    screen,
+    /if \(rewardSignature !== rewardSnap\) \{[\s\S]*if \(!pickerOpen\) setRewards\(pendingRewards\);/,
+  );
 });
