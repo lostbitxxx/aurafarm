@@ -1188,6 +1188,26 @@ a.tracker-download { color: #6d7a62; }
   filter: brightness(0.97);
 }
 
+.tracker-card .pet-love-button {
+  display: block;
+  margin: 0.6rem auto;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.tracker-card .pet-love-button.is-lit {
+  background: var(--dialog-lime);
+  border-color: #97b839;
+  color: var(--dialog-ink);
+  box-shadow:
+    0 0 0 3px rgba(197, 239, 71, 0.4),
+    0 0 16px rgba(155, 199, 45, 0.55);
+  filter: none;
+}
+
 .tracker-card .button:focus-visible,
 .tracker-card .button-ghost:focus-visible,
 .tracker-card .dialog-close:focus-visible,
