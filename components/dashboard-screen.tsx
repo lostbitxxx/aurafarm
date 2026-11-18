@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DeskTutorial, useDeskTutorial } from "./desk-tutorial";
 import { StudyPanel } from "./study-panel";
@@ -174,6 +174,15 @@ export function DashboardScreen({
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTotal, setPickerTotal] = useState(0);
+  const finishDevSessionRef = useRef<((password: string) => Promise<{ error: string }>) | null>(null);
+  const [canDevFinish, setCanDevFinish] = useState(false);
+  const onRegisterDevFinish = useCallback(
+    (api: { canFinish: boolean; finish: (password: string) => Promise<{ error: string }> } | null) => {
+      finishDevSessionRef.current = api?.finish ?? null;
+      setCanDevFinish(Boolean(api?.canFinish));
+    },
+    [],
+  );
   // Server snapshot stays at epoch so a broken streak is never shown as live before the farmer day is known.
   const todayLocal = useSyncExternalStore(
     subscribeFarmerLocalDay,
@@ -452,6 +461,7 @@ export function DashboardScreen({
         onClothesApplied={onClothesApplied}
         tutorialCurrent={tour.step?.target === "start" && !tour.covered}
         onTutorialStart={tour.onStart}
+        onRegisterDevFinish={onRegisterDevFinish}
       />
       {dialog === "shop" ? (
         <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
@@ -523,7 +533,17 @@ export function DashboardScreen({
       ) : null}
       {dialog === "dev-tools" ? (
         <HistoryDialog title="Developer tools" onClose={() => setDialog(null)}>
-          <AdminReset userId={userId} />
+          <AdminReset
+            userId={userId}
+            canFinishWebsiteSession={canDevFinish}
+            onFinishWebsiteSession={async (password) => {
+              const finish = finishDevSessionRef.current;
+              if (!finish) return { error: "Start a website timer session first." };
+              const result = await finish(password);
+              if (!result.error) setDialog(null);
+              return result;
+            }}
+          />
         </HistoryDialog>
       ) : null}
       {shownSong && !songBlocked ? (

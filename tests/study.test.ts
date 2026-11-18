@@ -574,6 +574,9 @@ test("the admin reset clears only the signed-in farmer", () => {
   assert.match(action, /getClaims/);
   assert.match(action, /Sign in before resetting your pets/);
   assert.match(page, /AdminReset/);
+  assert.match(panel, /End session early/);
+  assert.match(panel, /Finish session now/);
+  assert.match(panel, /onFinishWebsiteSession/);
   assert.match(panel, /Set streak/);
   assert.match(panel, /Reset account/);
   assert.match(panel, /deletes your study records/);
@@ -586,9 +589,23 @@ test("the admin reset clears only the signed-in farmer", () => {
   assert.match(panel, /Reset daily cylinder/);
   assert.match(panel, /writeCylinderReset/);
   assert.match(action, /set_daily_streak/);
+  assert.ok(panel.indexOf("End session early") < panel.indexOf("Reset account"));
   assert.ok(panel.indexOf("Reset account") < panel.indexOf("Set streak"));
   const streakBlock = panel.slice(panel.indexOf("admin-streak-title"));
   assert.ok(streakBlock.indexOf("Streak days") < streakBlock.indexOf("Password"));
+});
+
+test("desk developer tools reopen the website timer finish helper", () => {
+  const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const study = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  assert.match(desk, /onRegisterDevFinish/);
+  assert.match(desk, /canFinishWebsiteSession=\{canDevFinish\}/);
+  assert.match(desk, /onFinishWebsiteSession/);
+  assert.match(desk, /finishDevSessionRef/);
+  assert.match(study, /onRegisterDevFinish/);
+  assert.match(study, /Finish this session now/);
+  assert.match(study, /canFinish: canDevFinish/);
+  assert.match(study, /finish: \(password\) => finishDevRef\.current\(password\)/);
 });
 
 test("study history merges session and XP rows by session id", () => {
