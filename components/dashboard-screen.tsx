@@ -288,16 +288,6 @@ export function DashboardScreen({
   const shownSong = songDisplay ? songById(songDisplay) : null;
 
   const activePet = equippedPet(localPets);
-  const songPet = activePet ?? localPets[0] ?? {
-    id: "song",
-    pet_type: "baby_slime",
-    level: 1,
-    xp: 0,
-    is_desktop_active: false,
-    color: null,
-    hat: null,
-    clothes: null,
-  };
   const described = activePet ? describePet(activePet.pet_type) : null;
   const progress = activePet ? experienceProgress(activePet.xp) : null;
   const sessionActive = Boolean(activeSession);
@@ -552,7 +542,6 @@ export function DashboardScreen({
           key={shownSong.id}
           songTitle={shownSong.title}
           songId={shownSong.id}
-          pet={songPet}
           onContinue={dismissSong}
         />
       ) : null}
