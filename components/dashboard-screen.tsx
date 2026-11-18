@@ -25,6 +25,7 @@ import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
 import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
+import { RENAME_COUPON_ID } from "@/lib/rename-coupon";
 import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -70,6 +71,8 @@ export function DashboardScreen({
   streakCount,
   streakLocalDate,
   pets,
+  renameCoupons: initialRenameCoupons,
+  showPetNames: initialShowPetNames,
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
@@ -104,6 +107,8 @@ export function DashboardScreen({
   streakCount: number;
   streakLocalDate: string | null;
   pets: PetCard[];
+  renameCoupons: number;
+  showPetNames: boolean;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
@@ -164,6 +169,8 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
+  const [renameCoupons, setRenameCoupons] = useState(initialRenameCoupons);
+  const [showPetNames, setShowPetNames] = useState(initialShowPetNames);
   const [friendRows, setFriendRows] = useState(friends);
   const [ownedColors, setOwnedColors] = useState(ownedColorIds);
   const [ownedHats, setOwnedHats] = useState(ownedHatIds);
@@ -194,17 +201,22 @@ export function DashboardScreen({
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
-    .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
+    .map(
+      (pet) =>
+        `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}:${pet.name ?? ""}`,
+    )
     .join("|");
   const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
   const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
   const songSignature = ownedSongs.map((song) => `${song.id}:${song.seen ? 1 : 0}`).join("|");
   const friendSignature = friends.map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}`).join("|");
+  const renameSignature = `${initialRenameCoupons}|${initialShowPetNames ? 1 : 0}`;
   const [petsSnap, setPetsSnap] = useState(petsSignature);
   const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
   const [rewardSnap, setRewardSnap] = useState(rewardSignature);
   const [songSnap, setSongSnap] = useState(songSignature);
   const [friendSnap, setFriendSnap] = useState(friendSignature);
+  const [renameSnap, setRenameSnap] = useState(renameSignature);
 
   if (petsSignature !== petsSnap) {
     setPetsSnap(petsSignature);
@@ -216,6 +228,12 @@ export function DashboardScreen({
     setOwnedColors(ownedColorIds);
     setOwnedHats(ownedHatIds);
     setOwnedClothes(ownedClothesIds);
+  }
+
+  if (renameSignature !== renameSnap) {
+    setRenameSnap(renameSignature);
+    setRenameCoupons(initialRenameCoupons);
+    setShowPetNames(initialShowPetNames);
   }
 
   if (rewardSignature !== rewardSnap) {
@@ -331,6 +349,13 @@ export function DashboardScreen({
     );
   }
 
+  function onPetRenamed(petId: string, name: string) {
+    setLocalPets((current) =>
+      current.map((pet) => (pet.id === petId ? { ...pet, name } : pet)),
+    );
+    setRenameCoupons((current) => Math.max(0, current - 1));
+  }
+
   const openRewardPicker = useCallback(() => {
     if (rewards.length === 0) return;
     setPickerTotal(rewards.length);
@@ -353,6 +378,9 @@ export function DashboardScreen({
 
   function onRewardClaimed(itemId: string, equip: boolean) {
     const petId = rewards[0]?.petId;
+    if (itemId === RENAME_COUPON_ID) {
+      setRenameCoupons((current) => Math.min(3, current + 1));
+    }
     const color = sampleColor(itemId);
     const preview = previewReward(itemId);
     const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
@@ -385,6 +413,7 @@ export function DashboardScreen({
         color: null,
         hat: null,
         clothes: null,
+        name: null,
       }
     : null;
 
@@ -443,6 +472,8 @@ export function DashboardScreen({
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
+        renameCoupons={renameCoupons}
+        showPetNames={showPetNames}
         onOpenInventory={() => showSection("inventory")}
         onOpenSong={() => showSection("song")}
         onOpenAchievements={() => showSection("achievements")}
@@ -451,6 +482,7 @@ export function DashboardScreen({
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
+        onPetRenamed={onPetRenamed}
         tutorialCurrent={tour.step?.target === "start" && !tour.covered}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
         onTutorialStart={tour.onStart}
@@ -508,7 +540,9 @@ export function DashboardScreen({
           friendCode={friendCode}
           friendInvite={friendInvite}
           allowStatusSeen={allowStatusSeen}
+          showPetNames={showPetNames}
           friendsError={friendsError}
+          onShowPetNamesChange={setShowPetNames}
           onClose={() => setDialog(null)}
         />
       ) : null}
@@ -568,6 +602,7 @@ export function DashboardScreen({
           ownedColorIds={ownedColors}
           ownedHatIds={ownedHats}
           ownedClothesIds={ownedClothes}
+          renameCoupons={renameCoupons}
           onClaimed={onRewardClaimed}
           onClose={() => {
             setPickerOpen(false);

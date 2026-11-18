@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { applyPetClothes, applyPetColor, applyPetHat, equipPetToDesktop } from "@/lib/actions/pets";
+import { useRef, useState, type FormEvent } from "react";
+import { applyPetClothes, applyPetColor, applyPetHat, equipPetToDesktop, renamePet } from "@/lib/actions/pets";
 import {
   collectionNoneCard,
   ownedPreviewRewards,
@@ -18,7 +18,8 @@ import {
   SAMPLE_COLORS,
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
-import { describePet, type PetCard } from "@/lib/pets";
+import { petDisplayName, type PetCard } from "@/lib/pets";
+import { RENAME_PET_NAME_MAX } from "@/lib/rename-coupon";
 import { experienceProgress } from "@/lib/study";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt, usePetting } from "./pixel-pet";
@@ -54,25 +55,29 @@ export function PetDetailDialog({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  renameCoupons = 0,
   sessionActive,
   onClose,
   onEquipped,
   onColorApplied,
   onHatApplied,
   onClothesApplied,
+  onPetRenamed,
 }: {
   pet: PetCard;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  renameCoupons?: number;
   sessionActive: boolean;
   onClose: () => void;
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
+  onPetRenamed?: (petId: string, name: string) => void;
 }) {
-  const copy = describePet(pet.pet_type);
+  const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
   const [pose, setPose] = useState<"idle" | "blush">("idle");
   const [pending, setPending] = useState(false);
@@ -81,6 +86,8 @@ export function PetDetailDialog({
   const [picker, setPicker] = useState<SlotPicker | null>(null);
   const [hearts, setHearts] = useState<{ id: number; drift: number }[]>([]);
   const heartIdRef = useRef(0);
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState(displayName);
 
   function spawnHeart() {
     const id = ++heartIdRef.current;
@@ -111,6 +118,29 @@ export function PetDetailDialog({
     }
     setEquipped(true);
     onEquipped?.(pet.id);
+  }
+
+  function startRename() {
+    if (pending || renameCoupons < 1) return;
+    setError(null);
+    setDraftName(displayName);
+    setRenaming(true);
+  }
+
+  async function onRename(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || renameCoupons < 1) return;
+    setPending(true);
+    setError(null);
+    const result = await renamePet(pet.id, draftName);
+    setPending(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    const nextName = result.name ?? draftName.trim();
+    onPetRenamed?.(pet.id, nextName);
+    setRenaming(false);
   }
 
   if (picker === "color") {
@@ -160,7 +190,7 @@ export function PetDetailDialog({
   }
 
   return (
-    <FarmDialog title={copy.name} onClose={onClose} wide>
+    <FarmDialog title={displayName} onClose={onClose} wide>
       <div className="pet-detail">
         <div>
           <div className="big-pet" onPointerMove={petting.onPointerMove} onPointerLeave={petting.onPointerLeave}>
@@ -202,7 +232,7 @@ export function PetDetailDialog({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress.intoLevel}
-            aria-label={`${copy.name} experience`}
+            aria-label={`${displayName} experience`}
           >
             <span className="xp-fill" style={{ width: `${progress.intoLevel}%` }} />
           </div>
@@ -255,17 +285,59 @@ export function PetDetailDialog({
               />
             </button>
           </div>
-          <div className="tracker-actions">
-            <button
-              type="button"
-              className="button"
-              disabled={pending || equipped || sessionActive}
-              title={sessionActive && !equipped ? EQUIP_DURING_SESSION_NOTE : undefined}
-              onClick={onEquip}
-            >
-              {equipped ? "Equipped" : sessionActive ? "Locked during session" : "Equip pet"}
-            </button>
-          </div>
+          <p className="panel-hint">
+            Rename coupons: {renameCoupons}
+          </p>
+          {renaming ? (
+            <form className="pet-rename-form" onSubmit={onRename}>
+              <label className="field">
+                <span>New name</span>
+                <input
+                  type="text"
+                  value={draftName}
+                  maxLength={RENAME_PET_NAME_MAX}
+                  autoFocus
+                  onChange={(event) => setDraftName(event.target.value)}
+                />
+              </label>
+              <div className="tracker-actions">
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    setRenaming(false);
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="button" disabled={pending || renameCoupons < 1}>
+                  Save name
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="tracker-actions">
+              <button
+                type="button"
+                className="button button-ghost"
+                disabled={pending || renameCoupons < 1}
+                onClick={startRename}
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                className="button"
+                disabled={pending || equipped || sessionActive}
+                title={sessionActive && !equipped ? EQUIP_DURING_SESSION_NOTE : undefined}
+                onClick={onEquip}
+              >
+                {equipped ? "Equipped" : sessionActive ? "Locked during session" : "Equip pet"}
+              </button>
+            </div>
+          )}
           {sessionActive ? <p className="panel-hint">{EQUIP_DURING_SESSION_NOTE}</p> : null}
           {error ? (
             <p className="form-error" role="alert">
@@ -308,7 +380,7 @@ function PetColorPicker({
 
   return (
     <FarmDialog title="Color" onClose={onClose} wide>
-      <p className="panel-hint">Choose a color for {describePet(pet.pet_type).name}.</p>
+      <p className="panel-hint">Choose a color for {petDisplayName(pet)}.</p>
       {error ? (
         <p className="form-error" role="alert">
           {error}
@@ -383,7 +455,7 @@ function PetAccessoryPicker({
   return (
     <FarmDialog title={title} onClose={onClose} wide>
       <p className="panel-hint">
-        Choose {kind === "hat" ? "a hat" : "clothes"} for {describePet(pet.pet_type).name}.
+        Choose {kind === "hat" ? "a hat" : "clothes"} for {petDisplayName(pet)}.
       </p>
       {error ? (
         <p className="form-error" role="alert">
