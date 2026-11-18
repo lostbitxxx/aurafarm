@@ -43,17 +43,17 @@ export function equippedPet(pets: readonly PetCard[]) {
 
 const PET_COPY: Record<string, { name: string; note: string; price?: number }> = {
   baby_slime: {
-    name: "Cat",
-    note: "A wobbly starter that sticks to the desktop.",
+    name: "Matcha",
+    note: "Your first desk companion.",
   },
   lantern_moth: {
-    name: "Bunny",
-    note: "A small light that follows the desk.",
+    name: "Taro",
+    note: "Soft hops beside the lamp.",
     price: SHOP_PRICE,
   },
   river_newt: {
-    name: "Bear",
-    note: "A quiet swimmer from the farm stream.",
+    name: "Coffee",
+    note: "Quiet paws from the farm path.",
     price: SHOP_PRICE,
   },
 };
