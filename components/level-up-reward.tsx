@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { claimCollectionReward } from "@/lib/actions/pets";
+import { applyPetClothes, applyPetColor, applyPetHat, claimCollectionReward } from "@/lib/actions/pets";
 import { previewReward, previewRewards, type PreviewReward } from "@/lib/collection-catalog";
-import { sampleAccessoryName, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
+import {
+  sampleAccessoryName,
+  sampleClothes,
+  sampleColor,
+  sampleHat,
+  SAMPLE_CLOTHES,
+  SAMPLE_COLORS,
+  SAMPLE_HATS,
+} from "@/lib/pet-assets";
 import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
 import {
   canShuffleReward,
@@ -131,8 +139,19 @@ export function LevelUpCelebration({
   );
 }
 
+type RewardKind = "color" | "hat" | "clothes";
+
+function rewardKindForItem(itemId: string): RewardKind | null {
+  if (sampleColor(itemId)) return "color";
+  const preview = previewReward(itemId);
+  if (preview?.kind === "hat" || sampleHat(itemId)) return "hat";
+  if (preview?.kind === "clothes" || sampleClothes(itemId)) return "clothes";
+  return null;
+}
+
 export function RewardPicker({
   rewardId,
+  petId,
   userId,
   choiceNumber,
   choiceTotal,
@@ -143,16 +162,18 @@ export function RewardPicker({
   onClose,
 }: {
   rewardId: string;
+  petId: string;
   userId: string;
   choiceNumber: number;
   choiceTotal: number;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
-  onClaimed: (itemId: string) => void;
+  onClaimed: (itemId: string, equip: boolean) => void;
   onClose: () => void;
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [applyNow, setApplyNow] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pools = useMemo<RewardPools>(
     () => ({
@@ -186,23 +207,45 @@ export function RewardPicker({
     : [];
   const shufflesLeft = offer ? REWARD_SHUFFLE_LIMIT - offer.shufflesUsed : REWARD_SHUFFLE_LIMIT;
   const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
+  const busy = pendingId !== null;
 
-  async function onChoose(itemId: string) {
-    if (pendingId) return;
+  function onChoose(itemId: string) {
+    if (busy) return;
+    void finishClaim(itemId, applyNow && Boolean(rewardKindForItem(itemId)));
+  }
+
+  async function finishClaim(itemId: string, equip: boolean) {
     setError(null);
     setPendingId(itemId);
-    const result = await claimCollectionReward(itemId);
-    setPendingId(null);
-    if (result.error) {
-      setError(result.error);
+    const claim = await claimCollectionReward(itemId);
+    if (claim.error) {
+      setPendingId(null);
+      setError(claim.error);
       return;
     }
     forgetRewardOffer(userId, rewardId);
-    onClaimed(itemId);
+    if (equip) {
+      const kind = rewardKindForItem(itemId);
+      const applied =
+        kind === "color"
+          ? await applyPetColor(petId, itemId)
+          : kind === "hat"
+            ? await applyPetHat(petId, itemId)
+            : kind === "clothes"
+              ? await applyPetClothes(petId, itemId)
+              : { error: "" };
+      if (applied.error) {
+        setPendingId(null);
+        setError(applied.error);
+        return;
+      }
+    }
+    setPendingId(null);
+    onClaimed(itemId, equip);
   }
 
   function onShuffle() {
-    if (!offer) return;
+    if (!offer || busy) return;
     const next = shuffleRewardOffer(offer, pools);
     if (!next) return;
     saveRewardOffer(userId, rewardId, pools, next);
@@ -211,7 +254,7 @@ export function RewardPicker({
   return (
     <FarmDialog title="Choose a reward" onClose={onClose} wide>
       <p className="panel-hint">
-        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit. The one you pick is worn by this pet.
+        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit.
       </p>
       {error ? (
         <p className="form-error" role="alert">
@@ -228,7 +271,7 @@ export function RewardPicker({
                 kind={card.kind}
                 itemId={card.id}
                 pending={pendingId === card.id}
-                disabled={pendingId !== null}
+                disabled={busy}
                 onChoose={onChoose}
               />
             </li>
@@ -237,11 +280,27 @@ export function RewardPicker({
       ) : (
         <p className="panel-hint">You already own every color, hat, and outfit.</p>
       )}
+      <div className="reward-apply-row">
+        <span className="reward-apply-label" id="reward-apply-label">
+          Apply now?
+        </span>
+        <button
+          type="button"
+          className="reward-apply-toggle"
+          role="switch"
+          aria-checked={applyNow}
+          aria-labelledby="reward-apply-label"
+          disabled={busy}
+          onClick={() => setApplyNow((current) => !current)}
+        >
+          <span className="reward-apply-knob" aria-hidden="true" />
+        </button>
+      </div>
       <div className="reward-shuffle">
         <button
           type="button"
           className="button button-small button-ghost"
-          disabled={!shuffleReady || pendingId !== null}
+          disabled={!shuffleReady || busy}
           onClick={onShuffle}
         >
           {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}

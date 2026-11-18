@@ -220,7 +220,9 @@ export function DashboardScreen({
 
   if (rewardSignature !== rewardSnap) {
     setRewardSnap(rewardSignature);
-    setRewards(pendingRewards);
+    // Claiming revalidates the dashboard and drops the banked reward from props.
+    // Keep local rewards while the picker is open so the dialog is not unmounted mid-choice.
+    if (!pickerOpen) setRewards(pendingRewards);
   }
 
   if (songSignature !== songSnap) {
@@ -349,7 +351,7 @@ export function DashboardScreen({
     });
   }, []);
 
-  function onRewardClaimed(itemId: string) {
+  function onRewardClaimed(itemId: string, equip: boolean) {
     const petId = rewards[0]?.petId;
     const color = sampleColor(itemId);
     const preview = previewReward(itemId);
@@ -358,7 +360,7 @@ export function DashboardScreen({
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
-    if (petId) {
+    if (equip && petId) {
       setLocalPets((current) =>
         current.map((pet) => {
           if (pet.id !== petId) return pet;
@@ -559,6 +561,7 @@ export function DashboardScreen({
         <RewardPicker
           key={rewards[0].id}
           rewardId={rewards[0].id}
+          petId={rewards[0].petId}
           userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}
@@ -566,7 +569,10 @@ export function DashboardScreen({
           ownedHatIds={ownedHats}
           ownedClothesIds={ownedClothes}
           onClaimed={onRewardClaimed}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => {
+            setPickerOpen(false);
+            setRewards(pendingRewards);
+          }}
         />
       ) : null}
       {tour.step && tour.stepIndex !== null ? (

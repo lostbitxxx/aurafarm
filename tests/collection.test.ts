@@ -320,19 +320,24 @@ test("unused sample hats and clothes are removed from the catalog", () => {
   assert.match(clothesCheck, /'little-gentleman-suit'/);
 });
 
-test("choosing a level reward wears it on the pet that earned the level", () => {
-  const sql = readFileSync(
+test("choosing a level reward asks before equipping on the pet", () => {
+  const claimApply = readFileSync(
     new URL("../supabase/migrations/0035_claim_applies_reward.sql", import.meta.url),
     "utf8",
   );
-  const claim = sql.slice(sql.indexOf("function public.claim_collection_reward"));
+  const claimOnly = readFileSync(
+    new URL("../supabase/migrations/0046_claim_without_apply.sql", import.meta.url),
+    "utf8",
+  );
+  const claim = claimOnly.slice(claimOnly.indexOf("function public.claim_collection_reward"));
   const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   const claimed = screen.slice(screen.indexOf("function onRewardClaimed"), screen.indexOf("const celebrationPet"));
   const picker = readFileSync(new URL("../components/level-up-reward.tsx", import.meta.url), "utf8");
 
+  assert.match(claimApply, /set color = target_item/);
   assert.match(claim, /select kind into item_kind/);
   assert.match(claim, /from public\.collection_items/);
-  assert.match(claim, /select id, pet_id into reward_id, reward_pet_id/);
+  assert.match(claim, /select id into reward_id/);
   assert.match(claim, /Item not in the collection/);
   assert.match(claim, /Item already owned/);
   assert.match(claim, /No reward to claim/);
@@ -340,18 +345,31 @@ test("choosing a level reward wears it on the pet that earned the level", () => 
   assert.match(claim, /set item_id = target_item/);
   assert.match(claim, /for update/);
   assert.match(claim, /security definer/);
-  assert.match(claim, /item_kind = 'color'/);
-  assert.match(claim, /set color = target_item/);
-  assert.match(claim, /item_kind = 'hat'/);
-  assert.match(claim, /set hat = target_item/);
-  assert.match(claim, /item_kind = 'clothes'/);
-  assert.match(claim, /set clothes = target_item/);
-  assert.match(claim, /where id = reward_pet_id/);
-  assert.match(claim, /and user_id = auth\.uid\(\)/);
-  assert.match(claimed, /rewards\[0\]\?\.petId/);
-  assert.match(claimed, /setLocalPets/);
+  assert.doesNotMatch(claim, /set color = target_item/);
+  assert.doesNotMatch(claim, /set hat = target_item/);
+  assert.doesNotMatch(claim, /set clothes = target_item/);
+  assert.match(claimed, /function onRewardClaimed\(itemId: string, equip: boolean\)/);
+  assert.match(claimed, /if \(equip && petId\)/);
   assert.match(claimed, /return \{ \.\.\.pet, color \}/);
   assert.match(claimed, /return \{ \.\.\.pet, hat \}/);
   assert.match(claimed, /return \{ \.\.\.pet, clothes \}/);
-  assert.match(picker, /worn by this pet/);
+  assert.match(picker, /Apply now\?/);
+  assert.match(picker, /useState\(true\)/);
+  assert.match(picker, /role="switch"/);
+  assert.match(picker, /aria-checked=\{applyNow\}/);
+  assert.match(picker, /finishClaim\(itemId, applyNow/);
+  assert.match(picker, /applyPetColor/);
+  assert.match(picker, /applyPetHat/);
+  assert.match(picker, /applyPetClothes/);
+  assert.match(picker, /finishClaim/);
+  assert.doesNotMatch(picker, /setEquipPrompt/);
+  assert.doesNotMatch(picker, /Equip reward\?/);
+  assert.doesNotMatch(picker, /Not now/);
+  assert.doesNotMatch(picker, /worn by this pet/);
+  assert.match(screen, /petId=\{rewards\[0\]\.petId\}/);
+  // Claim revalidates pendingRewards; do not overwrite local rewards while the picker is open.
+  assert.match(
+    screen,
+    /if \(rewardSignature !== rewardSnap\) \{[\s\S]*if \(!pickerOpen\) setRewards\(pendingRewards\);/,
+  );
 });
