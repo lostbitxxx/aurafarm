@@ -11,6 +11,7 @@ import {
 import {
   colorForPetType,
   EQUIP_DURING_SESSION_NOTE,
+  sampleAccessoryIcon,
   sampleAccessoryName,
   SAMPLE_CLOTHES,
   SAMPLE_COLORS,
@@ -33,9 +34,18 @@ function colorDisplayName(colorId: string | null | undefined, petType: string) {
   return SAMPLE_COLORS.find((color) => color.id === fallback)?.name ?? fallback;
 }
 
+function resolvedColorId(colorId: string | null | undefined, petType: string) {
+  return colorId || colorForPetType(petType);
+}
+
 function accessoryDisplayName(kind: "hat" | "clothes", id: string | null | undefined) {
   if (!id) return COLLECTION_NONE.name;
   return previewReward(id)?.name ?? sampleAccessoryName(kind, id) ?? id;
+}
+
+function accessoryIconSrc(kind: "hat" | "clothes", id: string | null | undefined) {
+  if (!id) return COLLECTION_NONE.icon;
+  return previewReward(id)?.icon ?? sampleAccessoryIcon(kind, id) ?? COLLECTION_NONE.icon;
 }
 
 export function PetDetailDialog({
@@ -172,17 +182,49 @@ export function PetDetailDialog({
             {progress.intoLevel} / 100 XP
           </p>
           <div className="accessory-slots" aria-label="Accessories">
-            <button type="button" className="accessory-slot" onClick={() => setPicker("color")}>
+            <button
+              type="button"
+              className="accessory-slot"
+              aria-label={`Color: ${colorDisplayName(pet.color, pet.pet_type)}`}
+              onClick={() => setPicker("color")}
+            >
               Color
-              <b>{colorDisplayName(pet.color, pet.pet_type)}</b>
+              <PixelPetArt
+                petType={pet.pet_type}
+                color={resolvedColorId(pet.color, pet.pet_type)}
+                className="accessory-slot-art"
+                alt=""
+              />
             </button>
-            <button type="button" className="accessory-slot" onClick={() => setPicker("hat")}>
+            <button
+              type="button"
+              className="accessory-slot"
+              aria-label={`Hat: ${accessoryDisplayName("hat", pet.hat)}`}
+              onClick={() => setPicker("hat")}
+            >
               Hat
-              <b>{accessoryDisplayName("hat", pet.hat)}</b>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="accessory-slot-art"
+                src={accessoryIconSrc("hat", pet.hat)}
+                alt=""
+                draggable={false}
+              />
             </button>
-            <button type="button" className="accessory-slot" onClick={() => setPicker("clothes")}>
+            <button
+              type="button"
+              className="accessory-slot"
+              aria-label={`Clothes: ${accessoryDisplayName("clothes", pet.clothes)}`}
+              onClick={() => setPicker("clothes")}
+            >
               Clothes
-              <b>{accessoryDisplayName("clothes", pet.clothes)}</b>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="accessory-slot-art"
+                src={accessoryIconSrc("clothes", pet.clothes)}
+                alt=""
+                draggable={false}
+              />
             </button>
           </div>
           <div className="tracker-actions">
