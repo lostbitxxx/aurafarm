@@ -693,7 +693,8 @@ export function LivingRoom({
         </div>
         {headerAside}
       </div>
-      <div ref={roomRef} className={editing ? "living-room is-editing" : "living-room"}>
+      <div className="living-room-stage">
+        <div ref={roomRef} className={editing ? "living-room is-editing" : "living-room"}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="living-room-layer is-wall"
@@ -743,14 +744,13 @@ export function LivingRoom({
           ) : null,
         )}
         {/*
-          SVG hit layer shares the furniture viewBox + slice so click targets stay
-          glued to art when .living-room aspect ratio ≠ 2:1 (object-fit: cover).
+          SVG hit layer shares the furniture viewBox; room stays 2:1 so meet matches contain.
         */}
         {editing ? null : (
           <svg
             className="living-room-rack-hotspots"
             viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
-            preserveAspectRatio="xMidYMid slice"
+            preserveAspectRatio="xMidYMid meet"
             style={{ zIndex: rackZ, transform: rackShift }}
           >
             {ROOM_RACK_HOTSPOTS.map((spot) => {
@@ -786,7 +786,7 @@ export function LivingRoom({
           <svg
             className="living-room-wall-hotspots"
             viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
-            preserveAspectRatio="xMidYMid slice"
+            preserveAspectRatio="xMidYMid meet"
             style={{ zIndex: blackboardZ, transform: boardShift }}
           >
             {ROOM_WALL_HOTSPOTS.map((spot) => (
@@ -886,6 +886,7 @@ export function LivingRoom({
             </button>
           </div>
         ) : null}
+        </div>
       </div>
       {editing && decorOpen && draftDecor ? (
         <RoomDecorateDialog decor={draftDecor} onChange={setDraftDecor} onClose={() => setDecorOpen(false)} />

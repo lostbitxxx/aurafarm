@@ -7,31 +7,44 @@ import {
   equipRoomSkin,
   isRoomItemPlaced,
   roomSkinSrc,
-  seatGroupPlaced,
-  setRoomItemPlaced,
-  setSeatGroupPlaced,
   skinOwned,
   type DecorOption,
   type RoomDecor,
   type RoomDecorCategoryId,
 } from "@/lib/room-decor";
 
-function previewStyle(crop: { x: number; y: number; width: number; height: number }) {
-  const width = (600 / Math.max(crop.width, crop.height)) * 100;
-  const height = width * 0.5;
-  const left = 50 - ((crop.x + crop.width / 2) / 600) * width;
-  const top = 50 - ((crop.y + crop.height / 2) / 300) * height;
-  return { width: `${width}%`, height: `${height}%`, left: `${left}%`, top: `${top}%` };
+function previewStyle(
+  crop: { x: number; y: number; width: number; height: number },
+  /** Expand the viewed region so tall pieces (lamp, shelf) fit with margin. */
+  pad = 0,
+) {
+  const viewW = crop.width * (1 + pad * 2);
+  const viewH = crop.height * (1 + pad * 2);
+  const cx = (crop.x + crop.width / 2) / 600;
+  const cy = (crop.y + crop.height / 2) / 300;
+  // Size by width; height:auto keeps the 2:1 sheet. Center the crop with
+  // translate so a non-square frame does not shift the piece up/down.
+  const width = (600 / Math.max(viewW, viewH)) * 100;
+  return {
+    width: `${width}%`,
+    height: "auto",
+    left: "50%",
+    top: "50%",
+    transform: `translate(${(0.5 - cx) * 100 - 50}%, ${(0.5 - cy) * 100 - 50}%)`,
+  };
 }
 
 function DecorArt({
   src,
   crop,
   alt,
+  roomy = false,
 }: {
   src: string;
   crop: { x: number; y: number; width: number; height: number } | null;
   alt: string;
+  /** Detail preview: leave space around the piece without changing the frame box. */
+  roomy?: boolean;
 }) {
   if (!crop) {
     return <img className="decor-art-fit" src={src} alt={alt} draggable={false} />;
@@ -39,7 +52,7 @@ function DecorArt({
   return (
     <span className="decor-art-crop">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} draggable={false} style={previewStyle(crop)} />
+      <img src={src} alt={alt} draggable={false} style={previewStyle(crop, roomy ? 0.35 : 0)} />
     </span>
   );
 }
@@ -54,18 +67,12 @@ export function RoomDecorateDialog({
   onClose: () => void;
 }) {
   const [categoryId, setCategoryId] = useState<RoomDecorCategoryId>("floor");
-  const [query, setQuery] = useState("");
   const [detailId, setDetailId] = useState("floor:base");
   const categories = ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false);
   const category = categories.find((item) => item.id === categoryId) ?? categories[0];
   const options = useMemo(() => decorOptions(category.id), [category.id]);
-  const skins = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return options;
-    return options.filter((skin) => skin.name.toLowerCase().includes(needle));
-  }, [options, query]);
-  const detail = options.find((skin) => skin.key === detailId) ?? skins[0] ?? options[0];
-  const strips = category.id === "floor" || category.id === "trim" || category.id === "wall";
+  const detail = options.find((skin) => skin.key === detailId) ?? options[0];
+  const strips = category.id === "floor" || category.id === "wall";
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -89,13 +96,12 @@ export function RoomDecorateDialog({
   }
 
   function chooseSkin(skin: DecorOption) {
-    setDetailId(skin.key);
-    if (!skinOwned(skin.skinId)) return;
-    const seat = skin.categoryId === "armchair" || skin.categoryId === "loveseat" || skin.categoryId === "sofa";
-    if (seat && optionPlaced(skin)) {
-      onChange(setRoomItemPlaced(decor, skin.categoryId, false));
+    // First click previews; second click on the same owned skin equips.
+    if (skin.key !== detailId) {
+      setDetailId(skin.key);
       return;
     }
+    if (!skinOwned(skin.skinId)) return;
     onChange(equipRoomSkin(decor, skin.categoryId, skin.skinId));
   }
 
@@ -116,70 +122,47 @@ export function RoomDecorateDialog({
         </header>
         <div className="decor-body">
           <div className="decor-cats" role="tablist" aria-label="Decoration types">
-            {categories.map((item) => {
-              const itemPlaced = item.id === "sofa" ? seatGroupPlaced(decor) : isRoomItemPlaced(decor, item.id);
-              return (
-                <div key={item.id} className={item.id === category.id ? "decor-cat is-selected" : "decor-cat"}>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={item.id === category.id}
-                    className="decor-cat-main"
-                    onClick={() => chooseCategory(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                  {item.optional ? (
-                    <button
-                      type="button"
-                      className="decor-cat-toggle"
-                      aria-label={itemPlaced ? `Remove ${item.label}` : `Add ${item.label}`}
-                      onClick={() =>
-                        onChange(
-                          item.id === "sofa"
-                            ? setSeatGroupPlaced(decor, !itemPlaced)
-                            : setRoomItemPlaced(decor, item.id, !itemPlaced),
-                        )
-                      }
-                    >
-                      {itemPlaced ? "−" : "+"}
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
+            {categories.map((item) => (
+              <div key={item.id} className={item.id === category.id ? "decor-cat is-selected" : "decor-cat"}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={item.id === category.id}
+                  className="decor-cat-main"
+                  onClick={() => chooseCategory(item.id)}
+                >
+                  {item.label}
+                </button>
+              </div>
+            ))}
           </div>
           <div className="decor-grid-col">
-            <label className="decor-search">
-              <span className="sr-only">Search decorations</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search..."
-                type="search"
-              />
-            </label>
             <div className={strips ? "decor-grid is-strips" : "decor-grid"}>
-              {skins.length === 0 ? <p className="decor-empty">No decorations match.</p> : null}
-              {skins.map((skin) => {
+              {options.length === 0 ? <p className="decor-empty">No decorations yet.</p> : null}
+              {options.map((skin) => {
                 const owned = skinOwned(skin.skinId);
                 const equipped = optionPlaced(skin);
+                const selected = skin.key === detail?.key;
                 return (
                   <button
                     key={skin.key}
                     type="button"
                     className={
                       strips
-                        ? `decor-tile is-strip is-${category.id}${equipped ? " is-equipped" : ""}`
-                        : equipped
-                          ? "decor-tile is-equipped"
-                          : "decor-tile"
+                        ? `decor-tile is-strip is-${category.id}${equipped ? " is-equipped" : ""}${selected ? " is-selected" : ""}`
+                        : `${equipped ? "decor-tile is-equipped" : "decor-tile"}${selected ? " is-selected" : ""}`
                     }
                     aria-pressed={equipped}
+                    aria-current={selected ? "true" : undefined}
                     onClick={() => chooseSkin(skin)}
                   >
                     {owned ? (
-                      <DecorArt src={roomSkinSrc(skin.categoryId, skin.skinId)} crop={skin.crop} alt="" />
+                      <DecorArt
+                        src={roomSkinSrc(skin.categoryId, skin.skinId)}
+                        crop={skin.crop}
+                        alt=""
+                        roomy
+                      />
                     ) : (
                       <span className="decor-locked" aria-hidden="true">
                         ?
@@ -195,7 +178,12 @@ export function RoomDecorateDialog({
             <aside className="decor-detail">
               <div className={strips ? `decor-detail-frame is-strip is-${category.id}` : "decor-detail-frame"}>
                 {skinOwned(detail.skinId) ? (
-                  <DecorArt src={roomSkinSrc(detail.categoryId, detail.skinId)} crop={detail.crop} alt="" />
+                  <DecorArt
+                    src={roomSkinSrc(detail.categoryId, detail.skinId)}
+                    crop={detail.crop}
+                    alt=""
+                    roomy
+                  />
                 ) : (
                   <span className="decor-locked" aria-hidden="true">
                     ?

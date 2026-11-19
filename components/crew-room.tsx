@@ -123,19 +123,21 @@ function CrewFarmer({ occupant, spot }: { occupant: CrewOccupant; spot: WanderSp
 
 export function CrewRoom({ occupants }: { occupants: readonly CrewOccupant[] }) {
   return (
-    <div className="living-room">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="living-room-art" src={ROOM_ASSET_PATH} alt="" draggable={false} />
-      <div className="living-room-pets">
-        {occupants.map((occupant, index) => (
-          <CrewFarmer key={occupant.farmerId} occupant={occupant} spot={spotForIndex(index)} />
-        ))}
-      </div>
-      {occupants.length === 0 ? (
-        <div className="room-empty">
-          <p>Nobody is in the crew room right now.</p>
+    <div className="living-room-stage">
+      <div className="living-room">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="living-room-art" src={ROOM_ASSET_PATH} alt="" draggable={false} />
+        <div className="living-room-pets">
+          {occupants.map((occupant, index) => (
+            <CrewFarmer key={occupant.farmerId} occupant={occupant} spot={spotForIndex(index)} />
+          ))}
         </div>
-      ) : null}
+        {occupants.length === 0 ? (
+          <div className="room-empty">
+            <p>Nobody is in the crew room right now.</p>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

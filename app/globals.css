@@ -1409,10 +1409,23 @@ a.tracker-download { color: #6d7a62; }
   font-size: 1.05rem;
 }
 
-.crew-desk .living-room {
+.crew-desk .living-room-stage {
   flex: 1;
-  height: auto;
   min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.crew-desk .living-room {
+  flex: none;
+  width: min(100%, calc(100cqh * 2 / 1));
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 2 / 1;
 }
 
 .dashboard-desk {
@@ -1441,10 +1454,23 @@ a.tracker-download { color: #6d7a62; }
   flex-direction: column;
 }
 
-.dashboard-desk .living-room {
+.dashboard-desk .living-room-stage {
   flex: 1;
-  height: auto;
   min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.dashboard-desk .living-room {
+  flex: none;
+  width: min(100%, calc(100cqh * 2 / 1));
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 2 / 1;
 }
 
 .crew-room-head {
@@ -2856,12 +2882,17 @@ button.dialog-row {
   font-size: 0.9rem;
 }
 
+.living-room-stage {
+  width: 100%;
+  min-width: 0;
+}
+
 .living-room {
   position: relative;
   /* Keep furniture/pet depth z-indexes inside the room so dialogs (z~30) stay on top. */
   z-index: 0;
   isolation: isolate;
-  width: auto;
+  width: 100%;
   height: auto;
   aspect-ratio: 2 / 1;
   /* Size container so the capsule flame can track this box with cqh. */
@@ -2879,7 +2910,7 @@ button.dialog-row {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   image-rendering: pixelated;
   pointer-events: none;
 }
@@ -3313,10 +3344,19 @@ button.dialog-row {
 
 .room-pet-wrap {
   position: absolute;
-  width: 86px;
+  /*
+    Drawn for a ~466px-tall room (same reference as .room-cylinder).
+    Scale with living-room cqh so pets shrink with the 2:1 stage.
+  */
+  width: calc(100cqh * 86 / 466);
   transform: translate(-50%, -50%);
   /* Inline z-index from foot depth; fallback keeps pets above the base room. */
   z-index: 2;
+}
+
+.room-pet-wrap .pixel-pet-art {
+  width: calc(100cqh * 70 / 466);
+  height: calc(100cqh * 70 / 466);
 }
 
 .room-pet-wrap.is-dragging {
@@ -3384,12 +3424,13 @@ button.dialog-row {
   flex-direction: column;
   align-items: center;
   gap: 0.08rem;
-  font: 10px ui-monospace, monospace;
+  font-family: ui-monospace, monospace;
+  font-size: calc(100cqh * 10 / 466);
   line-height: 1.15;
   text-align: center;
   background: #fff9ed;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.4rem;
+  padding: 0.2em 0.4em;
+  border-radius: 0.4em;
 }
 
 .room-pet-label-line {
@@ -3403,9 +3444,9 @@ button.dialog-row {
 .room-equipped {
   background: #c5ef47;
   color: #23392d;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15em 0.4em;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: calc(100cqh * 10.4 / 466);
   font-weight: 700;
 }
 
@@ -3448,8 +3489,8 @@ button.dialog-row {
 
 .room-heart img {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: calc(100cqh * 16 / 466);
+  height: calc(100cqh * 16 / 466);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -3460,7 +3501,7 @@ button.dialog-row {
 }
 
 @keyframes room-heart {
-  to { transform: translateY(-28px); opacity: 0; }
+  to { transform: translateY(calc(100cqh * -28 / 466)); opacity: 0; }
 }
 
 .pixel-pet-art {
@@ -5002,9 +5043,10 @@ button.dialog-row {
   .room-top { flex-direction: column; align-items: flex-start; }
   .room-top .below-room { text-align: left; justify-content: flex-start; }
   .room-top .desk-session { flex-direction: row; align-items: center; }
-  .living-room { height: 420px; }
-  .dashboard-desk .living-room,
-  .crew-desk .living-room { height: auto; }
+  .living-room {
+    height: auto;
+    aspect-ratio: 2 / 1;
+  }
   .pet-detail { grid-template-columns: 1fr; }
   .pet-detail-stage { min-height: 0; }
   .big-pet { min-height: 140px; }
@@ -5331,7 +5373,9 @@ button.dialog-row {
 
 .decor-card {
   width: min(58rem, 100%);
-  max-height: min(86vh, 40rem);
+  /* Height comes from the body rail (4 Floor strips); only clamp to the viewport. */
+  max-height: 86vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   padding: 1rem 1.1rem 1.15rem;
@@ -5343,6 +5387,7 @@ button.dialog-row {
 }
 
 .decor-card-head {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5371,11 +5416,24 @@ button.dialog-row {
 }
 
 .decor-body {
+  /* Fixed rail: exactly 4 Floor/Wall strips (middle width ÷ 5 each + gaps). */
+  container-type: inline-size;
+  --decor-cat-w: 5.75rem;
+  --decor-detail-w: 15rem;
+  --decor-grid-gap: 0.65rem;
+  --decor-body-gap: 0.9rem;
+  --decor-mid-w: calc(100cqi - var(--decor-cat-w) - var(--decor-detail-w) - 2 * var(--decor-body-gap));
+  --decor-rail-h: min(
+    calc(4 * (var(--decor-mid-w) / 5) + 3 * var(--decor-grid-gap)),
+    calc(86vh - 6rem)
+  );
   min-height: 0;
-  flex: 1;
+  flex: none;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr) 15rem;
-  gap: 0.9rem;
+  grid-template-columns: var(--decor-cat-w) minmax(0, 1fr) var(--decor-detail-w);
+  gap: var(--decor-body-gap);
+  align-items: start;
 }
 
 .decor-cats {
@@ -5389,6 +5447,8 @@ button.dialog-row {
 .decor-cat {
   display: flex;
   align-items: stretch;
+  flex: none;
+  width: var(--decor-cat-w);
   min-height: 2.35rem;
   border: 2px solid #23392d;
   border-radius: 3px;
@@ -5405,45 +5465,28 @@ button.dialog-row {
   border: 0;
   background: transparent;
   color: inherit;
-  text-align: left;
-  padding: 0.35rem 0.45rem;
+  text-align: center;
+  padding: 0.35rem 0.35rem;
   cursor: pointer;
   font-weight: 650;
 }
 
-.decor-cat-toggle {
-  width: 1.7rem;
-  border: 0;
-  border-left: 1.5px solid #23392d;
-  background: transparent;
-  color: inherit;
-  font-size: 1.15rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
 .decor-grid-col {
   min-width: 0;
+  height: var(--decor-rail-h);
+  max-height: var(--decor-rail-h);
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-}
-
-.decor-search input {
-  width: 100%;
-  border: 2px solid #23392d;
-  border-radius: 3px;
-  background: #fff;
-  color: #23392d;
-  padding: 0.45rem 0.6rem;
+  overflow: hidden;
 }
 
 .decor-grid {
+  flex: 1;
   min-height: 0;
   overflow: auto;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: var(--decor-grid-gap);
   align-content: start;
 }
 
@@ -5472,14 +5515,15 @@ button.dialog-row {
   object-fit: cover;
 }
 
+/* 5:1 strip shows ~40% of the 2:1 sheet — pin to the wall / floor band. */
 .decor-tile.is-floor .decor-art-fit,
 .decor-detail-frame.is-floor .decor-art-fit {
-  object-position: center 70%;
+  object-position: center bottom;
 }
 
 .decor-tile.is-wall .decor-art-fit,
 .decor-detail-frame.is-wall .decor-art-fit {
-  object-position: center 20%;
+  object-position: center top;
 }
 
 .decor-tile.is-trim .decor-art-fit,
@@ -5492,9 +5536,14 @@ button.dialog-row {
   cursor: pointer;
 }
 
-.decor-tile.is-equipped {
+.decor-tile.is-selected {
   border-color: #c2342a;
   box-shadow: inset 0 0 0 1px #c2342a;
+}
+
+.decor-tile.is-equipped {
+  border-color: #5aa818;
+  box-shadow: inset 0 0 0 1px #5aa818;
 }
 
 .decor-art-fit,
@@ -5530,12 +5579,53 @@ button.dialog-row {
 }
 
 .decor-detail {
+  container-type: size;
   min-width: 0;
-  overflow: auto;
+  height: var(--decor-rail-h);
+  max-height: var(--decor-rail-h);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .decor-detail-frame {
-  margin-bottom: 0.7rem;
+  /* Stay square even when the rail is short — shrink both sides, never squash. */
+  flex: none;
+  margin: 0 auto 0.55rem;
+  width: min(100%, 11rem, 48cqh);
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.decor-detail-frame.is-floor,
+.decor-detail-frame.is-wall {
+  /* Floor / wall: span the detail column horizontally (5:1 strip). */
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  aspect-ratio: 5 / 1;
+}
+
+/* Same inset on thumbs and detail so lamp/shelf/etc. match left ↔ right. */
+.decor-tile:not(.is-strip) .decor-art-crop,
+.decor-detail-frame:not(.is-strip) .decor-art-crop {
+  inset: 8%;
+}
+
+.decor-tile:not(.is-strip) > .decor-art-fit,
+.decor-detail-frame:not(.is-strip) > .decor-art-fit {
+  width: 84%;
+  height: 84%;
+  margin: 8%;
+  object-fit: contain;
+}
+
+.decor-tile:not(.is-strip) > .decor-locked,
+.decor-detail-frame:not(.is-strip) > .decor-locked {
+  width: 84%;
+  height: 84%;
+  margin: 8%;
 }
 
 .decor-detail h3 {
@@ -5560,8 +5650,10 @@ button.dialog-row {
 
 .decor-dots {
   display: flex;
+  justify-content: center;
   gap: 0.35rem;
-  margin-top: 0.8rem;
+  margin-top: auto;
+  padding-top: 0.8rem;
 }
 
 .decor-dots i {
@@ -5576,25 +5668,44 @@ button.dialog-row {
 }
 
 @media (max-width: 860px) {
+  /* Tall/narrow: cats on top; content row still fixed to 4 Floor strips. */
   .decor-body {
-    grid-template-columns: 1fr;
-    overflow: auto;
+    --decor-mid-w: calc(100cqi - var(--decor-detail-w) - var(--decor-body-gap));
+    --decor-rail-h: min(
+      calc(4 * (var(--decor-mid-w) / 5) + 3 * var(--decor-grid-gap)),
+      calc(86vh - 10rem)
+    );
+    grid-template-columns: minmax(0, 1fr) var(--decor-detail-w);
+    grid-template-rows: auto var(--decor-rail-h);
   }
 
   .decor-cats {
+    grid-column: 1 / -1;
+    grid-row: 1;
     flex-direction: row;
     flex-wrap: wrap;
+    overflow: visible;
+    max-height: none;
+    padding-right: 0;
   }
 
   .decor-cat {
-    flex: 1 1 7rem;
+    flex: none;
+    width: var(--decor-cat-w);
   }
 
+  .decor-grid-col {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .decor-detail {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* Slightly fewer columns so tiles stay readable in the narrower middle pane. */
   .decor-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .decor-grid.is-strips {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

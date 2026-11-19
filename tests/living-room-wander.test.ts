@@ -343,7 +343,7 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /ROOM_FURNITURE/);
   assert.match(source, /ROOM_RACK_HOTSPOTS/);
   assert.match(source, /room-rack-hotspot/);
-  assert.match(source, /preserveAspectRatio="xMidYMid slice"/);
+  assert.match(source, /preserveAspectRatio="xMidYMid meet"/);
   assert.match(source, /spot\.bounds\.x/);
   assert.match(source, /onOpenSong/);
   assert.match(source, /onOpenAchievements/);
