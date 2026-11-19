@@ -462,74 +462,81 @@ export function StudyPanel({
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}
-        />
-        <div className="below-room">
-          <div className="session-copy">
-            <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
-              <p className="pet-name">
-                {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
-              </p>
-              {shownSession && !checkingSession ? (
-                <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
-                  End session early
+          headerAction={
+            shownSession ? null : (
+              <div className="room-head-action">
+                <button
+                  type="button"
+                  className="button button-start"
+                  data-tutorial="start"
+                  data-tutorial-current={tutorialCurrent ? "true" : undefined}
+                  disabled={pending}
+                  onClick={() => {
+                    onTutorialStart?.();
+                    onAskTracker();
+                  }}
+                >
+                  Start studying →
                 </button>
+              </div>
+            )
+          }
+        />
+        {shownSession || checkingSession || error ? (
+          <div className="below-room">
+            <div className="session-copy">
+              {shownSession || checkingSession ? (
+                <>
+                  <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
+                    <p className="pet-name">
+                      {checkingSession ? "Checking this session" : "Studying with you"}
+                    </p>
+                    {shownSession && !checkingSession ? (
+                      <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
+                        End session early
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="growth-label">
+                    {checkingSession
+                      ? "Fetching the desk."
+                      : shownSession?.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."}
+                  </p>
+                  {checkingSession ? (
+                    <SessionRefreshStatus />
+                  ) : shownSession?.useDesktopPet ? (
+                    <div className="study-active">
+                      <p>
+                        Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                      </p>
+                      <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+                    </div>
+                  ) : shownSession ? (
+                    <StudyClock
+                      session={shownSession}
+                      rushed={rushed}
+                      onFinished={() => finishSession("")}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
               ) : null}
             </div>
-            <p className="growth-label">
-              {checkingSession
-                ? "Fetching the desk."
-                : shownSession
-                  ? shownSession.useDesktopPet
-                    ? "Desktop pet is tracking this session."
-                    : "Website timer is tracking this session."
-                  : "Pick a length and a tracker, then Farm Aura."}
-            </p>
-            {checkingSession ? (
-              <SessionRefreshStatus />
-            ) : shownSession?.useDesktopPet ? (
-              <div className="study-active">
-                <p>
-                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-                </p>
-                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+            {shownSession?.useDesktopPet && launchUrl ? (
+              <div className="scene-actions is-start">
+                <a className="button button-start" href={launchUrl}>
+                  Open Aurafarm
+                </a>
               </div>
-            ) : shownSession ? (
-              <StudyClock
-                session={shownSession}
-                rushed={rushed}
-                onFinished={() => finishSession("")}
-              />
-            ) : null}
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
             ) : null}
           </div>
-          {shownSession?.useDesktopPet && launchUrl ? (
-            <div className="scene-actions is-start">
-              <a className="button button-start" href={launchUrl}>
-                Open Aurafarm
-              </a>
-            </div>
-          ) : shownSession ? null : (
-            <div className="scene-actions is-start">
-              <button
-                type="button"
-                className="button button-start"
-                data-tutorial="start"
-                data-tutorial-current={tutorialCurrent ? "true" : undefined}
-                disabled={pending}
-                onClick={() => {
-                  onTutorialStart?.();
-                  onAskTracker();
-                }}
-              >
-                Start studying →
-              </button>
-            </div>
-          )}
-        </div>
+        ) : null}
       </section>
       {startOpen ? (
         <div className="tracker-pop" role="presentation" onClick={onCloseStart}>
