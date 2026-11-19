@@ -5427,7 +5427,7 @@ button.dialog-row {
   min-height: 0;
   overflow: auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.65rem;
   align-content: start;
 }
@@ -5543,5 +5543,9 @@ button.dialog-row {
 
   .decor-cat {
     flex: 1 1 7rem;
+  }
+
+  .decor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
