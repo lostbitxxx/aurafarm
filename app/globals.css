@@ -5232,6 +5232,10 @@ button.dialog-row {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+  /* The room-wide scale is for a capsule pinned to the corner. In the dock it
+     paints past the layout box and covers the edit button. */
+  transform: none;
+  z-index: 1;
 }
 
 .room-side-dock .room-cylinder-tube {
@@ -5257,6 +5261,9 @@ button.dialog-row {
 }
 
 .room-tool-button.is-bottom {
+  position: relative;
+  z-index: 2;
+  flex: none;
   margin-top: auto;
 }
 
@@ -5420,7 +5427,7 @@ button.dialog-row {
   min-height: 0;
   overflow: auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.65rem;
   align-content: start;
 }
@@ -5536,5 +5543,9 @@ button.dialog-row {
 
   .decor-cat {
     flex: 1 1 7rem;
+  }
+
+  .decor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
