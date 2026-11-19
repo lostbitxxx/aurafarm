@@ -33,6 +33,7 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
+import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
 import { StudyClock } from "./study-clock";
 import { LivingRoom } from "./living-room";
 import { PetDetailDialog } from "./pet-detail-dialog";
@@ -180,6 +181,8 @@ export function StudyPanel({
   }
   const [startOpen, setStartOpen] = useState(false);
   const [trackerChoice, setTrackerChoice] = useState(true);
+  const macDesktop = useSyncExternalStore(subscribeMacDesktop, macDesktopSnapshot, macDesktopServerSnapshot);
+  const useDesktopPet = macDesktop === true && trackerChoice;
   const [desktopLink, setDesktopLink] = useState("");
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -287,7 +290,7 @@ export function StudyPanel({
     if (pending || seconds === null || desktopLink) return;
     setPending(true);
     setError(null);
-    const result = await startStudySession(seconds, trackerChoice);
+    const result = await startStudySession(seconds, useDesktopPet);
     setPending(false);
     if (result.error) {
       setError(result.error);
@@ -299,8 +302,8 @@ export function StudyPanel({
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
     setLocalPlanned(seconds);
-    setLocalDesktop(trackerChoice);
-    if (trackerChoice) {
+    setLocalDesktop(useDesktopPet);
+    if (useDesktopPet) {
       setDesktopLink(buildPetLaunchUrl(result.launchCode));
       return;
     }
@@ -462,74 +465,71 @@ export function StudyPanel({
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}
-        />
-        <div className="below-room">
-          <div className="session-copy">
-            <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
-              <p className="pet-name">
-                {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
-              </p>
+          headerAside={
+            <div className="below-room desk-session">
+              <div className="session-copy">
+                <p className="pet-name">
+                  {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
+                </p>
+                <p className="growth-label">
+                  {checkingSession
+                    ? "Fetching the desk."
+                    : shownSession
+                      ? shownSession.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."
+                      : "Pick a length and a tracker, then Farm Aura."}
+                </p>
+                {checkingSession ? (
+                  <SessionRefreshStatus />
+                ) : shownSession?.useDesktopPet ? (
+                  <div className="study-active">
+                    <p>
+                      Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                    </p>
+                    <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+                  </div>
+                ) : null}
+                {error ? (
+                  <p className="form-error" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+              </div>
               {shownSession && !checkingSession ? (
                 <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
                   End session early
                 </button>
               ) : null}
+              {shownSession && !checkingSession && !shownSession.useDesktopPet ? (
+                <StudyClock session={shownSession} rushed={rushed} onFinished={() => finishSession("")} />
+              ) : null}
+              {shownSession?.useDesktopPet && launchUrl ? (
+                <div className="scene-actions is-start">
+                  <a className="button button-start" href={launchUrl}>
+                    Open Aurafarm
+                  </a>
+                </div>
+              ) : shownSession ? null : (
+                <div className="scene-actions is-start">
+                  <button
+                    type="button"
+                    className="button button-start"
+                    data-tutorial="start"
+                    data-tutorial-current={tutorialCurrent ? "true" : undefined}
+                    disabled={pending}
+                    onClick={() => {
+                      onTutorialStart?.();
+                      onAskTracker();
+                    }}
+                  >
+                    Start studying →
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="growth-label">
-              {checkingSession
-                ? "Fetching the desk."
-                : shownSession
-                  ? shownSession.useDesktopPet
-                    ? "Desktop pet is tracking this session."
-                    : "Website timer is tracking this session."
-                  : "Pick a length and a tracker, then Farm Aura."}
-            </p>
-            {checkingSession ? (
-              <SessionRefreshStatus />
-            ) : shownSession?.useDesktopPet ? (
-              <div className="study-active">
-                <p>
-                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-                </p>
-                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
-              </div>
-            ) : shownSession ? (
-              <StudyClock
-                session={shownSession}
-                rushed={rushed}
-                onFinished={() => finishSession("")}
-              />
-            ) : null}
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
-          {shownSession?.useDesktopPet && launchUrl ? (
-            <div className="scene-actions is-start">
-              <a className="button button-start" href={launchUrl}>
-                Open Aurafarm
-              </a>
-            </div>
-          ) : shownSession ? null : (
-            <div className="scene-actions is-start">
-              <button
-                type="button"
-                className="button button-start"
-                data-tutorial="start"
-                data-tutorial-current={tutorialCurrent ? "true" : undefined}
-                disabled={pending}
-                onClick={() => {
-                  onTutorialStart?.();
-                  onAskTracker();
-                }}
-              >
-                Start studying →
-              </button>
-            </div>
-          )}
-        </div>
+          }
+        />
       </section>
       {startOpen ? (
         <div className="tracker-pop" role="presentation" onClick={onCloseStart}>
@@ -608,15 +608,32 @@ export function StudyPanel({
               </p>
             )}
             <div className="tracker-cards" role="group" aria-label="Session tracker">
-              <div className={trackerChoice ? "tracker-option is-selected" : "tracker-option"}>
+              <div className={useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
                 <button
                   type="button"
                   className="tracker-option-pick"
-                  aria-pressed={trackerChoice}
-                  disabled={pending || Boolean(desktopLink)}
-                  onClick={() => setTrackerChoice(true)}
+                  aria-pressed={useDesktopPet}
+                  disabled={pending || Boolean(desktopLink) || macDesktop !== true}
+                  onClick={() => {
+                    if (macDesktop === true) setTrackerChoice(true);
+                  }}
                 >
                   <span className="tracker-option-name">Desktop pet</span>
+                  <span
+                    className={
+                      macDesktop === true
+                        ? "tracker-choice-note tracker-mac-note"
+                        : macDesktop === false
+                          ? "tracker-choice-note tracker-unsupported-note"
+                          : "tracker-choice-note"
+                    }
+                  >
+                    {macDesktop === true
+                      ? "※ Recommended ※"
+                      : macDesktop === false
+                        ? "Not supported in this device"
+                        : "\u00a0"}
+                  </span>
                   <TrackerDemo kind="desktop" />
                   <span className="tracker-option-copy">
                     The pet stays in the corner, closes a distracting tab, and brings you back for the reward.
@@ -626,19 +643,20 @@ export function StudyPanel({
                   <a className="tracker-download" href={downloadUrl}>
                     First time aurafarming? Download here!
                   </a>
-                ) : (
-                  <p className="tracker-download">First time aurafarming? The Mac pet is not published yet.</p>
-                )}
+                ) : null}
               </div>
-              <div className={!trackerChoice ? "tracker-option is-selected" : "tracker-option"}>
+              <div className={!useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
                 <button
                   type="button"
                   className="tracker-option-pick"
-                  aria-pressed={!trackerChoice}
+                  aria-pressed={!useDesktopPet}
                   disabled={pending || Boolean(desktopLink)}
                   onClick={() => setTrackerChoice(false)}
                 >
                   <span className="tracker-option-name">Website timer</span>
+                  <span className="tracker-choice-note" aria-hidden="true">
+                    {"\u00a0"}
+                  </span>
                   <TrackerDemo kind="website" />
                   <span className="tracker-option-copy">
                     The countdown stays beside your PDF, then the site comes back with the reward.

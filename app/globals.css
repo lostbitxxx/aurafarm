@@ -707,7 +707,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   cursor: pointer;
 }
 
-.tracker-option-pick:disabled { cursor: not-allowed; opacity: 0.7; }
+.tracker-option-pick:disabled { cursor: not-allowed; opacity: 1; }
 
 .tracker-option-name {
   border: 1px solid #c5cbb9;
@@ -715,6 +715,31 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   background: #f3efe2;
   padding: 0.38rem 0.95rem;
   font-weight: 700;
+}
+
+.tracker-choice-note {
+  display: block;
+  margin-top: -0.28rem;
+  min-height: 1.2em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.tracker-mac-note {
+  color: #c2342a;
+  font-weight: 700;
+}
+
+.tracker-unsupported-note {
+  color: #8a9184;
+}
+
+.tracker-option-pick:disabled .tracker-option-name,
+.tracker-option-pick:disabled .tracker-demo,
+.tracker-option-pick:disabled .tracker-option-copy {
+  opacity: 0.7;
 }
 
 .tracker-option.is-selected .tracker-option-name {
@@ -1385,6 +1410,38 @@ a.tracker-download { color: #6d7a62; }
 }
 
 .crew-desk .living-room {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.dashboard-desk {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.dashboard-desk .topbar { flex: none; }
+
+.dashboard-desk .desk {
+  min-height: 0;
+}
+
+.dashboard-desk .scene {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-desk .living-room-block {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-desk .living-room {
   flex: 1;
   height: auto;
   min-height: 0;
@@ -2739,6 +2796,52 @@ button.dialog-row {
 
 .room-head {
   margin-bottom: 0.75rem;
+}
+
+.room-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.room-top .room-head {
+  margin-bottom: 0;
+  flex: none;
+  min-width: 0;
+}
+
+.room-top .desk-session {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.15rem;
+  margin-top: 0;
+  text-align: right;
+}
+
+.room-top .desk-session .session-copy {
+  flex: none;
+}
+
+.room-top .desk-session .growth-label {
+  margin-top: 0.2rem;
+}
+
+.room-top .desk-session .study-clock {
+  margin: 0;
+  font-size: clamp(2.8rem, 4.5vw, 3.5rem);
+}
+
+.room-top .desk-session .scene-actions.is-start {
+  align-self: center;
+}
+
+.room-top .desk-session .button-end-early {
+  flex: none;
+  margin-top: 0;
 }
 
 .room-title {
@@ -4870,7 +4973,12 @@ button.dialog-row {
   .crew-top { flex-direction: column; align-items: flex-start; }
   .crew-top .below-room { text-align: left; justify-content: flex-start; }
   .crew-timer { display: flex; flex-direction: row; align-items: center; }
+  .room-top { flex-direction: column; align-items: flex-start; }
+  .room-top .below-room { text-align: left; justify-content: flex-start; }
+  .room-top .desk-session { flex-direction: row; align-items: center; }
   .living-room { height: 420px; }
+  .dashboard-desk .living-room,
+  .crew-desk .living-room { height: auto; }
   .pet-detail { grid-template-columns: 1fr; }
   .pet-detail-stage { min-height: 0; }
   .big-pet { min-height: 140px; }

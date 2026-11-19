@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import {
   BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
@@ -428,6 +428,7 @@ export function LivingRoom({
   dailyStudiedMinutes = null,
   dailyGoalMinutes = null,
   isStudyDay = true,
+  headerAside = null,
 }: {
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
@@ -443,6 +444,7 @@ export function LivingRoom({
   dailyStudiedMinutes?: number | null;
   dailyGoalMinutes?: number | null;
   isStudyDay?: boolean;
+  headerAside?: ReactNode;
 }) {
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const showCylinder =
@@ -457,9 +459,12 @@ export function LivingRoom({
 
   return (
     <section className="living-room-block" aria-label="Your little living room">
-      <div className="room-head">
-        <h2 className="room-title">Your little living room</h2>
-        <p className="room-subtitle">Your favorite companions, at home.</p>
+      <div className="room-top">
+        <div className="room-head">
+          <h2 className="room-title">Your little living room</h2>
+          <p className="room-subtitle">Your favorite companions, at home.</p>
+        </div>
+        {headerAside}
       </div>
       <div className="living-room">
         {/* eslint-disable-next-line @next/next/no-img-element */}
