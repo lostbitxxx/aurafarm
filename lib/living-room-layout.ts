@@ -25,7 +25,15 @@ export type RoomObstacle = {
   maxTop: number;
 };
 
-export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant" | "storage-rack" | "blackboard";
+export type RoomFurnitureId =
+  | "sofa"
+  | "armchair"
+  | "loveseat"
+  | "bookshelf"
+  | "lamp"
+  | "plant"
+  | "storage-rack"
+  | "blackboard";
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
@@ -99,7 +107,12 @@ export function depthTopFromBounds(bounds: RoomRectPx) {
   return pxToTopPercent(bounds.y + bounds.height);
 }
 
-const LOVESEAT_BOUNDS: RoomRectPx = { x: 33, y: 110, width: 147, height: 59 };
+/** Four-seat sofa. Height includes the arms, which extend past the back cushion. */
+export const SOFA_BOUNDS: RoomRectPx = { x: 33, y: 110, width: 147, height: 62 };
+/** One-seat chair, between the lamp and the console. */
+export const ARMCHAIR_BOUNDS: RoomRectPx = { x: 232, y: 132, width: 52, height: 52 };
+/** Two-seat loveseat, on the floor in front of the console's right side. */
+export const LOVESEAT_BOUNDS: RoomRectPx = { x: 360, y: 176, width: 108, height: 48 };
 const BOOKSHELF_BOUNDS: RoomRectPx = { x: 471, y: 48, width: 75, height: 88 };
 const LAMP_BOUNDS: RoomRectPx = { x: 183, y: 116, width: 42, height: 60 };
 const PLANT_BOUNDS: RoomRectPx = { x: 509, y: 139, width: 35, height: 82 };
@@ -109,8 +122,9 @@ const STORAGE_RACK_BOUNDS: RoomRectPx = { x: 292, y: 78, width: 130, height: 65 
 const BLACKBOARD_BOUNDS: RoomRectPx = { x: 248, y: 22, width: 100, height: 48 };
 
 /**
- * Loveseat/sofa: no-walk starts high. We also seal up to the walk-band top so pets
- * cannot sit in the razor-thin strip between the wall seam and the seat.
+ * Sofa: no-walk starts high. We also seal up to the walk-band top so pets
+ * cannot stand in the razor-thin strip between the wall seam and the seat.
+ * Sitting is a separate drop, not a wander spot inside this block.
  */
 export const LOVESEAT_BLOCK_FROM = 0.28;
 
@@ -130,9 +144,9 @@ function piece(
   };
 }
 
-function loveseatBlock(): RoomObstacle {
-  const block = footprintObstacle(LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM);
-  // Close the gap under the wall so left-side pets are not trapped “in” the sofa.
+function sofaBlock(): RoomObstacle {
+  const block = footprintObstacle(SOFA_BOUNDS, LOVESEAT_BLOCK_FROM);
+  // Close the gap under the wall so left-side pets are not trapped in the sofa.
   return {
     ...block,
     minTop: Math.min(block.minTop, pxToTopPercent(ROOM_FLOOR_START_Y) + 2),
@@ -241,12 +255,14 @@ export const ROOM_WALL_HOTSPOTS: readonly RoomWallHotspot[] = [
 
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
-  piece("loveseat", "/pet-assets/room/loveseat/base.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
+  piece("sofa", "/pet-assets/room/sofa/base.svg", SOFA_BOUNDS, LOVESEAT_BLOCK_FROM, sofaBlock()),
   piece("lamp", "/pet-assets/room/lamp/base.svg", LAMP_BOUNDS),
   storageRackPiece(),
   blackboardPiece(),
   bookshelfPiece(),
   piece("plant", "/pet-assets/room/plant/base.svg", PLANT_BOUNDS),
+  piece("armchair", "/pet-assets/room/armchair/base.svg", ARMCHAIR_BOUNDS),
+  piece("loveseat", "/pet-assets/room/loveseat/base.svg", LOVESEAT_BOUNDS),
 ];
 
 /** Walk obstacles — skip zero-size wall props (blackboard). */
@@ -276,7 +292,7 @@ export const ROOM_WALK_BOUNDS = {
   maxTop: 78,
 } as const;
 
-/** Starting spots in open floor corridors (right of the loveseat column). */
+/** Starting spots in open floor corridors (right of the sofa column). */
 export const ROOM_START_SPOTS = [
   { left: 34, top: 46 },
   { left: 42, top: 50 },

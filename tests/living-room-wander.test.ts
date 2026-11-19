@@ -109,7 +109,7 @@ test("hitting a bound clamps the spot and reports hitBound", () => {
 });
 
 test("bottom-half furniture footprints block wander steps", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   assert.ok(loveseat);
   const midLeft = (loveseat.block.minLeft + loveseat.block.maxLeft) / 2;
   const midTop = (loveseat.block.minTop + loveseat.block.maxTop) / 2;
@@ -138,7 +138,7 @@ test("start spots stay off furniture footprints and on the floor", () => {
 });
 
 test("resolveWanderSpot ejects a pet stuck inside the loveseat footprint", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   assert.ok(loveseat);
   const stuck = {
     left: (loveseat.block.minLeft + loveseat.block.maxLeft) / 2,
@@ -153,7 +153,7 @@ test("resolveWanderSpot ejects a pet stuck inside the loveseat footprint", () =>
 });
 
 test("loveseat column has no walkable pocket against the wall", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   assert.ok(loveseat);
   assert.equal(loveseat.block.minTop, WALK_BOUNDS.minTop);
   assert.equal(spotHitsObstacle({ left: 14, top: WALK_BOUNDS.minTop }), true);
@@ -161,7 +161,7 @@ test("loveseat column has no walkable pocket against the wall", () => {
 });
 
 test("loveseat no-walk zone starts higher than a plain bottom half", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   assert.ok(loveseat);
   assert.ok(LOVESEAT_BLOCK_FROM < 0.5);
   const raw = footprintObstacle(loveseat.bounds, LOVESEAT_BLOCK_FROM);
@@ -174,7 +174,7 @@ test("loveseat no-walk zone starts higher than a plain bottom half", () => {
   // Purple rug is floor/carpet, not a solid furniture id (former "sofa" art).
   assert.deepEqual(
     [...ROOM_FURNITURE.map((item) => item.id)].sort(),
-    ["blackboard", "bookshelf", "lamp", "loveseat", "plant", "storage-rack"],
+    ["armchair", "blackboard", "bookshelf", "lamp", "loveseat", "plant", "sofa", "storage-rack"],
   );
   assert.ok(ROOM_FURNITURE.every((item) => !item.src.includes("carpet")));
   assert.match(ROOM_CARPET_SRC, /\/carpet\/base\.svg$/);
@@ -189,7 +189,7 @@ test("carpet is a floor layer path and does not block wander", () => {
 });
 
 test("furniture depth sorts so lower footprints draw in front", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   const plant = ROOM_FURNITURE.find((item) => item.id === "plant");
   assert.ok(loveseat && plant);
   assert.ok(plant.depthTop > loveseat.depthTop);
@@ -210,7 +210,7 @@ test("bookshelf sorts behind the walk band without growing its no-walk box", () 
 
 test("storage rack sits between sofa and shelf with drawer hotspots", () => {
   const rack = ROOM_FURNITURE.find((item) => item.id === "storage-rack");
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   const shelf = ROOM_FURNITURE.find((item) => item.id === "bookshelf");
   assert.ok(rack && loveseat && shelf);
   assert.equal(rack.depthTop, STORAGE_RACK_DEPTH_TOP);
@@ -297,7 +297,7 @@ test("drag helpers use forehead offset and a movement threshold", () => {
 });
 
 test("dropping on furniture resolves to a walkable spot", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "loveseat");
+  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
   assert.ok(loveseat);
   const ontoSofa = {
     left: (loveseat.block.minLeft + loveseat.block.maxLeft) / 2,
@@ -402,6 +402,8 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
     "floor/base.svg",
     "carpet/base.svg",
     "trim/base.svg",
+    "sofa/base.svg",
+    "armchair/base.svg",
     "loveseat/base.svg",
     "shelf/base.svg",
     "lamp/base.svg",
