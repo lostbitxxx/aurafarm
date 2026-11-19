@@ -29,7 +29,7 @@ export type RoomFurnitureId = "loveseat" | "bookshelf" | "lamp" | "plant" | "sto
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
-  /** Asset under /pet-assets/room/furniture/ */
+  /** Default (base) layer under /pet-assets/room/<item>/base.svg, or the console rack. */
   src: string;
   /** Full drawn bbox in SVG px (for splitting / debugging). */
   bounds: RoomRectPx;
@@ -116,14 +116,14 @@ export const LOVESEAT_BLOCK_FROM = 0.28;
 
 function piece(
   id: RoomFurnitureId,
-  file: string,
+  src: string,
   bounds: RoomRectPx,
   blockedFromFraction = 0.5,
   block: RoomObstacle = footprintObstacle(bounds, blockedFromFraction),
 ): RoomFurniturePiece {
   return {
     id,
-    src: `/pet-assets/room/furniture/${file}`,
+    src,
     bounds,
     depthTop: depthTopFromBounds(bounds),
     block,
@@ -149,7 +149,7 @@ export const BOOKSHELF_DEPTH_TOP = pxToTopPercent(ROOM_FLOOR_START_Y) - 1;
 function bookshelfPiece(): RoomFurniturePiece {
   return {
     id: "bookshelf",
-    src: "/pet-assets/room/furniture/bookshelf.svg",
+    src: "/pet-assets/room/shelf/base.svg",
     bounds: BOOKSHELF_BOUNDS,
     depthTop: BOOKSHELF_DEPTH_TOP,
     block: footprintObstacle(BOOKSHELF_BOUNDS, 0.5),
@@ -178,7 +178,7 @@ export const BLACKBOARD_DEPTH_TOP = BOOKSHELF_DEPTH_TOP;
 function blackboardPiece(): RoomFurniturePiece {
   return {
     id: "blackboard",
-    src: "/pet-assets/room/furniture/blackboard.svg",
+    src: "/pet-assets/room/board/base.svg",
     bounds: BLACKBOARD_BOUNDS,
     depthTop: BLACKBOARD_DEPTH_TOP,
     block: {
@@ -241,12 +241,12 @@ export const ROOM_WALL_HOTSPOTS: readonly RoomWallHotspot[] = [
 
 /** Solid props: collision + draw-order occlusion (not carpet). */
 export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
-  piece("loveseat", "loveseat.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
-  piece("lamp", "lamp.svg", LAMP_BOUNDS),
+  piece("loveseat", "/pet-assets/room/loveseat/base.svg", LOVESEAT_BOUNDS, LOVESEAT_BLOCK_FROM, loveseatBlock()),
+  piece("lamp", "/pet-assets/room/lamp/base.svg", LAMP_BOUNDS),
   storageRackPiece(),
   blackboardPiece(),
   bookshelfPiece(),
-  piece("plant", "plant.svg", PLANT_BOUNDS),
+  piece("plant", "/pet-assets/room/plant/base.svg", PLANT_BOUNDS),
 ];
 
 /** Walk obstacles — skip zero-size wall props (blackboard). */
@@ -256,11 +256,11 @@ export function furnitureWalkObstacles(pieces: readonly RoomFurniturePiece[] = R
     .filter((block) => block.maxLeft > block.minLeft && block.maxTop > block.minTop);
 }
 
-export const ROOM_WALL_SRC = "/pet-assets/room/base/wall.svg";
-export const ROOM_FLOOR_SRC = "/pet-assets/room/base/floor.svg";
-export const ROOM_TRIM_SRC = "/pet-assets/room/base/trim.svg";
+export const ROOM_WALL_SRC = "/pet-assets/room/wall/base.svg";
+export const ROOM_FLOOR_SRC = "/pet-assets/room/floor/base.svg";
+export const ROOM_TRIM_SRC = "/pet-assets/room/trim/base.svg";
 /** Purple rug — same stack as floor; never occludes pets; walkable. */
-export const ROOM_CARPET_SRC = "/pet-assets/room/base/carpet.svg";
+export const ROOM_CARPET_SRC = "/pet-assets/room/carpet/base.svg";
 
 /** Obstacles used by wander (furniture footprints only; carpet excluded). */
 export const ROOM_OBSTACLES: readonly RoomObstacle[] = furnitureWalkObstacles();

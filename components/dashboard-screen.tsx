@@ -412,7 +412,7 @@ export function DashboardScreen({
     : null;
 
   return (
-    <div className="desk-page">
+    <div className="desk-page dashboard-desk">
       <SocialPresence />
       <SiteHeader
         displayName={displayName}
@@ -620,7 +620,7 @@ export function DashboardScreen({
 
 export function DashboardFallback() {
   return (
-    <div className="desk-page">
+    <div className="desk-page dashboard-desk">
       <header className="topbar">
         <span className="wordmark">Aurafarm</span>
       </header>
