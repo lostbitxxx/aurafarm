@@ -54,7 +54,7 @@ test("wander timing ranges match the Living Room stroll contract", () => {
   assert.deepEqual(WALK_DURATION_MS, { min: 1500, max: 7000 });
   assert.deepEqual(IDLE_DURATION_MS, { min: 2000, max: 6000 });
   assert.equal(PETTING_HOLD_MS, 1500);
-  assert.equal(WANDER_SPEED_PX, 18);
+  assert.equal(WANDER_SPEED_PX, 36);
   assert.equal(WANDER_VERTICAL_RATIO, 0.68);
   assert.equal(WANDER_MAX_DT_SEC, 0.05);
 

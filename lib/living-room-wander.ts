@@ -11,7 +11,7 @@ import {
 export const WALK_BOUNDS = ROOM_WALK_BOUNDS;
 
 /** Horizontal stroll speed in CSS pixels per second of the room box. */
-export const WANDER_SPEED_PX = 18;
+export const WANDER_SPEED_PX = 36;
 
 /** Vertical speed as a fraction of horizontal (room perspective). */
 export const WANDER_VERTICAL_RATIO = 0.68;
