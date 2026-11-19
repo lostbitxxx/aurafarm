@@ -76,6 +76,9 @@ export type FarmCrewRoom = {
   displayName: string;
   userId: string;
   activeSession: ActiveStudySession | null;
+  preferredSessionMinutes: number | null;
+  streakCount: number;
+  streakLocalDate: string | null;
   error: string | null;
 };
 
