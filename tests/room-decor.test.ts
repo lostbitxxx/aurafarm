@@ -13,6 +13,7 @@ import {
   decorOptions,
   parseRoomDecor,
   ROOM_DECOR_CATEGORIES,
+  roomSkinSrc,
   setRoomItemPlaced,
 } from "../lib/room-decor";
 
@@ -71,8 +72,26 @@ test("default furniture footprints match the wander obstacles", () => {
   assert.match(seats[2]?.description ?? "", /Seats 4 pets/);
   assert.deepEqual(
     ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false).map((item) => item.label),
-    ["Floor", "Trim", "Wall", "Carpet", "Lamp", "Board", "Music", "Trophy", "Shelf", "Sofa", "Plant"],
+    ["Floor", "Wall", "Carpet", "Lamp", "Shelf", "Sofa", "Plant"],
   );
+});
+
+test("equipping a wall skin keeps trim on the same theme", () => {
+  const decor = defaultRoomDecor();
+  const next = equipRoomSkin(decor, "wall", "base");
+  assert.equal(next.skins.wall, "base");
+  assert.equal(next.skins.trim, "base");
+  assert.equal(ROOM_DECOR_CATEGORIES.find((item) => item.id === "trim")?.sidebar, false);
+});
+
+test("music and trophy previews crop the living-room console sheet", () => {
+  assert.match(roomSkinSrc("trophy", "base"), /furniture\/storage-rack\.svg$/);
+  assert.match(roomSkinSrc("music", "base"), /furniture\/storage-rack\.svg$/);
+  const trophy = ROOM_DECOR_CATEGORIES.find((item) => item.id === "trophy");
+  const music = ROOM_DECOR_CATEGORIES.find((item) => item.id === "music");
+  assert.ok(trophy?.crop);
+  assert.ok(music?.crop);
+  assert.ok((trophy?.crop?.x ?? 0) > (music?.crop?.x ?? 0));
 });
 
 test("cover mapping matches the viewBox when the room is 600 by 300", () => {
@@ -86,6 +105,7 @@ test("cover mapping matches the viewBox when the room is 600 by 300", () => {
 test("the living room can edit, decorate, and save", () => {
   const source = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/room-decorate-dialog.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(source, /"Edit room"/);
   assert.match(source, /aria-label="Decorate"/);
   assert.match(source, /"Save"/);
@@ -93,6 +113,24 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /writeRoomDecor/);
   assert.match(dialog, /Decorations/);
   assert.match(dialog, /Not obtained yet/);
-  assert.match(dialog, /Remove \$\{item\.label\}/);
+  assert.doesNotMatch(dialog, /decor-cat-toggle/);
+  assert.doesNotMatch(dialog, /Remove \$\{item\.label\}/);
   assert.doesNotMatch(dialog, /optional \? null/);
+  // Preview first; equip only on a second click of the same owned skin.
+  assert.match(dialog, /skin\.key !== detailId/);
+  assert.match(dialog, /First click previews/);
+  assert.match(css, /\.decor-tile\.is-selected\s*\{[^}]*#c2342a/);
+  assert.match(css, /\.decor-tile\.is-equipped\s*\{[^}]*#5aa818/);
+});
+
+test("equipping one seat clears the other seat pieces", () => {
+  const decor = defaultRoomDecor();
+  assert.equal(isRoomItemPlaced(decor, "sofa"), true);
+  const withChair = equipRoomSkin(setRoomItemPlaced(decor, "armchair", true), "armchair", "base");
+  assert.equal(isRoomItemPlaced(withChair, "armchair"), true);
+  assert.equal(isRoomItemPlaced(withChair, "sofa"), false);
+  assert.equal(isRoomItemPlaced(withChair, "loveseat"), false);
+  const withCouch = equipRoomSkin(withChair, "sofa", "base");
+  assert.equal(isRoomItemPlaced(withCouch, "sofa"), true);
+  assert.equal(isRoomItemPlaced(withCouch, "armchair"), false);
 });

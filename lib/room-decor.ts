@@ -1,13 +1,15 @@
 /**
  * Room decorating: which skins a player owns, which optional pieces are placed,
  * and how far movable pieces sit from their default spots.
- * Floor, trim, and wall stay fixed. Players own the base skin of every item.
+ * Floor, trim, and wall stay fixed. Trim follows the wall skin in the picker.
+ * Players own the base skin of every item.
  */
 
 import {
   ARMCHAIR_BOUNDS,
   LOVESEAT_BOUNDS,
   ROOM_FURNITURE,
+  ROOM_RACK_HOTSPOTS,
   ROOM_VIEW_HEIGHT,
   ROOM_VIEW_WIDTH,
   SOFA_BOUNDS,
@@ -18,6 +20,11 @@ import {
   type RoomObstacle,
   type RoomRectPx,
 } from "@/lib/living-room-layout";
+
+const RACK_SONG_BOUNDS = ROOM_RACK_HOTSPOTS.find((spot) => spot.id === "song")!.bounds;
+const RACK_TROPHY_BOUNDS = ROOM_RACK_HOTSPOTS.find((spot) => spot.id === "achievements")!.bounds;
+/** Console sheet used in the living room for music + trophy previews. */
+const STORAGE_RACK_SRC = "/pet-assets/room/furniture/storage-rack.svg";
 
 export type RoomDecorCategoryId =
   | "floor"
@@ -123,6 +130,8 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     optional: false,
     mover: null,
     crop: null,
+    /** Picked with Wall — same theme id is applied to both layers. */
+    sidebar: false,
     skins: themeSkins("Trim"),
   },
   {
@@ -164,6 +173,8 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     optional: false,
     mover: "blackboard",
     crop: { x: 248, y: 22, width: 100, height: 48 },
+    /** Hidden until alternate board skins exist. */
+    sidebar: false,
     skins: [{ id: "base", name: "Blackboard", description: "Opens Social. It stays on the wall." }],
   },
   {
@@ -172,7 +183,10 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     folder: "music",
     optional: false,
     mover: "storage-rack",
-    crop: null,
+    /** Crop of the gramophone on the shared console sheet. */
+    crop: RACK_SONG_BOUNDS,
+    /** Hidden until alternate music skins exist. */
+    sidebar: false,
     skins: [
       {
         id: "base",
@@ -187,7 +201,10 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     folder: "trophy",
     optional: false,
     mover: "storage-rack",
-    crop: null,
+    /** Crop of the trophy on the shared console sheet (not the placeholder trophy/base.svg). */
+    crop: RACK_TROPHY_BOUNDS,
+    /** Hidden until alternate trophy skins exist. */
+    sidebar: false,
     skins: [
       {
         id: "base",
@@ -326,6 +343,8 @@ export function skinOwned(skinId: string) {
 }
 
 export function roomSkinSrc(categoryId: RoomDecorCategoryId, skinId: string) {
+  // Music and trophy paint from the console in the room — preview the same sheet.
+  if (categoryId === "music" || categoryId === "trophy") return STORAGE_RACK_SRC;
   const category = roomDecorCategory(categoryId);
   const known = category.skins.some((skin) => skin.id === skinId);
   const id = known ? skinId : "base";
@@ -422,7 +441,18 @@ export function equipRoomSkin(decor: RoomDecor, categoryId: RoomDecorCategoryId,
   if (!skin || !skinOwned(skin.id)) return decor;
   const next = cloneRoomDecor(decor);
   next.skins[categoryId] = skin.id;
+  // Wall and trim share theme ids; keep both layers on the same look.
+  if (categoryId === "wall" || categoryId === "trim") {
+    next.skins.wall = skin.id;
+    next.skins.trim = skin.id;
+  }
   if (category.optional) next.placed[categoryId] = true;
+  // Only one seat piece in the room at a time.
+  if (SEAT_CATEGORY_IDS.includes(categoryId)) {
+    for (const id of SEAT_CATEGORY_IDS) {
+      next.placed[id] = id === categoryId;
+    }
+  }
   return next;
 }
 
@@ -432,7 +462,7 @@ export function moveRoomItem(decor: RoomDecor, id: DecorMoverId, dx: number, dy:
   return next;
 }
 
-/** Map a viewBox rectangle onto a room that paints layers with object-fit: cover. */
+/** Map a viewBox rectangle onto a room that paints layers with object-fit: contain. */
 export function coverBox(
   bounds: RoomRectPx,
   roomWidth: number,
@@ -441,7 +471,7 @@ export function coverBox(
 ) {
   const width = Math.max(roomWidth, 1);
   const height = Math.max(roomHeight, 1);
-  const scale = Math.max(width / ROOM_VIEW_WIDTH, height / ROOM_VIEW_HEIGHT);
+  const scale = Math.min(width / ROOM_VIEW_WIDTH, height / ROOM_VIEW_HEIGHT);
   const originX = (width - ROOM_VIEW_WIDTH * scale) / 2;
   const originY = (height - ROOM_VIEW_HEIGHT * scale) / 2;
   return {
