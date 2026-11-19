@@ -451,6 +451,7 @@ export function StudyPanel({
     <main className="desk">
       <section className="scene" aria-label="Study scene">
         <LivingRoom
+          userId={userId}
           pets={pets}
           placedIds={placedIds}
           placementReady={placementReady}

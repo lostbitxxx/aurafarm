@@ -177,12 +177,12 @@ test("loveseat no-walk zone starts higher than a plain bottom half", () => {
     ["blackboard", "bookshelf", "lamp", "loveseat", "plant", "storage-rack"],
   );
   assert.ok(ROOM_FURNITURE.every((item) => !item.src.includes("carpet")));
-  assert.match(ROOM_CARPET_SRC, /\/base\/carpet\.svg$/);
+  assert.match(ROOM_CARPET_SRC, /\/carpet\/base\.svg$/);
 });
 
 test("carpet is a floor layer path and does not block wander", () => {
-  assert.match(ROOM_CARPET_SRC, /\/base\/carpet\.svg$/);
-  const carpet = readFileSync(new URL("../public/pet-assets/room/base/carpet.svg", import.meta.url), "utf8");
+  assert.match(ROOM_CARPET_SRC, /\/carpet\/base\.svg$/);
+  const carpet = readFileSync(new URL("../public/pet-assets/room/carpet/base.svg", import.meta.url), "utf8");
   assert.match(carpet, /viewBox="0 0 600 300"/);
   // Mid-carpet spot must stay walkable (treated like floor).
   assert.equal(spotHitsObstacle({ left: 50, top: 72 }), false);
@@ -398,21 +398,21 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
 
   assert.match(css, /\.is-carpet/);
   for (const file of [
-    "base/wall.svg",
-    "base/floor.svg",
-    "base/carpet.svg",
-    "base/trim.svg",
-    "furniture/loveseat.svg",
-    "furniture/bookshelf.svg",
-    "furniture/lamp.svg",
-    "furniture/plant.svg",
+    "wall/base.svg",
+    "floor/base.svg",
+    "carpet/base.svg",
+    "trim/base.svg",
+    "loveseat/base.svg",
+    "shelf/base.svg",
+    "lamp/base.svg",
+    "plant/base.svg",
     "furniture/storage-rack.svg",
   ]) {
     const svg = readFileSync(new URL(`../public/pet-assets/room/${file}`, import.meta.url), "utf8");
     assert.match(svg, /viewBox="0 0 600 300"/);
   }
 
-  const wall = readFileSync(new URL("../public/pet-assets/room/base/wall.svg", import.meta.url), "utf8");
+  const wall = readFileSync(new URL("../public/pet-assets/room/wall/base.svg", import.meta.url), "utf8");
   // Window sits behind the sofa (left), not the old center slot.
   assert.match(wall, /x="70"/);
   assert.doesNotMatch(wall, /x="274"/);

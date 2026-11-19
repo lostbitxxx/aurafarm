@@ -5183,3 +5183,347 @@ button.dialog-row {
 .tutorial-skip:focus-visible {
   background: rgba(20, 33, 26, 0.06);
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.room-side-dock {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  bottom: 0.4rem;
+  z-index: 240;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 7.6rem;
+  pointer-events: none;
+}
+
+.room-side-spacer {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.room-side-dock .room-cylinder {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.room-side-dock .room-cylinder-tube {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 12rem;
+}
+
+.room-tool-button {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid #2a2a2a;
+  border-radius: 6px;
+  background: #3d3d3d;
+  color: #fff;
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.25);
+  cursor: pointer;
+}
+
+.room-tool-button.is-bottom {
+  margin-top: auto;
+}
+
+.room-tool-button:hover,
+.room-tool-button:focus-visible {
+  background: #2a2a2a;
+}
+
+.room-tool-button:focus-visible {
+  outline: 3px solid #c5ef47;
+  outline-offset: 2px;
+}
+
+.room-tool-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.room-edit-handle {
+  position: absolute;
+  z-index: 214;
+  margin: 0;
+  padding: 0;
+  border: 2px dashed #23392d;
+  border-radius: 4px;
+  background: rgba(197, 239, 71, 0.2);
+  cursor: grab;
+  touch-action: none;
+}
+
+.room-edit-handle:active {
+  cursor: grabbing;
+}
+
+.room-edit-handle:focus-visible {
+  outline: 3px solid #8261a7;
+  outline-offset: 2px;
+}
+
+.decor-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(35, 57, 45, 0.45);
+}
+
+.decor-card {
+  width: min(58rem, 100%);
+  max-height: min(86vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.1rem 1.15rem;
+  border: 2px solid #23392d;
+  border-radius: 4px;
+  background: #fffdf8;
+  color: #23392d;
+  box-shadow: 6px 6px 0 rgba(35, 57, 45, 0.16);
+}
+
+.decor-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+
+.decor-card-head h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+
+.decor-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border: 1.5px solid #23392d;
+  border-radius: 4px;
+  background: #fff;
+  color: #23392d;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.decor-body {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr) 15rem;
+  gap: 0.9rem;
+}
+
+.decor-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.decor-cat {
+  display: flex;
+  align-items: stretch;
+  min-height: 2.35rem;
+  border: 2px solid #23392d;
+  border-radius: 3px;
+  background: #fff;
+}
+
+.decor-cat.is-selected {
+  border-color: #c2342a;
+  box-shadow: inset 0 0 0 1px #c2342a;
+}
+
+.decor-cat-main {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0.35rem 0.45rem;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.decor-cat-toggle {
+  width: 1.7rem;
+  border: 0;
+  border-left: 1.5px solid #23392d;
+  background: transparent;
+  color: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.decor-grid-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.decor-search input {
+  width: 100%;
+  border: 2px solid #23392d;
+  border-radius: 3px;
+  background: #fff;
+  color: #23392d;
+  padding: 0.45rem 0.6rem;
+}
+
+.decor-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.decor-tile,
+.decor-detail-frame {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid #23392d;
+  border-radius: 3px;
+  background: #f4f1e6;
+  overflow: hidden;
+}
+
+.decor-tile {
+  padding: 0;
+  cursor: pointer;
+}
+
+.decor-tile.is-equipped {
+  border-color: #c2342a;
+  box-shadow: inset 0 0 0 1px #c2342a;
+}
+
+.decor-art-fit,
+.decor-art-crop img {
+  image-rendering: pixelated;
+}
+
+.decor-art-fit {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.decor-art-crop {
+  position: absolute;
+  inset: 0;
+}
+
+.decor-art-crop img {
+  position: absolute;
+  max-width: none;
+}
+
+.decor-locked {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--serif);
+  font-size: 2rem;
+  color: #23392d;
+}
+
+.decor-detail {
+  min-width: 0;
+  overflow: auto;
+}
+
+.decor-detail-frame {
+  margin-bottom: 0.7rem;
+}
+
+.decor-detail h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--serif);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.decor-obtained,
+.decor-copy,
+.decor-empty {
+  margin: 0;
+  color: #596650;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.decor-copy {
+  margin-top: 0.45rem;
+}
+
+.decor-dots {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+}
+
+.decor-dots i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #d5d8cc;
+}
+
+.decor-dots i.is-on {
+  background: #c2342a;
+}
+
+@media (max-width: 860px) {
+  .decor-body {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .decor-cats {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .decor-cat {
+    flex: 1 1 7rem;
+  }
+}
