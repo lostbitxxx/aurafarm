@@ -501,6 +501,49 @@ export function StudyPanel({
                 <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
                   End session early
                 </button>
+              </div>
+            )
+          }
+        />
+        {shownSession || checkingSession || error ? (
+          <div className="below-room">
+            <div className="session-copy">
+              {shownSession || checkingSession ? (
+                <>
+                  <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
+                    <p className="pet-name">
+                      {checkingSession ? "Checking this session" : "Studying with you"}
+                    </p>
+                    {shownSession && !checkingSession ? (
+                      <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
+                        End session early
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="growth-label">
+                    {checkingSession
+                      ? "Fetching the desk."
+                      : shownSession?.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."}
+                  </p>
+                  {checkingSession ? (
+                    <SessionRefreshStatus />
+                  ) : shownSession?.useDesktopPet ? (
+                    <div className="study-active">
+                      <p>
+                        Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
+                      </p>
+                      <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
+                    </div>
+                  ) : shownSession ? (
+                    <StudyClock
+                      session={shownSession}
+                      rushed={rushed}
+                      onFinished={() => finishSession("")}
+                    />
+                  ) : null}
+                </>
               ) : null}
               {shownSession && !checkingSession && !shownSession.useDesktopPet ? (
                 <StudyClock session={shownSession} rushed={rushed} onFinished={() => finishSession("")} />
