@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOM_OBSTACLES } from "../lib/living-room-layout";
+import { ROOM_FURNITURE, ROOM_OBSTACLES, furnitureWalkObstacles } from "../lib/living-room-layout";
 import {
   coverBox,
   decorObstacles,
   defaultRoomDecor,
   equipRoomSkin,
+  isFurniturePlaced,
   isRoomItemPlaced,
   moveRoomItem,
+  decorOptions,
   parseRoomDecor,
+  ROOM_DECOR_CATEGORIES,
   setRoomItemPlaced,
 } from "../lib/room-decor";
 
@@ -47,12 +50,29 @@ test("saved decor drops skins the player does not own", () => {
 });
 
 test("default furniture footprints match the wander obstacles", () => {
-  assert.deepEqual(decorObstacles(defaultRoomDecor()), ROOM_OBSTACLES);
-  const moved = moveRoomItem(defaultRoomDecor(), "lamp", 5, 0);
+  const decor = defaultRoomDecor();
+  const placed = ROOM_FURNITURE.filter((item) => isFurniturePlaced(decor, item.id));
+  assert.equal(isRoomItemPlaced(decor, "armchair"), false);
+  assert.equal(isRoomItemPlaced(decor, "loveseat"), false);
+  assert.equal(isRoomItemPlaced(decor, "sofa"), true);
+  assert.deepEqual(decorObstacles(decor), furnitureWalkObstacles(placed));
+  const moved = moveRoomItem(decor, "lamp", 5, 0);
   const lamp = decorObstacles(moved).find((block) => Math.abs(block.minLeft - (ROOM_OBSTACLES[1]?.minLeft ?? 0) - 5) < 0.001);
   assert.ok(lamp);
-  const removed = setRoomItemPlaced(defaultRoomDecor(), "plant", false);
-  assert.equal(decorObstacles(removed).length, ROOM_OBSTACLES.length - 1);
+  const removed = setRoomItemPlaced(decor, "plant", false);
+  assert.equal(decorObstacles(removed).length, furnitureWalkObstacles(placed).length - 1);
+  const seats = decorOptions("sofa");
+  assert.deepEqual(
+    seats.map((skin) => skin.name),
+    ["Armchair", "Loveseat", "Couch", "Greenhouse Couch", "Orbital Couch", "Leather Couch"],
+  );
+  assert.match(seats[0]?.description ?? "", /Seats 1 pet/);
+  assert.match(seats[1]?.description ?? "", /Seats 2 pets/);
+  assert.match(seats[2]?.description ?? "", /Seats 4 pets/);
+  assert.deepEqual(
+    ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false).map((item) => item.label),
+    ["Floor", "Trim", "Wall", "Carpet", "Lamp", "Board", "Music", "Trophy", "Shelf", "Sofa", "Plant"],
+  );
 });
 
 test("cover mapping matches the viewBox when the room is 600 by 300", () => {

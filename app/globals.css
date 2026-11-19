@@ -3324,6 +3324,11 @@ button.dialog-row {
   cursor: grabbing;
 }
 
+.room-pet-wrap.is-sitting {
+  /* Feet rest on the cushion; the name stays above the pet. */
+  transform: translate(-50%, -100%);
+}
+
 .room-pet-wrap.is-dragging .room-pet {
   cursor: grabbing;
 }
@@ -3347,6 +3352,7 @@ button.dialog-row {
 }
 
 .room-pet {
+  position: relative;
   display: grid;
   justify-items: center;
   gap: 0.15rem;
@@ -3401,6 +3407,15 @@ button.dialog-row {
   border-radius: 999px;
   font-size: 0.65rem;
   font-weight: 700;
+}
+
+/* Keep the badge off the layout height so seated feet share one cushion line. */
+.room-pet-wrap.is-sitting .room-equipped {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 110%);
+  white-space: nowrap;
 }
 
 .room-empty {
@@ -5436,10 +5451,40 @@ button.dialog-row {
 .decor-detail-frame {
   position: relative;
   aspect-ratio: 1;
+  overflow: hidden;
   border: 2px solid #23392d;
   border-radius: 3px;
   background: #f4f1e6;
   overflow: hidden;
+}
+
+.decor-grid.is-strips {
+  grid-template-columns: 1fr;
+}
+
+.decor-tile.is-strip,
+.decor-detail-frame.is-strip {
+  aspect-ratio: 5 / 1;
+}
+
+.decor-tile.is-strip .decor-art-fit,
+.decor-detail-frame.is-strip .decor-art-fit {
+  object-fit: cover;
+}
+
+.decor-tile.is-floor .decor-art-fit,
+.decor-detail-frame.is-floor .decor-art-fit {
+  object-position: center 70%;
+}
+
+.decor-tile.is-wall .decor-art-fit,
+.decor-detail-frame.is-wall .decor-art-fit {
+  object-position: center 20%;
+}
+
+.decor-tile.is-trim .decor-art-fit,
+.decor-detail-frame.is-trim .decor-art-fit {
+  object-position: center 38%;
 }
 
 .decor-tile {
@@ -5547,5 +5592,9 @@ button.dialog-row {
 
   .decor-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .decor-grid.is-strips {
+    grid-template-columns: 1fr;
   }
 }

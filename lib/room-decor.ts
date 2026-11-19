@@ -5,9 +5,12 @@
  */
 
 import {
+  ARMCHAIR_BOUNDS,
+  LOVESEAT_BOUNDS,
   ROOM_FURNITURE,
   ROOM_VIEW_HEIGHT,
   ROOM_VIEW_WIDTH,
+  SOFA_BOUNDS,
   pxToLeftPercent,
   pxToTopPercent,
   type RoomFurnitureId,
@@ -26,6 +29,8 @@ export type RoomDecorCategoryId =
   | "music"
   | "trophy"
   | "shelf"
+  | "armchair"
+  | "loveseat"
   | "sofa"
   | "plant";
 
@@ -48,6 +53,19 @@ export type RoomDecorCategory = {
   /** Crop inside the 600×300 layer, when the skin is a full-room sheet. */
   crop: RoomRectPx | null;
   skins: readonly RoomSkin[];
+  /** Hidden from the category list when its skins are shown under another category. */
+  sidebar?: boolean;
+  /** Drag-handle name when it differs from the category label. */
+  handle?: string;
+};
+
+export type DecorOption = {
+  key: string;
+  name: string;
+  description: string;
+  categoryId: RoomDecorCategoryId;
+  skinId: string;
+  crop: RoomRectPx | null;
 };
 
 export type RoomDecorOffset = { dx: number; dy: number };
@@ -73,6 +91,18 @@ function themeSkins(noun: string): RoomSkin[] {
     id: skin.id,
     name: skin.id === "base" ? noun : `${skin.name} ${noun}`,
     description: skin.description,
+  }));
+}
+
+function seatLine(capacity: number) {
+  return capacity === 1 ? "Seats 1 pet." : `Seats ${capacity} pets.`;
+}
+
+function seatSkins(noun: string, capacity: number, skins: readonly RoomSkin[] = THEME_SKINS): RoomSkin[] {
+  return skins.map((skin) => ({
+    id: skin.id,
+    name: skin.id === "base" ? noun : `${skin.name} ${noun}`,
+    description: `${skin.description} ${seatLine(capacity)}`,
   }));
 }
 
@@ -176,13 +206,38 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     skins: themeSkins("Shelf"),
   },
   {
-    id: "sofa",
-    label: "Sofa",
+    id: "armchair",
+    label: "Armchair",
+    folder: "armchair",
+    optional: true,
+    mover: "armchair",
+    crop: ARMCHAIR_BOUNDS,
+    sidebar: false,
+    skins: seatSkins("Armchair", 1, [
+      { id: "base", name: "Armchair", description: "The starter chair that comes with your room." },
+    ]),
+  },
+  {
+    id: "loveseat",
+    label: "Loveseat",
     folder: "loveseat",
     optional: true,
     mover: "loveseat",
-    crop: { x: 33, y: 110, width: 147, height: 59 },
-    skins: themeSkins("Sofa"),
+    crop: LOVESEAT_BOUNDS,
+    sidebar: false,
+    skins: seatSkins("Loveseat", 2, [
+      { id: "base", name: "Loveseat", description: "The starter loveseat that comes with your room." },
+    ]),
+  },
+  {
+    id: "sofa",
+    label: "Sofa",
+    handle: "Couch",
+    folder: "sofa",
+    optional: true,
+    mover: "sofa",
+    crop: SOFA_BOUNDS,
+    skins: seatSkins("Couch", 4),
   },
   {
     id: "plant",
@@ -203,7 +258,9 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
 const CATEGORY_BY_ID = new Map(ROOM_DECOR_CATEGORIES.map((category) => [category.id, category]));
 
 const PIECE_CATEGORY: Partial<Record<RoomFurnitureId, RoomDecorCategoryId>> = {
-  loveseat: "sofa",
+  sofa: "sofa",
+  armchair: "armchair",
+  loveseat: "loveseat",
   bookshelf: "shelf",
   lamp: "lamp",
   plant: "plant",
@@ -213,6 +270,8 @@ const PIECE_CATEGORY: Partial<Record<RoomFurnitureId, RoomDecorCategoryId>> = {
 const MOVER_IDS: readonly DecorMoverId[] = [
   "carpet",
   "lamp",
+  "sofa",
+  "armchair",
   "loveseat",
   "plant",
   "blackboard",
@@ -224,6 +283,41 @@ export function roomDecorCategory(id: RoomDecorCategoryId) {
   const category = CATEGORY_BY_ID.get(id);
   if (!category) throw new Error(`Unknown room category ${id}`);
   return category;
+}
+
+const SEAT_CATEGORY_IDS: readonly RoomDecorCategoryId[] = ["armchair", "loveseat", "sofa"];
+
+function optionsFor(category: RoomDecorCategory): DecorOption[] {
+  return category.skins.map((skin) => ({
+    key: `${category.id}:${skin.id}`,
+    name: skin.name,
+    description: skin.description,
+    categoryId: category.id,
+    skinId: skin.id,
+    crop: category.crop,
+  }));
+}
+
+/** Skins shown for a category. Sofa lists the armchair, loveseat, and couch together. */
+export function decorOptions(categoryId: RoomDecorCategoryId): readonly DecorOption[] {
+  if (categoryId === "sofa") {
+    return SEAT_CATEGORY_IDS.flatMap((id) => optionsFor(roomDecorCategory(id)));
+  }
+  return optionsFor(roomDecorCategory(categoryId));
+}
+
+export function seatGroupPlaced(decor: RoomDecor) {
+  return SEAT_CATEGORY_IDS.some((id) => isRoomItemPlaced(decor, id));
+}
+
+export function setSeatGroupPlaced(decor: RoomDecor, placed: boolean): RoomDecor {
+  const next = cloneRoomDecor(decor);
+  if (placed) {
+    next.placed.sofa = true;
+    return next;
+  }
+  for (const id of SEAT_CATEGORY_IDS) next.placed[id] = false;
+  return next;
 }
 
 /** Players start with the base skin only. Other files stay in the catalog, locked. */
@@ -265,6 +359,8 @@ function zeroOffsets(): Record<DecorMoverId, RoomDecorOffset> {
   return {
     carpet: { dx: 0, dy: 0 },
     lamp: { dx: 0, dy: 0 },
+    sofa: { dx: 0, dy: 0 },
+    armchair: { dx: 0, dy: 0 },
     loveseat: { dx: 0, dy: 0 },
     plant: { dx: 0, dy: 0 },
     blackboard: { dx: 0, dy: 0 },
@@ -278,7 +374,7 @@ export function defaultRoomDecor(): RoomDecor {
   const placed = {} as Record<RoomDecorCategoryId, boolean>;
   for (const category of ROOM_DECOR_CATEGORIES) {
     skins[category.id] = "base";
-    placed[category.id] = true;
+    placed[category.id] = category.id !== "armchair" && category.id !== "loveseat";
   }
   return { skins, placed, offsets: zeroOffsets() };
 }
@@ -401,8 +497,16 @@ export function parseRoomDecor(raw: string | null): RoomDecor {
       if (typeof placed === "boolean") next.placed[category.id] = placed;
     }
   }
+  const savedOffsets = record.offsets as Partial<Record<string, RoomDecorOffset>> | undefined;
+  // Older rooms stored the four-seat sofa offset under "loveseat".
+  const legacySofa = savedOffsets?.sofa == null && savedOffsets?.loveseat != null;
   for (const id of MOVER_IDS) {
-    const offset = record.offsets?.[id];
+    const offset =
+      id === "sofa" && legacySofa
+        ? savedOffsets?.loveseat
+        : id === "loveseat" && legacySofa
+          ? undefined
+          : savedOffsets?.[id];
     if (!offset || typeof offset.dx !== "number" || typeof offset.dy !== "number") continue;
     next.offsets[id] = clampRoomOffset(moverBounds(id), offset.dx, offset.dy);
   }
@@ -435,7 +539,9 @@ export function decorHandles(decor: RoomDecor): { id: DecorMoverId; label: strin
     if (!isRoomItemPlaced(decor, category.id)) continue;
     seen.add(category.mover);
     const label =
-      category.mover === "storage-rack" ? "Music, trophy, and collection drawer" : category.label;
+      category.mover === "storage-rack"
+        ? "Music, trophy, and collection drawer"
+        : (category.handle ?? category.label);
     handles.push({ id: category.mover, label });
   }
   return handles;

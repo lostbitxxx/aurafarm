@@ -3,18 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ROOM_DECOR_CATEGORIES,
+  decorOptions,
   equipRoomSkin,
   isRoomItemPlaced,
   roomSkinSrc,
+  seatGroupPlaced,
   setRoomItemPlaced,
+  setSeatGroupPlaced,
   skinOwned,
+  type DecorOption,
   type RoomDecor,
   type RoomDecorCategoryId,
-  type RoomSkin,
 } from "@/lib/room-decor";
 
 function previewStyle(crop: { x: number; y: number; width: number; height: number }) {
-  const width = (600 / Math.min(crop.width, crop.height)) * 100;
+  const width = (600 / Math.max(crop.width, crop.height)) * 100;
   const height = width * 0.5;
   const left = 50 - ((crop.x + crop.width / 2) / 600) * width;
   const top = 50 - ((crop.y + crop.height / 2) / 300) * height;
@@ -52,16 +55,17 @@ export function RoomDecorateDialog({
 }) {
   const [categoryId, setCategoryId] = useState<RoomDecorCategoryId>("floor");
   const [query, setQuery] = useState("");
-  const [detailId, setDetailId] = useState("base");
-  const category = ROOM_DECOR_CATEGORIES.find((item) => item.id === categoryId) ?? ROOM_DECOR_CATEGORIES[0];
+  const [detailId, setDetailId] = useState("floor:base");
+  const categories = ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false);
+  const category = categories.find((item) => item.id === categoryId) ?? categories[0];
+  const options = useMemo(() => decorOptions(category.id), [category.id]);
   const skins = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return category.skins;
-    return category.skins.filter((skin) => skin.name.toLowerCase().includes(needle));
-  }, [category.skins, query]);
-  const detail = category.skins.find((skin) => skin.id === detailId) ?? skins[0] ?? category.skins[0];
-  const placed = isRoomItemPlaced(decor, category.id);
-  const equippedId = decor.skins[category.id];
+    if (!needle) return options;
+    return options.filter((skin) => skin.name.toLowerCase().includes(needle));
+  }, [options, query]);
+  const detail = options.find((skin) => skin.key === detailId) ?? skins[0] ?? options[0];
+  const strips = category.id === "floor" || category.id === "trim" || category.id === "wall";
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -72,15 +76,27 @@ export function RoomDecorateDialog({
   }, [onClose]);
 
   function chooseCategory(nextId: RoomDecorCategoryId) {
-    const next = ROOM_DECOR_CATEGORIES.find((item) => item.id === nextId);
+    const nextOptions = decorOptions(nextId);
+    const equipped = nextOptions.find(
+      (skin) => isRoomItemPlaced(decor, skin.categoryId) && decor.skins[skin.categoryId] === skin.skinId,
+    );
     setCategoryId(nextId);
-    setDetailId(next ? decor.skins[next.id] : "base");
+    setDetailId(equipped?.key ?? nextOptions[0]?.key ?? "floor:base");
   }
 
-  function chooseSkin(skin: RoomSkin) {
-    setDetailId(skin.id);
-    if (!skinOwned(skin.id)) return;
-    onChange(equipRoomSkin(decor, category.id, skin.id));
+  function optionPlaced(skin: DecorOption) {
+    return isRoomItemPlaced(decor, skin.categoryId) && decor.skins[skin.categoryId] === skin.skinId;
+  }
+
+  function chooseSkin(skin: DecorOption) {
+    setDetailId(skin.key);
+    if (!skinOwned(skin.skinId)) return;
+    const seat = skin.categoryId === "armchair" || skin.categoryId === "loveseat" || skin.categoryId === "sofa";
+    if (seat && optionPlaced(skin)) {
+      onChange(setRoomItemPlaced(decor, skin.categoryId, false));
+      return;
+    }
+    onChange(equipRoomSkin(decor, skin.categoryId, skin.skinId));
   }
 
   return (
@@ -100,8 +116,8 @@ export function RoomDecorateDialog({
         </header>
         <div className="decor-body">
           <div className="decor-cats" role="tablist" aria-label="Decoration types">
-            {ROOM_DECOR_CATEGORIES.map((item) => {
-              const itemPlaced = isRoomItemPlaced(decor, item.id);
+            {categories.map((item) => {
+              const itemPlaced = item.id === "sofa" ? seatGroupPlaced(decor) : isRoomItemPlaced(decor, item.id);
               return (
                 <div key={item.id} className={item.id === category.id ? "decor-cat is-selected" : "decor-cat"}>
                   <button
@@ -118,7 +134,13 @@ export function RoomDecorateDialog({
                       type="button"
                       className="decor-cat-toggle"
                       aria-label={itemPlaced ? `Remove ${item.label}` : `Add ${item.label}`}
-                      onClick={() => onChange(setRoomItemPlaced(decor, item.id, !itemPlaced))}
+                      onClick={() =>
+                        onChange(
+                          item.id === "sofa"
+                            ? setSeatGroupPlaced(decor, !itemPlaced)
+                            : setRoomItemPlaced(decor, item.id, !itemPlaced),
+                        )
+                      }
                     >
                       {itemPlaced ? "−" : "+"}
                     </button>
@@ -137,21 +159,27 @@ export function RoomDecorateDialog({
                 type="search"
               />
             </label>
-            <div className="decor-grid">
+            <div className={strips ? "decor-grid is-strips" : "decor-grid"}>
               {skins.length === 0 ? <p className="decor-empty">No decorations match.</p> : null}
               {skins.map((skin) => {
-                const owned = skinOwned(skin.id);
-                const equipped = placed && skin.id === equippedId;
+                const owned = skinOwned(skin.skinId);
+                const equipped = optionPlaced(skin);
                 return (
                   <button
-                    key={skin.id}
+                    key={skin.key}
                     type="button"
-                    className={equipped ? "decor-tile is-equipped" : "decor-tile"}
+                    className={
+                      strips
+                        ? `decor-tile is-strip is-${category.id}${equipped ? " is-equipped" : ""}`
+                        : equipped
+                          ? "decor-tile is-equipped"
+                          : "decor-tile"
+                    }
                     aria-pressed={equipped}
                     onClick={() => chooseSkin(skin)}
                   >
                     {owned ? (
-                      <DecorArt src={roomSkinSrc(category.id, skin.id)} crop={category.crop} alt="" />
+                      <DecorArt src={roomSkinSrc(skin.categoryId, skin.skinId)} crop={skin.crop} alt="" />
                     ) : (
                       <span className="decor-locked" aria-hidden="true">
                         ?
@@ -165,9 +193,9 @@ export function RoomDecorateDialog({
           </div>
           {detail ? (
             <aside className="decor-detail">
-              <div className="decor-detail-frame">
-                {skinOwned(detail.id) ? (
-                  <DecorArt src={roomSkinSrc(category.id, detail.id)} crop={category.crop} alt="" />
+              <div className={strips ? `decor-detail-frame is-strip is-${category.id}` : "decor-detail-frame"}>
+                {skinOwned(detail.skinId) ? (
+                  <DecorArt src={roomSkinSrc(detail.categoryId, detail.skinId)} crop={detail.crop} alt="" />
                 ) : (
                   <span className="decor-locked" aria-hidden="true">
                     ?
@@ -176,12 +204,12 @@ export function RoomDecorateDialog({
               </div>
               <h3>{detail.name}</h3>
               <p className="decor-obtained">
-                {skinOwned(detail.id) ? "Included with your room" : "Not obtained yet"}
+                {skinOwned(detail.skinId) ? "Included with your room" : "Not obtained yet"}
               </p>
               <p className="decor-copy">{detail.description}</p>
               <div className="decor-dots" aria-hidden="true">
-                {category.skins.map((skin) => (
-                  <i key={skin.id} className={skin.id === detail.id ? "is-on" : undefined} />
+                {options.map((skin) => (
+                  <i key={skin.key} className={skin.key === detail.key ? "is-on" : undefined} />
                 ))}
               </div>
             </aside>

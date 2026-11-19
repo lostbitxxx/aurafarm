@@ -55,6 +55,17 @@ import {
   type WanderSpot,
 } from "@/lib/living-room-wander";
 import { PIXEL_HEART_SRC } from "@/lib/pet-assets";
+import {
+  dropOnSeat,
+  liftSeat,
+  readRoomSeats,
+  reconcileSeats,
+  seatAnchor,
+  seatPaintZ,
+  seatsEqual,
+  writeRoomSeats,
+  type SeatMap,
+} from "@/lib/room-seats";
 import { petDisplayName, type PetCard } from "@/lib/pets";
 import { experienceProgress } from "@/lib/study";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
@@ -69,12 +80,20 @@ function RoomPet({
   showPetNames,
   onOpen,
   obstaclesRef,
+  seatedSpot,
+  seatZ,
+  onTrySit,
+  onLiftSeat,
 }: {
   pet: PetCard;
   paused: boolean;
   showPetNames: boolean;
   onOpen: (petId: string) => void;
   obstaclesRef: RefObject<readonly RoomObstacle[]>;
+  seatedSpot: WanderSpot | null;
+  seatZ: number | null;
+  onTrySit: (spot: WanderSpot) => WanderSpot | null;
+  onLiftSeat: () => void;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
@@ -100,6 +119,11 @@ function RoomPet({
   const struggleTimerRef = useRef(0);
   const reducedRef = useRef(false);
   const pausedRef = useRef(paused);
+  const sittingRef = useRef(seatedSpot !== null);
+  const trySitRef = useRef(onTrySit);
+  const liftSeatRef = useRef(onLiftSeat);
+  trySitRef.current = onTrySit;
+  liftSeatRef.current = onLiftSeat;
   const pressRef = useRef<{
     pointerId: number;
     startX: number;
@@ -128,6 +152,20 @@ function RoomPet({
     pausedRef.current = paused;
   }, [paused]);
 
+  const seatLeft = seatedSpot?.left ?? null;
+  const seatTop = seatedSpot?.top ?? null;
+  useEffect(() => {
+    if (seatLeft == null || seatTop == null) {
+      if (modeRef.current === "dragging") return;
+      sittingRef.current = false;
+      return;
+    }
+    sittingRef.current = true;
+    if (modeRef.current !== "dragging") commitSpot({ left: seatLeft, top: seatTop });
+    // commitSpot is recreated per render and only needs the latest pet id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatLeft, seatTop]);
+
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     reducedRef.current = media.matches;
@@ -140,7 +178,10 @@ function RoomPet({
 
   useEffect(() => {
     // Hard unstick on mount (covers pets left in an expanded sofa footprint).
-    commitSpot(resolveWanderSpot(positionRef.current, undefined, obstaclesRef.current));
+    // A pet already seated stays on the cushion; the seat effect owns that spot.
+    if (!sittingRef.current) {
+      commitSpot(resolveWanderSpot(positionRef.current, undefined, obstaclesRef.current));
+    }
 
     let frame = 0;
     let last = performance.now();
@@ -178,6 +219,11 @@ function RoomPet({
       const current = modeRef.current;
 
       if (current === "petting" || current === "dragging") return;
+
+      if (sittingRef.current) {
+        if (current === "walking") enterIdle(now);
+        return;
+      }
 
       // Unstick pets trapped in a no-go zone (e.g. sofa footprint grew after they sat there).
       const freed = resolveWanderSpot(positionRef.current, undefined, obstaclesRef.current);
@@ -278,6 +324,8 @@ function RoomPet({
     clearPettingFx();
     window.clearTimeout(struggleTimerRef.current);
     setStruggling(false);
+    sittingRef.current = false;
+    liftSeatRef.current();
     modeRef.current = "dragging";
     setMode("dragging");
     if (pressRef.current) {
@@ -294,7 +342,9 @@ function RoomPet({
   function endDrag() {
     window.clearTimeout(struggleTimerRef.current);
     setStruggling(false);
-    commitSpot(resolveWanderSpot(positionRef.current, undefined, obstaclesRef.current));
+    const sat = trySitRef.current(positionRef.current);
+    sittingRef.current = sat !== null;
+    commitSpot(sat ?? resolveWanderSpot(positionRef.current, undefined, obstaclesRef.current));
     const now = performance.now();
     modeRef.current = "idle";
     setMode("idle");
@@ -383,9 +433,11 @@ function RoomPet({
     onOpen(pet.id);
   }
 
+  const sitting = seatedSpot !== null && !dragging;
   const wrapClass = [
     pet.is_desktop_active ? "room-pet-wrap is-equipped" : "room-pet-wrap",
     dragging ? "is-dragging" : null,
+    sitting ? "is-sitting" : null,
     struggling ? "is-struggling" : null,
   ]
     .filter(Boolean)
@@ -400,9 +452,9 @@ function RoomPet({
         top: `${position.top}%`,
         // Pets share the room stacking context with furniture (see `.living-room-pets`).
         // Drag lifts above ROOM_DEPTH_Z_MAX so the carried pet is never tucked under a sofa.
-        zIndex: dragging ? ROOM_DRAG_Z : roomDepthZ(position.top),
+        zIndex: dragging ? ROOM_DRAG_Z : sitting && seatZ != null ? seatZ : roomDepthZ(position.top),
       }}
-      data-mode={mode}
+      data-mode={sitting ? "sitting" : mode}
     >
       <button
         type="button"
@@ -516,6 +568,10 @@ export function LivingRoom({
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
   const [decorOpen, setDecorOpen] = useState(false);
+  const [seats, setSeats] = useState<SeatMap>({});
+  const [seatsReady, setSeatsReady] = useState(false);
+  const seatsRef = useRef<SeatMap>({});
+  seatsRef.current = seats;
   const editing = draftDecor !== null;
   const decor = draftDecor ?? savedDecor;
   const roomRef = useRef<HTMLDivElement | null>(null);
@@ -537,10 +593,41 @@ export function LivingRoom({
   const boardShift = offsetTransform(decor, "blackboard");
 
   useEffect(() => {
-    setSavedDecor(readRoomDecor(userId));
+    const loaded = readRoomDecor(userId);
+    setSavedDecor(loaded);
     setDraftDecor(null);
     setDecorOpen(false);
+    setSeats(reconcileSeats(loaded, readRoomSeats(userId)));
+    setSeatsReady(true);
   }, [userId]);
+
+  useEffect(() => {
+    if (!seatsReady) return;
+    setSeats((current) => {
+      const next = reconcileSeats(decor, current);
+      return seatsEqual(next, current) ? current : next;
+    });
+  }, [decor, seatsReady]);
+
+  useEffect(() => {
+    if (!seatsReady) return;
+    writeRoomSeats(userId, seats);
+  }, [seats, seatsReady, userId]);
+
+  function trySit(petId: string, spot: WanderSpot) {
+    const result = dropOnSeat(decor, seatsRef.current, petId, spot);
+    if (!result) return null;
+    seatsRef.current = result.seats;
+    setSeats(result.seats);
+    return result.spot;
+  }
+
+  function liftPet(petId: string) {
+    const next = liftSeat(seatsRef.current, petId);
+    if (next === seatsRef.current) return;
+    seatsRef.current = next;
+    setSeats(next);
+  }
 
   useEffect(() => {
     const room = roomRef.current;
@@ -772,16 +859,23 @@ export function LivingRoom({
         </div>
         {editing ? null : (
           <div className="living-room-pets">
-            {placed.map((pet) => (
-              <RoomPet
-                key={pet.id}
-                pet={pet}
-                paused={false}
-                showPetNames={showPetNames}
-                onOpen={onOpenPet}
-                obstaclesRef={obstaclesRef}
-              />
-            ))}
+            {placed.map((pet) => {
+              const assignment = seats[pet.id];
+              return (
+                <RoomPet
+                  key={pet.id}
+                  pet={pet}
+                  paused={false}
+                  showPetNames={showPetNames}
+                  onOpen={onOpenPet}
+                  obstaclesRef={obstaclesRef}
+                  seatedSpot={assignment ? seatAnchor(decor, assignment) : null}
+                  seatZ={assignment ? seatPaintZ(assignment.pieceId) : null}
+                  onTrySit={(spot) => trySit(pet.id, spot)}
+                  onLiftSeat={() => liftPet(pet.id)}
+                />
+              );
+            })}
           </div>
         )}
         {!editing && placementReady && placed.length === 0 ? (
