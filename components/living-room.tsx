@@ -9,6 +9,8 @@ import {
   ROOM_FURNITURE,
   ROOM_RACK_HOTSPOTS,
   ROOM_TRIM_SRC,
+  ROOM_VIEW_HEIGHT,
+  ROOM_VIEW_WIDTH,
   ROOM_WALL_HOTSPOTS,
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
@@ -480,51 +482,75 @@ export function LivingRoom({
             style={{ zIndex: roomDepthZ(item.depthTop) }}
           />
         ))}
-        <div className="living-room-rack-hotspots" style={{ zIndex: rackZ }}>
+        {/*
+          SVG hit layer shares the furniture viewBox + slice so click targets stay
+          glued to art when .living-room aspect ratio ≠ 2:1 (object-fit: cover).
+        */}
+        <svg
+          className="living-room-rack-hotspots"
+          viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
+          preserveAspectRatio="xMidYMid slice"
+          style={{ zIndex: rackZ }}
+        >
           {ROOM_RACK_HOTSPOTS.map((spot) => {
             const action = rackActions[spot.id];
             if (!action) return null;
             return (
-              <button
+              <rect
                 key={spot.id}
-                type="button"
                 className="room-rack-hotspot"
+                role="button"
+                tabIndex={0}
                 aria-label={spot.label}
                 data-tutorial={spot.id}
                 data-tutorial-current={tutorialTarget === spot.id ? "true" : undefined}
                 data-rack-hotspot={spot.id}
-                style={{
-                  left: `${spot.box.minLeft}%`,
-                  top: `${spot.box.minTop}%`,
-                  width: `${spot.box.maxLeft - spot.box.minLeft}%`,
-                  height: `${spot.box.maxTop - spot.box.minTop}%`,
-                }}
+                x={spot.bounds.x}
+                y={spot.bounds.y}
+                width={spot.bounds.width}
+                height={spot.bounds.height}
                 onClick={action}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    action();
+                  }
+                }}
               />
             );
           })}
-        </div>
+        </svg>
         {onOpenSocial ? (
-          <div className="living-room-wall-hotspots" style={{ zIndex: blackboardZ }}>
+          <svg
+            className="living-room-wall-hotspots"
+            viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
+            preserveAspectRatio="xMidYMid slice"
+            style={{ zIndex: blackboardZ }}
+          >
             {ROOM_WALL_HOTSPOTS.map((spot) => (
-              <button
+              <rect
                 key={spot.id}
-                type="button"
                 className="room-rack-hotspot"
+                role="button"
+                tabIndex={0}
                 aria-label={spot.label}
                 data-tutorial={spot.tutorialTarget}
                 data-tutorial-current={tutorialTarget === spot.tutorialTarget ? "true" : undefined}
                 data-wall-hotspot={spot.id}
-                style={{
-                  left: `${spot.box.minLeft}%`,
-                  top: `${spot.box.minTop}%`,
-                  width: `${spot.box.maxLeft - spot.box.minLeft}%`,
-                  height: `${spot.box.maxTop - spot.box.minTop}%`,
-                }}
+                x={spot.bounds.x}
+                y={spot.bounds.y}
+                width={spot.bounds.width}
+                height={spot.bounds.height}
                 onClick={onOpenSocial}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpenSocial();
+                  }
+                }}
               />
             ))}
-          </div>
+          </svg>
         ) : null}
         {showCylinder ? (
           <DailyProgressCylinder
