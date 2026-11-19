@@ -45,7 +45,9 @@ export type RoomRackHotspotId = "song" | "achievements" | "collection";
 export type RoomRackHotspot = {
   id: RoomRackHotspotId;
   label: string;
-  /** Hit area in room percent space (matches CSS absolute box). */
+  /** Hit area in the shared 600×300 SVG space (for SVG overlay targets). */
+  bounds: RoomRectPx;
+  /** Percent box derived from bounds (tests / legacy). */
   box: RoomObstacle;
 };
 
@@ -57,6 +59,9 @@ export type RoomWallHotspot = {
   label: string;
   /** Tutorial target id (kept as "social" for the desk tour). */
   tutorialTarget: "social";
+  /** Hit area in the shared 600×300 SVG space (for SVG overlay targets). */
+  bounds: RoomRectPx;
+  /** Percent box derived from bounds (tests / legacy). */
   box: RoomObstacle;
 };
 
@@ -194,41 +199,33 @@ function hotspotBox(bounds: RoomRectPx): RoomObstacle {
   };
 }
 
+function rackHotspot(id: RoomRackHotspotId, label: string, bounds: RoomRectPx): RoomRackHotspot {
+  return { id, label, bounds, box: hotspotBox(bounds) };
+}
+
 /** Gramophone / trophy / clothes-shelf+drawer hit areas on the storage rack. */
 export const ROOM_RACK_HOTSPOTS: readonly RoomRackHotspot[] = [
-  {
-    id: "song",
-    label: "Song",
-    // Left top: gramophone
-    box: hotspotBox({
-      x: STORAGE_RACK_BOUNDS.x,
-      y: STORAGE_RACK_BOUNDS.y,
-      width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
-      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
-    }),
-  },
-  {
-    id: "achievements",
-    label: "Achievements",
-    // Right top: trophy
-    box: hotspotBox({
-      x: STORAGE_RACK_BOUNDS.x + Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
-      y: STORAGE_RACK_BOUNDS.y,
-      width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
-      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
-    }),
-  },
-  {
-    id: "collection",
-    label: "Collection",
-    // Open clothes shelf + wide drawer
-    box: hotspotBox({
-      x: STORAGE_RACK_BOUNDS.x,
-      y: STORAGE_RACK_BOUNDS.y + Math.round(STORAGE_RACK_BOUNDS.height * 0.45),
-      width: STORAGE_RACK_BOUNDS.width,
-      height: Math.round(STORAGE_RACK_BOUNDS.height * 0.55),
-    }),
-  },
+  // Left top: gramophone
+  rackHotspot("song", "Song", {
+    x: STORAGE_RACK_BOUNDS.x,
+    y: STORAGE_RACK_BOUNDS.y,
+    width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+    height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
+  }),
+  // Right top: trophy
+  rackHotspot("achievements", "Achievements", {
+    x: STORAGE_RACK_BOUNDS.x + Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+    y: STORAGE_RACK_BOUNDS.y,
+    width: Math.round(STORAGE_RACK_BOUNDS.width * 0.5),
+    height: Math.round(STORAGE_RACK_BOUNDS.height * 0.48),
+  }),
+  // Open clothes shelf + wide drawer
+  rackHotspot("collection", "Collection", {
+    x: STORAGE_RACK_BOUNDS.x,
+    y: STORAGE_RACK_BOUNDS.y + Math.round(STORAGE_RACK_BOUNDS.height * 0.45),
+    width: STORAGE_RACK_BOUNDS.width,
+    height: Math.round(STORAGE_RACK_BOUNDS.height * 0.55),
+  }),
 ];
 
 /** Blackboard on the wall. */
@@ -237,6 +234,7 @@ export const ROOM_WALL_HOTSPOTS: readonly RoomWallHotspot[] = [
     id: "blackboard",
     label: "Blackboard",
     tutorialTarget: "social",
+    bounds: BLACKBOARD_BOUNDS,
     box: hotspotBox(BLACKBOARD_BOUNDS),
   },
 ];

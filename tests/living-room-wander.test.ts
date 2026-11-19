@@ -222,6 +222,8 @@ test("storage rack sits between sofa and shelf with drawer hotspots", () => {
     ["song", "achievements", "collection"],
   );
   for (const spot of ROOM_RACK_HOTSPOTS) {
+    assert.ok(spot.bounds.x >= rack.bounds.x);
+    assert.ok(spot.bounds.x + spot.bounds.width <= rack.bounds.x + rack.bounds.width);
     assert.ok(spot.box.minLeft >= pxToLeftPercent(rack.bounds.x) - 0.01);
     assert.ok(spot.box.maxLeft <= pxToLeftPercent(rack.bounds.x + rack.bounds.width) + 0.01);
   }
@@ -341,6 +343,8 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /ROOM_FURNITURE/);
   assert.match(source, /ROOM_RACK_HOTSPOTS/);
   assert.match(source, /room-rack-hotspot/);
+  assert.match(source, /preserveAspectRatio="xMidYMid slice"/);
+  assert.match(source, /spot\.bounds\.x/);
   assert.match(source, /onOpenSong/);
   assert.match(source, /onOpenAchievements/);
   assert.match(source, /onOpenCollection/);
