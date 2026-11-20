@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { refreshFarmCrewRoom } from "@/lib/actions/farm-crew";
 import { completeStudyTimer, endStudyEarly } from "@/lib/actions/study";
-import { farmerLocalDay, formatClock, formatTimestamp, type ActiveStudySession } from "@/lib/study";
+import { farmerLocalDay, type ActiveStudySession } from "@/lib/study";
 import { loadFarmCrewLeaderboard } from "@/lib/actions/leaderboard";
 import { managesFarmCrew, type FarmCrewRoom } from "@/lib/farm-crew";
 import type { LeaderboardMode, LeaderboardRow } from "@/lib/leaderboard";
@@ -243,35 +243,36 @@ function CrewSessionTimer({
   return (
     <>
       <div className="below-room crew-timer">
-        {session.useDesktopPet ? (
-          <div className="session-copy">
-            <div className="study-active">
-              <p>
-                Started <time dateTime={session.startedAt}>{formatTimestamp(session.startedAt)}</time>
-              </p>
-              <p>{formatClock(session.plannedSeconds)} chosen</p>
+        <StudyClock
+          session={session}
+          rushed={false}
+          onFinished={session.useDesktopPet ? null : onFinished}
+        />
+        <div className="desk-session-actions">
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="button button-ghost button-end-early"
+            disabled={pending}
+            onClick={() => {
+              setError(null);
+              setEarlyOpen(true);
+            }}
+          >
+            End session early
+          </button>
+          {launchUrl ? (
+            <div className="scene-actions is-start">
+              <a className="button button-start" href={launchUrl}>
+                Open Aurafarm
+              </a>
             </div>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          className="button button-ghost button-end-early"
-          disabled={pending}
-          onClick={() => {
-            setError(null);
-            setEarlyOpen(true);
-          }}
-        >
-          End session early
-        </button>
-        {session.useDesktopPet ? null : <StudyClock session={session} rushed={false} onFinished={onFinished} />}
-        {launchUrl ? (
-          <div className="scene-actions is-start">
-            <a className="button button-start" href={launchUrl}>
-              Open Aurafarm
-            </a>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
       {earlyOpen ? (
         <div className="tracker-pop" role="presentation" onClick={() => (pending ? null : setEarlyOpen(false))}>

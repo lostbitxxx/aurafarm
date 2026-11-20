@@ -203,13 +203,13 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(readyWebsite[0], /max-width:\s*0|flex:\s*0\s+0\s+0|max-height:\s*0/);
   assert.match(readyDesktop[0], /translateX\(calc\(50% \+ 0\.375rem\)\)/);
   assert.doesNotMatch(readyDesktop[0], /max-width:\s*18\.5rem/);
-  assert.match(desk, /shownSession\?\.useDesktopPet && launchUrl \? \([\s\S]*href=\{launchUrl\}[\s\S]*Open Aurafarm/);
+  assert.match(desk, /shownSession\.useDesktopPet && launchUrl \? \([\s\S]*href=\{launchUrl\}[\s\S]*Open Aurafarm/);
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
   assert.match(desk, /headTitle=\{shownSession \? "Studying with you" : null\}/);
   assert.match(desk, /Desktop pet is tracking this session\.[\s\S]*Website timer is tracking this session\./);
-  assert.match(desk, /room-top is-studying|headTitle=\{shownSession/);
+  assert.match(desk, /desk-session-actions/);
   assert.match(
     desk,
     /shownSession && !checkingSession \? \([\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
@@ -220,6 +220,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(living, /headSubtitle \?\? "Your favorite companions, at home\."/);
   assert.match(living, /studyingHead \? "room-top is-studying" : "room-top"/);
   assert.match(deskCss, /\.room-top\.is-studying \{[\s\S]*grid-template-columns:/);
+  assert.match(deskCss, /\.room-top\.is-studying \.room-head \{[\s\S]*grid-column: 1;[\s\S]*text-align: left;/);
+  assert.match(deskCss, /\.room-top\.is-studying \.study-clock \{[\s\S]*grid-column: 2;[\s\S]*justify-self: center;/);
+  assert.match(deskCss, /\.room-top\.is-studying \.desk-session-actions \{[\s\S]*grid-column: 3;/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);

@@ -490,16 +490,6 @@ export function StudyPanel({
                   ) : null}
                 </div>
               )}
-              {shownSession && error ? (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              ) : null}
-              {shownSession && !checkingSession ? (
-                <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
-                  End session early
-                </button>
-              ) : null}
               {shownSession && !checkingSession ? (
                 <StudyClock
                   session={shownSession}
@@ -507,13 +497,32 @@ export function StudyPanel({
                   onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
                 />
               ) : null}
-              {shownSession?.useDesktopPet && launchUrl ? (
-                <div className="scene-actions is-start">
-                  <a className="button button-start" href={launchUrl}>
-                    Open Aurafarm
-                  </a>
+              {shownSession ? (
+                <div className="desk-session-actions">
+                  {error ? (
+                    <p className="form-error" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  {!checkingSession ? (
+                    <button
+                      type="button"
+                      className="button button-ghost button-end-early"
+                      disabled={pending}
+                      onClick={onOpenEarly}
+                    >
+                      End session early
+                    </button>
+                  ) : null}
+                  {shownSession.useDesktopPet && launchUrl ? (
+                    <div className="scene-actions is-start">
+                      <a className="button button-start" href={launchUrl}>
+                        Open Aurafarm
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
-              ) : shownSession ? null : (
+              ) : (
                 <div className="scene-actions is-start">
                   <button
                     type="button"

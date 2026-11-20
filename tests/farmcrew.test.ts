@@ -225,6 +225,8 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /crew-top is-studying/);
   assert.match(screen, /Studying with you/);
   assert.match(screen, /Website timer is tracking this session/);
+  assert.match(screen, /desk-session-actions/);
+  assert.match(screen, /useDesktopPet \? null : onFinished/);
   assert.match(screen, /End session early/);
   assert.match(screen, /endStudyEarly/);
   assert.match(screen, /Keep studying/);
