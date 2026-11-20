@@ -203,7 +203,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(readyWebsite[0], /max-width:\s*0|flex:\s*0\s+0\s+0|max-height:\s*0/);
   assert.match(readyDesktop[0], /translateX\(calc\(50% \+ 0\.375rem\)\)/);
   assert.doesNotMatch(readyDesktop[0], /max-width:\s*18\.5rem/);
-  assert.match(desk, /shownSession\.useDesktopPet && launchUrl \? \([\s\S]*DesktopLaunchHelp href=\{launchUrl\}/);
+  assert.match(desk, /shownSession\.useDesktopPet && launchUrl \? <DesktopLaunchHelp href=\{launchUrl\} \/>/);
   const launchHelp = readFileSync(new URL("../components/desktop-launch-help.tsx", import.meta.url), "utf8");
   assert.match(launchHelp, /Not Seeing Desktop Pet\?/);
   assert.match(launchHelp, /button button-ghost button-end-early/);
