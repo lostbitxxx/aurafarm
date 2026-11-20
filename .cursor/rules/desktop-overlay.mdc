@@ -21,7 +21,7 @@ alwaysApply: false
 ## Pet
 - Closed bar: anchor the pet beside the session rail (`barThickness`); keep the sprite there and extend only the chat window/bubble away from the rail.
 - Open bar: hide the external pet window and show the pet inside the cream shell; restore the external pet when closing a distracted tab (walk animation).
-- Drag from the pet only (closed external sprite or open in-panel sprite); collapsed pet shows `pointer` on hover (clickable) and `grabbing` while dragging; the session rail opens/closes the bar; no drag handle; no bottom dock target (left/right/top only).
+- Drag from the pet only (closed external sprite or open in-panel sprite); collapsed pet uses ignoreMouseEvents(forward) + rect hit-testing, a tiny sprite fill so CSS `grab`/`grabbing` can paint, then capture mouse over the sprite; the session rail opens/closes the bar; no drag handle; no bottom dock target (left/right/top only).
 - Session rail shows a centered chevron that points toward expand when closed and the opposite when open (per dock edge).
 - Chat bubbles sit above the pet with a sharp triangle tip (fade in). No-session copy prompts starting on the web; live distraction / close copy show for open or closed; open-bar-only idle lines stay in-panel.
 

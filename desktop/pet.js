@@ -72,25 +72,28 @@ function setHoverCursor(kind) {
   petStack.style.cursor = value || "";
 }
 
+/** Geometry hit test — more reliable than elementFromPoint on transparent overlays. */
 function overPetHit(event) {
   const x = event.clientX;
   const y = event.clientY;
   if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-  const node = document.elementFromPoint(x, y);
-  return Boolean(node && (node === petStack || petStack.contains(node)));
+  const rect = petStack.getBoundingClientRect();
+  const pad = 6;
+  return x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad;
 }
 
 /**
- * Transparent click-through windows do not deliver reliable mouseenter while
- * ignoreMouseEvents(forward) is on. Track mousemove and only capture the mouse
- * (so CSS pointer can show) when the cursor is over the sprite.
+ * Transparent click-through windows need ignoreMouseEvents(false) before CSS
+ * cursors paint, and a non-zero fill on the sprite (see pet.html background).
+ * mouseenter is unreliable under forward-only events — use mousemove + rects.
  */
 function syncPetMouseTarget(event) {
   if (dockDragging) return;
   const over = overPetHit(event);
   if (over) {
-    if (!mouseCaptured) setPetMouseIgnore(false);
-    setHoverCursor("pointer");
+    // Re-assert capture every move; Electron can drop cursor ownership otherwise.
+    setPetMouseIgnore(false);
+    setHoverCursor("grab");
     return;
   }
   if (mouseCaptured) {
@@ -111,9 +114,8 @@ function clearDockDrag() {
       // Capture may already be cleared.
     }
   }
-  // Stay clickable if the pointer is still over the pet after a drag.
   if (petStack.matches?.(":hover")) {
-    setHoverCursor("pointer");
+    setHoverCursor("grab");
     setPetMouseIgnore(false);
     return;
   }
@@ -121,7 +123,7 @@ function clearDockDrag() {
   setPetMouseIgnore(true);
 }
 
-window.addEventListener("mousemove", syncPetMouseTarget, { passive: true });
+document.addEventListener("mousemove", syncPetMouseTarget, { passive: true });
 window.addEventListener("mouseleave", () => {
   if (dockDragging) return;
   setHoverCursor("");

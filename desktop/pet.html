@@ -131,13 +131,15 @@
         flex: none;
         width: 70px;
         height: 70px;
-        cursor: pointer;
+        /* Tiny fill so Electron paints CSS cursors on a transparent overlay. */
+        background: rgba(0, 0, 0, 0.01);
+        cursor: grab;
         pointer-events: auto;
       }
       #pet-stack:hover,
       #pet-stack .pet-figure,
       #pet-stack .pet-layer {
-        cursor: pointer;
+        cursor: grab;
       }
       #pet-stack.is-dragging,
       #pet-stack.is-dragging .pet-figure,
@@ -160,7 +162,7 @@
         border: 0;
         outline: none;
         image-rendering: pixelated;
-        cursor: pointer;
+        cursor: grab;
       }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       .pet-layer:not([src]),
