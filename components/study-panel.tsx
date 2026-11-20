@@ -464,28 +464,37 @@ export function StudyPanel({
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}
+          headTitle={shownSession ? "Studying with you" : null}
+          headSubtitle={
+            shownSession
+              ? shownSession.useDesktopPet
+                ? "Desktop pet is tracking this session."
+                : "Website timer is tracking this session."
+              : null
+          }
           headerAside={
             <div className="below-room desk-session">
-              <div className="session-copy">
-                <p className="pet-name">
-                  {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
-                </p>
-                <p className="growth-label">
-                  {checkingSession
-                    ? "Fetching the desk."
-                    : shownSession
-                      ? shownSession.useDesktopPet
-                        ? "Desktop pet is tracking this session."
-                        : "Website timer is tracking this session."
-                      : "Pick a length and a tracker, then Farm Aura."}
-                </p>
-                {checkingSession ? <SessionRefreshStatus /> : null}
-                {error ? (
-                  <p className="form-error" role="alert">
-                    {error}
+              {shownSession ? null : (
+                <div className="session-copy">
+                  <p className="pet-name">
+                    {checkingSession ? "Checking this session" : "Ready for a little focus?"}
                   </p>
-                ) : null}
-              </div>
+                  <p className="growth-label">
+                    {checkingSession ? "Fetching the desk." : "Pick a length and a tracker, then Farm Aura."}
+                  </p>
+                  {checkingSession ? <SessionRefreshStatus /> : null}
+                  {error ? (
+                    <p className="form-error" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              {shownSession && error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
               {shownSession && !checkingSession ? (
                 <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
                   End session early

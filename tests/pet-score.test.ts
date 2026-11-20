@@ -207,11 +207,19 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
+  assert.match(desk, /headTitle=\{shownSession \? "Studying with you" : null\}/);
+  assert.match(desk, /Desktop pet is tracking this session\.[\s\S]*Website timer is tracking this session\./);
+  assert.match(desk, /room-top is-studying|headTitle=\{shownSession/);
   assert.match(
     desk,
     /shownSession && !checkingSession \? \([\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
   );
   assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
+  const living = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  assert.match(living, /headTitle \?\? "Your little living room"/);
+  assert.match(living, /headSubtitle \?\? "Your favorite companions, at home\."/);
+  assert.match(living, /studyingHead \? "room-top is-studying" : "room-top"/);
+  assert.match(deskCss, /\.room-top\.is-studying \{[\s\S]*grid-template-columns:/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);

@@ -126,16 +126,29 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
         ) : null}
         {detail ? (
           <section className="living-room-block crew-room-stage" aria-label={detail.name}>
-            <div className="crew-top">
+            <div className={session ? "crew-top is-studying" : "crew-top"}>
               <div className="room-head crew-room-head">
-                <PixelPetArt petType={detail.petType} color={detail.color} className="dialog-pet-art" alt="" />
-                <div>
-                  <h1 className="room-title">{detail.name}</h1>
-                  <p className="room-subtitle">
-                    {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
-                  </p>
-                  {detail.description ? <p className="panel-hint">{detail.description}</p> : null}
-                </div>
+                {session ? (
+                  <div>
+                    <h1 className="room-title">Studying with you</h1>
+                    <p className="room-subtitle">
+                      {session.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <PixelPetArt petType={detail.petType} color={detail.color} className="dialog-pet-art" alt="" />
+                    <div>
+                      <h1 className="room-title">{detail.name}</h1>
+                      <p className="room-subtitle">
+                        {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
+                      </p>
+                      {detail.description ? <p className="panel-hint">{detail.description}</p> : null}
+                    </div>
+                  </>
+                )}
               </div>
               {session ? (
                 <CrewSessionTimer
@@ -230,22 +243,16 @@ function CrewSessionTimer({
   return (
     <>
       <div className="below-room crew-timer">
-        <div className="session-copy">
-          <p className="pet-name">Studying with you</p>
-          <p className="growth-label">
-            {session.useDesktopPet
-              ? "Desktop pet is tracking this session."
-              : "Website timer is tracking this session."}
-          </p>
-          {session.useDesktopPet ? (
+        {session.useDesktopPet ? (
+          <div className="session-copy">
             <div className="study-active">
               <p>
                 Started <time dateTime={session.startedAt}>{formatTimestamp(session.startedAt)}</time>
               </p>
               <p>{formatClock(session.plannedSeconds)} chosen</p>
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         <button
           type="button"
           className="button button-ghost button-end-early"
