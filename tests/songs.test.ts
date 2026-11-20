@@ -128,6 +128,7 @@ test("the desk opens songs and celebrates an unlock", () => {
   assert.match(screen, /onOpenSong=\{\(\) => showSection\("song"\)\}/);
   assert.match(livingRoom, /onOpenSong/);
   assert.match(livingRoom, /data-rack-hotspot=\{spot\.id\}/);
+  assert.match(livingRoom, /room-prop-hotspot/);
   assert.match(screen, /DeskSong/);
   assert.match(screen, /SongUnlockCelebration/);
   assert.match(screen, /featuredSongId=\{shownSong && !songBlocked \? shownSong\.id : null\}/);

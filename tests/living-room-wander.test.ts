@@ -342,12 +342,15 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /ROOM_CARPET_SRC/);
   assert.match(source, /ROOM_FURNITURE/);
   assert.match(source, /ROOM_RACK_HOTSPOTS/);
-  assert.match(source, /room-rack-hotspot/);
-  assert.match(source, /preserveAspectRatio="xMidYMid meet"/);
-  assert.match(source, /spot\.bounds\.x/);
+  assert.match(source, /ROOM_WALL_HOTSPOTS/);
+  assert.match(source, /room-prop-hotspot/);
+  assert.match(source, /room-prop-hotspot-pad/);
+  assert.match(source, /coverBox\(/);
+  assert.match(source, /spot\.bounds/);
   assert.match(source, /onOpenSong/);
   assert.match(source, /onOpenAchievements/);
   assert.match(source, /onOpenCollection/);
+  assert.match(source, /onOpenSocial/);
   assert.match(source, /roomDepthZ/);
   assert.doesNotMatch(source, /PettingHandIcon/);
   assert.doesNotMatch(source, /room-pet-button/);
@@ -379,6 +382,8 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(css, /\.room-pet-wrap\.is-dragging/);
   assert.match(css, /room-pet-struggle/);
   assert.match(css, /rotate\(-10deg\)/);
+  assert.match(css, /\.room-prop-hotspot/);
+  assert.match(css, /\.room-prop-hotspot-pad/);
   assert.match(css, /\.room-rack-hotspot/);
   // Pets must not sit in a low stacking context or drag order cannot beat furniture.
   assert.match(css, /\.living-room-pets\s*\{[^}]*pointer-events:\s*none/);

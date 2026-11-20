@@ -587,10 +587,10 @@ export function LivingRoom({
     collection: onOpenCollection,
   };
   const rackZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) + 1;
+  const rackPadZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) - 1;
   const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
+  const blackboardPadZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) - 1;
   const carpetShift = offsetTransform(decor, "carpet");
-  const rackShift = offsetTransform(decor, "storage-rack");
-  const boardShift = offsetTransform(decor, "blackboard");
 
   useEffect(() => {
     const loaded = readRoomDecor(userId);
@@ -743,77 +743,89 @@ export function LivingRoom({
             />
           ) : null,
         )}
-        {/*
-          SVG hit layer shares the furniture viewBox; room stays 2:1 so meet matches contain.
-        */}
-        {editing ? null : (
-          <svg
-            className="living-room-rack-hotspots"
-            viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ zIndex: rackZ, transform: rackShift }}
-          >
-            {ROOM_RACK_HOTSPOTS.map((spot) => {
+        {/* Prop hotspots: glow under furniture art, hit target + label on top. */}
+        {editing
+          ? null
+          : ROOM_RACK_HOTSPOTS.flatMap((spot) => {
               const action = rackActions[spot.id];
-              if (!action) return null;
-              return (
-                <rect
-                  key={spot.id}
-                  className="room-rack-hotspot"
-                  role="button"
-                  tabIndex={0}
+              if (!action) return [];
+              const box = coverBox(
+                spot.bounds,
+                roomSize.width,
+                roomSize.height,
+                decor.offsets["storage-rack"],
+              );
+              const boxStyle = {
+                left: box.left,
+                top: box.top,
+                width: box.width,
+                height: box.height,
+              };
+              return [
+                <span
+                  key={`${spot.id}-pad`}
+                  className="room-prop-hotspot-pad"
+                  aria-hidden="true"
+                  data-prop-hotspot={spot.id}
+                  data-rack-hotspot={spot.id}
+                  style={{ ...boxStyle, zIndex: rackPadZ }}
+                />,
+                <button
+                  key={`${spot.id}-btn`}
+                  type="button"
+                  className="room-prop-hotspot"
                   aria-label={spot.label}
                   data-tutorial={spot.id}
                   data-tutorial-current={tutorialTarget === spot.id ? "true" : undefined}
+                  data-prop-hotspot={spot.id}
                   data-rack-hotspot={spot.id}
-                  x={spot.bounds.x}
-                  y={spot.bounds.y}
-                  width={spot.bounds.width}
-                  height={spot.bounds.height}
+                  style={{ ...boxStyle, zIndex: rackZ }}
                   onClick={action}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      action();
-                    }
-                  }}
-                />
-              );
+                >
+                  <span className="room-prop-hotspot-label">{spot.label}</span>
+                </button>,
+              ];
             })}
-          </svg>
-        )}
-        {!editing && onOpenSocial ? (
-          <svg
-            className="living-room-wall-hotspots"
-            viewBox={`0 0 ${ROOM_VIEW_WIDTH} ${ROOM_VIEW_HEIGHT}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ zIndex: blackboardZ, transform: boardShift }}
-          >
-            {ROOM_WALL_HOTSPOTS.map((spot) => (
-              <rect
-                key={spot.id}
-                className="room-rack-hotspot"
-                role="button"
-                tabIndex={0}
-                aria-label={spot.label}
-                data-tutorial={spot.tutorialTarget}
-                data-tutorial-current={tutorialTarget === spot.tutorialTarget ? "true" : undefined}
-                data-wall-hotspot={spot.id}
-                x={spot.bounds.x}
-                y={spot.bounds.y}
-                width={spot.bounds.width}
-                height={spot.bounds.height}
-                onClick={onOpenSocial}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onOpenSocial();
-                  }
-                }}
-              />
-            ))}
-          </svg>
-        ) : null}
+        {!editing && onOpenSocial
+          ? ROOM_WALL_HOTSPOTS.flatMap((spot) => {
+              const box = coverBox(
+                spot.bounds,
+                roomSize.width,
+                roomSize.height,
+                decor.offsets.blackboard,
+              );
+              const boxStyle = {
+                left: box.left,
+                top: box.top,
+                width: box.width,
+                height: box.height,
+              };
+              return [
+                <span
+                  key={`${spot.id}-pad`}
+                  className="room-prop-hotspot-pad"
+                  aria-hidden="true"
+                  data-prop-hotspot={spot.id}
+                  data-wall-hotspot={spot.id}
+                  style={{ ...boxStyle, zIndex: blackboardPadZ }}
+                />,
+                <button
+                  key={`${spot.id}-btn`}
+                  type="button"
+                  className="room-prop-hotspot"
+                  aria-label={spot.label}
+                  data-tutorial={spot.tutorialTarget}
+                  data-tutorial-current={tutorialTarget === spot.tutorialTarget ? "true" : undefined}
+                  data-prop-hotspot={spot.id}
+                  data-wall-hotspot={spot.id}
+                  style={{ ...boxStyle, zIndex: blackboardZ }}
+                  onClick={onOpenSocial}
+                >
+                  <span className="room-prop-hotspot-label">{spot.label}</span>
+                </button>,
+              ];
+            })
+          : null}
         {editing
           ? decorHandles(decor).map((handle) => {
               const box = coverBox(moverBounds(handle.id), roomSize.width, roomSize.height, decor.offsets[handle.id]);

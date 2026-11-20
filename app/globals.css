@@ -3080,6 +3080,134 @@ button.dialog-row {
   stroke-width: 3;
 }
 
+/* Prop entries (Song / Collection / Achievements / Blackboard): glow under art, label under hit. */
+.room-prop-hotspot {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  overflow: visible;
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.room-prop-hotspot:focus-visible {
+  outline: none;
+}
+
+.room-prop-hotspot-pad {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* Soft aura drawn behind the entry art (pad z-index is under the furniture). */
+.room-prop-hotspot-pad::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 85.8%; /* 78% × 1.1 */
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 55%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  transform: translate(-50%, -50%) scale(0.92);
+  transition:
+    background 180ms ease,
+    filter 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Collection drawer is wide — use a rounded rectangle instead of a circle. */
+.room-prop-hotspot-pad[data-prop-hotspot="collection"]::before {
+  width: 129.6%; /* 108% × 1.2 */
+  height: 129.6%;
+  aspect-ratio: auto;
+  border-radius: 0.55rem;
+  background: transparent;
+}
+
+.room-prop-hotspot-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.35rem);
+  transform: translate(-50%, 0.25rem);
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 252, 245, 0.72);
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 0.744rem; /* 0.62rem × 1.2 */
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.living-room:has(.room-prop-hotspot[data-prop-hotspot="song"]:is(:hover, :focus-visible))
+  .room-prop-hotspot-pad[data-prop-hotspot="song"]::before,
+.living-room:has(.room-prop-hotspot[data-prop-hotspot="achievements"]:is(:hover, :focus-visible))
+  .room-prop-hotspot-pad[data-prop-hotspot="achievements"]::before,
+.living-room:has(.room-prop-hotspot[data-prop-hotspot="blackboard"]:is(:hover, :focus-visible))
+  .room-prop-hotspot-pad[data-prop-hotspot="blackboard"]::before {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.308) 42%,
+    rgba(255, 255, 255, 0.088) 68%,
+    rgba(255, 255, 255, 0) 78%
+  );
+  filter:
+    drop-shadow(0 0 4.4px rgba(255, 255, 255, 0.99))
+    drop-shadow(0 0 11px rgba(255, 255, 255, 0.605))
+    drop-shadow(0 0 17.6px rgba(255, 255, 255, 0.308));
+  transform: translate(-50%, -50%) scale(1.155); /* 1.05 × 1.1 */
+}
+
+.living-room:has(.room-prop-hotspot[data-prop-hotspot="collection"]:is(:hover, :focus-visible))
+  .room-prop-hotspot-pad[data-prop-hotspot="collection"]::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.308) 42%,
+    rgba(255, 255, 255, 0.088) 68%,
+    rgba(255, 255, 255, 0) 78%
+  );
+  filter:
+    drop-shadow(0 0 4.4px rgba(255, 255, 255, 0.99))
+    drop-shadow(0 0 11px rgba(255, 255, 255, 0.605))
+    drop-shadow(0 0 17.6px rgba(255, 255, 255, 0.308));
+  transform: translate(-50%, -50%) scale(1.386); /* 1.155 × 1.2 */
+}
+
+.room-prop-hotspot:hover .room-prop-hotspot-label,
+.room-prop-hotspot:focus-visible .room-prop-hotspot-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-prop-hotspot-pad::before,
+  .room-prop-hotspot-label {
+    transition: none;
+  }
+}
+
 /* Daily progress capsule — soft pill like the desk meter mock, cozy linen wall. */
 .room-cylinder {
   position: absolute;
