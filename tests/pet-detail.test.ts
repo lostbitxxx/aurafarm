@@ -2,10 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+test("equip-during-session copy stays short and the pixel heart asset exists", () => {
+  const assets = readFileSync(new URL("../lib/pet-assets.ts", import.meta.url), "utf8");
+  const heart = readFileSync(new URL("../public/pet-assets/ui/pixel-heart.svg", import.meta.url), "utf8");
+  assert.match(assets, /You cannot switch equipped pet while studying!/);
+  assert.doesNotMatch(assets, /XP stays with the pet chosen when the session started/);
+  assert.match(assets, /PIXEL_HEART_SRC/);
+  assert.match(heart, /shape-rendering="crispEdges"/);
+  assert.match(heart, /#d45d83/);
+});
+
 test("pet detail dress-up reuses collection apply actions and owned pickers", () => {
   const detail = readFileSync(new URL("../components/pet-detail-dialog.tsx", import.meta.url), "utf8");
   const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   const colorSql = readFileSync(
     new URL("../supabase/migrations/0018_collection_colors.sql", import.meta.url),
     "utf8",
@@ -22,8 +33,27 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /setPicker\("hat"\)/);
   assert.match(detail, /setPicker\("clothes"\)/);
   assert.match(detail, /onChoose\(null\)/);
-  assert.match(detail, /title=\{copy\.name\}/);
+  assert.match(detail, /pet-detail-dialog-title/);
   assert.match(detail, /Lv\.\{progress\.level\}/);
+  assert.match(detail, /Display Lv/);
+  assert.match(detail, /pet-detail-level-row/);
+  assert.match(detail, /pet-detail-stage/);
+  assert.doesNotMatch(detail, /pet-detail-display-name/);
+  assert.doesNotMatch(detail, /Stroke left/);
+  assert.doesNotMatch(detail, /pet-love-button/);
+  assert.doesNotMatch(detail, /Pet ♡/);
+  assert.match(detail, /PetRenameForm/);
+  assert.match(detail, /PetRenameCircleButton/);
+  assert.match(detail, /Rename coupons:/);
+  assert.match(detail, /updateShowPetNames/);
+  assert.match(css, /\.pet-detail-dialog-title/);
+  assert.match(css, /\.pet-detail-stage/);
+  assert.match(detail, /accessoryIconSrc\("hat", pet\.hat\)/);
+  assert.match(detail, /accessoryIconSrc\("clothes", pet\.clothes\)/);
+  assert.match(detail, /className="accessory-slot-art"/);
+  assert.match(detail, /PixelPetArt[\s\S]*color=\{resolvedColorId\(pet\.color, pet\.pet_type\)\}/);
+  assert.doesNotMatch(detail, /<b>\{colorDisplayName/);
+  assert.doesNotMatch(detail, /<b>\{accessoryDisplayName/);
   assert.doesNotMatch(detail, /\{copy\.name\} · Lv\./);
   assert.doesNotMatch(detail, /ACCESSORY_NOTE/);
   assert.doesNotMatch(detail, /Coming soon/);

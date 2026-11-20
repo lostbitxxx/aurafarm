@@ -9,9 +9,9 @@
  */
 
 export type PetSpecies = "cat" | "bunny";
-export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "wait" | "study1" | "study2";
+export type PetPose = "idle" | "walk1" | "walk2" | "blush" | "struggle" | "wait" | "study1" | "study2";
 export type PetLegMode = "stand" | "left-up" | "right-up";
-export type PetFaceMode = "normal" | "blush";
+export type PetFaceMode = "normal" | "blush" | "struggle";
 
 /**
  * One id per color range. A lighter or darker shade of the same range is an SVG
@@ -191,7 +191,9 @@ export function legModeForPose(pose: PetPose): PetLegMode {
 }
 
 export function faceModeForPose(pose: PetPose): PetFaceMode {
-  return pose === "blush" ? "blush" : "normal";
+  if (pose === "blush") return "blush";
+  if (pose === "struggle") return "struggle";
+  return "normal";
 }
 
 export function isStudyPose(pose: PetPose) {
@@ -267,7 +269,18 @@ export function outfitFolder(hat: string | null | undefined, clothes: string | n
   return `${hatPart}-${clothesPart}`;
 }
 
+/** Full composite room art (crew room and any single-image use). */
 export const ROOM_ASSET_PATH = "/pet-assets/room/living-room.svg";
+
+/** Layered desk room pieces (wall / floor / carpet / furniture folders). */
+export {
+  ROOM_CARPET_SRC,
+  ROOM_FLOOR_SRC,
+  ROOM_FURNITURE,
+  ROOM_TRIM_SRC,
+  ROOM_WALL_SRC,
+} from "@/lib/living-room-layout";
+
 
 export const ROOM_PLACEMENT_NOTE =
   "This arrangement stays in this browser. It is not saved to your account.";
@@ -284,5 +297,7 @@ export function streakPillLabel(streakCount: number | null | undefined) {
   return safe === 1 ? "1 day" : `${safe} days`;
 }
 
-export const EQUIP_DURING_SESSION_NOTE =
-  "You cannot switch the equipped pet while a study session is running. XP stays with the pet chosen when the session started.";
+export const EQUIP_DURING_SESSION_NOTE = "You cannot switch equipped pet while studying!";
+
+/** Pixel heart for petting FX and the Pet button. */
+export const PIXEL_HEART_SRC = "/pet-assets/ui/pixel-heart.svg";

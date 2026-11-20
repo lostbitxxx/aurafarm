@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { updateSocialSettings } from "@/lib/actions/friends";
+import { updateShowPetNames } from "@/lib/actions/pets";
 import {
   FRIEND_INVITE_OPTIONS,
   STATUS_SEEN_OPTIONS,
@@ -19,29 +20,38 @@ export function SocialSettingsDialog({
   friendCode,
   friendInvite,
   allowStatusSeen,
+  showPetNames,
   friendsError,
+  onShowPetNamesChange,
   onClose,
+  embedded = false,
 }: {
   friendCode: string;
   friendInvite: FriendInvite;
   allowStatusSeen: StatusSeen;
+  showPetNames: boolean;
   friendsError: string | null;
+  onShowPetNamesChange?: (enabled: boolean) => void;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const [invite, setInvite] = useState(friendInvite);
   const [seen, setSeen] = useState(allowStatusSeen);
+  // showPetNames=false means Display Lv is on (name + level in the living room).
+  const [displayLv, setDisplayLv] = useState(!showPetNames);
   const [error, setError] = useState<string | null>(friendsError);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openPicker, setOpenPicker] = useState<"invite" | "seen" | null>(null);
-  const settingsKey = `${friendInvite}|${allowStatusSeen}|${friendsError ?? ""}`;
+  const settingsKey = `${friendInvite}|${allowStatusSeen}|${showPetNames ? 1 : 0}|${friendsError ?? ""}`;
   const [snap, setSnap] = useState(settingsKey);
 
   if (settingsKey !== snap) {
     setSnap(settingsKey);
     setInvite(friendInvite);
     setSeen(allowStatusSeen);
+    setDisplayLv(!showPetNames);
     setError(friendsError);
   }
 
@@ -62,58 +72,91 @@ export function SocialSettingsDialog({
     setPending(true);
     setError(null);
     setNotice(null);
-    const result = await updateSocialSettings(invite, seen);
-    setPending(false);
-    if (result.error) {
-      setError(result.error);
+    const social = await updateSocialSettings(invite, seen);
+    if (social.error) {
+      setPending(false);
+      setError(social.error);
       return;
     }
+    const nextShowNames = !displayLv;
+    const names = await updateShowPetNames(nextShowNames);
+    setPending(false);
+    if (names.error) {
+      setError(names.error);
+      return;
+    }
+    onShowPetNamesChange?.(nextShowNames);
     setNotice("Saved.");
   }
 
+  const body = (
+    <div className={embedded ? "social-board-panel" : undefined}>
+      <div className={embedded ? "social-board-scroll" : undefined}>
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="friend-code-row">
+          <p className="panel-hint">
+            Your friend code <strong className="friend-code">{friendCode || "Unavailable"}</strong>
+          </p>
+          <button type="button" className="button button-small" onClick={onCopy} disabled={!friendCode}>
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <form className="social-settings-form" onSubmit={onSave}>
+          <SettingPicker
+            label="Who can add you"
+            value={invite}
+            options={FRIEND_INVITE_OPTIONS}
+            open={openPicker === "invite"}
+            onOpenChange={(open) => setOpenPicker(open ? "invite" : null)}
+            onChange={(value) => {
+              if (isFriendInvite(value)) setInvite(value);
+            }}
+            mark={inviteMark}
+          />
+          <SettingPicker
+            label="Who can see your status"
+            value={seen}
+            options={STATUS_SEEN_OPTIONS}
+            open={openPicker === "seen"}
+            onOpenChange={(open) => setOpenPicker(open ? "seen" : null)}
+            onChange={(value) => {
+              if (isStatusSeen(value)) setSeen(value);
+            }}
+            mark={seenMark}
+          />
+          <div className="reward-apply-row">
+            <span className="reward-apply-label" id="display-lv-label">
+              Display Lv
+            </span>
+            <button
+              type="button"
+              className="reward-apply-toggle"
+              role="switch"
+              aria-checked={displayLv}
+              aria-labelledby="display-lv-label"
+              disabled={pending}
+              onClick={() => setDisplayLv((current) => !current)}
+            >
+              <span className="reward-apply-knob" aria-hidden="true" />
+            </button>
+          </div>
+          <button type="submit" className="button button-small" disabled={pending}>
+            Save
+          </button>
+        </form>
+        {notice ? <p className="panel-hint">{notice}</p> : null}
+      </div>
+    </div>
+  );
+
+  if (embedded) return body;
   return (
     <FarmDialog title="Social Settings" onClose={onClose} wide>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <div className="friend-code-row">
-        <p className="panel-hint">
-          Your friend code <strong className="friend-code">{friendCode || "Unavailable"}</strong>
-        </p>
-        <button type="button" className="button button-small" onClick={onCopy} disabled={!friendCode}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <form className="social-settings-form" onSubmit={onSave}>
-        <SettingPicker
-          label="Who can add you"
-          value={invite}
-          options={FRIEND_INVITE_OPTIONS}
-          open={openPicker === "invite"}
-          onOpenChange={(open) => setOpenPicker(open ? "invite" : null)}
-          onChange={(value) => {
-            if (isFriendInvite(value)) setInvite(value);
-          }}
-          mark={inviteMark}
-        />
-        <SettingPicker
-          label="Who can see your status"
-          value={seen}
-          options={STATUS_SEEN_OPTIONS}
-          open={openPicker === "seen"}
-          onOpenChange={(open) => setOpenPicker(open ? "seen" : null)}
-          onChange={(value) => {
-            if (isStatusSeen(value)) setSeen(value);
-          }}
-          mark={seenMark}
-        />
-        <button type="submit" className="button button-small" disabled={pending}>
-          Save
-        </button>
-      </form>
-      {notice ? <p className="panel-hint">{notice}</p> : null}
+      {body}
     </FarmDialog>
   );
 }

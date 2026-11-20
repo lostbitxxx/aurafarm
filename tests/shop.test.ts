@@ -53,12 +53,15 @@ test("the desk requires an account and the old shop page is gone", () => {
   assert.match(header, /onClick=\{onOpenShop\}/);
   assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
-  assert.match(header, /Collection/);
+  assert.doesNotMatch(header, /Collection/);
   assert.match(header, />Pets</);
   assert.doesNotMatch(header, />Inventory</);
-  assert.match(header, /Achievements/);
+  assert.doesNotMatch(header, /Achievements/);
   assert.doesNotMatch(publicHeader, /\/shop/);
   assert.doesNotMatch(publicHeader, /\/inventory/);
+  const livingRoom = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  assert.match(livingRoom, /onOpenCollection/);
+  assert.match(livingRoom, /onOpenAchievements/);
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
   assert.match(action, /shopPurchaseBlock/);
   assert.match(action, /highestPetLevel/);

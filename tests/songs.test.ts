@@ -112,15 +112,30 @@ test("song migration grants, backfills, and resets ownership", () => {
 test("the desk opens songs and celebrates an unlock", () => {
   const screen = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const livingRoom = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const player = readFileSync(new URL("../components/song-player.tsx", import.meta.url), "utf8");
+  const musicPlayer = readFileSync(
+    new URL("../public/pet-assets/props/music-player.svg", import.meta.url),
+    "utf8",
+  );
   const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 
-  assert.match(header, /onOpenSong/);
-  assert.match(header, />\s*Song\s*</);
+  assert.match(musicPlayer, /viewBox="0 0 42 42"/);
+  assert.match(musicPlayer, /shape-rendering="crispEdges"/);
+
+  assert.doesNotMatch(header, /onOpenSong/);
+  assert.doesNotMatch(header, />\s*Song\s*</);
+  assert.match(screen, /onOpenSong=\{\(\) => showSection\("song"\)\}/);
+  assert.match(livingRoom, /onOpenSong/);
+  assert.match(livingRoom, /data-rack-hotspot=\{spot\.id\}/);
   assert.match(screen, /DeskSong/);
   assert.match(screen, /SongUnlockCelebration/);
   assert.match(screen, /featuredSongId=\{shownSong && !songBlocked \? shownSong\.id : null\}/);
+  assert.doesNotMatch(screen, /pet=\{songPet\}/);
   assert.match(player, /New song unlocked/);
+  assert.match(player, /MUSIC_PLAYER_ASSET/);
+  assert.match(player, /level-up-music-player/);
+  assert.doesNotMatch(player, /PixelPetArt/);
   assert.match(player, /aria-label="Previous song"/);
   assert.match(player, /aria-label="Next song"/);
   assert.match(player, /song-icon-prev/);

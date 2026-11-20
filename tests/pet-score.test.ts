@@ -177,29 +177,27 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /closeFrontWindow/);
   assert.doesNotMatch(main, /The study time has not finished/);
   const desk = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
-  assert.match(desk, /Copy session code/);
-  assert.match(desk, /Copy Terminal command/);
-  assert.match(desk, /navigator\.clipboard\.writeText\(value\)/);
-  assert.match(desk, /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*customOpen \? \([\s\S]*Custom minutes[\s\S]*How should this session be tracked/);
-  assert.match(desk, /Desktop pet/);
-  assert.match(desk, /Website timer/);
-  assert.match(desk, /xattr -cr ~\/Downloads\/Aurafarm\.app/);
+  assert.doesNotMatch(desk, /Copy session code/);
+  assert.doesNotMatch(desk, /Copy Terminal command/);
+  assert.doesNotMatch(desk, /navigator\.clipboard\.writeText/);
+  assert.doesNotMatch(desk, /xattr -cr/);
   assert.match(
     desk,
-    /Desktop pet[\s\S]*If you haven't downloaded our desktop application, please download it here\.[\s\S]*<PetStatus downloadUrl=\{downloadUrl\} showHeading=\{false\} \/>[\s\S]*After downloading, unzip it, then open your Terminal and run this command:[\s\S]*xattr -cr ~\/Downloads\/Aurafarm\.app/,
+    /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*\{customOpen \? \([\s\S]*placeholder="type here"[\s\S]*\) : null\}[\s\S]*Desktop pet[\s\S]*Website timer[\s\S]*FARM AURA/,
   );
-  assert.match(
-    desk,
-    /desktopStep === 2 \? \([\s\S]*When on, we close tabs like YouTube and Instagram for you when you get distracted\.[\s\S]*Close blocked tabs[\s\S]*Confirm/,
-  );
+  assert.match(desk, /TrackerDemo kind="desktop"/);
+  assert.match(desk, /TrackerDemo kind="website"/);
+  assert.match(desk, /First time aurafarming\? Download here!/);
+  assert.match(desk, /desktopLink \? \([\s\S]*href=\{desktopLink\}[\s\S]*Open Aurafarm/);
+  assert.match(desk, /shownSession\?\.useDesktopPet && launchUrl \? \([\s\S]*href=\{launchUrl\}[\s\S]*Open Aurafarm/);
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
-  assert.match(desk, /desktopStep === 2 \|\| trackerChoice === false \? "Confirm" : "Next"/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
-  assert.match(desk, /shownSession\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
-  assert.match(desk, /onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/);
+  assert.match(
+    desk,
+    /shownSession && !checkingSession \? \([\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
+  );
   assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
-  assert.match(desk, /trackerChoice === true \?[\s\S]*The desktop pet tracks the time\.[\s\S]*trackerChoice === false/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);

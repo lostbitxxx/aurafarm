@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { claimCollectionReward } from "@/lib/actions/pets";
+import { applyPetClothes, applyPetColor, applyPetHat, claimCollectionReward } from "@/lib/actions/pets";
 import { previewReward, previewRewards, type PreviewReward } from "@/lib/collection-catalog";
-import { sampleAccessoryName, SAMPLE_CLOTHES, SAMPLE_COLORS, SAMPLE_HATS } from "@/lib/pet-assets";
-import { describePet, type CollectionReward, type PetCard } from "@/lib/pets";
+import {
+  sampleAccessoryName,
+  sampleClothes,
+  sampleColor,
+  sampleHat,
+  SAMPLE_CLOTHES,
+  SAMPLE_COLORS,
+  SAMPLE_HATS,
+} from "@/lib/pet-assets";
+import { petDisplayName, type CollectionReward, type PetCard } from "@/lib/pets";
 import {
   canShuffleReward,
   forgetRewardOffer,
@@ -17,6 +25,12 @@ import {
   type RewardPools,
 } from "@/lib/reward-offer";
 import { rememberSeenRewards } from "@/lib/reward-seen";
+import {
+  RENAME_COUPON_ICON,
+  RENAME_COUPON_ID,
+  RENAME_COUPON_MAX,
+  RENAME_COUPON_NAME,
+} from "@/lib/rename-coupon";
 import { FarmDialog } from "./farm-dialog";
 import { PixelPetArt } from "./pixel-pet";
 
@@ -54,7 +68,7 @@ export function LevelUpCelebration({
 }) {
   const titleId = useId();
   const continueRef = useRef<HTMLButtonElement>(null);
-  const copy = describePet(pet.pet_type);
+  const displayName = petDisplayName(pet);
 
   useEffect(() => {
     if (markIds) rememberSeenRewards(userId, markIds.split("|").filter(Boolean));
@@ -115,10 +129,10 @@ export function LevelUpCelebration({
           hat={pet.hat}
           clothes={pet.clothes}
           className="level-up-pet"
-          alt={copy.name}
+          alt={displayName}
         />
         <div className="level-up-copy">
-          <p className="level-up-kicker">{copy.name}</p>
+          <p className="level-up-kicker">{displayName}</p>
           <h2 id={titleId} className="level-up-title">
             Level {reward.levelReached}
           </h2>
@@ -131,29 +145,46 @@ export function LevelUpCelebration({
   );
 }
 
+type RewardKind = "color" | "hat" | "clothes";
+
+function rewardKindForItem(itemId: string): RewardKind | null {
+  if (itemId === RENAME_COUPON_ID) return null;
+  if (sampleColor(itemId)) return "color";
+  const preview = previewReward(itemId);
+  if (preview?.kind === "hat" || sampleHat(itemId)) return "hat";
+  if (preview?.kind === "clothes" || sampleClothes(itemId)) return "clothes";
+  return null;
+}
+
 export function RewardPicker({
   rewardId,
+  petId,
   userId,
   choiceNumber,
   choiceTotal,
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  renameCoupons,
   onClaimed,
   onClose,
 }: {
   rewardId: string;
+  petId: string;
   userId: string;
   choiceNumber: number;
   choiceTotal: number;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
-  onClaimed: (itemId: string) => void;
+  renameCoupons: number;
+  onClaimed: (itemId: string, equip: boolean) => void;
   onClose: () => void;
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [applyNow, setApplyNow] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const couponMaxed = renameCoupons >= RENAME_COUPON_MAX;
   const pools = useMemo<RewardPools>(
     () => ({
       colors: SAMPLE_COLORS.filter((color) => !ownedColorIds.includes(color.id)).map((color) => color.id),
@@ -177,7 +208,7 @@ export function RewardPicker({
     () => rewardOfferSnapshot(userId, rewardId, pools),
     rewardOfferServerSnapshot,
   );
-  const cards = offer
+  const cosmeticCards = offer
     ? [
         offer.colorId ? { kind: "Color" as const, id: offer.colorId } : null,
         offer.hatId ? { kind: "Hat" as const, id: offer.hatId } : null,
@@ -186,23 +217,46 @@ export function RewardPicker({
     : [];
   const shufflesLeft = offer ? REWARD_SHUFFLE_LIMIT - offer.shufflesUsed : REWARD_SHUFFLE_LIMIT;
   const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
+  const busy = pendingId !== null;
 
-  async function onChoose(itemId: string) {
-    if (pendingId) return;
+  function onChoose(itemId: string) {
+    if (busy) return;
+    if (itemId === RENAME_COUPON_ID && couponMaxed) return;
+    void finishClaim(itemId, applyNow && Boolean(rewardKindForItem(itemId)));
+  }
+
+  async function finishClaim(itemId: string, equip: boolean) {
     setError(null);
     setPendingId(itemId);
-    const result = await claimCollectionReward(itemId);
-    setPendingId(null);
-    if (result.error) {
-      setError(result.error);
+    const claim = await claimCollectionReward(itemId);
+    if (claim.error) {
+      setPendingId(null);
+      setError(claim.error);
       return;
     }
     forgetRewardOffer(userId, rewardId);
-    onClaimed(itemId);
+    if (equip) {
+      const kind = rewardKindForItem(itemId);
+      const applied =
+        kind === "color"
+          ? await applyPetColor(petId, itemId)
+          : kind === "hat"
+            ? await applyPetHat(petId, itemId)
+            : kind === "clothes"
+              ? await applyPetClothes(petId, itemId)
+              : { error: "" };
+      if (applied.error) {
+        setPendingId(null);
+        setError(applied.error);
+        return;
+      }
+    }
+    setPendingId(null);
+    onClaimed(itemId, equip);
   }
 
   function onShuffle() {
-    if (!offer) return;
+    if (!offer || busy) return;
     const next = shuffleRewardOffer(offer, pools);
     if (!next) return;
     saveRewardOffer(userId, rewardId, pools, next);
@@ -211,7 +265,7 @@ export function RewardPicker({
   return (
     <FarmDialog title="Choose a reward" onClose={onClose} wide>
       <p className="panel-hint">
-        {choiceNumber} of {choiceTotal}. Pick one color, hat, or outfit. The one you pick is worn by this pet.
+        {choiceNumber} of {choiceTotal}. Pick one color, hat, outfit, or rename coupon.
       </p>
       {error ? (
         <p className="form-error" role="alert">
@@ -220,34 +274,89 @@ export function RewardPicker({
       ) : null}
       {!offer ? (
         <p className="panel-hint">Drawing a reward…</p>
-      ) : cards.length > 0 ? (
-        <ul className="collection-color-grid">
-          {cards.map((card) => (
+      ) : (
+        <ul className="collection-color-grid reward-choice-grid">
+          {cosmeticCards.map((card) => (
             <li key={`${card.kind}-${card.id}`}>
               <RewardChoiceButton
                 kind={card.kind}
                 itemId={card.id}
                 pending={pendingId === card.id}
-                disabled={pendingId !== null}
+                disabled={busy}
                 onChoose={onChoose}
               />
             </li>
           ))}
+          <li key="rename-coupon">
+            <RenameCouponChoiceButton
+              pending={pendingId === RENAME_COUPON_ID}
+              disabled={busy || couponMaxed}
+              maxed={couponMaxed}
+              onChoose={onChoose}
+            />
+          </li>
         </ul>
-      ) : (
-        <p className="panel-hint">You already own every color, hat, and outfit.</p>
       )}
+      <div className="reward-apply-row">
+        <span className="reward-apply-label" id="reward-apply-label">
+          Apply now?
+        </span>
+        <button
+          type="button"
+          className="reward-apply-toggle"
+          role="switch"
+          aria-checked={applyNow}
+          aria-labelledby="reward-apply-label"
+          disabled={busy}
+          onClick={() => setApplyNow((current) => !current)}
+        >
+          <span className="reward-apply-knob" aria-hidden="true" />
+        </button>
+      </div>
       <div className="reward-shuffle">
         <button
           type="button"
           className="button button-small button-ghost"
-          disabled={!shuffleReady || pendingId !== null}
+          disabled={!shuffleReady || busy}
           onClick={onShuffle}
         >
           {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}
         </button>
       </div>
     </FarmDialog>
+  );
+}
+
+function RenameCouponChoiceButton({
+  pending,
+  disabled,
+  maxed,
+  onChoose,
+}: {
+  pending: boolean;
+  disabled: boolean;
+  maxed: boolean;
+  onChoose: (itemId: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={maxed ? "collection-color is-maxed" : "collection-color"}
+      disabled={disabled}
+      onClick={() => onChoose(RENAME_COUPON_ID)}
+      aria-disabled={maxed || disabled}
+    >
+      <span className="reward-offer-kind">Coupon</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="collection-accessory-art"
+        src={RENAME_COUPON_ICON}
+        alt=""
+        draggable={false}
+        style={{ imageRendering: "pixelated" }}
+      />
+      <strong>{pending ? "…" : maxed ? "Maximum coupon reached" : RENAME_COUPON_NAME}</strong>
+    </button>
   );
 }
 

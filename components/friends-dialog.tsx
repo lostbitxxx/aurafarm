@@ -14,12 +14,14 @@ export function FriendsDialog({
   friendsError,
   onFriendsChange,
   onClose,
+  embedded = false,
 }: {
   friends: readonly FriendCard[];
   friendCode: string;
   friendsError: string | null;
   onFriendsChange?: (friends: readonly FriendCard[]) => void;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const [tab, setTab] = useState<FriendsTab>("list");
   const [rows, setRows] = useState(friends);
@@ -142,9 +144,13 @@ export function FriendsDialog({
     }
   }
 
-  return (
-    <FarmDialog title="Friends" onClose={onClose} wide>
-      <div className="collection-tabs" role="tablist" aria-label="Friends">
+  const body = (
+    <div className={embedded ? "social-board-panel" : undefined}>
+      <div
+        className={embedded ? "collection-tabs social-board-sticky-controls" : "collection-tabs"}
+        role="tablist"
+        aria-label="Friends"
+      >
         <button
           type="button"
           role="tab"
@@ -173,7 +179,9 @@ export function FriendsDialog({
         </button>
       </div>
       <div
-        className="collection-panel friends-panel"
+        className={
+          embedded ? "collection-panel friends-panel social-board-scroll" : "collection-panel friends-panel"
+        }
         role="tabpanel"
         id={tab === "list" ? "friends-panel-list" : "friends-panel-add"}
         aria-labelledby={tab === "list" ? "friends-tab-list" : "friends-tab-add"}
@@ -261,6 +269,13 @@ export function FriendsDialog({
           </>
         )}
       </div>
+    </div>
+  );
+
+  if (embedded) return body;
+  return (
+    <FarmDialog title="Friends" onClose={onClose} wide>
+      {body}
     </FarmDialog>
   );
 }

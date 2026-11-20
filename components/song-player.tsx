@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { markSongSeen } from "@/lib/actions/songs";
-import { describePet, type PetCard } from "@/lib/pets";
 import {
   NO_OTHER_SONGS,
   STARTER_SONG_ID,
@@ -12,7 +11,8 @@ import {
   songById,
 } from "@/lib/songs";
 import { FarmDialog } from "./farm-dialog";
-import { PixelPetArt } from "./pixel-pet";
+
+export const MUSIC_PLAYER_ASSET = "/pet-assets/props/music-player.svg";
 
 const CONFETTI = [
   { left: "6%", delay: "0s", duration: "1.7s", color: "#c6ef4a", rotate: "-16deg" },
@@ -31,7 +31,8 @@ const CONFETTI = [
   { left: "78%", delay: "0.12s", duration: "1.8s", color: "#c6ef4a", rotate: "-12deg" },
 ];
 
-const DEFAULT_VOLUME = 0.7;
+const MAX_VOLUME = 0.2;
+const DEFAULT_VOLUME = MAX_VOLUME * 0.7;
 const MOBILE_PLAYBACK = "(max-width: 1120px)";
 
 function songStorageKey(userId: string) {
@@ -40,7 +41,7 @@ function songStorageKey(userId: string) {
 
 function clampVolume(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_VOLUME;
-  return Math.min(1, Math.max(0, value));
+  return Math.min(MAX_VOLUME, Math.max(0, value));
 }
 
 function readSavedSong(userId: string) {
@@ -272,7 +273,7 @@ export function DeskSong({
   const progressMax = duration > 0 ? duration : 0;
   const progressValue = progressMax > 0 ? Math.min(elapsed, progressMax) : 0;
   const progressPercent = progressMax > 0 ? (progressValue / progressMax) * 100 : 0;
-  const volumePercent = volume * 100;
+  const volumePercent = MAX_VOLUME > 0 ? (volume / MAX_VOLUME) * 100 : 0;
 
   return (
     <>
@@ -367,7 +368,7 @@ export function DeskSong({
                 type="range"
                 className="song-progress-range song-volume-range"
                 min={0}
-                max={1}
+                max={MAX_VOLUME}
                 step={0.01}
                 value={volume}
                 aria-label="Volume"
@@ -390,17 +391,14 @@ export function DeskSong({
 export function SongUnlockCelebration({
   songTitle,
   songId,
-  pet,
   onContinue,
 }: {
   songTitle: string;
   songId: string;
-  pet: PetCard;
   onContinue: () => void;
 }) {
   const titleId = useId();
   const continueRef = useRef<HTMLButtonElement>(null);
-  const copy = describePet(pet.pet_type);
 
   useEffect(() => {
     void markSongSeen(songId);
@@ -455,13 +453,12 @@ export function SongUnlockCelebration({
         </div>
         <div className="level-up-rays" aria-hidden="true" />
         <div className="level-up-light" aria-hidden="true" />
-        <PixelPetArt
-          petType={pet.pet_type}
-          color={pet.color}
-          hat={pet.hat}
-          clothes={pet.clothes}
-          className="level-up-pet"
-          alt={copy.name}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="level-up-pet level-up-music-player"
+          src={MUSIC_PLAYER_ASSET}
+          alt=""
+          draggable={false}
         />
         <div className="level-up-copy">
           <p className="level-up-kicker">{songTitle}</p>

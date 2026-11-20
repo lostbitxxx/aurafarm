@@ -23,10 +23,11 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { describePet, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
+import { petDisplayName, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode, Weekday } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
+import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
 import { PixelPetArt } from "./pixel-pet";
 
 export function ShopDialog({
@@ -397,12 +398,11 @@ function ApplyColorDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -464,12 +464,11 @@ function ApplyHatDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -534,7 +533,6 @@ function ApplyClothesDialog({
       ) : (
         <ul className="dialog-list">
           {pets.map((pet) => {
-            const copy = describePet(pet.pet_type);
             return (
               <li key={pet.id} className="dialog-row">
                 <PixelPetArt
@@ -545,7 +543,7 @@ function ApplyClothesDialog({
                   className="dialog-pet-art"
                 />
                 <div>
-                  <strong>{copy.name}</strong>
+                  <strong>{petDisplayName(pet)}</strong>
                   <p className="panel-hint">Level {pet.level}</p>
                 </div>
                 <button
@@ -569,19 +567,25 @@ export function InventoryDialog({
   pets,
   placedIds,
   sessionActive,
+  renameCoupons = 0,
   onClose,
   onToggleRoom,
   onEquipped,
+  onPetRenamed,
 }: {
   pets: PetCard[];
   placedIds: ReadonlySet<string>;
   sessionActive: boolean;
+  renameCoupons?: number;
   onClose: () => void;
   onToggleRoom: (petId: string) => void;
   onEquipped?: (petId: string) => void;
+  onPetRenamed?: (petId: string, name: string) => void;
 }) {
   const [items, setItems] = useState(pets);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renamePending, setRenamePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onEquip(petId: string) {
@@ -610,20 +614,27 @@ export function InventoryDialog({
       ) : null}
       <ul className="dialog-list">
         {items.map((pet) => {
-          const copy = describePet(pet.pet_type);
           const inRoom = placedIds.has(pet.id);
           const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
+          const renaming = renamingId === pet.id;
           return (
-            <li key={pet.id} className="dialog-row">
+            <li key={pet.id} className="dialog-row inventory-pet-row">
               <PixelPetArt petType={pet.pet_type} color={pet.color} hat={pet.hat} clothes={pet.clothes} className="dialog-pet-art" />
-              <div>
-                <strong>{copy.name}</strong>
+              <div className="inventory-pet-copy">
                 <p className="panel-hint">
                   Level {pet.level}
                   {pet.is_desktop_active ? " · Equipped" : ""}
                 </p>
+                <strong className="inventory-pet-name">{petDisplayName(pet)}</strong>
               </div>
               <div className="dialog-row-actions">
+                <PetRenameCircleButton
+                  disabled={renamePending || renameCoupons < 1 || renaming}
+                  onClick={() => {
+                    setError(null);
+                    setRenamingId(pet.id);
+                  }}
+                />
                 <button type="button" className="button button-small button-ghost" onClick={() => onToggleRoom(pet.id)}>
                   {inRoom ? "Remove from room" : "Show in room"}
                 </button>
@@ -637,6 +648,28 @@ export function InventoryDialog({
                   {pet.is_desktop_active ? "Equipped" : sessionActive ? "Locked" : "Equip"}
                 </button>
               </div>
+              {renaming ? (
+                <div className="inventory-pet-rename">
+                  <PetRenameForm
+                    pet={pet}
+                    renameCoupons={renameCoupons}
+                    pending={renamePending}
+                    onPendingChange={setRenamePending}
+                    onError={setError}
+                    onRenamed={(name) => {
+                      setItems((current) =>
+                        current.map((row) => (row.id === pet.id ? { ...row, name } : row)),
+                      );
+                      onPetRenamed?.(pet.id, name);
+                      setRenamingId(null);
+                    }}
+                    onCancel={() => {
+                      setRenamingId(null);
+                      setError(null);
+                    }}
+                  />
+                </div>
+              ) : null}
             </li>
           );
         })}
@@ -656,29 +689,31 @@ export function AchievementsDialog({
 }) {
   const earned = new Set(earnedIds);
   return (
-    <FarmDialog title="Achievements" onClose={onClose}>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <ul className="dialog-list achievement-list">
-        {ACHIEVEMENTS.map((achievement) => {
-          const done = earned.has(achievement.id);
-          return (
-            <li
-              key={achievement.id}
-              className={done ? "achievement-row achievement-row-earned" : "achievement-row achievement-row-locked"}
-            >
-              <div>
-                <strong>{achievement.title}</strong>
-                {done ? <span className="achievement-earned">Earned</span> : null}
-                <p className="panel-hint">{achievement.description}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+    <FarmDialog title="Achievements" onClose={onClose} wide>
+      <div className="achievements-board-body">
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <ul className="dialog-list achievement-list">
+          {ACHIEVEMENTS.map((achievement) => {
+            const done = earned.has(achievement.id);
+            return (
+              <li
+                key={achievement.id}
+                className={done ? "achievement-row achievement-row-earned" : "achievement-row achievement-row-locked"}
+              >
+                <div>
+                  <strong>{achievement.title}</strong>
+                  {done ? <span className="achievement-earned">Earned</span> : null}
+                  <p className="panel-hint">{achievement.description}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </FarmDialog>
   );
 }

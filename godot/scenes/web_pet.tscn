@@ -32,7 +32,7 @@ offset_right = 600.0
 offset_bottom = 300.0
 theme_override_colors/font_color = Color(0.968627, 0.952941, 0.909804, 1)
 theme_override_font_sizes/font_size = 36
-text = "Baby Slime"
+text = "Matcha"
 horizontal_alignment = 1
 
 [node name="LevelLabel" type="Label" parent="."]

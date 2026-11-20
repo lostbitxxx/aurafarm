@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DeskTutorial, useDeskTutorial } from "./desk-tutorial";
 import { StudyPanel } from "./study-panel";
@@ -16,15 +16,13 @@ import {
   ShopDialog,
 } from "./dashboard-dialogs";
 import { AdminReset } from "./admin-reset";
-import { FarmCrewDialog } from "./farm-crew-dialog";
-import { FriendsDialog } from "./friends-dialog";
-import { LeaderboardDialog } from "./leaderboard-dialog";
 import { PetStatus } from "./pet-status";
+import { SocialBoardDialog } from "./social-board-dialog";
 import { SocialPresence } from "./social-presence";
-import { SocialSettingsDialog } from "./social-settings-dialog";
 import { previewReward } from "@/lib/collection-catalog";
 import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
 import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
+import { RENAME_COUPON_ID } from "@/lib/rename-coupon";
 import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
 import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSeenRewards } from "@/lib/reward-seen";
@@ -37,7 +35,7 @@ import {
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
-import { type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
+import { isScheduledStudyDay, type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
 
 function roomStorageKey(userId: string) {
@@ -70,6 +68,8 @@ export function DashboardScreen({
   streakCount,
   streakLocalDate,
   pets,
+  renameCoupons: initialRenameCoupons,
+  showPetNames: initialShowPetNames,
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
@@ -88,8 +88,8 @@ export function DashboardScreen({
   downloadUrl,
   studyMode: _studyMode,
   preferredSessionMinutes,
-  weeklyStudyDays: _weeklyStudyDays,
-  planSessions: _planSessions,
+  weeklyStudyDays,
+  planSessions,
   planMigrationHint: _planMigrationHint = null,
   studyPlan,
   friendCode,
@@ -104,6 +104,8 @@ export function DashboardScreen({
   streakCount: number;
   streakLocalDate: string | null;
   pets: PetCard[];
+  renameCoupons: number;
+  showPetNames: boolean;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
@@ -148,10 +150,7 @@ export function DashboardScreen({
     | "inventory"
     | "achievements"
     | "edit-plan"
-    | "friends"
-    | "farmcrew"
-    | "social-settings"
-    | "leaderboard"
+    | "social"
     | "song"
     | "download"
     | "dev-tools"
@@ -164,6 +163,8 @@ export function DashboardScreen({
   const [placedIds, setPlacedIds] = useState<Set<string>>(() => new Set());
   const [placementReady, setPlacementReady] = useState(false);
   const [localPets, setLocalPets] = useState(pets);
+  const [renameCoupons, setRenameCoupons] = useState(initialRenameCoupons);
+  const [showPetNames, setShowPetNames] = useState(initialShowPetNames);
   const [friendRows, setFriendRows] = useState(friends);
   const [ownedColors, setOwnedColors] = useState(ownedColorIds);
   const [ownedHats, setOwnedHats] = useState(ownedHatIds);
@@ -174,27 +175,42 @@ export function DashboardScreen({
   const [display, setDisplay] = useState<{ id: string; markIds: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTotal, setPickerTotal] = useState(0);
+  const finishDevSessionRef = useRef<((password: string) => Promise<{ error: string }>) | null>(null);
+  const [canDevFinish, setCanDevFinish] = useState(false);
+  const onRegisterDevFinish = useCallback(
+    (api: { canFinish: boolean; finish: (password: string) => Promise<{ error: string }> } | null) => {
+      finishDevSessionRef.current = api?.finish ?? null;
+      setCanDevFinish(Boolean(api?.canFinish));
+    },
+    [],
+  );
   // Server snapshot stays at epoch so a broken streak is never shown as live before the farmer day is known.
   const todayLocal = useSyncExternalStore(
     subscribeFarmerLocalDay,
     farmerLocalDay,
     () => "1970-01-01",
   );
+  const studyDayToday = isScheduledStudyDay(weeklyStudyDays, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
   const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
-    .map((pet) => `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`)
+    .map(
+      (pet) =>
+        `${pet.id}:${pet.xp}:${pet.is_desktop_active}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}:${pet.name ?? ""}`,
+    )
     .join("|");
   const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
   const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
   const songSignature = ownedSongs.map((song) => `${song.id}:${song.seen ? 1 : 0}`).join("|");
   const friendSignature = friends.map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}`).join("|");
+  const renameSignature = `${initialRenameCoupons}|${initialShowPetNames ? 1 : 0}`;
   const [petsSnap, setPetsSnap] = useState(petsSignature);
   const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
   const [rewardSnap, setRewardSnap] = useState(rewardSignature);
   const [songSnap, setSongSnap] = useState(songSignature);
   const [friendSnap, setFriendSnap] = useState(friendSignature);
+  const [renameSnap, setRenameSnap] = useState(renameSignature);
 
   if (petsSignature !== petsSnap) {
     setPetsSnap(petsSignature);
@@ -208,9 +224,17 @@ export function DashboardScreen({
     setOwnedClothes(ownedClothesIds);
   }
 
+  if (renameSignature !== renameSnap) {
+    setRenameSnap(renameSignature);
+    setRenameCoupons(initialRenameCoupons);
+    setShowPetNames(initialShowPetNames);
+  }
+
   if (rewardSignature !== rewardSnap) {
     setRewardSnap(rewardSignature);
-    setRewards(pendingRewards);
+    // Claiming revalidates the dashboard and drops the banked reward from props.
+    // Keep local rewards while the picker is open so the dialog is not unmounted mid-choice.
+    if (!pickerOpen) setRewards(pendingRewards);
   }
 
   if (songSignature !== songSnap) {
@@ -278,16 +302,6 @@ export function DashboardScreen({
   const shownSong = songDisplay ? songById(songDisplay) : null;
 
   const activePet = equippedPet(localPets);
-  const songPet = activePet ?? localPets[0] ?? {
-    id: "song",
-    pet_type: "baby_slime",
-    level: 1,
-    xp: 0,
-    is_desktop_active: false,
-    color: null,
-    hat: null,
-    clothes: null,
-  };
   const described = activePet ? describePet(activePet.pet_type) : null;
   const progress = activePet ? experienceProgress(activePet.xp) : null;
   const sessionActive = Boolean(activeSession);
@@ -329,6 +343,13 @@ export function DashboardScreen({
     );
   }
 
+  function onPetRenamed(petId: string, name: string) {
+    setLocalPets((current) =>
+      current.map((pet) => (pet.id === petId ? { ...pet, name } : pet)),
+    );
+    setRenameCoupons((current) => Math.max(0, current - 1));
+  }
+
   const openRewardPicker = useCallback(() => {
     if (rewards.length === 0) return;
     setPickerTotal(rewards.length);
@@ -349,8 +370,11 @@ export function DashboardScreen({
     });
   }, []);
 
-  function onRewardClaimed(itemId: string) {
+  function onRewardClaimed(itemId: string, equip: boolean) {
     const petId = rewards[0]?.petId;
+    if (itemId === RENAME_COUPON_ID) {
+      setRenameCoupons((current) => Math.min(3, current + 1));
+    }
     const color = sampleColor(itemId);
     const preview = previewReward(itemId);
     const hat = sampleHat(itemId) ?? (preview?.kind === "hat" ? preview.id : null);
@@ -358,7 +382,7 @@ export function DashboardScreen({
     if (color) setOwnedColors((current) => (current.includes(color) ? current : [...current, color]));
     if (hat) setOwnedHats((current) => (current.includes(hat) ? current : [...current, hat]));
     if (clothes) setOwnedClothes((current) => (current.includes(clothes) ? current : [...current, clothes]));
-    if (petId) {
+    if (equip && petId) {
       setLocalPets((current) =>
         current.map((pet) => {
           if (pet.id !== petId) return pet;
@@ -383,32 +407,23 @@ export function DashboardScreen({
         color: null,
         hat: null,
         clothes: null,
+        name: null,
       }
     : null;
 
   return (
-    <div className="desk-page">
+    <div className="desk-page dashboard-desk">
       <SocialPresence />
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
         streakCount={liveStreakCount}
         onOpenShop={() => showSection("shop")}
-        onOpenCollection={() => showSection("collection")}
         onOpenInventory={() => showSection("inventory")}
-        onOpenAchievements={() => showSection("achievements")}
-        onOpenFriends={() => showSection("friends")}
-        onOpenFarmCrew={() => showSection("farmcrew")}
-        onOpenSocialSettings={() => showSection("social-settings")}
-        onOpenLeaderboard={() => showSection("leaderboard")}
-        onOpenSong={() => showSection("song")}
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
-        pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
-        socialPinned={tour.socialPinned && !tour.covered}
-        onSocialClick={tour.onSocialClick}
       />
       <DeskSong
         userId={userId}
@@ -419,6 +434,7 @@ export function DashboardScreen({
         onClose={() => setDialog(null)}
       />
       <StudyPanel
+        userId={userId}
         activeSession={activeSession}
         deskRefreshing={deskRefreshing}
         scores={scores}
@@ -435,18 +451,31 @@ export function DashboardScreen({
         placedIds={placedIds}
         placementReady={placementReady}
         preferredSessionMinutes={preferredSessionMinutes}
+        planSessions={planSessions}
+        isStudyDay={studyDayToday}
+        showDailyCylinder={Boolean(preferredSessionMinutes && weeklyStudyDays.length > 0)}
         streakBoostActive={liveStreakCount > 0}
         streakQualifiedToday={streakQualifiedToday}
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
+        renameCoupons={renameCoupons}
+        showPetNames={showPetNames}
         onOpenInventory={() => showSection("inventory")}
+        onOpenSong={() => showSection("song")}
+        onOpenAchievements={() => showSection("achievements")}
+        onOpenCollection={() => showSection("collection")}
+        onOpenSocial={() => showSection("social")}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
+        onPetRenamed={onPetRenamed}
+        onShowPetNamesChange={setShowPetNames}
         tutorialCurrent={tour.step?.target === "start" && !tour.covered}
+        tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
         onTutorialStart={tour.onStart}
+        onRegisterDevFinish={onRegisterDevFinish}
       />
       {dialog === "shop" ? (
         <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
@@ -470,9 +499,11 @@ export function DashboardScreen({
           pets={localPets}
           placedIds={placedIds}
           sessionActive={sessionActive}
+          renameCoupons={renameCoupons}
           onClose={() => setDialog(null)}
           onToggleRoom={onToggleRoom}
           onEquipped={onEquipped}
+          onPetRenamed={onPetRenamed}
         />
       ) : null}
       {dialog === "achievements" ? (
@@ -482,25 +513,18 @@ export function DashboardScreen({
           onClose={() => setDialog(null)}
         />
       ) : null}
-      {dialog === "friends" ? (
-        <FriendsDialog
+      {dialog === "social" ? (
+        <SocialBoardDialog
           friends={friends}
           friendCode={friendCode}
           friendsError={friendsError}
-          onFriendsChange={setFriendRows}
-          onClose={() => setDialog(null)}
-        />
-      ) : null}
-      {dialog === "farmcrew" ? <FarmCrewDialog onClose={() => setDialog(null)} /> : null}
-      {dialog === "leaderboard" ? (
-        <LeaderboardDialog userId={userId} onClose={() => setDialog(null)} />
-      ) : null}
-      {dialog === "social-settings" ? (
-        <SocialSettingsDialog
-          friendCode={friendCode}
           friendInvite={friendInvite}
           allowStatusSeen={allowStatusSeen}
-          friendsError={friendsError}
+          showPetNames={showPetNames}
+          userId={userId}
+          pendingFriendRequest={incomingFriendRequests(friendRows).length > 0}
+          onFriendsChange={setFriendRows}
+          onShowPetNamesChange={setShowPetNames}
           onClose={() => setDialog(null)}
         />
       ) : null}
@@ -518,7 +542,17 @@ export function DashboardScreen({
       ) : null}
       {dialog === "dev-tools" ? (
         <HistoryDialog title="Developer tools" onClose={() => setDialog(null)}>
-          <AdminReset />
+          <AdminReset
+            userId={userId}
+            canFinishWebsiteSession={canDevFinish}
+            onFinishWebsiteSession={async (password) => {
+              const finish = finishDevSessionRef.current;
+              if (!finish) return { error: "Start a website timer session first." };
+              const result = await finish(password);
+              if (!result.error) setDialog(null);
+              return result;
+            }}
+          />
         </HistoryDialog>
       ) : null}
       {shownSong && !songBlocked ? (
@@ -526,7 +560,6 @@ export function DashboardScreen({
           key={shownSong.id}
           songTitle={shownSong.title}
           songId={shownSong.id}
-          pet={songPet}
           onContinue={dismissSong}
         />
       ) : null}
@@ -544,14 +577,19 @@ export function DashboardScreen({
         <RewardPicker
           key={rewards[0].id}
           rewardId={rewards[0].id}
+          petId={rewards[0].petId}
           userId={userId}
           choiceNumber={Math.max(1, pickerTotal - rewards.length + 1)}
           choiceTotal={Math.max(pickerTotal, rewards.length)}
           ownedColorIds={ownedColors}
           ownedHatIds={ownedHats}
           ownedClothesIds={ownedClothes}
+          renameCoupons={renameCoupons}
           onClaimed={onRewardClaimed}
-          onClose={() => setPickerOpen(false)}
+          onClose={() => {
+            setPickerOpen(false);
+            setRewards(pendingRewards);
+          }}
         />
       ) : null}
       {tour.step && tour.stepIndex !== null ? (
@@ -582,7 +620,7 @@ export function DashboardScreen({
 
 export function DashboardFallback() {
   return (
-    <div className="desk-page">
+    <div className="desk-page dashboard-desk">
       <header className="topbar">
         <span className="wordmark">Aurafarm</span>
       </header>

@@ -21,7 +21,16 @@ test("the desk lists pets for the signed-in farmer and keeps room placement", ()
   assert.match(desk, /describePet/);
   assert.match(desk, /localStorage/);
   assert.doesNotMatch(desk, /current\.size === 0/);
+  assert.match(desk, /renameCoupons=\{renameCoupons\}/);
+  assert.match(desk, /onPetRenamed=\{onPetRenamed\}/);
   assert.match(equip, /equip_pet_to_desktop/);
   assert.match(equip, /revalidatePath\("\/inventory"\)/);
   assert.match(equip, /revalidatePath\("\/dashboard"\)/);
+
+  const inventory = readFileSync(new URL("../components/dashboard-dialogs.tsx", import.meta.url), "utf8");
+  const inventoryBlock = inventory.slice(inventory.indexOf("export function InventoryDialog"));
+  assert.match(inventoryBlock, /PetRenameCircleButton/);
+  assert.match(inventoryBlock, /inventory-pet-name/);
+  assert.match(inventoryBlock, /Level \{pet\.level\}/);
+  assert.match(inventoryBlock, /onPetRenamed/);
 });

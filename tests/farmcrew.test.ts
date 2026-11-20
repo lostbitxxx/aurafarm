@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   crewOccupantsFromRows,
+  crewShowsAurafarming,
   farmCrewCardsFromRows,
   farmCrewDetailFromRows,
   farmCrewJoinRequestsFromRows,
@@ -118,6 +119,30 @@ test("farm crew rows keep membership, public crews, and the room", () => {
   ]);
   assert.equal(farmer?.clothes, "little-gentleman-suit");
   assert.equal(farmer?.presence, "aurafarming");
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "online" },
+      crewId,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    false,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: "22222222-2222-4222-8222-222222222222", presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    true,
+  );
   assert.equal(crewOccupantsFromRows([{ farmer_id: crewId, presence: "offline" }]).length, 0);
 });
 
@@ -125,6 +150,22 @@ test("farm crew errors point at migration 0039", () => {
   assert.equal(
     farmCrewMessage("Could not find the function public.list_my_farm_crews"),
     "Run migrations 0039 and 0040 before using FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("Could not find the function public.set_farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for table farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage('column reference "user_id" is ambiguous'),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for function get_farm_crew"),
+    "FarmCrew could not be updated.",
   );
   assert.equal(farmCrewMessage("You are already in this FarmCrew."), "You are already in this FarmCrew.");
   assert.equal(
@@ -138,19 +179,20 @@ test("farm crew errors point at migration 0039", () => {
   );
 });
 
-test("Social opens FarmCrew and Visit goes to the crew room", () => {
+test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const board = readFileSync(new URL("../components/social-board-dialog.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/farm-crew-dialog.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/farmcrew/[id]/page.tsx", import.meta.url), "utf8");
   const room = readFileSync(new URL("../components/crew-room.tsx", import.meta.url), "utf8");
   const sql = readFileSync(new URL("../supabase/migrations/0039_farm_crew.sql", import.meta.url), "utf8");
   const visibility = readFileSync(new URL("../supabase/migrations/0040_farm_crew_visibility.sql", import.meta.url), "utf8");
 
-  assert.match(header, /onClick=\{onOpenFarmCrew\}[\s\S]*FarmCrew/);
-  assert.match(header, /aria-haspopup="menu"[\s\S]*?>\s*Social\s*<\/button>/);
-  assert.match(desk, /onOpenFarmCrew=\{\(\) => showSection\("farmcrew"\)\}/);
-  assert.match(desk, /<FarmCrewDialog/);
+  assert.doesNotMatch(header, /onOpenFarmCrew/);
+  assert.match(desk, /onOpenSocial=\{\(\) => showSection\("social"\)\}/);
+  assert.match(desk, /<SocialBoardDialog/);
+  assert.match(board, /<FarmCrewDialog[\s\S]*embedded/);
   assert.match(dialog, /FarmCrew List/);
   assert.match(dialog, /Join FarmCrew/);
   assert.match(dialog, /Create FarmCrew/);
@@ -169,11 +211,31 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /AuraFarmCrew/);
   assert.match(screen, /Back to Dashboard/);
   assert.match(screen, /Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-link"[\s\S]{0,80}Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-drawer-link"[\s\S]{0,80}Leaderboard/);
+  assert.match(screen, /onOpenLeaderboard=\{\(\) => setPanel\("board"\)\}/);
   assert.match(screen, /loadFarmCrewLeaderboard/);
   assert.match(screen, /<FarmDialog title="Leaderboard"/);
   assert.match(screen, /managesFarmCrew\(detail\.role\)/);
   assert.match(screen, />\s*Admin\s*</);
   assert.match(screen, /<CrewAdminDialog/);
+  assert.match(screen, /topbar-brand/);
+  assert.match(screen, /CrewSessionTimer[\s\S]*<CrewRoom/);
+  assert.match(screen, /StudyClock/);
+  assert.match(screen, /Website timer is tracking this session/);
+  assert.match(screen, /End session early/);
+  assert.match(screen, /endStudyEarly/);
+  assert.match(screen, /Keep studying/);
+  assert.match(screen, /<CrewStudyStart/);
+  const start = readFileSync(new URL("../components/crew-study-start.tsx", import.meta.url), "utf8");
+  assert.match(start, /Start studying/);
+  assert.match(start, /startStudySession/);
+  assert.match(start, /How long will you study\?/);
+  assert.match(start, /FARM AURA/);
+  const crewDesk = readFileSync(new URL("../lib/farm-crew-desk.ts", import.meta.url), "utf8");
+  assert.match(crewDesk, /preferred_session_minutes/);
+  assert.match(crewDesk, /study_sessions/);
+  assert.match(crewDesk, /\.eq\("status", "active"\)/);
   const admin = readFileSync(new URL("../components/crew-admin-dialog.tsx", import.meta.url), "utf8");
   assert.match(admin, /<FarmDialog title="Admin"/);
   assert.match(admin, />\s*General\s*</);
@@ -193,6 +255,14 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.doesNotMatch(page, /export const dynamic/);
   assert.match(room, /Aurafarming/);
   assert.match(room, /living-room/);
+  assert.match(room, /CREW_LIBRARY_PATH/);
+  assert.match(room, /is-remote/);
+  assert.match(room, /occupant\.farmerId === viewerId/);
+  assert.match(room, /CREW_PEDESTAL/);
+  assert.match(screen, /viewerId=\{room\.userId\}/);
+  assert.match(screen, /viewerStudying=\{Boolean\(session\)\}/);
+  assert.match(room, /crewShowsAurafarming/);
+  assert.match(screen, /mascot=\{\{ petType: detail\.petType, color: detail\.color \}\}/);
   assert.equal(requiresAccount("/farmcrew/11111111-1111-4111-8111-111111111111"), true);
   assert.equal(requiresAccount("/farmcrew"), false);
 
@@ -208,6 +278,11 @@ test("Social opens FarmCrew and Visit goes to the crew room", () => {
   assert.match(sql, /function public\.request_farm_crew_by_code/);
   assert.match(sql, /function public\.list_farm_crew_room/);
   assert.match(sql, /allow_status_seen in \('friend_and_group', 'group_only'\)/);
+  const presenceSql = readFileSync(new URL("../supabase/migrations/0045_crew_room_presence.sql", import.meta.url), "utf8");
+  assert.match(presenceSql, /interval '3 minutes'/);
+  assert.match(presenceSql, /interval '15 seconds'/);
+  assert.match(presenceSql, /allow_status_seen <> 'none'/);
+  assert.match(presenceSql, /current_status in \('online', 'aurafarming'\)/);
   assert.match(sql, /revoke all on function public\.join_farm_crew\(uuid, boolean\)/);
   assert.doesNotMatch(sql, /grant execute on function public\.join_farm_crew/);
 

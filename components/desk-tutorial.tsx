@@ -11,8 +11,6 @@ import {
   type DeskTutorialStep,
 } from "@/lib/desk-tutorial";
 
-const SOCIAL_LOOKING =
-  "Friends, FarmCrew, Social Settings, and the Leaderboard are in here. Close this menu to continue.";
 const CLOSE_PROMPT = "Click close to continue.";
 
 type Hole = { top: number; left: number; width: number; height: number };
@@ -22,7 +20,6 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
   const searchParams = useSearchParams();
   const [stepIndex, setStepIndex] = useState<number | null>(null);
   const [phase, setPhase] = useState<"point" | "looking">("point");
-  const [socialPinned, setSocialPinned] = useState(false);
   const stepRef = useRef<number | null>(null);
   const awaitingClose = useRef(false);
   const advanceLock = useRef(false);
@@ -34,7 +31,6 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     advanceLock.current = false;
     writeTutorialRecord(userId, { status: "done" });
     stepRef.current = null;
-    setSocialPinned(false);
     setPhase("point");
     setStepIndex(null);
   }, [userId]);
@@ -45,7 +41,6 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     if (current === null) return;
     advanceLock.current = true;
     awaitingClose.current = false;
-    setSocialPinned(false);
     setPhase("point");
     const next = current + 1;
     if (next >= DESK_TUTORIAL_STEPS.length) {
@@ -67,7 +62,6 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     if (current === null || current <= 0) return;
     advanceLock.current = true;
     awaitingClose.current = false;
-    setSocialPinned(false);
     setPhase("point");
     const previous = current - 1;
     stepRef.current = previous;
@@ -128,29 +122,8 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     if (!step || !sectionMatchesStep(step, section)) return;
     open();
     awaitingClose.current = true;
-    setSocialPinned(false);
     setPhase("looking");
   }, []);
-
-  const dismissSocial = useCallback(() => {
-    const index = stepRef.current;
-    if (index === null || DESK_TUTORIAL_STEPS[index]?.id !== "social") return;
-    if (phase !== "looking") return;
-    if (dialog !== null || awaitingClose.current) return;
-    setSocialPinned(false);
-    advance();
-  }, [advance, dialog, phase]);
-
-  const onSocialClick = useCallback(() => {
-    const index = stepRef.current;
-    if (index === null || DESK_TUTORIAL_STEPS[index]?.id !== "social") return;
-    if (phase === "point") {
-      setSocialPinned(true);
-      setPhase("looking");
-      return;
-    }
-    dismissSocial();
-  }, [dismissSocial, phase]);
 
   const onStart = useCallback(() => {
     const index = stepRef.current;
@@ -166,17 +139,12 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
 
   const step = stepIndex === null ? null : DESK_TUTORIAL_STEPS[stepIndex];
   const covered = Boolean(step && phase === "looking" && dialog !== null);
-  const body = covered
-    ? CLOSE_PROMPT
-    : step?.id === "social" && phase === "looking"
-      ? SOCIAL_LOOKING
-      : (step?.body ?? "");
+  const body = covered ? CLOSE_PROMPT : (step?.body ?? "");
 
   return {
     step,
     stepIndex,
-    socialPinned,
-    includeMenu: Boolean(step?.id === "social" && socialPinned && !covered),
+    includeMenu: false,
     covered,
     title: covered ? "Close" : (step?.title ?? ""),
     body,
@@ -185,8 +153,7 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     onNext: advance,
     onPrev: retreat,
     onSkip: finish,
-    onScrim: dismissSocial,
-    onSocialClick,
+    onScrim: () => undefined,
     onStart,
     onMissingTarget,
     openSection,

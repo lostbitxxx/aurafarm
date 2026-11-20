@@ -90,37 +90,32 @@ test("friend rows keep accepted friends apart from incoming requests", () => {
   assert.equal(friendRequestMessage("column allow_status_seen does not exist"), "Run migration 0026 before using social status.");
 });
 
-test("the desk opens Friends and Leaderboard from Social", () => {
+test("the desk opens Social from the living-room blackboard", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const livingRoom = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  const board = readFileSync(new URL("../components/social-board-dialog.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/friends-dialog.tsx", import.meta.url), "utf8");
   const action = readFileSync(new URL("../lib/actions/friends.ts", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
 
-  assert.match(header, /Social/);
-  assert.match(header, /onClick=\{onOpenFriends\}/);
-  assert.match(header, /<span>Friends<\/span>/);
-  assert.match(header, /pendingFriendRequest \? <span className="request-dot"/);
-  assert.match(header, /aria-haspopup="menu"[\s\S]*?>\s*Social\s*<\/button>/);
-  assert.doesNotMatch(header, /aria-haspopup="menu"[\s\S]{0,40}request-dot/);
-  assert.doesNotMatch(
-    header.slice(header.indexOf('role="menu"'), header.indexOf("Leaderboard") + 40),
-    /Social [Ss]ettings/,
-  );
-  assert.match(header, /Social settings/);
-  assert.match(header, /onOpenSocialSettings/);
-  assert.match(header, /onClick=\{onOpenLeaderboard\}[\s\S]*Leaderboard/);
-  assert.match(desk, /onOpenFriends=\{\(\) => showSection\("friends"\)\}/);
-  assert.match(desk, /pendingFriendRequest=\{incomingFriendRequests\(friendRows\)\.length > 0\}/);
-  assert.match(desk, /onOpenSocialSettings=\{\(\) => showSection\("social-settings"\)\}/);
-  assert.match(desk, /onOpenLeaderboard=\{\(\) => showSection\("leaderboard"\)\}/);
+  assert.doesNotMatch(header, /onOpenFriends/);
+  assert.doesNotMatch(header, /Social settings/);
+  assert.match(livingRoom, /onOpenSocial/);
+  assert.match(livingRoom, /ROOM_WALL_HOTSPOTS/);
+  assert.match(livingRoom, /data-tutorial=\{spot\.tutorialTarget\}/);
+  assert.match(desk, /onOpenSocial=\{\(\) => showSection\("social"\)\}/);
   assert.match(desk, /onOpenEditPlan=\{studyPlan \? \(\) => showSection\("edit-plan"\) : undefined\}/);
   assert.match(desk, /onOpenDownload=\{\(\) => setDialog\("download"\)\}/);
   assert.match(desk, /onOpenDevTools=\{\(\) => setDialog\("dev-tools"\)\}/);
-  assert.match(desk, /<LeaderboardDialog/);
-  assert.match(desk, /<FriendsDialog[\s\S]*friendCode=\{friendCode\}/);
-  assert.match(desk, /<SocialSettingsDialog/);
+  assert.match(desk, /<SocialBoardDialog/);
+  assert.match(desk, /pendingFriendRequest=\{incomingFriendRequests\(friendRows\)\.length > 0\}/);
   assert.match(desk, /<SocialPresence/);
+  assert.match(board, /Friends/);
+  assert.match(board, /FarmCrew/);
+  assert.match(board, /Leaderboard/);
+  assert.match(board, /Social settings/);
+  assert.match(board, /<FriendsDialog[\s\S]*embedded/);
   assert.match(page, /loadFriendDesk/);
 
   assert.match(dialog, /Friend List/);

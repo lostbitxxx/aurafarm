@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { completeStudyTimer, endStudyEarly, setCloseBlocked, startStudySession } from "@/lib/actions/study";
+import { completeStudyTimer, endStudyEarly, startStudySession } from "@/lib/actions/study";
+import { CYLINDER_TICK_MS } from "@/lib/daily-cylinder";
+import {
+  filterSessionsAfterCylinderReset,
+  liveSessionCountsAfterCylinderReset,
+  readCylinderReset,
+  subscribeCylinderReset,
+} from "@/lib/cylinder-reset";
 import type { PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
@@ -12,20 +19,28 @@ import {
   plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
-  formatClock,
   formatDuration,
   experienceForSession,
   farmerLocalDay,
-  remainingSeconds,
+  focusedSeconds,
   sessionCountsForStreak,
+  studySecondsOnLocalDay,
+  subscribeFarmerLocalDay,
   STUDY_LENGTHS,
   type ActiveStudySession,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
+import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
+import { StudyClock } from "./study-clock";
 import { LivingRoom } from "./living-room";
 import { PetDetailDialog } from "./pet-detail-dialog";
-import { PetStatus } from "./pet-status";
+import { TrackerDemo } from "./study-tracker-demo";
+
+export type DevFinishApi = {
+  canFinish: boolean;
+  finish: (password: string) => Promise<{ error: string }>;
+};
 
 function preferredStudySeconds(minutes: number | null | undefined) {
   if (minutes == null || !Number.isFinite(minutes) || minutes < MIN_STUDY_MINUTES) {
@@ -36,6 +51,7 @@ function preferredStudySeconds(minutes: number | null | undefined) {
 }
 
 export function StudyPanel({
+  userId,
   activeSession,
   scores,
   recordedSessions,
@@ -49,20 +65,34 @@ export function StudyPanel({
   placedIds,
   placementReady,
   preferredSessionMinutes,
+  planSessions = [],
+  isStudyDay = true,
+  showDailyCylinder = false,
   streakBoostActive = false,
   streakQualifiedToday = false,
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  renameCoupons = 0,
+  showPetNames = true,
   onOpenInventory,
+  onOpenSong,
+  onOpenAchievements,
+  onOpenCollection,
+  onOpenSocial,
   onEquipped,
   onColorApplied,
   onHatApplied,
   onClothesApplied,
+  onPetRenamed,
+  onShowPetNamesChange,
   deskRefreshing = false,
   tutorialCurrent = false,
+  tutorialTarget = null,
   onTutorialStart,
+  onRegisterDevFinish,
 }: {
+  userId: string;
   activeSession: ActiveStudySession | null;
   scores: StudyScoreCard[];
   recordedSessions: RecordedStudySession[];
@@ -78,19 +108,36 @@ export function StudyPanel({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   preferredSessionMinutes?: number | null;
+  planSessions?: readonly {
+    status: "submitted" | "cancelled";
+    endedAt: string;
+    durationSeconds?: number;
+  }[];
+  isStudyDay?: boolean;
+  showDailyCylinder?: boolean;
   streakBoostActive?: boolean;
   streakQualifiedToday?: boolean;
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  renameCoupons?: number;
+  showPetNames?: boolean;
   onOpenInventory: () => void;
+  onOpenSong?: () => void;
+  onOpenAchievements?: () => void;
+  onOpenCollection?: () => void;
+  onOpenSocial?: () => void;
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
   onClothesApplied: (petId: string, clothesId: string | null) => void;
+  onPetRenamed?: (petId: string, name: string) => void;
+  onShowPetNamesChange?: (enabled: boolean) => void;
   deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
+  tutorialTarget?: string | null;
   onTutorialStart?: () => void;
+  onRegisterDevFinish?: (api: DevFinishApi | null) => void;
 }) {
   const signature = [
     activeSession?.id ?? "",
@@ -130,10 +177,11 @@ export function StudyPanel({
     setCustomOpen(false);
     setCustomMinutes("");
   }
-  const [lengthOpen, setLengthOpen] = useState(false);
-  const [trackerOpen, setTrackerOpen] = useState(false);
-  const [trackerChoice, setTrackerChoice] = useState<boolean | null>(null);
-  const [desktopStep, setDesktopStep] = useState<0 | 1 | 2>(0);
+  const [startOpen, setStartOpen] = useState(false);
+  const [trackerChoice, setTrackerChoice] = useState(true);
+  const macDesktop = useSyncExternalStore(subscribeMacDesktop, macDesktopSnapshot, macDesktopServerSnapshot);
+  const useDesktopPet = macDesktop === true && trackerChoice;
+  const [desktopLink, setDesktopLink] = useState("");
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
   const [trackedError, setTrackedError] = useState<string | null>(null);
@@ -202,15 +250,14 @@ export function StudyPanel({
 
   function onAskTracker() {
     if (pending || shownSession) return;
-    setTrackerChoice(null);
+    setDesktopLink("");
     setError(null);
-    setTrackerOpen(false);
-    setLengthOpen(true);
+    setStartOpen(true);
   }
 
-  function onCloseLength() {
+  function onCloseStart() {
     if (pending) return;
-    setLengthOpen(false);
+    setStartOpen(false);
   }
 
   function onChoosePreset(seconds: number) {
@@ -236,62 +283,29 @@ export function StudyPanel({
     return plannedStudySeconds(Number(customMinutes) * 60);
   }
 
-  function onConfirmLength() {
-    const seconds = selectedLengthSeconds();
-    if (pending || seconds === null) return;
-    setChosenSeconds(seconds);
-    setLengthOpen(false);
-    setTrackerChoice(null);
-    setDesktopStep(0);
-    setTrackerOpen(true);
-  }
-
-  function onCloseTracker() {
-    if (pending) return;
-    setDesktopStep(0);
-    setTrackerOpen(false);
-    setLengthOpen(true);
-  }
-
-  function onBackTracker() {
-    if (pending) return;
-    if (desktopStep === 2) {
-      setDesktopStep(1);
-      return;
-    }
-    if (desktopStep === 1) {
-      setDesktopStep(0);
-      return;
-    }
-    onCloseTracker();
-  }
-
   async function onConfirmTracker() {
-    if (pending || trackerChoice === null) return;
+    const seconds = selectedLengthSeconds();
+    if (pending || seconds === null || desktopLink) return;
     setPending(true);
     setError(null);
-    const result = await startStudySession(chosenSeconds, trackerChoice);
+    const result = await startStudySession(seconds, useDesktopPet);
     setPending(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setTrackerOpen(false);
+    setChosenSeconds(seconds);
     setRushed(false);
     setLaunchCode(result.launchCode);
     setCodeSessionId(result.sessionId);
     setLocalStartedAt(new Date().toISOString());
-    setLocalPlanned(chosenSeconds);
-    setLocalDesktop(trackerChoice);
-  }
-
-  async function onToggleClose() {
-    if (pending || closeBlockedError) return;
-    setPending(true);
-    setError(null);
-    const result = await setCloseBlocked(!closeBlocked);
-    setPending(false);
-    if (result.error) setError(result.error);
+    setLocalPlanned(seconds);
+    setLocalDesktop(useDesktopPet);
+    if (useDesktopPet) {
+      setDesktopLink(buildPetLaunchUrl(result.launchCode));
+      return;
+    }
+    setStartOpen(false);
   }
 
   function onOpenEarly() {
@@ -333,6 +347,38 @@ export function StudyPanel({
     setDevOpen(false);
   }
 
+  async function runDevFinish(password: string) {
+    if (pending || !shownSession || shownSession.useDesktopPet) {
+      return { error: "Start a website timer session first." };
+    }
+    if (!devTimerPasswordMatches(password)) {
+      return { error: "That password does not match." };
+    }
+    setRushed(true);
+    const result = await finishSession(DEV_TIMER_PASSWORD);
+    if (!result.error) {
+      setDevPassword("");
+      setDevOpen(false);
+    }
+    return result;
+  }
+
+  const canDevFinish = Boolean(shownSession && !shownSession.useDesktopPet);
+  const finishDevRef = useRef(runDevFinish);
+  finishDevRef.current = runDevFinish;
+
+  useEffect(() => {
+    if (!onRegisterDevFinish) return;
+    onRegisterDevFinish({
+      canFinish: canDevFinish,
+      finish: (password) => finishDevRef.current(password),
+    });
+  }, [onRegisterDevFinish, canDevFinish]);
+
+  useEffect(() => {
+    return () => onRegisterDevFinish?.(null);
+  }, [onRegisterDevFinish]);
+
   async function onDevFinish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending || !shownSession || shownSession.useDesktopPet) return;
@@ -341,16 +387,47 @@ export function StudyPanel({
       return;
     }
     setDevRejected(false);
-    setRushed(true);
-    const result = await finishSession(DEV_TIMER_PASSWORD);
-    if (!result.error) {
-      setDevPassword("");
-      setDevOpen(false);
-    }
+    const result = await runDevFinish(devPassword);
+    if (result.error) setError(result.error);
   }
 
   const lengthSeconds = selectedLengthSeconds();
   const detailPet = detailPetId ? pets.find((pet) => pet.id === detailPetId) ?? null : null;
+  const todayLocal = useSyncExternalStore(subscribeFarmerLocalDay, farmerLocalDay, () => "1970-01-01");
+  const cylinderReset = useSyncExternalStore(
+    subscribeCylinderReset,
+    () => readCylinderReset(userId),
+    () => null,
+  );
+  const [cylinderNow, setCylinderNow] = useState<number | null>(null);
+  useEffect(() => {
+    if (!shownSession) {
+      setCylinderNow(null);
+      return;
+    }
+    const tick = () => setCylinderNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, CYLINDER_TICK_MS);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
+  }, [shownSession?.id, shownSession?.startedAt, shownSession?.plannedSeconds]);
+
+  const countedSessions = filterSessionsAfterCylinderReset(planSessions, cylinderReset, todayLocal);
+  const submittedTodaySeconds = studySecondsOnLocalDay(countedSessions, todayLocal);
+  const liveCounts =
+    shownSession != null && liveSessionCountsAfterCylinderReset(shownSession.startedAt, cylinderReset, todayLocal);
+  const liveSessionSeconds =
+    liveCounts && shownSession && cylinderNow != null
+      ? focusedSeconds(new Date(shownSession.startedAt).getTime(), cylinderNow, shownSession.plannedSeconds)
+      : 0;
+  const dailyStudiedMinutes = Math.floor((submittedTodaySeconds + liveSessionSeconds) / 60);
+  const dailyGoalMinutes =
+    showDailyCylinder && preferredSessionMinutes != null && preferredSessionMinutes > 0
+      ? preferredSessionMinutes
+      : null;
+
   const desktopPetSession = shownSession?.useDesktopPet === true;
   const router = useRouter();
   const [sessionRefreshing, startSessionRefresh] = useTransition();
@@ -372,88 +449,86 @@ export function StudyPanel({
     <main className="desk">
       <section className="scene" aria-label="Study scene">
         <LivingRoom
+          userId={userId}
           pets={pets}
           placedIds={placedIds}
           placementReady={placementReady}
+          showPetNames={showPetNames}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
-        />
-        <div className="below-room">
-          <div className="session-copy">
-            <div className={shownSession && !checkingSession ? "session-title-row" : undefined}>
-              <p className="pet-name">
-                {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
-              </p>
+          onOpenSong={onOpenSong}
+          onOpenAchievements={onOpenAchievements}
+          onOpenCollection={onOpenCollection}
+          onOpenSocial={onOpenSocial}
+          tutorialTarget={tutorialTarget}
+          dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
+          dailyGoalMinutes={dailyGoalMinutes}
+          isStudyDay={isStudyDay}
+          headerAside={
+            <div className="below-room desk-session">
+              <div className="session-copy">
+                <p className="pet-name">
+                  {checkingSession ? "Checking this session" : shownSession ? "Studying with you" : "Ready for a little focus?"}
+                </p>
+                <p className="growth-label">
+                  {checkingSession
+                    ? "Fetching the desk."
+                    : shownSession
+                      ? shownSession.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."
+                      : "Pick a length and a tracker, then Farm Aura."}
+                </p>
+                {checkingSession ? <SessionRefreshStatus /> : null}
+                {error ? (
+                  <p className="form-error" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+              </div>
               {shownSession && !checkingSession ? (
                 <button type="button" className="button button-ghost button-end-early" disabled={pending} onClick={onOpenEarly}>
                   End session early
                 </button>
               ) : null}
-            </div>
-            <p className="growth-label">
-              {checkingSession
-                ? "Fetching the desk."
-                : shownSession
-                  ? shownSession.useDesktopPet
-                    ? "Desktop pet is tracking this session."
-                    : "Website timer is tracking this session."
-                  : "Choose the duration and tracker in two steps."}
-            </p>
-            {checkingSession ? (
-              <SessionRefreshStatus />
-            ) : shownSession ? (
-              <>
-                {shownSession.useDesktopPet ? (
-                  <div className="study-active">
-                    {launchUrl ? (
-                      <>
-                        <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                        <a className="launch-link" href={launchUrl}>
-                          {launchUrl}
-                        </a>
-                        <CopySessionCode code={visibleCode} />
-                      </>
-                    ) : (
-                      <p>The launch code was shown when this session started.</p>
-                    )}
-                  </div>
-                ) : null}
+              {shownSession && !checkingSession ? (
                 <StudyClock
                   session={shownSession}
                   rushed={rushed}
                   onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
                 />
-              </>
-            ) : null}
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
-          {shownSession ? null : (
-            <div className="scene-actions is-start">
-              <button
-                type="button"
-                className="button button-start"
-                data-tutorial="start"
-                data-tutorial-current={tutorialCurrent ? "true" : undefined}
-                disabled={pending}
-                onClick={() => {
-                  onTutorialStart?.();
-                  onAskTracker();
-                }}
-              >
-                Start studying →
-              </button>
+              ) : null}
+              {shownSession?.useDesktopPet && launchUrl ? (
+                <div className="scene-actions is-start">
+                  <a className="button button-start" href={launchUrl}>
+                    Open Aurafarm
+                  </a>
+                </div>
+              ) : shownSession ? null : (
+                <div className="scene-actions is-start">
+                  <button
+                    type="button"
+                    className="button button-start"
+                    data-tutorial="start"
+                    data-tutorial-current={tutorialCurrent ? "true" : undefined}
+                    disabled={pending}
+                    onClick={() => {
+                      onTutorialStart?.();
+                      onAskTracker();
+                    }}
+                  >
+                    Start studying →
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          }
+        />
       </section>
-      {lengthOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseLength}>
+      {startOpen ? (
+        <div className="tracker-pop" role="presentation" onClick={onCloseStart}>
           <div
-            className="tracker-card"
+            className="tracker-card tracker-card-start"
             role="dialog"
             aria-modal="true"
             aria-labelledby="length-title"
@@ -461,7 +536,7 @@ export function StudyPanel({
           >
             <div className="dialog-head">
               <h2 id="length-title">How long will you study?</h2>
-              <button type="button" className="dialog-close" onClick={onCloseLength} aria-label="Close dialog">
+              <button type="button" className="dialog-close" onClick={onCloseStart} aria-label="Close dialog">
                 ×
               </button>
             </div>
@@ -472,7 +547,7 @@ export function StudyPanel({
                   type="button"
                   className={!customOpen && chosenSeconds === length.seconds ? "button" : "button button-ghost"}
                   aria-pressed={!customOpen && chosenSeconds === length.seconds}
-                  disabled={pending}
+                  disabled={pending || Boolean(desktopLink)}
                   onClick={() => onChoosePreset(length.seconds)}
                 >
                   {length.minutes} min
@@ -482,28 +557,27 @@ export function StudyPanel({
                 type="button"
                 className={customOpen ? "button" : "button button-ghost"}
                 aria-pressed={customOpen}
-                disabled={pending}
+                disabled={pending || Boolean(desktopLink)}
                 onClick={onChooseCustom}
               >
                 Custom
               </button>
-            </div>
-            {customOpen ? (
-              <label className="field">
-                Custom minutes
+              {customOpen ? (
                 <input
+                  className="length-type"
                   type="number"
                   inputMode="numeric"
                   min={MIN_STUDY_MINUTES}
                   max={MAX_STUDY_MINUTES}
                   step={1}
                   value={customMinutes}
-                  placeholder={`${MIN_STUDY_MINUTES}–${MAX_STUDY_MINUTES}`}
-                  autoFocus
+                  placeholder="type here"
+                  aria-label="Custom minutes"
+                  disabled={pending || Boolean(desktopLink)}
                   onChange={(event) => onCustomMinutes(event.target.value)}
                 />
-              </label>
-            ) : null}
+              ) : null}
+            </div>
             {lengthSeconds === null ? (
               <p>Use {MIN_STUDY_MINUTES} to {MAX_STUDY_MINUTES} whole minutes.</p>
             ) : (
@@ -527,126 +601,86 @@ export function StudyPanel({
                 .
               </p>
             )}
-            <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseLength}>
-                Cancel
-              </button>
-              <button type="button" className="button" disabled={pending || lengthSeconds === null} onClick={onConfirmLength}>
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {trackerOpen ? (
-        <div className="tracker-pop" role="presentation" onClick={onCloseTracker}>
-          <div
-            className="tracker-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tracker-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="dialog-head">
-              <h2 id="tracker-title">
-                {desktopStep === 2
-                  ? "Close blocked tabs?"
-                  : desktopStep === 1
-                    ? "Desktop pet"
-                    : "How should this session be tracked?"}
-              </h2>
-              <button type="button" className="dialog-close" onClick={onCloseTracker} aria-label="Close dialog">
-                ×
-              </button>
-            </div>
-            {desktopStep === 0 ? <p>The session starts when you confirm.</p> : null}
-            {desktopStep === 1 ? (
-              <ol className="pet-setup-steps">
-                <li>
-                  <p>If you haven't downloaded our desktop application, please download it here.</p>
-                  <PetStatus downloadUrl={downloadUrl} showHeading={false} />
-                </li>
-                <li>
-                  <p>After downloading, unzip it, then open your Terminal and run this command:</p>
-                  <div className="pet-open-command-row">
-                    <p className="pet-open-command">xattr -cr ~/Downloads/Aurafarm.app</p>
-                    <CopyButton value="xattr -cr ~/Downloads/Aurafarm.app" label="Copy Terminal command" />
-                  </div>
-                </li>
-              </ol>
-            ) : null}
-            {desktopStep === 2 ? (
-              <>
-                <p>When on, we close tabs like YouTube and Instagram for you when you get distracted.</p>
+            <div className="tracker-cards" role="group" aria-label="Session tracker">
+              <div className={useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
                 <button
                   type="button"
-                  className={closeBlocked ? "button" : "button button-ghost"}
-                  aria-pressed={closeBlocked}
-                  disabled={pending || Boolean(closeBlockedError)}
-                  onClick={onToggleClose}
+                  className="tracker-option-pick"
+                  aria-pressed={useDesktopPet}
+                  disabled={pending || Boolean(desktopLink) || macDesktop !== true}
+                  onClick={() => {
+                    if (macDesktop === true) setTrackerChoice(true);
+                  }}
                 >
-                  Close blocked tabs: {closeBlocked ? "On" : "Off"}
+                  <span className="tracker-option-name">Desktop pet</span>
+                  <span
+                    className={
+                      macDesktop === true
+                        ? "tracker-choice-note tracker-mac-note"
+                        : macDesktop === false
+                          ? "tracker-choice-note tracker-unsupported-note"
+                          : "tracker-choice-note"
+                    }
+                  >
+                    {macDesktop === true
+                      ? "※ Recommended ※"
+                      : macDesktop === false
+                        ? "Not supported in this device"
+                        : "\u00a0"}
+                  </span>
+                  <TrackerDemo kind="desktop" />
+                  <span className="tracker-option-copy">
+                    The pet stays in the corner, closes a distracting tab, and brings you back for the reward.
+                  </span>
                 </button>
-                {closeBlockedError ? (
-                  <p className="form-error" role="alert">
-                    {closeBlockedError}
-                  </p>
+                {downloadUrl ? (
+                  <a className="tracker-download" href={downloadUrl}>
+                    First time aurafarming? Download here!
+                  </a>
                 ) : null}
-              </>
-            ) : null}
-            {desktopStep === 0 ? (
-              <>
-                <div className="tracker-choices" role="group" aria-label="Session tracker">
-                  <button
-                    type="button"
-                    className={trackerChoice === true ? "button" : "button button-ghost"}
-                    aria-pressed={trackerChoice === true}
-                    disabled={pending}
-                    onClick={() => setTrackerChoice(true)}
-                  >
-                    Desktop pet
-                  </button>
-                  <button
-                    type="button"
-                    className={trackerChoice === false ? "button" : "button button-ghost"}
-                    aria-pressed={trackerChoice === false}
-                    disabled={pending}
-                    onClick={() => setTrackerChoice(false)}
-                  >
-                    Website timer
-                  </button>
-                </div>
-                {trackerChoice === true ? <p>The desktop pet tracks the time.</p> : null}
-                {trackerChoice === false ? <p>The website countdown tracks the time.</p> : null}
-              </>
-            ) : null}
+              </div>
+              <div className={!useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
+                <button
+                  type="button"
+                  className="tracker-option-pick"
+                  aria-pressed={!useDesktopPet}
+                  disabled={pending || Boolean(desktopLink)}
+                  onClick={() => setTrackerChoice(false)}
+                >
+                  <span className="tracker-option-name">Website timer</span>
+                  <span className="tracker-choice-note" aria-hidden="true">
+                    {"\u00a0"}
+                  </span>
+                  <TrackerDemo kind="website" />
+                  <span className="tracker-option-copy">
+                    The countdown stays beside your PDF, then the site comes back with the reward.
+                  </span>
+                </button>
+              </div>
+            </div>
             {error ? (
               <p className="form-error" role="alert">
                 {error}
               </p>
             ) : null}
-            <div className="tracker-actions">
-              <button type="button" className="button button-ghost" disabled={pending} onClick={onBackTracker}>
-                Back
+            <div className="tracker-actions start-actions">
+              <button type="button" className="button button-ghost" disabled={pending} onClick={onCloseStart}>
+                Cancel
               </button>
-              <button
-                type="button"
-                className="button"
-                disabled={pending || (desktopStep === 0 && trackerChoice === null)}
-                onClick={() => {
-                  if (desktopStep === 0 && trackerChoice) {
-                    setDesktopStep(1);
-                    return;
-                  }
-                  if (desktopStep === 1) {
-                    setDesktopStep(2);
-                    return;
-                  }
-                  void onConfirmTracker();
-                }}
-              >
-                {desktopStep === 2 || trackerChoice === false ? "Confirm" : "Next"}
-              </button>
+              {desktopLink ? (
+                <a className="button button-farm" href={desktopLink}>
+                  Open Aurafarm
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  className="button button-farm"
+                  disabled={pending || lengthSeconds === null}
+                  onClick={() => void onConfirmTracker()}
+                >
+                  FARM AURA
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -744,52 +778,19 @@ export function StudyPanel({
           ownedColorIds={ownedColorIds}
           ownedHatIds={ownedHatIds}
           ownedClothesIds={ownedClothesIds}
+          renameCoupons={renameCoupons}
+          showPetNames={showPetNames}
           sessionActive={Boolean(shownSession)}
           onClose={() => setDetailPetId(null)}
           onEquipped={onEquipped}
           onColorApplied={onColorApplied}
           onHatApplied={onHatApplied}
           onClothesApplied={onClothesApplied}
+          onPetRenamed={onPetRenamed}
+          onShowPetNamesChange={onShowPetNamesChange}
         />
       ) : null}
     </main>
-  );
-}
-
-function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  const copiedTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
-    };
-  }, []);
-
-  async function onCopy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
-      copiedTimer.current = window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  return (
-    <button type="button" className="button button-small" aria-label={label} onClick={() => void onCopy()}>
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
-function CopySessionCode({ code }: { code: string }) {
-  return (
-    <div className="launch-code-row">
-      <p className="launch-code">{code}</p>
-      <CopyButton value={code} label="Copy session code" />
-    </div>
   );
 }
 
@@ -802,52 +803,3 @@ function SessionRefreshStatus() {
   );
 }
 
-function StudyClock({
-  session,
-  rushed,
-  onFinished,
-}: {
-  session: ActiveStudySession;
-  rushed: boolean;
-  onFinished: (() => Promise<{ error: string }>) | null;
-}) {
-  const [now, setNow] = useState<number | null>(null);
-  const attempt = useRef<string | null>(null);
-  const onFinishedRef = useRef(onFinished);
-
-  useEffect(() => {
-    onFinishedRef.current = onFinished;
-  });
-
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    const first = window.setTimeout(tick, 0);
-    const id = window.setInterval(tick, 1000);
-    return () => {
-      window.clearTimeout(first);
-      window.clearInterval(id);
-    };
-  }, [session.id]);
-
-  const remaining = rushed
-    ? 0
-    : now === null
-      ? null
-      : remainingSeconds(session.startedAt, session.plannedSeconds, now);
-
-  useEffect(() => {
-    if (!onFinishedRef.current) return;
-    if (now === null || remaining === null || remaining > 0) return;
-    if (attempt.current === session.id) return;
-    attempt.current = session.id;
-    void onFinishedRef.current().then((result) => {
-      if (result.error === "Study time has not finished") attempt.current = null;
-    });
-  }, [now, remaining, session.id]);
-
-  return (
-    <p className="study-clock" role="timer">
-      {remaining === null ? "—" : formatClock(remaining)}
-    </p>
-  );
-}

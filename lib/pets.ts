@@ -29,6 +29,7 @@ export type PetCard = {
   color: string | null;
   hat: string | null;
   clothes: string | null;
+  name: string | null;
 };
 
 export type CollectionReward = {
@@ -43,17 +44,17 @@ export function equippedPet(pets: readonly PetCard[]) {
 
 const PET_COPY: Record<string, { name: string; note: string; price?: number }> = {
   baby_slime: {
-    name: "Baby Slime",
-    note: "A wobbly starter that sticks to the desktop.",
+    name: "Matcha",
+    note: "Your first desk companion.",
   },
   lantern_moth: {
-    name: "Lantern Moth",
-    note: "A small light that follows the desk.",
+    name: "Taro",
+    note: "Soft hops beside the lamp.",
     price: SHOP_PRICE,
   },
   river_newt: {
-    name: "River Newt",
-    note: "A quiet swimmer from the farm stream.",
+    name: "Coffee",
+    note: "Quiet paws from the farm path.",
     price: SHOP_PRICE,
   },
 };
@@ -136,4 +137,10 @@ export function describePet(petType: string) {
     name: name || "Pet",
     note: "A companion from your farm.",
   };
+}
+
+export function petDisplayName(pet: { pet_type: string; name?: string | null }) {
+  const custom = typeof pet.name === "string" ? pet.name.trim() : "";
+  if (custom) return custom;
+  return describePet(pet.pet_type).name;
 }
