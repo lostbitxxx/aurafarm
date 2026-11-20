@@ -1498,6 +1498,27 @@ a.tracker-download { color: #6d7a62; }
   background: #c5ef47;
 }
 
+.living-room-pets .room-pet-wrap.is-remote {
+  pointer-events: none;
+}
+
+.crew-room .room-pet-wrap.is-sitting .room-pet-label,
+.crew-room .room-pet-wrap.is-sitting .crew-room-status {
+  position: absolute;
+  left: 50%;
+  white-space: nowrap;
+}
+
+.crew-room .room-pet-wrap.is-sitting .room-pet-label {
+  bottom: 100%;
+  transform: translate(-50%, -0.2rem);
+}
+
+.crew-room .room-pet-wrap.is-sitting .crew-room-status {
+  top: 100%;
+  transform: translate(-50%, 0.2rem);
+}
+
 .tracker-card .form-error { color: #733d2c; }
 
 .motivation-quote {

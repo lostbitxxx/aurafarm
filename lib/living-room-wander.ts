@@ -45,6 +45,12 @@ export const OBSTACLE_EJECT_PAD = 1.25;
 
 export type WanderSpot = { left: number; top: number };
 export type WanderDir = { x: number; y: number };
+export type WalkBounds = {
+  minLeft: number;
+  maxLeft: number;
+  minTop: number;
+  maxTop: number;
+};
 
 export function randomBetween(min: number, max: number, rand: () => number = Math.random) {
   return min + rand() * (max - min);
@@ -75,7 +81,7 @@ export function randomIdleMs(rand: () => number = Math.random) {
  */
 export function randomWanderSpot(
   rand: () => number = Math.random,
-  bounds = WALK_BOUNDS,
+  bounds: WalkBounds = WALK_BOUNDS,
   obstacles: readonly RoomObstacle[] = ROOM_OBSTACLES,
   attempts = 48,
 ): WanderSpot {
@@ -141,7 +147,7 @@ export function stepWanderSpot(
   dir: WanderDir,
   dtSec: number,
   room: { width: number; height: number },
-  bounds = WALK_BOUNDS,
+  bounds: WalkBounds = WALK_BOUNDS,
   speedPx = WANDER_SPEED_PX,
   verticalRatio = WANDER_VERTICAL_RATIO,
   obstacles: readonly RoomObstacle[] = ROOM_OBSTACLES,
@@ -181,7 +187,7 @@ export function facingFromDirection(dir: WanderDir, currentFaceLeft: boolean): b
   return dir.x < 0;
 }
 
-export function clampSpotToWalkBand(spot: WanderSpot, bounds = WALK_BOUNDS): WanderSpot {
+export function clampSpotToWalkBand(spot: WanderSpot, bounds: WalkBounds = WALK_BOUNDS): WanderSpot {
   return {
     left: Math.min(bounds.maxLeft, Math.max(bounds.minLeft, spot.left)),
     top: Math.min(bounds.maxTop, Math.max(bounds.minTop, spot.top)),
@@ -201,7 +207,7 @@ function hitsBox(spot: WanderSpot, box: RoomObstacle) {
 export function ejectFromObstacle(
   spot: WanderSpot,
   box: RoomObstacle,
-  bounds = WALK_BOUNDS,
+  bounds: WalkBounds = WALK_BOUNDS,
   pad = OBSTACLE_EJECT_PAD,
 ): WanderSpot[] {
   return [
@@ -220,7 +226,7 @@ export function ejectFromObstacle(
  */
 export function resolveWanderSpot(
   spot: WanderSpot,
-  bounds = WALK_BOUNDS,
+  bounds: WalkBounds = WALK_BOUNDS,
   obstacles: readonly RoomObstacle[] = ROOM_OBSTACLES,
   fallbacks: readonly WanderSpot[] = ROOM_START_SPOTS,
 ): WanderSpot {

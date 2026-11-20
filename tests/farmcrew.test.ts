@@ -211,6 +211,12 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.doesNotMatch(page, /export const dynamic/);
   assert.match(room, /Aurafarming/);
   assert.match(room, /living-room/);
+  assert.match(room, /CREW_LIBRARY_PATH/);
+  assert.match(room, /is-remote/);
+  assert.match(room, /occupant\.farmerId === viewerId/);
+  assert.match(room, /CREW_PEDESTAL/);
+  assert.match(screen, /viewerId=\{room\.userId\}/);
+  assert.match(screen, /mascot=\{\{ petType: detail\.petType, color: detail\.color \}\}/);
   assert.equal(requiresAccount("/farmcrew/11111111-1111-4111-8111-111111111111"), true);
   assert.equal(requiresAccount("/farmcrew"), false);
 

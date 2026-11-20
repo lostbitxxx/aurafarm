@@ -183,7 +183,12 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
                 {sessionError}
               </p>
             ) : null}
-            <CrewRoom occupants={occupants} />
+            <CrewRoom
+              crewId={detail.crewId}
+              viewerId={room.userId}
+              mascot={{ petType: detail.petType, color: detail.color }}
+              occupants={occupants}
+            />
           </section>
         ) : (
           <section className="living-room-block" aria-label="FarmCrew">
