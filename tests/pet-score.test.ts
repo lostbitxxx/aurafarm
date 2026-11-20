@@ -206,7 +206,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /shownSession\.useDesktopPet && launchUrl \? <DesktopLaunchHelp href=\{launchUrl\} \/>/);
   const launchHelp = readFileSync(new URL("../components/desktop-launch-help.tsx", import.meta.url), "utf8");
   assert.match(launchHelp, /Not Seeing Desktop Pet\?/);
-  assert.match(launchHelp, /button button-ghost button-end-early/);
+  assert.match(launchHelp, /button button-end-early/);
+  assert.doesNotMatch(launchHelp, /className = "button button-ghost button-end-early"/);
   assert.match(launchHelp, /tracker-pop[\s\S]*Open Aurafarm/);
   assert.match(launchHelp, /setOpen\(true\)/);
   assert.match(launchHelp, /Not seeing the desktop pet\?/);

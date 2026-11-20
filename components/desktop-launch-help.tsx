@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 /** Website help to re-open the pet: opens a small dialog with the launch link. */
 export function DesktopLaunchHelp({
   href,
-  className = "button button-ghost button-end-early",
+  className = "button button-end-early",
 }: {
   href: string;
   className?: string;
