@@ -285,6 +285,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /#panel-pet-stack:hover/);
   assert.match(petPage, /#pet-stack:hover/);
   assert.match(petScript, /setHoverCursor\("pointer"\)/);
+  assert.match(petScript, /elementFromPoint/);
+  assert.match(petScript, /syncPetMouseTarget/);
   assert.match(petPage, /#pet-stack \{[\s\S]*cursor: pointer/);
   assert.doesNotMatch(panel, /id="pet-lane"/);
   assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);

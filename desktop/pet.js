@@ -17,6 +17,8 @@ let shownPose = "idle";
 let shownFlip = false;
 let dockDragging = false;
 let activePointerId = null;
+/** True while the overlay accepts mouse hits so CSS cursors can paint. */
+let mouseCaptured = false;
 
 function setLayer(node, src) {
   if (!node) return;
@@ -59,7 +61,42 @@ function screenPoint(event) {
 }
 
 function setPetMouseIgnore(ignore) {
+  mouseCaptured = !ignore;
   window.pet.setIgnoreMouse?.(ignore);
+}
+
+function setHoverCursor(kind) {
+  const value = kind || "";
+  document.documentElement.style.cursor = value;
+  document.body.style.cursor = value;
+  petStack.style.cursor = value || "";
+}
+
+function overPetHit(event) {
+  const x = event.clientX;
+  const y = event.clientY;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  const node = document.elementFromPoint(x, y);
+  return Boolean(node && (node === petStack || petStack.contains(node)));
+}
+
+/**
+ * Transparent click-through windows do not deliver reliable mouseenter while
+ * ignoreMouseEvents(forward) is on. Track mousemove and only capture the mouse
+ * (so CSS pointer can show) when the cursor is over the sprite.
+ */
+function syncPetMouseTarget(event) {
+  if (dockDragging) return;
+  const over = overPetHit(event);
+  if (over) {
+    if (!mouseCaptured) setPetMouseIgnore(false);
+    setHoverCursor("pointer");
+    return;
+  }
+  if (mouseCaptured) {
+    setHoverCursor("");
+    setPetMouseIgnore(true);
+  }
 }
 
 function clearDockDrag() {
@@ -84,20 +121,8 @@ function clearDockDrag() {
   setPetMouseIgnore(true);
 }
 
-function setHoverCursor(kind) {
-  const value = kind || "";
-  document.documentElement.style.cursor = value;
-  document.body.style.cursor = value;
-  petStack.style.cursor = value || "";
-}
-
-petStack.addEventListener("mouseenter", () => {
-  // Accept hits so the clickable pointer paints over the transparent overlay.
-  setPetMouseIgnore(false);
-  if (!dockDragging) setHoverCursor("pointer");
-});
-
-petStack.addEventListener("mouseleave", () => {
+window.addEventListener("mousemove", syncPetMouseTarget, { passive: true });
+window.addEventListener("mouseleave", () => {
   if (dockDragging) return;
   setHoverCursor("");
   setPetMouseIgnore(true);
@@ -141,10 +166,7 @@ petStack.addEventListener("lostpointercapture", (event) => {
   if (!dockDragging) return;
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   window.pet.dockDragCancel();
-  activePointerId = null;
-  dockDragging = false;
-  petStack.classList.remove("is-dragging");
-  setPetMouseIgnore(true);
+  clearDockDrag();
 });
 
 window.addEventListener("blur", () => {
