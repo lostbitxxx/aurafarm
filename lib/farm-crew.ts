@@ -286,6 +286,15 @@ export function farmCrewJoinRequestsFromRows(rows: readonly Record<string, unkno
   });
 }
 
+export function crewShowsAurafarming(
+  occupant: Pick<CrewOccupant, "farmerId" | "presence">,
+  viewerId: string,
+  viewerStudying: boolean,
+) {
+  if (occupant.farmerId === viewerId) return viewerStudying;
+  return occupant.presence === "aurafarming";
+}
+
 export function crewOccupantsFromRows(rows: readonly Record<string, unknown>[]): CrewOccupant[] {
   return rows.flatMap((row) => {
     const farmerId = typeof row.farmer_id === "string" ? row.farmer_id : "";

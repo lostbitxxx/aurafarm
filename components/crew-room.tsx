@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { CrewOccupant } from "@/lib/farm-crew";
+import { crewShowsAurafarming, type CrewOccupant } from "@/lib/farm-crew";
 import {
+  CREW_BLACKBOARD,
   CREW_LIBRARY_PATH,
   CREW_OBSTACLES,
   CREW_PEDESTAL,
@@ -48,6 +49,7 @@ function CrewFarmer({
   taken,
   roomRef,
   publish,
+  viewerStudying,
 }: {
   occupant: CrewOccupant;
   viewerId: string;
@@ -56,9 +58,10 @@ function CrewFarmer({
   taken: ReadonlySet<string>;
   roomRef: RefObject<HTMLDivElement | null>;
   publish: (pose: CrewPose) => Promise<CrewPose | null>;
+  viewerStudying: boolean;
 }) {
   const mine = occupant.farmerId === viewerId;
-  const studying = occupant.presence === "aurafarming";
+  const studying = crewShowsAurafarming(occupant, viewerId, viewerStudying);
   const spawn = crewSpawnSpot(occupant.farmerId);
   const [position, setPosition] = useState(spawn);
   const [shown, setShown] = useState(spawn);
@@ -391,11 +394,15 @@ export function CrewRoom({
   viewerId,
   mascot,
   occupants,
+  viewerStudying = false,
+  onOpenLeaderboard,
 }: {
   crewId: string;
   viewerId: string;
   mascot: { petType: string; color: string | null };
   occupants: readonly CrewOccupant[];
+  viewerStudying?: boolean;
+  onOpenLeaderboard?: () => void;
 }) {
   const roomRef = useRef<HTMLDivElement>(null);
   const { poses, loaded, error, publish } = useCrewPoses(crewId);
@@ -413,6 +420,32 @@ export function CrewRoom({
       <div className="living-room crew-room" ref={roomRef}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="living-room-art" src={CREW_LIBRARY_PATH} alt="" draggable={false} />
+        {onOpenLeaderboard ? (
+          <svg
+            className="living-room-wall-hotspots"
+            viewBox="0 0 600 300"
+            preserveAspectRatio="xMidYMid meet"
+            style={{ zIndex: 210 }}
+          >
+            <rect
+              className="room-rack-hotspot"
+              role="button"
+              tabIndex={0}
+              aria-label="Leaderboard"
+              x={CREW_BLACKBOARD.x}
+              y={CREW_BLACKBOARD.y}
+              width={CREW_BLACKBOARD.width}
+              height={CREW_BLACKBOARD.height}
+              onClick={onOpenLeaderboard}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onOpenLeaderboard();
+                }
+              }}
+            />
+          </svg>
+        ) : null}
         <div className="living-room-pets">
           <div
             className="room-pet-wrap is-sitting is-remote"
@@ -439,6 +472,7 @@ export function CrewRoom({
               taken={taken}
               roomRef={roomRef}
               publish={publish}
+              viewerStudying={viewerStudying}
             />
           ))}
         </div>

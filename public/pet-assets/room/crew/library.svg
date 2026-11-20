@@ -62,7 +62,15 @@
     </g>
   </symbol>
   <use href="#shelf" x="16" y="18"/>
-  <use href="#shelf" x="492" y="18"/>
+  <g>
+    <rect x="492" y="18" width="92" height="86" fill="#8a6a48"/>
+    <rect x="498" y="24" width="80" height="68" fill="#3a5a40"/>
+    <rect x="506" y="36" width="52" height="3" fill="#6a8a68"/>
+    <rect x="506" y="46" width="38" height="3" fill="#6a8a68"/>
+    <rect x="506" y="56" width="46" height="3" fill="#6a8a68"/>
+    <rect x="506" y="66" width="28" height="3" fill="#6a8a68"/>
+    <rect x="552" y="78" width="12" height="4" fill="#e8e0c8"/>
+  </g>
 
   <g>
     <rect x="230" y="18" width="140" height="64" fill="#c4b48a"/>

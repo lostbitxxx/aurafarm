@@ -8,6 +8,9 @@ import type { WanderSpot } from "@/lib/living-room-wander";
 
 export const CREW_LIBRARY_PATH = "/pet-assets/room/crew/library.svg";
 
+/** Right-wall blackboard. Same box the library shelf used to fill. */
+export const CREW_BLACKBOARD = { x: 492, y: 18, width: 92, height: 86 };
+
 export type CrewPoseMode = "idle" | "walking" | "sitting" | "dragging";
 
 export type CrewPose = {

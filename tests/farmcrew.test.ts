@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   crewOccupantsFromRows,
+  crewShowsAurafarming,
   farmCrewCardsFromRows,
   farmCrewDetailFromRows,
   farmCrewJoinRequestsFromRows,
@@ -118,6 +119,30 @@ test("farm crew rows keep membership, public crews, and the room", () => {
   ]);
   assert.equal(farmer?.clothes, "little-gentleman-suit");
   assert.equal(farmer?.presence, "aurafarming");
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "online" },
+      crewId,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    false,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: "22222222-2222-4222-8222-222222222222", presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    true,
+  );
   assert.equal(crewOccupantsFromRows([{ farmer_id: crewId, presence: "offline" }]).length, 0);
 });
 
@@ -186,6 +211,9 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /AuraFarmCrew/);
   assert.match(screen, /Back to Dashboard/);
   assert.match(screen, /Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-link"[\s\S]{0,80}Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-drawer-link"[\s\S]{0,80}Leaderboard/);
+  assert.match(screen, /onOpenLeaderboard=\{\(\) => setPanel\("board"\)\}/);
   assert.match(screen, /loadFarmCrewLeaderboard/);
   assert.match(screen, /<FarmDialog title="Leaderboard"/);
   assert.match(screen, /managesFarmCrew\(detail\.role\)/);
@@ -232,6 +260,8 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(room, /occupant\.farmerId === viewerId/);
   assert.match(room, /CREW_PEDESTAL/);
   assert.match(screen, /viewerId=\{room\.userId\}/);
+  assert.match(screen, /viewerStudying=\{Boolean\(session\)\}/);
+  assert.match(room, /crewShowsAurafarming/);
   assert.match(screen, /mascot=\{\{ petType: detail\.petType, color: detail\.color \}\}/);
   assert.equal(requiresAccount("/farmcrew/11111111-1111-4111-8111-111111111111"), true);
   assert.equal(requiresAccount("/farmcrew"), false);

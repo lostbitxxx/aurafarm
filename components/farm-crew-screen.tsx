@@ -78,11 +78,6 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
               <Link href="/dashboard" className="topbar-link">
                 Back to Dashboard
               </Link>
-              {detail ? (
-                <button type="button" className="topbar-link" onClick={() => setPanel("board")}>
-                  Leaderboard
-                </button>
-              ) : null}
               {detail && managesFarmCrew(detail.role) ? (
                 <button type="button" className="topbar-link" onClick={() => setPanel("admin")}>
                   Admin
@@ -104,11 +99,6 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
             <Link href="/dashboard" className="topbar-drawer-link">
               Back to Dashboard
             </Link>
-            {detail ? (
-              <button type="button" className="topbar-drawer-link" onClick={() => setPanel("board")}>
-                Leaderboard
-              </button>
-            ) : null}
             {detail && managesFarmCrew(detail.role) ? (
               <button type="button" className="topbar-drawer-link" onClick={() => setPanel("admin")}>
                 Admin
@@ -188,6 +178,8 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
               viewerId={room.userId}
               mascot={{ petType: detail.petType, color: detail.color }}
               occupants={occupants}
+              viewerStudying={Boolean(session)}
+              onOpenLeaderboard={() => setPanel("board")}
             />
           </section>
         ) : (

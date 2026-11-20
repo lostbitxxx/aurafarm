@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  CREW_BLACKBOARD,
   CREW_LIBRARY_PATH,
   CREW_OBSTACLES,
   CREW_PEDESTAL,
@@ -16,6 +17,15 @@ import { spotHitsObstacle } from "../lib/living-room-layout";
 
 test("library seats ring the pedestal and stay on open floor", () => {
   assert.equal(CREW_LIBRARY_PATH, "/pet-assets/room/crew/library.svg");
+  const library = readFileSync(new URL("../public/pet-assets/room/crew/library.svg", import.meta.url), "utf8");
+  assert.equal(library.match(/href="#shelf"/g)?.length, 1);
+  assert.match(library, /x="492" y="18" width="92" height="86" fill="#8a6a48"/);
+  assert.match(library, /fill="#3a5a40"/);
+  assert.equal(CREW_BLACKBOARD.x, 492);
+  assert.ok(CREW_BLACKBOARD.x > 400);
+  const room = readFileSync(new URL("../components/crew-room.tsx", import.meta.url), "utf8");
+  assert.match(room, /aria-label="Leaderboard"/);
+  assert.match(room, /onOpenLeaderboard/);
   assert.equal(CREW_SEATS.length, 6);
   const lefts = CREW_SEATS.map((seat) => seat.anchor.left);
   const tops = CREW_SEATS.map((seat) => seat.anchor.top);
