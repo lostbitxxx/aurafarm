@@ -67,8 +67,6 @@ function clearDockDrag() {
   activePointerId = null;
   dockDragging = false;
   petStack.classList.remove("is-dragging");
-  document.documentElement.style.cursor = "";
-  document.body.style.cursor = "";
   if (pointerId !== null && petStack.hasPointerCapture?.(pointerId)) {
     try {
       petStack.releasePointerCapture(pointerId);
@@ -76,20 +74,32 @@ function clearDockDrag() {
       // Capture may already be cleared.
     }
   }
+  // Stay clickable if the pointer is still over the pet after a drag.
+  if (petStack.matches?.(":hover")) {
+    setHoverCursor("pointer");
+    setPetMouseIgnore(false);
+    return;
+  }
+  setHoverCursor("");
   setPetMouseIgnore(true);
 }
 
+function setHoverCursor(kind) {
+  const value = kind || "";
+  document.documentElement.style.cursor = value;
+  document.body.style.cursor = value;
+  petStack.style.cursor = value || "";
+}
+
 petStack.addEventListener("mouseenter", () => {
-  // Accept hits so CSS grab cursor paints over the transparent overlay.
+  // Accept hits so the clickable pointer paints over the transparent overlay.
   setPetMouseIgnore(false);
-  document.documentElement.style.cursor = "grab";
-  document.body.style.cursor = "grab";
+  if (!dockDragging) setHoverCursor("pointer");
 });
 
 petStack.addEventListener("mouseleave", () => {
   if (dockDragging) return;
-  document.documentElement.style.cursor = "";
-  document.body.style.cursor = "";
+  setHoverCursor("");
   setPetMouseIgnore(true);
 });
 
@@ -99,8 +109,7 @@ petStack.addEventListener("pointerdown", (event) => {
   dockDragging = true;
   activePointerId = event.pointerId;
   petStack.classList.add("is-dragging");
-  document.documentElement.style.cursor = "grabbing";
-  document.body.style.cursor = "grabbing";
+  setHoverCursor("grabbing");
   petStack.setPointerCapture?.(event.pointerId);
   const point = screenPoint(event);
   window.pet.dockDragStart(point.x, point.y);
