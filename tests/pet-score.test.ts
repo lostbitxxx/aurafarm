@@ -284,11 +284,12 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /body\.edge-right\.is-open #panel-chevron svg/);
   assert.match(panel, /#panel-pet-stack:hover/);
   assert.match(petPage, /#pet-stack:hover/);
-  assert.match(petScript, /setHoverCursor\("grab"\)/);
   assert.match(petScript, /getBoundingClientRect/);
   assert.match(petScript, /syncPetMouseTarget/);
-  assert.match(petPage, /background: rgba\(0, 0, 0, 0\.01\)/);
-  assert.match(petPage, /#pet-stack \{[\s\S]*cursor: grab/);
+  assert.doesNotMatch(petScript, /setHoverCursor/);
+  assert.doesNotMatch(petPage, /background: rgba\(0, 0, 0, 0\.01\)/);
+  assert.doesNotMatch(petPage, /#pet-stack \{[^}]*cursor: grab/);
+  assert.match(panel, /#panel-pet-stack \{[^}]*cursor: grab/);
   assert.doesNotMatch(panel, /id="pet-lane"/);
   assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);
   assert.doesNotMatch(panel, /id="pet-switch-row"|id="pet-toggle"|Show pet/);
