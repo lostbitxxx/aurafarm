@@ -5,7 +5,6 @@ const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
 const toggle = document.getElementById("panel-toggle");
 const sessionFill = document.getElementById("session-fill");
-const petToggle = document.getElementById("pet-toggle");
 const panelPet = document.getElementById("panel-pet");
 const panelPetChat = document.getElementById("panel-pet-chat");
 const panelPetStack = document.getElementById("panel-pet-stack");
@@ -48,10 +47,6 @@ function applyPanelOpen(open) {
   document.body.classList.toggle("is-open", panelIsOpen);
   toggle.setAttribute("aria-expanded", panelIsOpen ? "true" : "false");
   toggle.setAttribute("aria-label", panelIsOpen ? "Close Aurafarm" : "Open Aurafarm");
-}
-
-function applyPetVisible(visible) {
-  petToggle.setAttribute("aria-checked", visible ? "true" : "false");
 }
 
 function setLayer(node, src) {
@@ -142,10 +137,6 @@ function clearDockDrag() {
 toggle.addEventListener("click", () => {
   if (dockDragging || dockMoved) return;
   window.pet.setOpen(toggle.getAttribute("aria-expanded") !== "true");
-});
-
-petToggle.addEventListener("click", () => {
-  window.pet.setPetVisible(petToggle.getAttribute("aria-checked") !== "true");
 });
 
 // Only the pet moves the dock; the EXP rail stays open/close.
@@ -242,7 +233,6 @@ applyDockEdge("right");
 window.pet.onState((state) => {
   if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
-  if (typeof state.petVisible === "boolean") applyPetVisible(state.petVisible);
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;

@@ -83,7 +83,6 @@ const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 let panelWindow = null;
 let panelOpen = false;
 let petWindow = null;
-let petVisible = true;
 let petAnimating = false;
 /** True while the pet is walking to close a distracted tab. */
 let petClosing = false;
@@ -113,7 +112,6 @@ let state = {
   sessionProgress: 0,
   status: "Let's study together!",
   panelOpen: false,
-  petVisible: true,
   panelPetVisible: false,
   petPose: "idle",
   petFlip: false,
@@ -195,7 +193,7 @@ function syncChatBubble(options = {}) {
     everDistracted: everDistractedThisSession(),
     panelOpen,
   });
-  const panelPetVisible = petVisible && panelOpen && !petAnimating;
+  const panelPetVisible = panelOpen && !petAnimating;
   if (
     state.chatBubble === copy.text &&
     state.chatBubbleScope === copy.scope &&
@@ -219,7 +217,7 @@ function publish() {
     ...state,
     assetOrigin: API_ORIGIN,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
-    panelPetVisible: petVisible && panelOpen && !petAnimating,
+    panelPetVisible: panelOpen && !petAnimating,
   };
   for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
@@ -430,10 +428,6 @@ function placePet() {
     win.hide();
     return;
   }
-  if (!petVisible) {
-    win.hide();
-    return;
-  }
   if (panelWindow && !panelWindow.isDestroyed()) {
     const panelRect = panelWindow.getBounds();
     const area = dockWorkArea({
@@ -584,7 +578,7 @@ async function finishPetApproach() {
 
 async function closeFrontTab(appName, host) {
   let animated = false;
-  if (petVisible && petWindow && !petWindow.isDestroyed()) {
+  if (petWindow && !petWindow.isDestroyed()) {
     const bounds = await readFrontWindowBounds(appName);
     const parsed = bounds.ok ? parseWindowBounds(bounds.value) : null;
     if (parsed) {
@@ -625,15 +619,6 @@ async function closeFrontTab(appName, host) {
   return result;
 }
 
-function setPetVisible(visible) {
-  petVisible = Boolean(visible);
-  if (petVisible) openPet();
-  else if (petWindow && !petWindow.isDestroyed()) petWindow.hide();
-  if (state.petVisible === petVisible) return;
-  state = { ...state, petVisible };
-  publish();
-}
-
 function hardenOverlayWindow(win) {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(true, "screen-saver");
@@ -650,7 +635,7 @@ function openPet() {
   const bounds = petWindowRect(petBounds());
   petWindow = new BrowserWindow({
     ...bounds,
-    show: petVisible && !panelOpen,
+    show: !panelOpen,
     frame: false,
     transparent: true,
     movable: false,
@@ -673,7 +658,7 @@ function openPet() {
   petWindow.loadFile(path.join(__dirname, "pet.html"));
   petWindow.on("closed", () => {
     petWindow = null;
-    if (!appQuitting && petVisible) setImmediate(() => openPet());
+    if (!appQuitting) setImmediate(() => openPet());
   });
   petWindow.webContents.once("did-finish-load", publish);
 }
@@ -1233,9 +1218,6 @@ ipcMain.on("quit-app", () => {
 });
 ipcMain.on("set-panel-open", (_event, open) => {
   setPanelOpen(open);
-});
-ipcMain.on("set-pet-visible", (_event, visible) => {
-  setPetVisible(visible);
 });
 ipcMain.on("pet-ignore-mouse", (_event, ignore) => {
   if (!petWindow || petWindow.isDestroyed()) return;
