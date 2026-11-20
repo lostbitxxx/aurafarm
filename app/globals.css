@@ -5467,15 +5467,16 @@ button.dialog-row {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  overflow: auto;
-  padding-right: 0.15rem;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .decor-cat {
   display: flex;
   align-items: stretch;
   flex: none;
-  width: var(--decor-cat-w);
+  width: 100%;
   min-height: 2.35rem;
   border: 2px solid #23392d;
   border-radius: 3px;
