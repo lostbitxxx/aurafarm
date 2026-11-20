@@ -254,7 +254,7 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     optional: true,
     mover: "sofa",
     crop: SOFA_BOUNDS,
-    skins: seatSkins("Couch", 4),
+    skins: seatSkins("Couch", 3),
   },
   {
     id: "plant",

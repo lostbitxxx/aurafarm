@@ -6,14 +6,14 @@ import { dropOnSeat, reconcileSeats, seatAnchor, seatCapacity, type SeatMap } fr
 
 test("seat capacity follows the piece and whether it is placed", () => {
   const decor = defaultRoomDecor();
-  assert.equal(seatCapacity("sofa", decor), 4);
+  assert.equal(seatCapacity("sofa", decor), 3);
   assert.equal(seatCapacity("armchair", decor), 0);
   assert.equal(seatCapacity("loveseat", decor), 0);
   assert.equal(seatCapacity("armchair", setRoomItemPlaced(decor, "armchair", true)), 1);
   assert.equal(seatCapacity("loveseat", setRoomItemPlaced(decor, "loveseat", true)), 2);
 });
 
-test("dropping on the sofa fills four seats and leaves a fifth on the floor", () => {
+test("dropping on the sofa fills three seats and leaves the rest on the floor", () => {
   const decor = defaultRoomDecor();
   const spot = {
     left: pxToLeftPercent(SOFA_BOUNDS.x + SOFA_BOUNDS.width / 2),
@@ -28,9 +28,10 @@ test("dropping on the sofa fills four seats and leaves a fifth on the floor", ()
       sat.push(result.spot);
     }
   }
-  assert.equal(Object.keys(seats).length, 4);
+  assert.equal(Object.keys(seats).length, 3);
+  assert.equal(seats.d, undefined);
   assert.equal(seats.e, undefined);
-  assert.equal(new Set(Object.values(seats).map((seat) => seat.seat)).size, 4);
+  assert.equal(new Set(Object.values(seats).map((seat) => seat.seat)).size, 3);
   const removed = setRoomItemPlaced(decor, "sofa", false);
   assert.deepEqual(reconcileSeats(removed, seats), {});
   assert.equal(seatAnchor(decor, { pieceId: "sofa", seat: 0 })?.left != null, true);

@@ -29,7 +29,7 @@ export type SeatMap = Record<string, SeatAssignment>;
 const SEAT_IDS: readonly SeatPieceId[] = ["sofa", "armchair", "loveseat"];
 
 const CAPACITY: Record<SeatPieceId, Readonly<Record<string, number>>> = {
-  sofa: { base: 4, greenhouse: 4, orbital: 4, leather: 4 },
+  sofa: { base: 3, greenhouse: 3, orbital: 3, leather: 3 },
   armchair: { base: 1 },
   loveseat: { base: 2 },
 };
@@ -175,7 +175,7 @@ export function parseRoomSeats(raw: string | null): SeatMap {
     if (assignment.pieceId !== "sofa" && assignment.pieceId !== "armchair" && assignment.pieceId !== "loveseat") {
       continue;
     }
-    if (!Number.isInteger(assignment.seat) || (assignment.seat ?? -1) < 0 || (assignment.seat ?? 0) > 3) continue;
+    if (!Number.isInteger(assignment.seat) || (assignment.seat ?? -1) < 0 || (assignment.seat ?? 0) > 2) continue;
     next[petId] = { pieceId: assignment.pieceId, seat: assignment.seat as number };
   }
   return next;

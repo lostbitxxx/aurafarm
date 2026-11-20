@@ -65,7 +65,13 @@ button.wordmark {
 }
 
 .topbar-nav {
-  align-items: flex-start;
+  align-items: center;
+}
+
+.topbar-nav > a {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .topbar-brand {
