@@ -99,7 +99,7 @@ test("buying a pet spends the shared price and cannot mint one", () => {
   assert.doesNotMatch(sql, /'baby_slime'/);
 });
 
-test("the signed-in header shows study time and public pages do not show a balance", () => {
+test("the signed-in header shows study time and coins and public pages do not show a balance", () => {
   assert.equal(wholePoints(100), 100);
   assert.equal(wholePoints("40"), 40);
   assert.equal(wholePoints(undefined), 0);
@@ -111,15 +111,20 @@ test("the signed-in header shows study time and public pages do not show a balan
     "utf8",
   );
   assert.match(header, /studySeconds\?: number/);
+  assert.match(header, /coins\?: number/);
   assert.match(header, /Study/);
+  assert.match(header, /Coins/);
   assert.doesNotMatch(header, /Points/);
   assert.doesNotMatch(publicHeader, /\bpoints\b/);
+  assert.doesNotMatch(publicHeader, /\bcoins\b/);
   const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
   const score = readFileSync(new URL("../lib/study-score.ts", import.meta.url), "utf8");
   assert.match(dashboard, /PROFILE_SELECT_WITH_WEEKLY/);
   assert.match(dashboard, /weekly_study_days/);
   assert.match(dashboard, /PROFILE_SELECT_LEGACY/);
   assert.match(dashboard, /planMigrationHint/);
+  assert.match(dashboard, /ownedRoomSkins/);
+  assert.match(dashboard, /\bcoins\b/);
   assert.match(score, /select\("display_name"\)/);
   assert.doesNotMatch(dashboard, /study_scores/);
   assert.doesNotMatch(score, /study_scores/);

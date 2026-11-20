@@ -2,7 +2,7 @@
  * Room decorating: which skins a player owns, which optional pieces are placed,
  * and how far movable pieces sit from their default spots.
  * Floor, trim, and wall stay fixed. Trim follows the wall skin in the picker.
- * Players own the base skin of every item.
+ * Players own the base skin of every item; other skins are bought with coins.
  */
 
 import {
@@ -337,9 +337,61 @@ export function setSeatGroupPlaced(decor: RoomDecor, placed: boolean): RoomDecor
   return next;
 }
 
-/** Players start with the base skin only. Other files stay in the catalog, locked. */
-export function skinOwned(skinId: string) {
-  return skinId === "base";
+/** Prices for purchasable skins. Must match room_skin_catalog in migration 0049. */
+export const ROOM_SKIN_PRICES: Readonly<Record<string, number>> = {
+  "plant:snake": 30,
+  "plant:monstera": 30,
+  "plant:pothos": 30,
+  "lamp:greenhouse": 60,
+  "lamp:orbital": 60,
+  "lamp:leather": 60,
+  "carpet:greenhouse": 60,
+  "carpet:orbital": 60,
+  "carpet:leather": 60,
+  "shelf:greenhouse": 90,
+  "shelf:orbital": 90,
+  "shelf:leather": 90,
+  "sofa:greenhouse": 90,
+  "sofa:orbital": 90,
+  "sofa:leather": 90,
+  "floor:greenhouse": 120,
+  "floor:orbital": 120,
+  "floor:leather": 120,
+  "wall:greenhouse": 120,
+  "wall:orbital": 120,
+  "wall:leather": 120,
+};
+
+export function roomSkinKey(categoryId: RoomDecorCategoryId, skinId: string) {
+  return `${categoryId}:${skinId}`;
+}
+
+export function roomSkinPrice(categoryId: RoomDecorCategoryId, skinId: string) {
+  if (skinId === "base") return 0;
+  return ROOM_SKIN_PRICES[roomSkinKey(categoryId, skinId)] ?? null;
+}
+
+export function ownedRoomSkinKeys(
+  rows: readonly { category_id: string; skin_id: string }[],
+): ReadonlySet<string> {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (typeof row.category_id !== "string" || typeof row.skin_id !== "string") continue;
+    keys.add(roomSkinKey(row.category_id as RoomDecorCategoryId, row.skin_id));
+  }
+  return keys;
+}
+
+/** Base is always owned. Trim follows an owned wall of the same skin id. */
+export function skinOwned(
+  categoryId: RoomDecorCategoryId,
+  skinId: string,
+  owned: ReadonlySet<string> = new Set(),
+) {
+  if (skinId === "base") return true;
+  if (owned.has(roomSkinKey(categoryId, skinId))) return true;
+  if (categoryId === "trim" && owned.has(roomSkinKey("wall", skinId))) return true;
+  return false;
 }
 
 export function roomSkinSrc(categoryId: RoomDecorCategoryId, skinId: string) {
@@ -435,10 +487,15 @@ export function setRoomItemPlaced(decor: RoomDecor, categoryId: RoomDecorCategor
   return { ...cloneRoomDecor(decor), placed: { ...decor.placed, [categoryId]: placed } };
 }
 
-export function equipRoomSkin(decor: RoomDecor, categoryId: RoomDecorCategoryId, skinId: string): RoomDecor {
+export function equipRoomSkin(
+  decor: RoomDecor,
+  categoryId: RoomDecorCategoryId,
+  skinId: string,
+  owned: ReadonlySet<string> = new Set(),
+): RoomDecor {
   const category = roomDecorCategory(categoryId);
   const skin = category.skins.find((item) => item.id === skinId);
-  if (!skin || !skinOwned(skin.id)) return decor;
+  if (!skin || !skinOwned(categoryId, skin.id, owned)) return decor;
   const next = cloneRoomDecor(decor);
   next.skins[categoryId] = skin.id;
   // Wall and trim share theme ids; keep both layers on the same look.
@@ -505,7 +562,10 @@ export function decorObstacles(decor: RoomDecor): RoomObstacle[] {
   });
 }
 
-export function parseRoomDecor(raw: string | null): RoomDecor {
+export function parseRoomDecor(
+  raw: string | null,
+  owned: ReadonlySet<string> = new Set(),
+): RoomDecor {
   const base = defaultRoomDecor();
   if (!raw) return base;
   let parsed: unknown;
@@ -519,7 +579,11 @@ export function parseRoomDecor(raw: string | null): RoomDecor {
   const next = defaultRoomDecor();
   for (const category of ROOM_DECOR_CATEGORIES) {
     const skinId = record.skins?.[category.id];
-    if (typeof skinId === "string" && category.skins.some((skin) => skin.id === skinId) && skinOwned(skinId)) {
+    if (
+      typeof skinId === "string" &&
+      category.skins.some((skin) => skin.id === skinId) &&
+      skinOwned(category.id, skinId, owned)
+    ) {
       next.skins[category.id] = skinId;
     }
     if (category.optional) {
@@ -547,10 +611,13 @@ function storageKey(userId: string) {
   return `aurafarm.room-decor.${userId}`;
 }
 
-export function readRoomDecor(userId: string): RoomDecor {
+export function readRoomDecor(
+  userId: string,
+  owned: ReadonlySet<string> = new Set(),
+): RoomDecor {
   if (typeof window === "undefined") return defaultRoomDecor();
   try {
-    return parseRoomDecor(window.localStorage.getItem(storageKey(userId)));
+    return parseRoomDecor(window.localStorage.getItem(storageKey(userId)), owned);
   } catch {
     return defaultRoomDecor();
   }

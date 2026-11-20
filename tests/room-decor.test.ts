@@ -30,6 +30,8 @@ test("a new room keeps must-have pieces and only the base skin", () => {
   assert.equal(equipRoomSkin(decor, "lamp", "greenhouse"), decor);
   assert.equal(setRoomItemPlaced(decor, "lamp", false).placed.lamp, false);
   assert.equal(equipRoomSkin(setRoomItemPlaced(decor, "carpet", false), "carpet", "base").placed.carpet, true);
+  const ownedLamp = new Set(["lamp:greenhouse"]);
+  assert.equal(equipRoomSkin(decor, "lamp", "greenhouse", ownedLamp).skins.lamp, "greenhouse");
 });
 
 test("saved decor drops skins the player does not own", () => {
@@ -112,13 +114,15 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /is-editing/);
   assert.match(source, /writeRoomDecor/);
   assert.match(dialog, /Decorations/);
-  assert.match(dialog, /Not obtained yet/);
+  assert.match(dialog, /Buy · \$\{detailPrice\} coins/);
+  assert.match(dialog, /"Equip"/);
   assert.doesNotMatch(dialog, /decor-cat-toggle/);
   assert.doesNotMatch(dialog, /Remove \$\{item\.label\}/);
   assert.doesNotMatch(dialog, /optional \? null/);
-  // Preview first; equip only on a second click of the same owned skin.
-  assert.match(dialog, /skin\.key !== detailId/);
-  assert.match(dialog, /First click previews/);
+  // Select for preview; Buy / Equip buttons apply the change.
+  assert.match(dialog, /Select for detail preview only/);
+  assert.match(dialog, /onEquip/);
+  assert.match(dialog, /onBuy/);
   assert.match(css, /\.decor-tile\.is-selected\s*\{[^}]*#c2342a/);
   assert.match(css, /\.decor-tile\.is-equipped\s*\{[^}]*#5aa818/);
 });

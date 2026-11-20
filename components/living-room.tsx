@@ -30,6 +30,7 @@ import {
   moverBounds,
   moveRoomItem,
   offsetTransform,
+  ownedRoomSkinKeys,
   readRoomDecor,
   roomBackgroundSrc,
   roomFurnitureSrc,
@@ -535,6 +536,9 @@ export function LivingRoom({
   placedIds,
   placementReady,
   showPetNames = true,
+  coins = 0,
+  ownedRoomSkins = [],
+  onCoinsChange,
   onOpenPet,
   onOpenInventory,
   onOpenSong,
@@ -555,6 +559,9 @@ export function LivingRoom({
   placedIds: ReadonlySet<string>;
   placementReady: boolean;
   showPetNames?: boolean;
+  coins?: number;
+  ownedRoomSkins?: readonly { categoryId: string; skinId: string }[];
+  onCoinsChange?: (coins: number) => void;
   onOpenPet: (petId: string) => void;
   onOpenInventory: () => void;
   onOpenSong?: () => void;
@@ -579,12 +586,29 @@ export function LivingRoom({
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
   const [decorOpen, setDecorOpen] = useState(false);
+  const [liveCoins, setLiveCoins] = useState(coins);
+  const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
+  const [ownedSkinKeys, setOwnedSkinKeys] = useState(() =>
+    ownedRoomSkinKeys(ownedRoomSkins.map((row) => ({ category_id: row.categoryId, skin_id: row.skinId }))),
+  );
+  const [ownedSkinSnap, setOwnedSkinSnap] = useState(ownedRoomSkinSignature);
   const [seats, setSeats] = useState<SeatMap>({});
   const [seatsReady, setSeatsReady] = useState(false);
   const seatsRef = useRef<SeatMap>({});
   seatsRef.current = seats;
   const editing = draftDecor !== null;
   const decor = draftDecor ?? savedDecor;
+
+  useEffect(() => {
+    setLiveCoins(coins);
+  }, [coins]);
+
+  if (ownedRoomSkinSignature !== ownedSkinSnap) {
+    setOwnedSkinSnap(ownedRoomSkinSignature);
+    setOwnedSkinKeys(
+      ownedRoomSkinKeys(ownedRoomSkins.map((row) => ({ category_id: row.categoryId, skin_id: row.skinId }))),
+    );
+  }
   const roomRef = useRef<HTMLDivElement | null>(null);
   const [roomSize, setRoomSize] = useState({ width: ROOM_VIEW_WIDTH, height: ROOM_VIEW_HEIGHT });
   const obstacles = useMemo(() => decorObstacles(decor), [decor]);
@@ -604,12 +628,14 @@ export function LivingRoom({
   const carpetShift = offsetTransform(decor, "carpet");
 
   useEffect(() => {
-    const loaded = readRoomDecor(userId);
+    const loaded = readRoomDecor(userId, ownedSkinKeys);
     setSavedDecor(loaded);
     setDraftDecor(null);
     setDecorOpen(false);
     setSeats(reconcileSeats(loaded, readRoomSeats(userId)));
     setSeatsReady(true);
+    // Ownership expands on buy without remounting the dialog; only reload layout on user change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ownedSkinKeys read at user switch
   }, [userId]);
 
   useEffect(() => {
@@ -913,7 +939,18 @@ export function LivingRoom({
         </div>
       </div>
       {editing && decorOpen && draftDecor ? (
-        <RoomDecorateDialog decor={draftDecor} onChange={setDraftDecor} onClose={() => setDecorOpen(false)} />
+        <RoomDecorateDialog
+          decor={draftDecor}
+          coins={liveCoins}
+          ownedSkinKeys={ownedSkinKeys}
+          onChange={setDraftDecor}
+          onCoinsChange={(next) => {
+            setLiveCoins(next);
+            onCoinsChange?.(next);
+          }}
+          onOwnedSkinsChange={setOwnedSkinKeys}
+          onClose={() => setDecorOpen(false)}
+        />
       ) : null}
     </section>
   );

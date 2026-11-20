@@ -37,17 +37,17 @@ export async function loadDashboard() {
   const { error: evaluateError } = await supabase.rpc("evaluate_achievements");
 
   const PROFILE_SELECT_WITH_WEEKLY =
-    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date, rename_coupons, show_pet_names";
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date, rename_coupons, show_pet_names, coins";
   const PROFILE_SELECT_LEGACY =
     "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, behavior_answers, streak_count, streak_local_date";
   const PROFILE_SELECT_WITH_RENAME =
     "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date";
-
   const [
     profileResultInitial,
     closeBlockedResult,
     petsResult,
     collectionsResult,
+    roomSkinsResult,
     rewardsResult,
     sessionResult,
     scoresResult,
@@ -63,6 +63,7 @@ export async function loadDashboard() {
         .eq("user_id", userId)
         .order("id", { ascending: true }),
       supabase.from("user_collections").select("item_id").eq("user_id", userId),
+      supabase.from("user_room_skins").select("category_id, skin_id").eq("user_id", userId),
       supabase
         .from("collection_rewards")
         .select("id, pet_id, level_reached")
@@ -96,17 +97,32 @@ export async function loadDashboard() {
         : supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
     ]);
 
+  const coinsColumnMissing = /\bcoins\b/i.test(profileResultInitial.error?.message ?? "");
   const renameColumnsMissing = /rename_coupons|show_pet_names/i.test(
     profileResultInitial.error?.message ?? "",
   );
   const weeklyColumnMissing = /weekly_study_days/i.test(profileResultInitial.error?.message ?? "");
-  const profileResult = renameColumnsMissing
-    ? weeklyColumnMissing
-      ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
-      : await supabase.from("profiles").select(PROFILE_SELECT_WITH_RENAME).eq("id", userId).maybeSingle()
-    : weeklyColumnMissing
-      ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
-      : profileResultInitial;
+  const profileResult = coinsColumnMissing
+    ? renameColumnsMissing
+      ? weeklyColumnMissing
+        ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+        : await supabase.from("profiles").select(PROFILE_SELECT_WITH_RENAME).eq("id", userId).maybeSingle()
+      : weeklyColumnMissing
+        ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+        : await supabase
+            .from("profiles")
+            .select(
+              "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, weekly_study_days, behavior_answers, streak_count, streak_local_date, rename_coupons, show_pet_names",
+            )
+            .eq("id", userId)
+            .maybeSingle()
+    : renameColumnsMissing
+      ? weeklyColumnMissing
+        ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+        : await supabase.from("profiles").select(PROFILE_SELECT_WITH_RENAME).eq("id", userId).maybeSingle()
+      : weeklyColumnMissing
+        ? await supabase.from("profiles").select(PROFILE_SELECT_LEGACY).eq("id", userId).maybeSingle()
+        : profileResultInitial;
 
   const petsNameMissing = /column .*name.* does not exist|Could not find the .*name.* column/i.test(
     petsResult.error?.message ?? "",
@@ -267,7 +283,9 @@ export async function loadDashboard() {
       recordedResult.error?.message ??
       petsLoadError ??
       collectionsResult.error?.message ??
-      (weeklyColumnMissing || renameColumnsMissing ? null : profileResult.error?.message) ??
+      (weeklyColumnMissing || renameColumnsMissing || coinsColumnMissing
+        ? null
+        : profileResult.error?.message) ??
       null,
   );
 
@@ -286,11 +304,27 @@ export async function loadDashboard() {
 
   const renameCoupons = clampRenameCoupons((profile as { rename_coupons?: unknown } | null)?.rename_coupons);
   const showPetNames = (profile as { show_pet_names?: unknown } | null)?.show_pet_names !== false;
+  const coinsRaw = (profile as { coins?: unknown } | null)?.coins;
+  const coins =
+    !coinsColumnMissing && Number.isFinite(Number(coinsRaw))
+      ? Math.max(0, Math.trunc(Number(coinsRaw)))
+      : 0;
+
+  const roomSkinsMissing = /user_room_skins/i.test(roomSkinsResult.error?.message ?? "");
+  const ownedRoomSkins = roomSkinsMissing
+    ? []
+    : (roomSkinsResult.data ?? []).flatMap((row) => {
+        const categoryId = typeof row.category_id === "string" ? row.category_id : "";
+        const skinId = typeof row.skin_id === "string" ? row.skin_id : "";
+        if (!categoryId || !skinId) return [];
+        return [{ categoryId, skinId }];
+      });
 
   return {
     userId,
     displayName: profile?.display_name?.trim() || gate.displayName || "Farmer",
     totalStudySeconds,
+    coins,
     streakCount,
     streakLocalDate,
     pets,
@@ -299,6 +333,7 @@ export async function loadDashboard() {
     ownedColorIds,
     ownedHatIds,
     ownedClothesIds,
+    ownedRoomSkins,
     ownedSongs,
     songsError,
     earnedAchievements,
