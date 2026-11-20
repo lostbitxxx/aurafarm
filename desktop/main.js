@@ -77,10 +77,8 @@ const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
 const PET_SIZE = DOCK_DEFAULTS.petSize;
 /** Extra window height above the sprite for the chat bubble. */
 const PET_CHAT_PAD = 64;
-/** Pet window width so multi-line chat fits; aligned away from the rail. */
+/** Pet window width so multi-line chat fits; sprite stays on the rail side. */
 const PET_CHAT_WIDTH = 168;
-/** Gap between the pet sprite and the session rail so chat never covers the bar. */
-const PET_CHAT_GAP = 8;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
@@ -228,14 +226,34 @@ function publish() {
   }
 }
 
-/** Top-left of the pet BrowserWindow (chat pad above the sprite; wider for chat). */
-function petWindowRect(spriteOrigin) {
-  const padX = Math.max(0, (PET_CHAT_WIDTH - PET_SIZE) / 2);
+/**
+ * Pet BrowserWindow around a fixed sprite origin.
+ * Sprite stays put beside the rail; the wider chat extends away from the dock edge.
+ */
+function petWindowRect(spriteOrigin, edge = dock.edge) {
+  const overhang = Math.max(0, PET_CHAT_WIDTH - PET_SIZE);
+  let x;
+  let y = Math.round(spriteOrigin.y - PET_CHAT_PAD);
+  let height = PET_SIZE + PET_CHAT_PAD;
+  if (edge === "right") {
+    // Sprite on the right (toward the rail); chat grows left.
+    x = Math.round(spriteOrigin.x - overhang);
+  } else if (edge === "left") {
+    // Sprite on the left (toward the rail); chat grows right.
+    x = Math.round(spriteOrigin.x);
+  } else if (edge === "top") {
+    // Keep the sprite under the rail; put chat beside it (no pad above into the bar).
+    x = Math.round(spriteOrigin.x - overhang);
+    y = Math.round(spriteOrigin.y);
+    height = PET_SIZE;
+  } else {
+    x = Math.round(spriteOrigin.x - overhang / 2);
+  }
   return {
-    x: Math.round(spriteOrigin.x - padX),
-    y: Math.round(spriteOrigin.y - PET_CHAT_PAD),
+    x,
+    y,
     width: PET_CHAT_WIDTH,
-    height: PET_SIZE + PET_CHAT_PAD,
+    height,
   };
 }
 
@@ -270,9 +288,6 @@ function dockOptions() {
     handleSize: DOCK_DEFAULTS.handleSize,
     levelSize: 0,
     chromePad: DOCK_DEFAULTS.chromePad,
-    chatWidth: PET_CHAT_WIDTH,
-    chatPad: PET_CHAT_PAD,
-    chatGap: PET_CHAT_GAP,
   };
 }
 

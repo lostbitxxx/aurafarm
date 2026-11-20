@@ -144,7 +144,19 @@ window.addEventListener("blur", () => {
   clearDockDrag();
 });
 
+const EDGE_CLASSES = ["edge-left", "edge-right", "edge-top", "edge-bottom"];
+
+function applyDockEdge(edge) {
+  const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
+  for (const name of EDGE_CLASSES) {
+    document.body.classList.toggle(name, name === `edge-${next}`);
+  }
+}
+
+applyDockEdge("right");
+
 window.pet.onState((state) => {
+  if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;

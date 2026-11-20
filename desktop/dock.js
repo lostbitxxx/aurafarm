@@ -25,12 +25,6 @@ const DEFAULTS = {
   handleSize: 0,
   levelSize: 0,
   chromePad: 3,
-  /** Pet BrowserWindow width when chat is wider than the sprite. */
-  chatWidth: 0,
-  /** Extra space above the sprite for the chat bubble (top dock). */
-  chatPad: 0,
-  /** Gap between the pet sprite and the session rail. */
-  chatGap: 0,
 };
 
 function isVerticalEdge(edge) {
@@ -185,26 +179,20 @@ function petOriginBesidePanel(edge, panelBounds, petSize, area, options = {}) {
   const { inset, insetBottom } = edgeInsets(cfg);
   const size = Number(petSize) || 0;
   const bar = cfg.barThickness;
-  const chatWidth = Number.isFinite(cfg.chatWidth) ? Math.max(0, cfg.chatWidth) : 0;
-  const chatPad = Number.isFinite(cfg.chatPad) ? Math.max(0, cfg.chatPad) : 0;
-  const chatGap = Number.isFinite(cfg.chatGap) ? Math.max(0, cfg.chatGap) : 0;
-  // Wide chat is centered on the sprite — keep half the overhang clear of the rail.
-  const sideClear = Math.max(0, (chatWidth - size) / 2) + chatGap;
   let x;
   let y;
   if (edge === "right") {
-    x = panelBounds.x + panelBounds.width - bar - size - sideClear;
+    x = panelBounds.x + panelBounds.width - bar - size;
     y = panelBounds.y + panelBounds.height - size;
   } else if (edge === "left") {
-    x = panelBounds.x + bar + sideClear;
+    x = panelBounds.x + bar;
     y = panelBounds.y + panelBounds.height - size;
   } else if (edge === "bottom") {
     x = panelBounds.x + Math.max(0, panelBounds.width - size);
     y = panelBounds.y + panelBounds.height - bar - size;
   } else {
-    // Chat bubble sits above the sprite — clear the top rail by chatPad + gap.
     x = panelBounds.x + Math.max(0, panelBounds.width - size);
-    y = panelBounds.y + bar + chatPad + chatGap;
+    y = panelBounds.y + bar;
   }
   const maxX = area.x + Math.max(0, area.width - size);
   const maxY = area.y + Math.max(0, area.height - size);

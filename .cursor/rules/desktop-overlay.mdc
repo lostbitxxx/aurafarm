@@ -19,7 +19,7 @@ alwaysApply: false
 - Respect reduced motion (instant bounds, no waits). Keep `panelToggleSeq` so rapid toggles cancel stale timeouts.
 
 ## Pet
-- Closed bar: anchor the pet beside the session rail (`barThickness`), with chat width/pad clearance so the bubble never covers the progress rail.
+- Closed bar: anchor the pet beside the session rail (`barThickness`); keep the sprite there and extend only the chat window/bubble away from the rail.
 - Open bar: hide the external pet window and show the pet inside the cream shell; restore the external pet when closing a distracted tab (walk animation).
 - Drag from the pet only (closed external sprite or open in-panel sprite); show `grab` / `grabbing` cursor on the pet; the session rail opens/closes the bar; no drag handle; no bottom dock target (left/right/top only).
 - Session rail shows a centered chevron that points toward expand when closed and the opposite when open (per dock edge).
