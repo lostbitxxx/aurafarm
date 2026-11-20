@@ -16,6 +16,8 @@ export function SiteHeader({
   onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
+  onReplayTutorial,
+  onTutorialSettings,
   tutorialTarget = null,
 }: {
   displayName: string;
@@ -26,6 +28,8 @@ export function SiteHeader({
   onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
+  onReplayTutorial?: () => void;
+  onTutorialSettings?: () => void;
   tutorialTarget?: string | null;
 }) {
   const streakLabel = streakPillLabel(streakCount);
@@ -77,6 +81,11 @@ export function SiteHeader({
       <Link href="/privacy" role="menuitem" onClick={() => setSettingsOpen(false)}>
         Privacy
       </Link>
+      {onReplayTutorial ? (
+        <button type="button" role="menuitem" onClick={() => runSettingsAction(onReplayTutorial)}>
+          Replay tutorial
+        </button>
+      ) : null}
       {onOpenDevTools ? (
         <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenDevTools)}>
           Dev tools
@@ -145,12 +154,20 @@ export function SiteHeader({
         >
           <button
             type="button"
-            className="topbar-settings-button topbar-desktop"
+            className="topbar-settings-button"
             aria-haspopup="menu"
             aria-expanded={settingsOpen}
             aria-controls={settingsId}
             aria-label={settingsOpen ? "Close settings" : "Open settings"}
-            onClick={() => setSettingsOpen((value) => !value)}
+            data-tutorial="settings"
+            data-tutorial-current={tutorialCurrent("settings")}
+            onClick={() => {
+              setSettingsOpen((value) => {
+                const next = !value;
+                if (next) onTutorialSettings?.();
+                return next;
+              });
+            }}
           >
             <span className="topbar-settings-gear" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
@@ -204,6 +221,11 @@ export function SiteHeader({
           <Link href="/privacy" className="topbar-drawer-link">
             Privacy
           </Link>
+          {onReplayTutorial ? (
+            <button type="button" className="topbar-drawer-link" onClick={onReplayTutorial}>
+              Replay tutorial
+            </button>
+          ) : null}
           {onOpenDevTools ? (
             <button type="button" className="topbar-drawer-link" onClick={onOpenDevTools}>
               Dev tools

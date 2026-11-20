@@ -20,7 +20,7 @@ test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
   assert.match(css, /\.topbar-settings-list[\s\S]*right:\s*0/);
 });
 
-test("Settings lists Edit plan, Download, Privacy, Dev tools, then Sign out", () => {
+test("Settings lists Edit plan, Download, Privacy, Replay tutorial, Dev tools, then Sign out", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const settingsBlock = header.slice(
     header.indexOf("const settingsItems"),
@@ -30,6 +30,7 @@ test("Settings lists Edit plan, Download, Privacy, Dev tools, then Sign out", ()
   const editPlan = settingsBlock.indexOf("Edit plan");
   const download = settingsBlock.indexOf("Download desktop pet");
   const privacy = settingsBlock.indexOf('href="/privacy"');
+  const replay = settingsBlock.indexOf("Replay tutorial");
   const social = settingsBlock.indexOf("Social settings");
   const devTools = settingsBlock.indexOf("Dev tools");
   const signOut = settingsBlock.indexOf("Sign out");
@@ -37,9 +38,12 @@ test("Settings lists Edit plan, Download, Privacy, Dev tools, then Sign out", ()
   assert.ok(editPlan >= 0);
   assert.ok(download > editPlan);
   assert.ok(privacy > download);
+  assert.ok(replay > privacy);
   assert.equal(social, -1);
-  assert.ok(devTools > privacy);
+  assert.ok(devTools > replay);
   assert.ok(signOut > devTools);
+  assert.match(header, /data-tutorial="settings"/);
+  assert.match(header, /onReplayTutorial/);
 });
 
 test("header no longer hosts Social; blackboard owns it", () => {

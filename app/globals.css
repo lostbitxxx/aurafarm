@@ -5324,19 +5324,33 @@ button.dialog-row {
 
 .tutorial-ring.is-circle { border-radius: 999px; }
 
+.tutorial-cursor {
+  position: fixed;
+  z-index: 43;
+  width: 2.75rem;
+  height: 2.75rem;
+  pointer-events: none;
+  user-select: none;
+  transform-origin: 20% 15%;
+  animation: tutorial-cursor-nudge 1.05s ease-in-out infinite;
+}
+
+@keyframes tutorial-cursor-nudge {
+  0%,
+  100% { transform: translate(0, 0); }
+  50% { transform: translate(0.28rem, 0.34rem); }
+}
+
 .tutorial-card {
   position: fixed;
   z-index: 42;
+  width: min(18rem, calc(100vw - 1.5rem));
+  padding: 0.95rem 1rem 1rem;
   border-radius: 16px;
   background: var(--paper);
   color: var(--ink);
   box-shadow: var(--shadow);
   pointer-events: auto;
-}
-
-.tutorial-card {
-  width: min(18rem, calc(100vw - 1.5rem));
-  padding: 0.95rem 1rem 1rem;
 }
 
 .tutorial-card.is-above { transform: translateY(-100%); }
@@ -5371,8 +5385,6 @@ button.dialog-row {
   margin-top: 0.85rem;
 }
 
-.tutorial-next,
-.tutorial-prev,
 .tutorial-skip {
   border: 0;
   border-radius: 999px;
@@ -5381,30 +5393,18 @@ button.dialog-row {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-}
-
-.tutorial-next {
-  background: var(--slime);
-  color: var(--ink);
-}
-
-.tutorial-next:hover,
-.tutorial-next:focus-visible {
-  background: var(--slime-deep);
-}
-
-.tutorial-prev,
-.tutorial-skip {
   background: transparent;
   color: var(--ink);
   box-shadow: inset 0 0 0 1.5px rgba(20, 33, 26, 0.28);
 }
 
-.tutorial-prev:hover,
-.tutorial-prev:focus-visible,
 .tutorial-skip:hover,
 .tutorial-skip:focus-visible {
   background: rgba(20, 33, 26, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-cursor { animation: none; }
 }
 
 .sr-only {

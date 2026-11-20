@@ -10,36 +10,57 @@ import {
   tutorialStorageKey,
 } from "../lib/desk-tutorial";
 
-test("desk tutorial walks shop, rack props, pets, social, then start studying", () => {
+test("desk tutorial walks shop, rack props, pets, social, start, then settings replay tip", () => {
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((step) => step.id),
-    ["shop", "collection", "pets", "achievements", "song", "social", "start"],
+    ["shop", "collection", "pets", "achievements", "song", "social", "start", "replay"],
   );
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((step) => step.target),
-    ["shop", "collection", "pets", "achievements", "song", "social", "start"],
+    ["shop", "collection", "pets", "achievements", "song", "social", "start", "settings"],
   );
 
-  const headerCopy = new Set(["shop", "pets"]);
   for (const step of DESK_TUTORIAL_STEPS) {
+    assert.match(step.body, /Click /);
+    if (step.kind === "dialog") {
+      assert.ok("openBody" in step);
+      assert.match(step.openBody, /\S/);
+      assert.doesNotMatch(step.openBody, /Click the X/i);
+    }
     if (step.kind === "start") {
-      assert.doesNotMatch(step.body, /inside/i);
-      assert.match(step.body, /start a study session/i);
+      assert.match(step.body, /Start studying/i);
+    } else if (step.kind === "settings") {
+      assert.match(step.body, /Settings/i);
+      assert.match(step.body, /Replay tutorial/i);
     } else if (step.id === "social") {
       assert.match(step.body, /blackboard/i);
-      assert.equal(step.kind, "dialog");
       assert.equal(step.section, "social");
-    } else if (headerCopy.has(step.id)) {
-      assert.match(step.body, new RegExp(`^Click ${step.title} to see what is inside\\.$`));
-    } else {
-      assert.match(step.body, /storage rack/);
+    } else if (step.id === "shop" || step.id === "pets") {
+      assert.match(step.body, new RegExp(`Click ${step.title}`));
+    } else if (step.kind === "dialog") {
+      assert.match(step.body, /rack|trophy|gramophone|drawer/i);
     }
   }
 
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((_, index) => progressLabel(index)),
-    ["1/7", "2/7", "3/7", "4/7", "5/7", "6/7", "7/7"],
+    ["1/8", "2/8", "3/8", "4/8", "5/8", "6/8", "7/8", "8/8"],
   );
+});
+
+test("tutorial UI uses cursor guidance and keeps skip only", () => {
+  const ui = readFileSync(new URL("../components/desk-tutorial.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(ui, /\/tutorial\/cursor\.svg/);
+  assert.match(ui, /tutorial-cursor/);
+  assert.match(ui, /Skip tutorial/);
+  assert.doesNotMatch(ui, /tutorial-next/);
+  assert.doesNotMatch(ui, /tutorial-prev/);
+  assert.doesNotMatch(ui, />\s*Next\s*</);
+  assert.doesNotMatch(ui, />\s*Prev\s*</);
+  assert.match(ui, /replay/);
+  assert.match(ui, /onSettings/);
+  assert.match(css, /\.tutorial-cursor/);
 });
 
 test("tutorial storage resumes an active step and remembers when it is done", () => {
@@ -59,6 +80,7 @@ test("tutorial storage resumes an active step and remembers when it is done", ()
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "social"), true);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "friends"), false);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[6], "shop"), false);
+  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[7], "shop"), false);
 });
 
 test("the first customization save opens the desk tutorial", () => {

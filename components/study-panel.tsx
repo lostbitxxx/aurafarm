@@ -136,7 +136,7 @@ export function StudyPanel({
   deskRefreshing?: boolean;
   tutorialCurrent?: boolean;
   tutorialTarget?: string | null;
-  onTutorialStart?: () => void;
+  onTutorialStart?: () => boolean;
   onRegisterDevFinish?: (api: DevFinishApi | null) => void;
 }) {
   const signature = [
@@ -513,7 +513,7 @@ export function StudyPanel({
                     data-tutorial-current={tutorialCurrent ? "true" : undefined}
                     disabled={pending}
                     onClick={() => {
-                      onTutorialStart?.();
+                      if (onTutorialStart?.()) return;
                       onAskTracker();
                     }}
                   >

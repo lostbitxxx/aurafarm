@@ -423,6 +423,11 @@ export function DashboardScreen({
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
+        onReplayTutorial={() => {
+          setDialog(null);
+          tour.replay();
+        }}
+        onTutorialSettings={tour.onSettings}
         tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
       />
       <DeskSong
@@ -601,14 +606,6 @@ export function DashboardScreen({
           ringTarget={tour.ringTarget}
           holeTarget={tour.holeTarget}
           includeMenu={tour.includeMenu}
-          onNext={() => {
-            tour.onNext();
-            setDialog(null);
-          }}
-          onPrev={() => {
-            tour.onPrev();
-            setDialog(null);
-          }}
           onSkip={tour.onSkip}
           onScrim={tour.onScrim}
           onMissingTarget={tour.onMissingTarget}

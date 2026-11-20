@@ -11,7 +11,7 @@ import {
   type DeskTutorialStep,
 } from "@/lib/desk-tutorial";
 
-const CLOSE_PROMPT = "Click close to continue.";
+const TUTORIAL_CURSOR_SRC = "/tutorial/cursor.svg";
 
 type Hole = { top: number; left: number; width: number; height: number };
 
@@ -56,20 +56,14 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     });
   }, [userId]);
 
-  const retreat = useCallback(() => {
-    if (advanceLock.current) return;
-    const current = stepRef.current;
-    if (current === null || current <= 0) return;
-    advanceLock.current = true;
+  const replay = useCallback(() => {
     awaitingClose.current = false;
+    advanceLock.current = false;
+    writeTutorialRecord(userId, { status: "active", step: 0 });
+    stepRef.current = 0;
     setPhase("point");
-    const previous = current - 1;
-    stepRef.current = previous;
-    setStepIndex(previous);
-    queueMicrotask(() => {
-      advanceLock.current = false;
-    });
-  }, []);
+    setStepIndex(0);
+  }, [userId]);
 
   useEffect(() => {
     const requested = searchParams.get("tutorial") === "1";
@@ -125,38 +119,48 @@ export function useDeskTutorial(userId: string, dialog: string | null) {
     setPhase("looking");
   }, []);
 
+  /** Returns true when the tutorial consumed the Start click (do not open the tracker yet). */
   const onStart = useCallback(() => {
     const index = stepRef.current;
-    if (index === null || DESK_TUTORIAL_STEPS[index]?.id !== "start") return;
+    if (index === null || DESK_TUTORIAL_STEPS[index]?.id !== "start") return false;
+    advance();
+    return true;
+  }, [advance]);
+
+  const onSettings = useCallback(() => {
+    const index = stepRef.current;
+    if (index === null || DESK_TUTORIAL_STEPS[index]?.kind !== "settings") return;
     finish();
   }, [finish]);
 
   const onMissingTarget = useCallback(() => {
     const index = stepRef.current;
-    if (index === null || DESK_TUTORIAL_STEPS[index]?.kind !== "start") return;
-    finish();
+    if (index === null) return;
+    const step = DESK_TUTORIAL_STEPS[index];
+    if (step?.kind === "start" || step?.kind === "settings") finish();
   }, [finish]);
 
   const step = stepIndex === null ? null : DESK_TUTORIAL_STEPS[stepIndex];
   const covered = Boolean(step && phase === "looking" && dialog !== null);
-  const body = covered ? CLOSE_PROMPT : (step?.body ?? "");
+  const body =
+    covered && step && "openBody" in step && step.openBody ? step.openBody : (step?.body ?? "");
 
   return {
     step,
     stepIndex,
     includeMenu: false,
     covered,
-    title: covered ? "Close" : (step?.title ?? ""),
+    title: step?.title ?? "",
     body,
     ringTarget: covered ? "close" : (step?.target ?? ""),
     holeTarget: covered ? "dialog" : null,
-    onNext: advance,
-    onPrev: retreat,
     onSkip: finish,
     onScrim: () => undefined,
     onStart,
+    onSettings,
     onMissingTarget,
     openSection,
+    replay,
   };
 }
 
@@ -175,8 +179,6 @@ export function DeskTutorial({
   ringTarget,
   holeTarget = null,
   includeMenu,
-  onNext,
-  onPrev,
   onSkip,
   onScrim,
   onMissingTarget,
@@ -188,8 +190,6 @@ export function DeskTutorial({
   ringTarget: string;
   holeTarget?: string | null;
   includeMenu: boolean;
-  onNext: () => void;
-  onPrev: () => void;
   onSkip: () => void;
   onScrim: () => void;
   onMissingTarget: () => void;
@@ -241,7 +241,7 @@ export function DeskTutorial({
       setHole(nextHole);
       setRing(nextRing);
       const cardWidth = Math.min(288, window.innerWidth - 24);
-      const estimated = 168;
+      const estimated = 148;
       const gap = 12;
       let placeAbove = false;
       let nextTop = nextRing.top + nextRing.height + gap;
@@ -303,6 +303,8 @@ export function DeskTutorial({
     { top: hole.top, left: right, width: Math.max(0, window.innerWidth - right), height: hole.height },
     { top: bottom, left: 0, width: "100%", height: Math.max(0, window.innerHeight - bottom) },
   ];
+  const cursorLeft = ring.left + ring.width * 0.28;
+  const cursorTop = ring.top + ring.height * 0.58;
 
   return (
     <div className="tutorial-layer">
@@ -315,6 +317,14 @@ export function DeskTutorial({
         />
       ))}
       <div className={holeTarget ? "tutorial-ring is-circle" : "tutorial-ring"} style={ring} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="tutorial-cursor"
+        src={TUTORIAL_CURSOR_SRC}
+        alt=""
+        draggable={false}
+        style={{ top: cursorTop, left: cursorLeft }}
+      />
       <div
         className={above ? "tutorial-card is-above" : "tutorial-card"}
         role="dialog"
@@ -328,14 +338,6 @@ export function DeskTutorial({
         <h2 id={titleId}>{title}</h2>
         <p>{body}</p>
         <div className="tutorial-actions">
-          {stepIndex > 0 ? (
-            <button type="button" className="tutorial-prev" onClick={onPrev}>
-              Prev
-            </button>
-          ) : null}
-          <button type="button" className="tutorial-next" onClick={onNext}>
-            {stepIndex === DESK_TUTORIAL_STEPS.length - 1 ? "Finish tutorial" : "Next"}
-          </button>
           <button type="button" className="tutorial-skip" onClick={onSkip}>
             Skip tutorial
           </button>
