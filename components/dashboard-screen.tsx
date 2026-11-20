@@ -590,6 +590,7 @@ export function DashboardScreen({
           ownedHatIds={ownedHats}
           ownedClothesIds={ownedClothes}
           renameCoupons={renameCoupons}
+          pet={localPets.find((pet) => pet.id === rewards[0].petId) ?? null}
           onClaimed={onRewardClaimed}
           onClose={() => {
             setPickerOpen(false);
