@@ -334,6 +334,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petPage, /width: 70px/);
   assert.match(petPage, /height: 70px/);
   assert.match(petPage, /\.pet-chat\.is-on/);
+  assert.match(petPage, /is-legs"[\s\S]*hidden/);
+  assert.match(petPage, /id="pet-sprite"[\s\S]*hidden/);
+  assert.match(petPage, /\.pet-layer:not\(\[src\]\),[\s\S]*display: none/);
+  assert.match(panel, /#panel-pet \.pet-layer:not\(\[src\]\),[\s\S]*display: none/);
+  assert.match(panel, /data-layer="legs"[\s\S]*hidden/);
   assert.match(petScript, /plainPetStack\(shownPet, shownPose\)/);
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(petScript, /chatBubbleScope/);
