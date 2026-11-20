@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   crewOccupantsFromRows,
+  crewShowsAurafarming,
   farmCrewCardsFromRows,
   farmCrewDetailFromRows,
   farmCrewJoinRequestsFromRows,
@@ -118,6 +119,30 @@ test("farm crew rows keep membership, public crews, and the room", () => {
   ]);
   assert.equal(farmer?.clothes, "little-gentleman-suit");
   assert.equal(farmer?.presence, "aurafarming");
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "online" },
+      crewId,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: crewId, presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    false,
+  );
+  assert.equal(
+    crewShowsAurafarming(
+      { farmerId: "22222222-2222-4222-8222-222222222222", presence: "aurafarming" },
+      crewId,
+      false,
+    ),
+    true,
+  );
   assert.equal(crewOccupantsFromRows([{ farmer_id: crewId, presence: "offline" }]).length, 0);
 });
 
@@ -125,6 +150,22 @@ test("farm crew errors point at migration 0039", () => {
   assert.equal(
     farmCrewMessage("Could not find the function public.list_my_farm_crews"),
     "Run migrations 0039 and 0040 before using FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("Could not find the function public.set_farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for table farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage('column reference "user_id" is ambiguous'),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for function get_farm_crew"),
+    "FarmCrew could not be updated.",
   );
   assert.equal(farmCrewMessage("You are already in this FarmCrew."), "You are already in this FarmCrew.");
   assert.equal(
@@ -170,6 +211,9 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /AuraFarmCrew/);
   assert.match(screen, /Back to Dashboard/);
   assert.match(screen, /Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-link"[\s\S]{0,80}Leaderboard/);
+  assert.doesNotMatch(screen, /className="topbar-drawer-link"[\s\S]{0,80}Leaderboard/);
+  assert.match(screen, /onOpenLeaderboard=\{\(\) => setPanel\("board"\)\}/);
   assert.match(screen, /loadFarmCrewLeaderboard/);
   assert.match(screen, /<FarmDialog title="Leaderboard"/);
   assert.match(screen, /managesFarmCrew\(detail\.role\)/);
@@ -211,6 +255,14 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.doesNotMatch(page, /export const dynamic/);
   assert.match(room, /Aurafarming/);
   assert.match(room, /living-room/);
+  assert.match(room, /CREW_LIBRARY_PATH/);
+  assert.match(room, /is-remote/);
+  assert.match(room, /occupant\.farmerId === viewerId/);
+  assert.match(room, /CREW_PEDESTAL/);
+  assert.match(screen, /viewerId=\{room\.userId\}/);
+  assert.match(screen, /viewerStudying=\{Boolean\(session\)\}/);
+  assert.match(room, /crewShowsAurafarming/);
+  assert.match(screen, /mascot=\{\{ petType: detail\.petType, color: detail\.color \}\}/);
   assert.equal(requiresAccount("/farmcrew/11111111-1111-4111-8111-111111111111"), true);
   assert.equal(requiresAccount("/farmcrew"), false);
 
