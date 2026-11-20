@@ -126,6 +126,22 @@ test("farm crew errors point at migration 0039", () => {
     farmCrewMessage("Could not find the function public.list_my_farm_crews"),
     "Run migrations 0039 and 0040 before using FarmCrew.",
   );
+  assert.equal(
+    farmCrewMessage("Could not find the function public.set_farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for table farm_crew_pose"),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage('column reference "user_id" is ambiguous'),
+    "Run migration 0048 before pet positions can match across the FarmCrew.",
+  );
+  assert.equal(
+    farmCrewMessage("permission denied for function get_farm_crew"),
+    "FarmCrew could not be updated.",
+  );
   assert.equal(farmCrewMessage("You are already in this FarmCrew."), "You are already in this FarmCrew.");
   assert.equal(
     farmCrewMessage("Could not find the function public.list_farm_crew_members"),

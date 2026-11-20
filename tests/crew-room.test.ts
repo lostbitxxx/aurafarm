@@ -75,6 +75,18 @@ test("pose rows keep a known chair and drop an unknown one", () => {
   );
 });
 
+test("crew poses are read and written with the signed-in server session", () => {
+  const sync = readFileSync(new URL("../lib/crew-room-sync.ts", import.meta.url), "utf8");
+  const actions = readFileSync(new URL("../lib/actions/farm-crew.ts", import.meta.url), "utf8");
+  assert.match(sync, /listFarmCrewPoses/);
+  assert.match(sync, /setFarmCrewPose/);
+  assert.doesNotMatch(sync, /@\/lib\/supabase\/client/);
+  assert.match(actions, /function listFarmCrewPoses/);
+  assert.match(actions, /function setFarmCrewPose/);
+  assert.match(actions, /list_farm_crew_poses/);
+  assert.match(actions, /set_farm_crew_pose/);
+});
+
 test("crew pose migration lets a member publish and keeps a taken chair", () => {
   const sql = readFileSync(new URL("../supabase/migrations/0048_crew_room_pose.sql", import.meta.url), "utf8");
   assert.match(sql, /create table if not exists public\.farm_crew_pose/);
@@ -84,7 +96,8 @@ test("crew pose migration lets a member publish and keeps a taken chair", () => 
   assert.match(sql, /status = 'accepted'/);
   assert.match(sql, /seat_id in \('nw', 'ne', 'w', 'e', 'sw', 'se'\)/);
   assert.match(sql, /pose\.user_id <> auth\.uid\(\)/);
+  assert.match(sql, /function public\.list_farm_crew_poses/);
+  assert.match(sql, /member\.user_id = auth\.uid\(\)/);
   assert.match(sql, /supabase_realtime/);
-  assert.match(sql, /grant select on public\.farm_crew_pose to authenticated/);
   assert.doesNotMatch(sql, /grant insert|grant update|grant delete/);
 });

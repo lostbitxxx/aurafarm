@@ -398,7 +398,7 @@ export function CrewRoom({
   occupants: readonly CrewOccupant[];
 }) {
   const roomRef = useRef<HTMLDivElement>(null);
-  const { poses, loaded, publish } = useCrewPoses(crewId);
+  const { poses, loaded, error, publish } = useCrewPoses(crewId);
   const taken = useMemo(() => {
     const seats = new Set<string>();
     for (const pose of Object.values(poses)) {
@@ -442,7 +442,11 @@ export function CrewRoom({
             />
           ))}
         </div>
-        {occupants.length === 0 ? (
+        {error ? (
+          <div className="room-empty">
+            <p>{error}</p>
+          </div>
+        ) : occupants.length === 0 ? (
           <div className="room-empty">
             <p>Nobody is in the crew room right now.</p>
           </div>

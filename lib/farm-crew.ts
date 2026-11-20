@@ -7,6 +7,7 @@ export const CREW_ID_PATTERN =
 
 const CREW_PET_TYPES = new Set(["baby_slime", "lantern_moth", "river_newt"]);
 const MIGRATION = "Run migrations 0039 and 0040 before using FarmCrew.";
+const POSE_MIGRATION = "Run migration 0048 before pet positions can match across the FarmCrew.";
 const ADMIN_MIGRATION = "Run migration 0042 before managing a FarmCrew.";
 const ROSTER_MIGRATION = "Run migration 0043 before reviewing FarmCrew members.";
 
@@ -97,6 +98,13 @@ export function normalizeCrewCode(value: string) {
 }
 
 export function farmCrewMessage(message: string) {
+  if (
+    /set_farm_crew_pose|list_farm_crew_poses|farm_crew_pose|permission denied for table farm_crew_member|column reference "user_id" is ambiguous/i.test(
+      message,
+    )
+  ) {
+    return POSE_MIGRATION;
+  }
   if (/list_farm_crew_join_requests/i.test(message)) {
     return ROSTER_MIGRATION;
   }
@@ -105,7 +113,11 @@ export function farmCrewMessage(message: string) {
   ) {
     return ADMIN_MIGRATION;
   }
-  if (/farm_crew|schema cache|list_my_farm_crews|list_public_farm_crews|Could not find the function/i.test(message)) {
+  if (
+    /could not find the (function|table).*(list_my_farm_crews|list_public_farm_crews|get_farm_crew|create_farm_crew|request_farm_crew)/i.test(
+      message,
+    )
+  ) {
     return MIGRATION;
   }
   const known = [

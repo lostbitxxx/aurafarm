@@ -21,6 +21,7 @@ import {
   type PublicFarmCrewCard,
 } from "@/lib/farm-crew";
 import { touchSocialPresence } from "@/lib/actions/friends";
+import { poseFromRow, type CrewPose } from "@/lib/crew-room-layout";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -160,6 +161,46 @@ export async function refreshFarmCrewRoom(crewId: string): Promise<{
   const crew = farmCrewDetailFromRows(rows(crewResult.data));
   if (!crew) return { error: "This FarmCrew is not open to you.", crew: null, occupants: [] };
   return { error: "", crew, occupants: crewOccupantsFromRows(rows(roomResult.data)) };
+}
+
+export async function listFarmCrewPoses(crewId: string): Promise<{ error: string; poses: CrewPose[] }> {
+  if (!CREW_ID_PATTERN.test(crewId)) return { error: "This FarmCrew is not open to you.", poses: [] };
+  const client = await signedInClient();
+  if ("error" in client) return { error: client.error ?? "Sign in to use FarmCrew.", poses: [] };
+
+  const { data, error } = await client.supabase.rpc("list_farm_crew_poses", { target: crewId });
+  if (error) return { error: farmCrewMessage(error.message), poses: [] };
+
+  const poses: CrewPose[] = [];
+  for (const row of rows(data)) {
+    const pose = poseFromRow(row);
+    if (pose) poses.push(pose);
+  }
+  return { error: "", poses };
+}
+
+export async function setFarmCrewPose(
+  crewId: string,
+  pose: CrewPose,
+): Promise<{ error: string; pose: CrewPose | null }> {
+  if (!CREW_ID_PATTERN.test(crewId)) return { error: "This FarmCrew is not open to you.", pose: null };
+  const client = await signedInClient();
+  if ("error" in client) return { error: client.error ?? "Sign in to use FarmCrew.", pose: null };
+
+  const { data, error } = await client.supabase.rpc("set_farm_crew_pose", {
+    target: crewId,
+    p_left: pose.left,
+    p_top: pose.top,
+    p_mode: pose.mode,
+    p_seat: pose.seatId ?? "",
+    p_face_left: pose.faceLeft,
+  });
+  if (error) return { error: farmCrewMessage(error.message), pose: null };
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    error: "",
+    pose: row && typeof row === "object" ? poseFromRow(row as Record<string, unknown>) : null,
+  };
 }
 
 function crewTarget(crewId: string) {

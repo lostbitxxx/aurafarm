@@ -28,22 +28,8 @@ comment on table public.farm_crew_pose is
 alter table public.farm_crew_pose enable row level security;
 
 revoke all on public.farm_crew_pose from public, anon, authenticated;
-grant select on public.farm_crew_pose to authenticated;
 
 drop policy if exists farm_crew_pose_select on public.farm_crew_pose;
-create policy farm_crew_pose_select
-on public.farm_crew_pose
-for select
-to authenticated
-using (
-  exists (
-    select 1
-    from public.farm_crew_member
-    where crew_id = farm_crew_pose.crew_id
-      and user_id = auth.uid()
-      and status = 'accepted'
-  )
-);
 
 create or replace function public.set_farm_crew_pose(
   target uuid,
@@ -66,6 +52,7 @@ volatile
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   stored_mode text;
   stored_seat text;
@@ -76,10 +63,10 @@ begin
 
   if not exists (
     select 1
-    from public.farm_crew_member
-    where crew_id = target
-      and user_id = auth.uid()
-      and status = 'accepted'
+    from public.farm_crew_member member
+    where member.crew_id = target
+      and member.user_id = auth.uid()
+      and member.status = 'accepted'
   ) then
     return;
   end if;
@@ -147,6 +134,53 @@ revoke all on function public.set_farm_crew_pose(uuid, numeric, numeric, text, t
 grant execute on function public.set_farm_crew_pose(uuid, numeric, numeric, text, text, boolean)
   to authenticated;
 
+create or replace function public.list_farm_crew_poses(target uuid)
+returns table (
+  user_id uuid,
+  left_pct numeric,
+  top_pct numeric,
+  mode text,
+  seat_id text,
+  face_left boolean,
+  updated_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return;
+  end if;
+
+  if not exists (
+    select 1
+    from public.farm_crew_member member
+    where member.crew_id = target
+      and member.user_id = auth.uid()
+      and member.status = 'accepted'
+  ) then
+    return;
+  end if;
+
+  return query
+  select
+    pose.user_id,
+    pose.left_pct,
+    pose.top_pct,
+    pose.mode,
+    pose.seat_id,
+    pose.face_left,
+    pose.updated_at
+  from public.farm_crew_pose pose
+  where pose.crew_id = target;
+end;
+$$;
+
+revoke all on function public.list_farm_crew_poses(uuid) from public, anon, authenticated;
+grant execute on function public.list_farm_crew_poses(uuid) to authenticated;
+
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
@@ -161,3 +195,7 @@ begin
     alter publication supabase_realtime add table public.farm_crew_pose;
   end if;
 end $$;
+
+alter table public.farm_crew_pose replica identity full;
+
+notify pgrst, 'reload schema';
