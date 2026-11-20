@@ -12,12 +12,11 @@ alwaysApply: false
 - Session-time rail stays on the docked edge (right/left/top): green fill grows with study progress; no grey XP track or level badge.
 
 ## Open / close motion
-- Prefer function-driven stages over stepped frame `setBounds` loops.
-- Open (sides): content square matches closed strip length; outer width adds `barThickness` for the session rail, then fade content in.
-- Open (top): grow thickness to content square + rail, then widen along the edge.
-- Close: fade content out, then reverse (narrow; top also shortens).
-- Use native `setBounds(bounds, true)` on macOS when motion is allowed; respect reduced motion (instant bounds, no waits).
-- Keep `panelToggleSeq` so rapid toggles cancel stale timeouts.
+- Prefer one native `setBounds(bounds, true)` morph (closed ↔ open) over stepped frame loops or no-op mid stages.
+- Open (sides): widen at closed strip height (content square + `barThickness` for the session rail), then fade content in.
+- Open (top): grow thickness to content square + rail, then fade content in.
+- Close: fade content out, then reverse the same morph back to the strip.
+- Respect reduced motion (instant bounds, no waits). Keep `panelToggleSeq` so rapid toggles cancel stale timeouts.
 
 ## Pet
 - Closed bar: anchor the pet beside the session rail (`barThickness`).

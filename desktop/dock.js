@@ -81,8 +81,10 @@ function collapsedChromeLength(cfg) {
 /**
  * @param {string} edge
  * @param {boolean | "closed" | "tall" | "open"} open
- *   closed = strip only; tall = side strip before widen (same height as closed);
- *   open = content square (panelSpan) plus progress-bar thickness on the docked edge
+ *   closed = strip only;
+ *   tall = legacy mid stage (sides match closed; top matches open height);
+ *   open = content square (panelSpan) plus progress-bar thickness on the docked edge.
+ *   Live open/close animates closed ↔ open in one native setBounds; tall is unused.
  */
 function panelSize(edge, open, area, options = {}) {
   const cfg = resolveConfig(options);

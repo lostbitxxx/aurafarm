@@ -320,16 +320,21 @@ function syncPanelOpenState() {
   publish();
 }
 
+/** Content fade in/out — keep in sync with `#panel-body` opacity transition. */
 const PANEL_SURFACE_MS = 200;
-/** Pause between "extend down" and "extend out" native resizes. */
-const PANEL_STAGE_MS = 140;
+/** Native macOS `setBounds(..., true)` window morph duration. */
+const PANEL_BOUNDS_MS = 280;
 
-/** Instant native resize — content fade runs in the renderer inside the same cream shell. */
-function applyPanelBounds(mode) {
+/**
+ * Resize the cream shell. Prefer native animated bounds on macOS; skip pet moves mid-morph
+ * so the sprite does not jump to the destination before the window finishes expanding.
+ */
+function applyPanelBounds(mode, { animate = false, movePet = true } = {}) {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  win.setBounds(panelBounds(mode), false);
-  placePet();
+  const useAnimate = Boolean(animate) && !prefersReducedMotion();
+  win.setBounds(panelBounds(mode), useAnimate);
+  if (movePet) placePet();
 }
 
 function dockWorkArea(point) {
@@ -381,24 +386,20 @@ function setPanelOpen(open) {
   const seq = ++panelToggleSeq;
   const reduced = prefersReducedMotion();
   if (next) {
-    // Widen at closed height; pet moves into the cream shell when open settles.
+    // One smooth widen/grow (sides widen; top grows down). Fade content after the shell settles.
     void (async () => {
-      if (reduced) {
-        applyPanelBounds("open");
-      } else {
-        applyPanelBounds("tall");
-        await waitMs(PANEL_STAGE_MS);
+      applyPanelBounds("open", { animate: !reduced, movePet: false });
+      if (!reduced) {
+        await waitMs(PANEL_BOUNDS_MS);
         if (seq !== panelToggleSeq) return;
-        applyPanelBounds("open");
       }
-      if (seq !== panelToggleSeq) return;
       panelOpen = true;
       placePet();
       syncPanelOpenState();
     })();
     return;
   }
-  // Fade content inside the shell, then reverse: narrow (pet returns beside the rail).
+  // Fade content out, then smoothly collapse the shell; pet returns beside the rail.
   panelOpen = false;
   placePet();
   syncPanelOpenState();
@@ -406,11 +407,13 @@ function setPanelOpen(open) {
     if (!reduced) {
       await waitMs(PANEL_SURFACE_MS);
       if (seq !== panelToggleSeq) return;
-      applyPanelBounds("tall");
-      await waitMs(PANEL_STAGE_MS);
+    }
+    applyPanelBounds("closed", { animate: !reduced, movePet: false });
+    if (!reduced) {
+      await waitMs(PANEL_BOUNDS_MS);
       if (seq !== panelToggleSeq) return;
     }
-    applyPanelBounds("closed");
+    placePet();
   })();
 }
 

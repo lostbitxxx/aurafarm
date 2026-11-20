@@ -307,10 +307,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /petDisplayProgress/);
   assert.match(main, /function applyPanelBounds/);
   assert.match(main, /PANEL_SURFACE_MS = 200/);
-  assert.match(main, /PANEL_STAGE_MS = 140/);
-  assert.match(main, /applyPanelBounds\("tall"\)/);
-  assert.match(main, /applyPanelBounds\("open"\)/);
-  assert.match(main, /applyPanelBounds\("closed"\)/);
+  assert.match(main, /PANEL_BOUNDS_MS = 280/);
+  assert.doesNotMatch(main, /PANEL_STAGE_MS/);
+  assert.doesNotMatch(main, /applyPanelBounds\("tall"\)/);
+  assert.match(main, /applyPanelBounds\("open", \{ animate: !reduced, movePet: false \}\)/);
+  assert.match(main, /applyPanelBounds\("closed", \{ animate: !reduced, movePet: false \}\)/);
   assert.doesNotMatch(main, /steps = 8/);
   assert.match(panel, /transition: opacity 200ms ease, visibility 200ms ease/);
   assert.match(panel, /#panel-body \{[\s\S]*background: transparent/);
