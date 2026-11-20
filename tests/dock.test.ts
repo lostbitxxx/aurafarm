@@ -105,6 +105,17 @@ test("overlayLayout keeps the docked group inside the inset work area", () => {
   assert.equal(normalized.edge, "right");
 });
 
+test("chat clearance keeps the wide bubble off the collapsed session rail", () => {
+  const chat = { chatWidth: 168, chatPad: 64, chatGap: 8 };
+  const right = overlayLayout("right", Number.MAX_SAFE_INTEGER, false, area, chat);
+  const sideClear = (168 - 70) / 2 + 8;
+  assert.equal(right.pet.x + right.pet.width + sideClear, right.panel.x);
+  const left = overlayLayout("left", 0, false, area, chat);
+  assert.equal(left.pet.x, left.panel.x + left.panel.width + sideClear);
+  const top = overlayLayout("top", 200, false, area, chat);
+  assert.equal(top.pet.y, top.panel.y + top.panel.height + 64 + 8);
+});
+
 test("snapOverlay preserves along-edge place and chooses the nearest edge", () => {
   const floating = { x: 900, y: 400, width: 24, height: 261 };
   const toLeft = snapOverlay(floating, { x: 130, y: 420 }, area, false);

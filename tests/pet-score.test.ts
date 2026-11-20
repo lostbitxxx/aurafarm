@@ -345,6 +345,12 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /chatBubbleCopy/);
   assert.match(main, /PET_CHAT_PAD = 64/);
   assert.match(main, /PET_CHAT_WIDTH = 168/);
+  assert.match(main, /PET_CHAT_GAP = 8/);
+  assert.match(main, /chatWidth: PET_CHAT_WIDTH/);
+  assert.match(main, /chatPad: PET_CHAT_PAD/);
+  assert.match(main, /chatGap: PET_CHAT_GAP/);
+  const dockSource = readFileSync(new URL("../desktop/dock.js", import.meta.url), "utf8");
+  assert.match(dockSource, /sideClear/);
   assert.match(main, /petClosing/);
   assert.doesNotMatch(main, /Closing \$\{host\}/);
   assert.doesNotMatch(main, /function showBubble|function hideBubble|bubbleHost/);
