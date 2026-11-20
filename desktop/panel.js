@@ -1,17 +1,24 @@
 const status = document.getElementById("status");
-const timer = document.getElementById("timer");
 const update = document.getElementById("update");
 const updateLabel = document.getElementById("update-label");
 const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
-const bubble = document.getElementById("bubble");
 const toggle = document.getElementById("panel-toggle");
-const expFill = document.getElementById("exp-fill");
-const expLevel = document.getElementById("exp-level");
+const sessionFill = document.getElementById("session-fill");
 const petToggle = document.getElementById("pet-toggle");
-const tokenForm = document.getElementById("session-token");
-const tokenField = document.querySelector("#session-token textarea");
-const dockHandle = document.getElementById("dock-handle");
+const panelPet = document.getElementById("panel-pet");
+const panelPetChat = document.getElementById("panel-pet-chat");
+const panelPetStack = document.getElementById("panel-pet-stack");
+const panelLayerNodes = {
+  floor: panelPetStack.querySelector('[data-layer="floor"]'),
+  chair: panelPetStack.querySelector('[data-layer="chair"]'),
+  shadow: panelPetStack.querySelector('[data-layer="shadow"]'),
+  legs: panelPetStack.querySelector('[data-layer="legs"]'),
+  body: panelPetStack.querySelector('[data-layer="body"]'),
+  face: panelPetStack.querySelector('[data-layer="face"]'),
+  desk: panelPetStack.querySelector('[data-layer="desk"]'),
+  pen: panelPetStack.querySelector('[data-layer="pen"]'),
+};
 
 const EDGE_CLASSES = ["edge-left", "edge-right", "edge-top", "edge-bottom"];
 let dockEdge = "right";
@@ -19,6 +26,10 @@ let panelIsOpen = false;
 let dockDragging = false;
 let dockMoved = false;
 let activePointerId = null;
+let assetOrigin = "";
+let shownPet = "baby_slime";
+let shownPose = "idle";
+let shownFlip = false;
 
 function isHorizontalEdge(edge) {
   return edge === "top" || edge === "bottom";
@@ -43,35 +54,69 @@ function applyPetVisible(visible) {
   petToggle.setAttribute("aria-checked", visible ? "true" : "false");
 }
 
-function applyExpBar(state) {
-  const ready = state.petStatsReady === true;
-  const level = state.level;
-  if (ready && typeof level === "number" && Number.isFinite(level) && level >= 1) {
-    expLevel.textContent = `LV${Math.floor(level)}`;
-  } else {
-    expLevel.textContent = "";
+function setLayer(node, src) {
+  if (!node) return;
+  if (!src) {
+    node.hidden = true;
+    node.removeAttribute("src");
+    return;
   }
+  if (node.getAttribute("src") !== src) node.src = src;
+  node.hidden = false;
+}
 
-  const into = state.xpIntoLevel;
+function applyPanelPetSprite() {
+  const base = String(assetOrigin || "").replace(/\/$/, "");
+  if (!base || typeof plainPetStack !== "function") return;
+  const stack = plainPetStack(shownPet, shownPose);
+  panelPetStack.classList.toggle("is-study", stack.stage === "study");
+  setLayer(panelLayerNodes.floor, stack.floor ? base + stack.floor : null);
+  setLayer(panelLayerNodes.chair, stack.chair ? base + stack.chair : null);
+  setLayer(panelLayerNodes.shadow, stack.shadow ? base + stack.shadow : null);
+  setLayer(panelLayerNodes.legs, base + stack.legs);
+  setLayer(panelLayerNodes.body, base + stack.body);
+  setLayer(panelLayerNodes.face, base + stack.face);
+  setLayer(panelLayerNodes.desk, stack.desk ? base + stack.desk : null);
+  setLayer(panelLayerNodes.pen, stack.pen ? base + stack.pen : null);
+  panelPetStack.style.transform = shownFlip ? "scaleX(-1)" : "";
+}
+
+function applyPanelPet(state) {
+  const show = state.panelPetVisible === true;
+  panelPet.classList.toggle("is-visible", show);
+  if (!show) {
+    panelPetChat.textContent = "";
+    panelPetChat.classList.remove("is-on");
+    return;
+  }
+  applyPanelPetSprite();
+  const text = typeof state.chatBubble === "string" ? state.chatBubble : "";
+  const scope = state.chatBubbleScope;
+  const showChat = Boolean(text) && (scope === "pet" || scope === "panel");
+  panelPetChat.textContent = showChat ? text : "";
+  panelPetChat.classList.toggle("is-on", showChat);
+}
+
+function applySessionFill(state) {
+  const raw = Number(state.sessionProgress);
   const pct =
-    ready && typeof into === "number" && Number.isFinite(into)
-      ? `${Math.max(0, Math.min(100, Math.round(into)))}%`
+    Number.isFinite(raw) && raw > 0
+      ? `${Math.max(0, Math.min(100, Math.round(raw * 100)))}%`
       : "0%";
-
   if (isHorizontalEdge(dockEdge)) {
-    expFill.style.width = pct;
-    expFill.style.height = "100%";
-    expFill.style.left = "0";
-    expFill.style.right = "auto";
-    expFill.style.top = "0";
-    expFill.style.bottom = "0";
+    sessionFill.style.width = pct;
+    sessionFill.style.height = "100%";
+    sessionFill.style.left = "0";
+    sessionFill.style.right = "auto";
+    sessionFill.style.top = "0";
+    sessionFill.style.bottom = "0";
   } else {
-    expFill.style.height = pct;
-    expFill.style.width = "auto";
-    expFill.style.left = "0";
-    expFill.style.right = "0";
-    expFill.style.bottom = "0";
-    expFill.style.top = "auto";
+    sessionFill.style.height = pct;
+    sessionFill.style.width = "auto";
+    sessionFill.style.left = "0";
+    sessionFill.style.right = "0";
+    sessionFill.style.bottom = "0";
+    sessionFill.style.top = "auto";
   }
 }
 
@@ -84,9 +129,10 @@ function clearDockDrag() {
   activePointerId = null;
   dockDragging = false;
   dockMoved = false;
-  if (pointerId !== null && dockHandle.hasPointerCapture?.(pointerId)) {
+  panelPetStack.classList.remove("is-dragging");
+  if (pointerId !== null && panelPetStack.hasPointerCapture?.(pointerId)) {
     try {
-      dockHandle.releasePointerCapture(pointerId);
+      panelPetStack.releasePointerCapture(pointerId);
     } catch {
       // Capture may already be cleared.
     }
@@ -102,19 +148,20 @@ petToggle.addEventListener("click", () => {
   window.pet.setPetVisible(petToggle.getAttribute("aria-checked") !== "true");
 });
 
-dockHandle.addEventListener("pointerdown", (event) => {
+// Only the pet moves the dock; the EXP rail stays open/close.
+panelPetStack.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
-  event.preventDefault();
   event.stopPropagation();
   dockDragging = true;
   dockMoved = false;
   activePointerId = event.pointerId;
-  dockHandle.setPointerCapture?.(event.pointerId);
+  panelPetStack.classList.add("is-dragging");
+  panelPetStack.setPointerCapture?.(event.pointerId);
   const point = screenPoint(event);
   window.pet.dockDragStart(point.x, point.y);
 });
 
-dockHandle.addEventListener("pointermove", (event) => {
+panelPetStack.addEventListener("pointermove", (event) => {
   if (!dockDragging || event.pointerId !== activePointerId) return;
   dockMoved = true;
   const point = screenPoint(event);
@@ -124,66 +171,33 @@ dockHandle.addEventListener("pointermove", (event) => {
 function finishDockPointer(event, cancelled) {
   if (!dockDragging || (activePointerId !== null && event.pointerId !== activePointerId)) return;
   const point = screenPoint(event);
-  const moved = dockMoved;
   if (cancelled) window.pet.dockDragCancel();
   else window.pet.dockDragEnd(point.x, point.y);
   clearDockDrag();
-  if (moved) {
-    const blockClick = (clickEvent) => {
-      clickEvent.preventDefault();
-      clickEvent.stopPropagation();
-      dockHandle.removeEventListener("click", blockClick, true);
-    };
-    dockHandle.addEventListener("click", blockClick, true);
-  }
 }
 
-dockHandle.addEventListener("pointerup", (event) => {
+panelPetStack.addEventListener("pointerup", (event) => {
   finishDockPointer(event, false);
 });
 
-dockHandle.addEventListener("pointercancel", (event) => {
+panelPetStack.addEventListener("pointercancel", (event) => {
   finishDockPointer(event, true);
 });
 
-dockHandle.addEventListener("lostpointercapture", (event) => {
-  // pointerup/cancel already cleared state; only recover unexpected capture loss.
+panelPetStack.addEventListener("lostpointercapture", (event) => {
   if (!dockDragging) return;
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   window.pet.dockDragCancel();
   activePointerId = null;
   dockDragging = false;
   dockMoved = false;
+  panelPetStack.classList.remove("is-dragging");
 });
 
 window.addEventListener("blur", () => {
   if (!dockDragging) return;
   window.pet.dockDragCancel();
   clearDockDrag();
-});
-
-function fillSessionCode(text) {
-  if (!(tokenField instanceof HTMLTextAreaElement)) return;
-  const code = text.trim();
-  if (!code) return;
-  tokenField.value = code;
-  tokenField.focus();
-}
-
-document.addEventListener("paste", (event) => {
-  if (document.activeElement === tokenField) return;
-  const text = event.clipboardData?.getData("text") ?? "";
-  if (!text.trim()) return;
-  event.preventDefault();
-  fillSessionCode(text);
-});
-
-document.addEventListener("keydown", (event) => {
-  const shortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "v";
-  if (!shortcut || document.activeElement === tokenField) return;
-  if (!navigator.clipboard?.readText) return;
-  event.preventDefault();
-  void navigator.clipboard.readText().then(fillSessionCode).catch(() => {});
 });
 
 document.getElementById("update-button").addEventListener("click", () => {
@@ -198,12 +212,30 @@ finishButton.addEventListener("click", () => {
   window.pet.finish();
 });
 
-document.getElementById("session-token").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const data = new FormData(event.currentTarget);
-  const result = await window.pet.useToken(String(data.get("token") ?? ""));
-  status.textContent = result.error || "Session token accepted.";
-});
+const STATUS_MIN_PX = 7;
+
+function fitStatusLine() {
+  if (!status || !status.textContent) return;
+  status.style.fontSize = "";
+  const base = parseFloat(getComputedStyle(status).fontSize) || 11;
+  let size = base;
+  status.style.fontSize = `${size}px`;
+  // Shrink until the Watching line fits on one row.
+  while (size > STATUS_MIN_PX && status.scrollWidth > status.clientWidth + 0.5) {
+    size -= 0.5;
+    status.style.fontSize = `${size}px`;
+  }
+}
+
+function scheduleFitStatusLine() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(fitStatusLine);
+  });
+}
+
+if (typeof ResizeObserver === "function") {
+  new ResizeObserver(() => fitStatusLine()).observe(status);
+}
 
 applyDockEdge("right");
 
@@ -211,20 +243,21 @@ window.pet.onState((state) => {
   if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
   if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
   if (typeof state.petVisible === "boolean") applyPetVisible(state.petVisible);
-  applyExpBar(state);
-  timer.hidden = !state.remainingLabel;
-  tokenForm.hidden = Boolean(state.remainingLabel);
-  timer.textContent = state.remainingLabel || "";
+  if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
+  if (state.petType) shownPet = state.petType;
+  if (state.petPose) shownPose = state.petPose;
+  if (typeof state.petFlip === "boolean") shownFlip = state.petFlip;
+  applySessionFill(state);
+  applyPanelPet(state);
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;
-  finishButton.textContent = state.finishLabel || "Finish focused session";
+  finishButton.textContent = state.finishLabel || "Finish session :)";
   note.textContent = state.finishNote || "";
-  bubble.textContent = state.bubble || "";
-  bubble.hidden = !state.bubble;
   if (state.updateUrl) {
     update.hidden = false;
     updateLabel.textContent = state.updateLabel || "A newer pet is available.";
   } else {
     update.hidden = true;
   }
+  scheduleFitStatusLine();
 });

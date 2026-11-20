@@ -161,17 +161,10 @@ function describeFrontRead(reading, log) {
     return `Could not read the front window. ${error.split("\n")[0]}`;
   }
   const app = reading?.app || "";
-  if (app && app !== "Safari" && app !== "Google Chrome" && app !== "Microsoft Edge") {
-    return `Watching. ${app} is in front.`;
-  }
   const host = hostnameFromUrl(reading?.url || "");
-  if (!host) {
-    return app
-      ? `Watching. ${app} has no page address in front.`
-      : "Watching. Nothing on the blocklist is in front.";
-  }
-  if (!log || log.blockedCount === 0) return `Watching. Front: ${host}`;
-  return `Watching. Blocked ${log.blockedCount}: ${log.blockedHosts.join(", ")}`;
+  if (host) return `Watching ${host}`;
+  if (app) return `Watching ${app}`;
+  return "Watching";
 }
 
 module.exports = {

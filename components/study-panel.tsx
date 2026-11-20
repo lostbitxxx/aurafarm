@@ -14,7 +14,6 @@ import {
   devTimerPasswordMatches,
   formatClock,
   formatDuration,
-  formatTimestamp,
   experienceForSession,
   farmerLocalDay,
   remainingSeconds,
@@ -402,30 +401,29 @@ export function StudyPanel({
             </p>
             {checkingSession ? (
               <SessionRefreshStatus />
-            ) : shownSession?.useDesktopPet ? (
-              <div className="study-active">
-                {launchUrl ? (
-                  <>
-                    <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
-                    <a className="launch-link" href={launchUrl}>
-                      {launchUrl}
-                    </a>
-                    <CopySessionCode code={visibleCode} />
-                  </>
-                ) : (
-                  <p>The launch code was shown when this session started.</p>
-                )}
-                <p>
-                  Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-                </p>
-                <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
-              </div>
             ) : shownSession ? (
-              <StudyClock
-                session={shownSession}
-                rushed={rushed}
-                onFinished={() => finishSession("")}
-              />
+              <>
+                {shownSession.useDesktopPet ? (
+                  <div className="study-active">
+                    {launchUrl ? (
+                      <>
+                        <p>Launch the pet, then open this link or paste the code. It expires in 5 minutes.</p>
+                        <a className="launch-link" href={launchUrl}>
+                          {launchUrl}
+                        </a>
+                        <CopySessionCode code={visibleCode} />
+                      </>
+                    ) : (
+                      <p>The launch code was shown when this session started.</p>
+                    )}
+                  </div>
+                ) : null}
+                <StudyClock
+                  session={shownSession}
+                  rushed={rushed}
+                  onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
+                />
+              </>
             ) : null}
             {error ? (
               <p className="form-error" role="alert">

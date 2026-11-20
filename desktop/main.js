@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, clipboard, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
 const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
@@ -29,9 +29,10 @@ const {
 } = require("./dock");
 const { petDisplayProgress } = require("./xp");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
-const { formatStudyClock, remainingStudyMs, studyProgress } = require("./study-clock");
+const { remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
+const { chatBubbleCopy } = require("./chat-bubble");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -74,6 +75,8 @@ const PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS.panelSpan;
 const PANEL_HEIGHT = DOCK_DEFAULTS.panelLength;
 const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
 const PET_SIZE = DOCK_DEFAULTS.petSize;
+/** Extra window height above the sprite for the chat bubble. */
+const PET_CHAT_PAD = 44;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
@@ -82,7 +85,10 @@ let panelOpen = false;
 let petWindow = null;
 let petVisible = true;
 let petAnimating = false;
-let bubbleHost = "";
+/** True while the pet is walking to close a distracted tab. */
+let petClosing = false;
+/** Last known “on blocklist host” for chat copy between polls. */
+let onDistractedHost = false;
 let finishing = false;
 let study = null;
 let lastBrowserApp = "";
@@ -103,15 +109,17 @@ let statsRefreshSeq = 0;
 let state = {
   petType: "baby_slime",
   level: null,
-  xpIntoLevel: null,
-  petStatsReady: false,
   statsPetId: null,
-  status: "Paste a session token.",
+  sessionProgress: 0,
+  status: "Let's study together!",
   panelOpen: false,
   petVisible: true,
+  panelPetVisible: false,
   petPose: "idle",
   petFlip: false,
   dockEdge: "right",
+  chatBubble: "",
+  chatBubbleScope: "none",
 };
 const pendingLinks = [];
 
@@ -172,20 +180,70 @@ function petLog(line) {
   console.log(line);
 }
 
+function everDistractedThisSession() {
+  if (!study) return false;
+  if (study.log?.blockedCount > 0) return true;
+  return Array.isArray(study.distractedHosts) && study.distractedHosts.length > 0;
+}
+
+function syncChatBubble(options = {}) {
+  if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
+  const copy = chatBubbleCopy({
+    sessionActive: Boolean(study?.token),
+    closing: petClosing,
+    onDistracted: onDistractedHost,
+    everDistracted: everDistractedThisSession(),
+    panelOpen,
+  });
+  const panelPetVisible = petVisible && panelOpen && !petAnimating;
+  if (
+    state.chatBubble === copy.text &&
+    state.chatBubbleScope === copy.scope &&
+    state.panelPetVisible === panelPetVisible
+  ) {
+    return false;
+  }
+  state = {
+    ...state,
+    chatBubble: copy.text,
+    chatBubbleScope: copy.scope,
+    panelPetVisible,
+  };
+  return true;
+}
+
 function publish() {
   petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
+  syncChatBubble();
   const payload = {
     ...state,
     assetOrigin: API_ORIGIN,
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
+    panelPetVisible: petVisible && panelOpen && !petAnimating,
   };
   for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
 }
 
+/** Top-left of the pet BrowserWindow (chat pad above the sprite). */
+function petWindowRect(spriteOrigin) {
+  return {
+    x: Math.round(spriteOrigin.x),
+    y: Math.round(spriteOrigin.y - PET_CHAT_PAD),
+    width: PET_SIZE,
+    height: PET_SIZE + PET_CHAT_PAD,
+  };
+}
+
+function friendlyStatus(status) {
+  const text = String(status ?? "");
+  if (/refresh token/i.test(text)) return "Let's study together!";
+  return text;
+}
+
 function setStatus(status, extra = {}) {
-  state = { ...state, ...extra, status };
+  state = { ...state, ...extra, status: friendlyStatus(status) };
   publish();
 }
 
@@ -207,7 +265,7 @@ function dockOptions() {
     panelSpan: PANEL_EXPANDED_WIDTH,
     panelLength: PANEL_HEIGHT,
     handleSize: DOCK_DEFAULTS.handleSize,
-    levelSize: DOCK_DEFAULTS.levelSize,
+    levelSize: 0,
     chromePad: DOCK_DEFAULTS.chromePad,
   };
 }
@@ -220,10 +278,25 @@ function applyEquippedPetStats(row) {
     ...state,
     petType,
     level: display.level,
-    xpIntoLevel: display.xpIntoLevel,
-    petStatsReady: display.ready,
     statsPetId: display.petId,
   };
+}
+
+function setSessionProgress(progress) {
+  const next =
+    typeof progress === "number" && Number.isFinite(progress)
+      ? Math.min(1, Math.max(0, progress))
+      : 0;
+  if (Math.abs((state.sessionProgress || 0) - next) < 0.002) return false;
+  state = { ...state, sessionProgress: next };
+  return true;
+}
+
+function syncSessionProgress(now = Date.now()) {
+  if (!study) return setSessionProgress(0);
+  const progress = studyProgress(study, now);
+  if (progress === null) return setSessionProgress(0);
+  return setSessionProgress(progress);
 }
 
 function prefersReducedMotion() {
@@ -286,7 +359,8 @@ function panelBounds(open) {
 function placePanel() {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  win.setHasShadow(true);
+  // Native + CSS shadows stacked a ghost frame around the transparent pad.
+  win.setHasShadow(false);
   win.setBounds(panelBounds(panelOpen), true);
 }
 
@@ -307,7 +381,7 @@ function setPanelOpen(open) {
   const seq = ++panelToggleSeq;
   const reduced = prefersReducedMotion();
   if (next) {
-    // Extend the bar down, then out (EXP rail stays on the dock edge; pet stays beside it).
+    // Widen at closed height; pet moves into the cream shell when open settles.
     void (async () => {
       if (reduced) {
         applyPanelBounds("open");
@@ -319,12 +393,14 @@ function setPanelOpen(open) {
       }
       if (seq !== panelToggleSeq) return;
       panelOpen = true;
+      placePet();
       syncPanelOpenState();
     })();
     return;
   }
-  // Fade content inside the shell, then reverse: narrow, then shorten.
+  // Fade content inside the shell, then reverse: narrow (pet returns beside the rail).
   panelOpen = false;
+  placePet();
   syncPanelOpenState();
   void (async () => {
     if (!reduced) {
@@ -346,6 +422,15 @@ function placePet() {
   if (petAnimating || dockDrag) return;
   const win = petWindow;
   if (!win || win.isDestroyed()) return;
+  // Open bar hosts the pet inside the cream shell; keep the external window for closed / walk-away.
+  if (panelOpen) {
+    win.hide();
+    return;
+  }
+  if (!petVisible) {
+    win.hide();
+    return;
+  }
   if (panelWindow && !panelWindow.isDestroyed()) {
     const panelRect = panelWindow.getBounds();
     const area = dockWorkArea({
@@ -353,13 +438,14 @@ function placePet() {
       y: panelRect.y + panelRect.height / 2,
     });
     const origin = petOriginBesidePanel(dock.edge, panelRect, PET_SIZE, area, dockOptions());
-    win.setBounds(
-      { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
-      false,
-    );
+    win.setBounds(petWindowRect(origin), false);
+    hardenOverlayWindow(win);
+    win.showInactive();
     return;
   }
-  win.setBounds(petBounds(), true);
+  win.setBounds(petWindowRect(petBounds()), true);
+  hardenOverlayWindow(win);
+  win.showInactive();
 }
 
 function placeOverlayFloating(panelRect, pointer) {
@@ -374,16 +460,13 @@ function placeOverlayFloating(panelRect, pointer) {
       false,
     );
   }
-  if (!petWindow || petWindow.isDestroyed() || petAnimating) return;
+  if (!petWindow || petWindow.isDestroyed() || petAnimating || panelOpen) return;
   const cx = Number.isFinite(pointer?.x) ? pointer.x : panelRect.x + panelRect.width / 2;
   const cy = Number.isFinite(pointer?.y) ? pointer.y : panelRect.y + panelRect.height / 2;
   const area = dockWorkArea({ x: cx, y: cy });
   const edge = nearestEdge(cx, cy, area);
   const origin = petOriginBesidePanel(edge, panelRect, PET_SIZE, area, dockOptions());
-  petWindow.setBounds(
-    { x: origin.x, y: origin.y, width: PET_SIZE, height: Math.min(PET_SIZE, area.height) },
-    false,
-  );
+  petWindow.setBounds(petWindowRect(origin), false);
 }
 
 function beginDockDrag(screenX, screenY) {
@@ -479,7 +562,7 @@ async function jumpPet() {
 
 async function returnPetHome() {
   if (!petWindow || petWindow.isDestroyed()) return;
-  const home = petBounds();
+  const home = petWindowRect(petBounds());
   await walkPetTo(home.x, home.y);
   setPetPose("idle", false);
 }
@@ -488,9 +571,11 @@ async function finishPetApproach() {
   try {
     await returnPetHome();
   } finally {
+    petClosing = false;
     petAnimating = false;
     setPetPose("idle", false);
     placePet();
+    publish();
   }
 }
 
@@ -500,16 +585,24 @@ async function closeFrontTab(appName, host) {
     const bounds = await readFrontWindowBounds(appName);
     const parsed = bounds.ok ? parseWindowBounds(bounds.value) : null;
     if (parsed) {
+      petClosing = true;
       petAnimating = true;
       animated = true;
+      publish();
       try {
+        // Leave the open bar and appear at the dock home before walking to the tab strip.
+        const home = petWindowRect(petBounds());
+        petWindow.setBounds(home, false);
+        hardenOverlayWindow(petWindow);
+        petWindow.showInactive();
         const origin = petOriginForTabStrip(parsed, PET_SIZE);
         const display = screen.getDisplayNearestPoint({
           x: origin.x + PET_SIZE / 2,
           y: origin.y + PET_SIZE / 2,
         });
         const aim = clampPetOrigin(origin, PET_SIZE, display.bounds);
-        await walkPetTo(aim.x, aim.y);
+        const target = petWindowRect(aim);
+        await walkPetTo(target.x, target.y);
         await jumpPet();
       } catch {
         await finishPetApproach();
@@ -549,16 +642,12 @@ function hardenOverlayWindow(win) {
 function openPet() {
   if (petWindow && !petWindow.isDestroyed()) {
     placePet();
-    if (petVisible) {
-      hardenOverlayWindow(petWindow);
-      petWindow.showInactive();
-    }
     return;
   }
-  const bounds = petBounds();
+  const bounds = petWindowRect(petBounds());
   petWindow = new BrowserWindow({
     ...bounds,
-    show: petVisible,
+    show: petVisible && !panelOpen,
     frame: false,
     transparent: true,
     movable: false,
@@ -576,6 +665,7 @@ function openPet() {
     },
   });
   hardenOverlayWindow(petWindow);
+  // Forward hits so the sprite can opt into drag without blocking the desktop.
   petWindow.setIgnoreMouseEvents(true, { forward: true });
   petWindow.loadFile(path.join(__dirname, "pet.html"));
   petWindow.on("closed", () => {
@@ -595,18 +685,6 @@ function focusPanel() {
   win.focus();
 }
 
-function pasteSessionCode(win) {
-  const text = clipboard.readText().trim();
-  if (!text || !win || win.isDestroyed()) return;
-  const script = `(() => {
-    const field = document.querySelector("#session-token textarea");
-    if (!field) return;
-    field.value = ${JSON.stringify(text)};
-    field.focus();
-  })()`;
-  void win.webContents.executeJavaScript(script);
-}
-
 function openPanel() {
   if (panelWindow && !panelWindow.isDestroyed()) {
     hardenOverlayWindow(panelWindow);
@@ -622,7 +700,7 @@ function openPanel() {
     movable: false,
     resizable: false,
     alwaysOnTop: true,
-    hasShadow: true,
+    hasShadow: false,
     backgroundColor: "#00000000",
     title: "Aurafarm",
     webPreferences: {
@@ -633,20 +711,6 @@ function openPanel() {
   });
   hardenOverlayWindow(panelWindow);
   panelWindow.loadFile(path.join(__dirname, "panel.html"));
-  panelWindow.webContents.on("context-menu", (_event, params) => {
-    const win = panelWindow;
-    if (!win || win.isDestroyed()) return;
-    const inField = params.isEditable;
-    Menu.buildFromTemplate([
-      { role: "cut", enabled: inField && params.editFlags.canCut },
-      { role: "copy", enabled: inField && params.editFlags.canCopy },
-      inField
-        ? { role: "paste", enabled: params.editFlags.canPaste }
-        : { label: "Paste", click: () => pasteSessionCode(win) },
-      { type: "separator" },
-      { role: "selectAll" },
-    ]).popup({ window: win });
-  });
   panelWindow.on("closed", () => {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
@@ -679,7 +743,7 @@ async function restoreSession() {
     await refreshPet();
   } catch {
     petLog("[pet] saved sign-in could not be read.");
-    setStatus("Paste a session token.");
+    setStatus("Let's study together!");
   }
 }
 
@@ -723,7 +787,7 @@ async function refreshPet() {
   }
   applyEquippedPetStats(data);
   petLog(
-    `[pet] equipped ${state.petType} level ${state.level ?? "?"} into ${state.xpIntoLevel ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
+    `[pet] equipped ${state.petType} level ${state.level ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
   );
   publish();
 }
@@ -762,56 +826,10 @@ async function claim(code, browser = "") {
   return { error: "" };
 }
 
-function readSessionToken(raw) {
-  const trimmed = String(raw || "").trim();
-  if (!trimmed) return { error: "A session token is required." };
-  if (!trimmed.startsWith("{")) return { launchCode: trimmed };
-  let parsed;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return { error: "That session token is not valid." };
-  }
-  if (
-    !parsed ||
-    typeof parsed !== "object" ||
-    typeof parsed.access_token !== "string" ||
-    parsed.access_token.length === 0 ||
-    typeof parsed.refresh_token !== "string" ||
-    parsed.refresh_token.length === 0
-  ) {
-    return { error: "That session token is not valid." };
-  }
-  return { accessToken: parsed.access_token, refreshToken: parsed.refresh_token };
-}
-
-async function useToken(raw) {
-  const parsed = readSessionToken(raw);
-  if (parsed.error) return { error: parsed.error };
-  if (parsed.launchCode) return claim(parsed.launchCode);
-  if (!supabase) return { error: "Supabase is not configured." };
-  const { data, error } = await supabase.auth.setSession({
-    access_token: parsed.accessToken,
-    refresh_token: parsed.refreshToken,
-  });
-  if (error || !data.session) return { error: error?.message ?? "That session token is not valid." };
-  writeSecret(
-    "session.json",
-    JSON.stringify({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-    }),
-  );
-  await refreshPet();
-  focusPanel();
-  setStatus("Session token accepted.");
-  return { error: "" };
-}
-
 async function cancelStudy() {
   if (!supabase) return { error: "Supabase is not configured." };
   const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) return { error: "Paste a session token before cancelling." };
+  if (!sessionData.session) return { error: "No signed-in pet session." };
   let sessionId = study?.id || "";
   if (!sessionId) {
     const { data, error: findError } = await supabase
@@ -841,21 +859,17 @@ function tickStudyClock() {
   if (!study || finishing) return;
   const now = Date.now();
   const remaining = remainingStudyMs(study, now);
-  const label = remaining === null ? "" : formatStudyClock(remaining);
-  const progress = studyProgress(study, now) ?? 0;
+  const progressChanged = syncSessionProgress(now);
   const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, now) : "";
-  const clockChanged = state.remainingLabel !== label || state.timerProgress !== progress;
-  const countdownChanged = Boolean(countdown) && state.status !== countdown;
-  if (clockChanged || countdownChanged) {
-    state = {
-      ...state,
-      remainingLabel: label,
-      timerProgress: progress,
-      ...(countdownChanged ? { status: countdown } : {}),
-    };
+  const statusChanged = Boolean(countdown && state.status !== countdown);
+  if (statusChanged) state = { ...state, status: countdown };
+  if (progressChanged || statusChanged) publish();
+  // Countdown UI lives on the desk site; the pet only auto-finishes when time is up.
+  if (remaining !== null && remaining <= 0) {
+    setSessionProgress(1);
     publish();
+    void finishSession();
   }
-  if (remaining !== null && remaining <= 0) void finishSession();
 }
 
 function startStudyClock() {
@@ -890,12 +904,13 @@ function beginFrontWatch(body, browser = "") {
     petLog(
       `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level ?? "?"}`,
     );
-    // Sprite type can update immediately; level/XP wait for refreshPet so fill matches the desk.
+    // Sprite type can update immediately; level waits for refreshPet.
     state = { ...state, petType: body.pet_type };
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
   state = { ...state, finishNote: "" };
+  syncSessionProgress(Date.now());
   void refreshPet();
   setDebug(
     describeCloseDebug({
@@ -919,24 +934,12 @@ function stopFrontWatch() {
   stopStudyClock();
   frontPoll = null;
   study = null;
-  hideBubble();
-  state = { ...state, remainingLabel: "", timerProgress: 0 };
+  petClosing = false;
+  onDistractedHost = false;
+  state = { ...state, chatBubble: "", chatBubbleScope: "none", sessionProgress: 0 };
   const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));
   if (state.debug === debugBefore) publish();
-}
-
-function showBubble(host) {
-  bubbleHost = host;
-  state = { ...state, bubble: `Closing ${host}` };
-  publish();
-}
-
-function hideBubble() {
-  bubbleHost = "";
-  if (!state.bubble) return;
-  state = { ...state, bubble: "" };
-  publish();
 }
 
 function setPetLevel(level) {
@@ -1152,22 +1155,21 @@ async function pollFront() {
     }
     let closeNote = "";
     let closeError = "";
+    const onDistracted = Boolean(decision.host);
+    syncChatBubble({ onDistracted });
     if (decision.close && current.closeBlocked) {
-      showBubble(decision.host);
       const closed = await closeFrontTab(reading.app, decision.host);
       if (study !== current) return;
       if (closed.skipped) {
-        hideBubble();
+        syncChatBubble({ onDistracted: Boolean(decision.host) });
       } else {
         current.closeWatch = noteCloseAttempt(current.closeWatch);
         if (!closed.ok) {
-          hideBubble();
+          syncChatBubble({ onDistracted: Boolean(decision.host) });
           closeError = closed.error || "osascript failed";
           closeNote = `Could not close ${decision.host}. The browser asked you to confirm.`;
         }
       }
-    } else if (bubbleHost && (!current.closeBlocked || !reading.url || decision.host !== bubbleHost)) {
-      hideBubble();
     }
     if (study !== current) return;
     setDebug(
@@ -1215,7 +1217,6 @@ function registerMacProtocol() {
 }
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
-ipcMain.handle("use-token", (_event, token) => useToken(String(token ?? "")));
 ipcMain.handle("claim", (_event, code) => claim(String(code ?? "")));
 ipcMain.handle("cancel-study", () => cancelStudy());
 ipcMain.on("finish-session", () => {
@@ -1232,6 +1233,11 @@ ipcMain.on("set-panel-open", (_event, open) => {
 });
 ipcMain.on("set-pet-visible", (_event, visible) => {
   setPetVisible(visible);
+});
+ipcMain.on("pet-ignore-mouse", (_event, ignore) => {
+  if (!petWindow || petWindow.isDestroyed()) return;
+  if (ignore) petWindow.setIgnoreMouseEvents(true, { forward: true });
+  else petWindow.setIgnoreMouseEvents(false);
 });
 ipcMain.on("dock-drag-start", (_event, point) => {
   beginDockDrag(Number(point?.x), Number(point?.y));

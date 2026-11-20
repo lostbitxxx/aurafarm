@@ -12,12 +12,88 @@
         background: transparent;
         overflow: hidden;
       }
+      #pet-root {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      #pet-root #pet-stack {
+        pointer-events: auto;
+      }
+      .pet-chat {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        max-width: 9.5rem;
+        min-height: 2.2rem;
+        margin: 0 0 0.45rem;
+        padding: 0.35rem 0.45rem;
+        border: 1.5px solid #9daa90;
+        border-radius: 4px;
+        background: #fffdf6;
+        color: #23392d;
+        font: 650 11px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 220ms ease, transform 220ms ease;
+        pointer-events: none;
+      }
+      .pet-chat::before,
+      .pet-chat::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+      .pet-chat::before {
+        bottom: -7px;
+        margin-left: -7px;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-top: 7px solid #9daa90;
+      }
+      .pet-chat::after {
+        bottom: -5px;
+        margin-left: -5.5px;
+        border-left: 5.5px solid transparent;
+        border-right: 5.5px solid transparent;
+        border-top: 5.5px solid #fffdf6;
+      }
+      .pet-chat.is-on {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .pet-chat:not(.is-on) {
+        visibility: hidden;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .pet-chat {
+          transition: none;
+        }
+      }
       #pet-stack {
         position: relative;
         display: block;
+        flex: none;
         width: 70px;
         height: 70px;
-        pointer-events: none;
+        cursor: grab;
+        pointer-events: auto;
+      }
+      #pet-stack.is-dragging {
+        cursor: grabbing;
       }
       #pet-stack.is-study .pet-figure {
         inset: 8% 17% 28% 17%;
@@ -37,17 +113,20 @@
     </style>
   </head>
   <body>
-    <div id="pet-stack" aria-hidden="true">
-      <img class="pet-layer is-floor" data-layer="floor" alt="" draggable="false" hidden />
-      <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
-      <span class="pet-figure">
-        <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
-        <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
-        <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
-        <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
-      </span>
-      <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
-      <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />
+    <div id="pet-root" aria-hidden="true">
+      <p id="pet-chat" class="pet-chat"></p>
+      <div id="pet-stack">
+        <img class="pet-layer is-floor" data-layer="floor" alt="" draggable="false" hidden />
+        <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
+        <span class="pet-figure">
+          <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
+          <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
+          <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
+          <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
+        </span>
+        <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
+        <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />
+      </div>
     </div>
     <script src="pet-art.js"></script>
     <script src="pet.js"></script>

@@ -238,13 +238,13 @@ test("a failed browser read is shown instead of a clear session", () => {
   assert.match(blockedRead, /Allow Electron/);
 
   const otherApp = describeFrontRead({ app: "Electron", url: "", error: "" }, createFrontLog());
-  assert.match(otherApp, /Electron is in front/);
+  assert.equal(otherApp, "Watching Electron");
   assert.doesNotMatch(otherApp, /Click Chrome or Safari/);
 
   const youtube = recordFrontHost(createFrontLog(), "https://www.youtube.com/", blocked, desk);
   assert.equal(
     describeFrontRead({ app: "Google Chrome", url: "https://www.youtube.com/", error: "" }, youtube),
-    "Watching. Blocked 1: www.youtube.com",
+    "Watching www.youtube.com",
   );
   assert.equal(
     closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 16_000),

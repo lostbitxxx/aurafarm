@@ -58,20 +58,20 @@ test("nearestEdge picks left, right, or top and never bottom", () => {
 
 test("panelSize is vertical on the sides and horizontal on the top", () => {
   const closedRight = panelSize("right", false, area);
-  assert.equal(closedRight.width, 52);
-  assert.ok(closedRight.height > 52);
+  assert.equal(closedRight.width, 31);
+  assert.equal(closedRight.height, 238);
   const tallRight = panelSize("right", "tall", area);
-  assert.equal(tallRight.width, 52);
-  assert.ok(tallRight.height >= 275);
+  assert.equal(tallRight.width, 31);
+  assert.equal(tallRight.height, closedRight.height);
   const openRight = panelSize("right", true, area);
-  assert.ok(openRight.width >= 320);
-  assert.equal(openRight.height, tallRight.height);
+  assert.equal(openRight.width, 269);
+  assert.equal(openRight.height, 238);
   const closedTop = panelSize("top", false, area);
-  assert.equal(closedTop.height, 52);
-  assert.ok(closedTop.width > 52);
+  assert.equal(closedTop.height, 31);
+  assert.equal(closedTop.width, 238);
   const openTop = panelSize("top", true, area);
-  assert.ok(openTop.width >= 320);
-  assert.ok(openTop.height >= 275);
+  assert.equal(openTop.width, 238);
+  assert.equal(openTop.height, 269);
 });
 
 test("overlayLayout keeps the docked group inside the inset work area", () => {
@@ -81,14 +81,15 @@ test("overlayLayout keeps the docked group inside the inset work area", () => {
   assert.equal(right.panel.x + right.panel.width, area.x + area.width - 8);
   // Bottom is flush (insetBottom: 0); sides/top keep inset.
   assert.equal(right.panel.y + right.panel.height, area.y + area.height);
-  // Pet sits beside the EXP rail, not the far left of an open panel.
+  // Closed: pet sits beside the EXP rail (open bar hosts the pet inside the shell instead).
   assert.equal(right.pet.x + right.pet.width, right.panel.x);
   assert.ok(right.pet.y >= area.y + 8);
   assert.equal(right.pet.y + right.pet.height, area.y + area.height);
 
   const openRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, true, area);
-  assert.equal(openRight.pet.x + openRight.pet.width, openRight.panel.x + openRight.panel.width - 52);
-  assert.equal(openRight.pet.x + openRight.pet.width, right.pet.x + right.pet.width);
+  assert.equal(openRight.pet.x + openRight.pet.width, openRight.panel.x + openRight.panel.width - 31);
+  assert.equal(openRight.panel.height, 238);
+  assert.equal(openRight.panel.width, 269);
 
   const left = overlayLayout("left", 0, false, area);
   assert.equal(left.panel.x, area.x + 8);
