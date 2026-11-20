@@ -147,6 +147,31 @@ export function LevelUpCelebration({
 
 type RewardKind = "color" | "hat" | "clothes";
 
+type RewardPetLook = Pick<PetCard, "pet_type" | "color" | "hat" | "clothes"> & {
+  name?: string | null;
+};
+
+function currentRewardLook(pet: RewardPetLook | null) {
+  return {
+    petType: pet?.pet_type ?? "baby_slime",
+    color: pet?.color ?? null,
+    hat: pet?.hat ?? null,
+    clothes: pet?.clothes ?? null,
+  };
+}
+
+export function rewardPreviewLook(pet: RewardPetLook | null, itemId: string | null) {
+  if (!itemId || itemId === RENAME_COUPON_ID) return null;
+  const kind = rewardKindForItem(itemId);
+  if (!kind) return null;
+  return {
+    petType: pet?.pet_type ?? "baby_slime",
+    color: kind === "color" ? itemId : (pet?.color ?? null),
+    hat: kind === "hat" ? itemId : (pet?.hat ?? null),
+    clothes: kind === "clothes" ? itemId : (pet?.clothes ?? null),
+  };
+}
+
 function rewardKindForItem(itemId: string): RewardKind | null {
   if (itemId === RENAME_COUPON_ID) return null;
   if (sampleColor(itemId)) return "color";
@@ -166,6 +191,7 @@ export function RewardPicker({
   ownedHatIds,
   ownedClothesIds,
   renameCoupons,
+  pet = null,
   onClaimed,
   onClose,
 }: {
@@ -178,9 +204,11 @@ export function RewardPicker({
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
   renameCoupons: number;
+  pet?: RewardPetLook | null;
   onClaimed: (itemId: string, equip: boolean) => void;
   onClose: () => void;
 }) {
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [applyNow, setApplyNow] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -218,11 +246,22 @@ export function RewardPicker({
   const shufflesLeft = offer ? REWARD_SHUFFLE_LIMIT - offer.shufflesUsed : REWARD_SHUFFLE_LIMIT;
   const shuffleReady = offer ? canShuffleReward(offer, pools) : false;
   const busy = pendingId !== null;
+  const offeredIds = new Set<string>([RENAME_COUPON_ID, ...cosmeticCards.map((card) => card.id)]);
+  const selectedId = pickedId && offeredIds.has(pickedId) ? pickedId : null;
+  const preview = rewardPreviewLook(pet, selectedId);
+  const current = currentRewardLook(pet);
+  const renaming = selectedId === RENAME_COUPON_ID;
 
   function onChoose(itemId: string) {
     if (busy) return;
     if (itemId === RENAME_COUPON_ID && couponMaxed) return;
-    void finishClaim(itemId, applyNow && Boolean(rewardKindForItem(itemId)));
+    setPickedId(itemId);
+  }
+
+  function onConfirm() {
+    if (!selectedId || busy) return;
+    if (selectedId === RENAME_COUPON_ID && couponMaxed) return;
+    void finishClaim(selectedId, applyNow && Boolean(rewardKindForItem(selectedId)));
   }
 
   async function finishClaim(itemId: string, equip: boolean) {
@@ -275,27 +314,70 @@ export function RewardPicker({
       {!offer ? (
         <p className="panel-hint">Drawing a reward…</p>
       ) : (
-        <ul className="collection-color-grid reward-choice-grid">
-          {cosmeticCards.map((card) => (
-            <li key={`${card.kind}-${card.id}`}>
-              <RewardChoiceButton
-                kind={card.kind}
-                itemId={card.id}
-                pending={pendingId === card.id}
-                disabled={busy}
+        <>
+          <div className="reward-preview" aria-label="Reward preview">
+            {renaming ? (
+              <>
+                <PixelPetArt
+                  petType={current.petType}
+                  color={current.color}
+                  hat={current.hat}
+                  clothes={current.clothes}
+                  className="reward-preview-pet"
+                  alt=""
+                />
+                <div className="reward-preview-rename">
+                  <span className="reward-preview-name">{petDisplayName(pet ?? { pet_type: current.petType })}</span>
+                  <PreviewArrow direction="down" />
+                  <span className="reward-preview-unknown">?</span>
+                </div>
+              </>
+            ) : preview ? (
+              <>
+                <PixelPetArt
+                  petType={current.petType}
+                  color={current.color}
+                  hat={current.hat}
+                  clothes={current.clothes}
+                  className="reward-preview-pet"
+                  alt=""
+                />
+                <PreviewArrow direction="right" />
+                <PixelPetArt
+                  petType={preview.petType}
+                  color={preview.color}
+                  hat={preview.hat}
+                  clothes={preview.clothes}
+                  className="reward-preview-pet"
+                  alt=""
+                />
+              </>
+            ) : null}
+          </div>
+          <ul className="collection-color-grid reward-choice-grid">
+            {cosmeticCards.map((card) => (
+              <li key={`${card.kind}-${card.id}`}>
+                <RewardChoiceButton
+                  kind={card.kind}
+                  itemId={card.id}
+                  pending={pendingId === card.id}
+                  disabled={busy}
+                  selected={selectedId === card.id}
+                  onChoose={onChoose}
+                />
+              </li>
+            ))}
+            <li key="rename-coupon">
+              <RenameCouponChoiceButton
+                pending={pendingId === RENAME_COUPON_ID}
+                disabled={busy || couponMaxed}
+                maxed={couponMaxed}
+                selected={selectedId === RENAME_COUPON_ID}
                 onChoose={onChoose}
               />
             </li>
-          ))}
-          <li key="rename-coupon">
-            <RenameCouponChoiceButton
-              pending={pendingId === RENAME_COUPON_ID}
-              disabled={busy || couponMaxed}
-              maxed={couponMaxed}
-              onChoose={onChoose}
-            />
-          </li>
-        </ul>
+          </ul>
+        </>
       )}
       <div className="reward-apply-row">
         <span className="reward-apply-label" id="reward-apply-label">
@@ -313,14 +395,17 @@ export function RewardPicker({
           <span className="reward-apply-knob" aria-hidden="true" />
         </button>
       </div>
-      <div className="reward-shuffle">
+      <div className="reward-actions">
         <button
           type="button"
           className="button button-small button-ghost"
           disabled={!shuffleReady || busy}
           onClick={onShuffle}
         >
-          {shufflesLeft === 0 ? "No shuffles left" : `Shuffle (${shufflesLeft} left)`}
+          {shufflesLeft === 0 ? "No rerolls left" : `Reroll (${shufflesLeft} left)`}
+        </button>
+        <button type="button" className="button button-small" disabled={!selectedId || busy} onClick={onConfirm}>
+          {busy ? "…" : "Confirm"}
         </button>
       </div>
     </FarmDialog>
@@ -331,18 +416,21 @@ function RenameCouponChoiceButton({
   pending,
   disabled,
   maxed,
+  selected,
   onChoose,
 }: {
   pending: boolean;
   disabled: boolean;
   maxed: boolean;
+  selected: boolean;
   onChoose: (itemId: string) => void;
 }) {
   return (
     <button
       type="button"
-      className={maxed ? "collection-color is-maxed" : "collection-color"}
+      className={["collection-color", maxed ? "is-maxed" : "", selected ? "is-selected" : ""].filter(Boolean).join(" ")}
       disabled={disabled}
+      aria-pressed={selected}
       onClick={() => onChoose(RENAME_COUPON_ID)}
       aria-disabled={maxed || disabled}
     >
@@ -365,12 +453,14 @@ function RewardChoiceButton({
   itemId,
   pending,
   disabled,
+  selected,
   onChoose,
 }: {
   kind: "Color" | "Hat" | "Clothes";
   itemId: string;
   pending: boolean;
   disabled: boolean;
+  selected: boolean;
   onChoose: (itemId: string) => void;
 }) {
   const preview = kind === "Color" ? null : previewReward(itemId);
@@ -383,7 +473,13 @@ function RewardChoiceButton({
         : null;
   const name = kind === "Color" ? colorName : (preview?.name ?? legacyName ?? itemId);
   return (
-    <button type="button" className="collection-color" disabled={disabled} onClick={() => onChoose(itemId)}>
+    <button
+      type="button"
+      className={selected ? "collection-color is-selected" : "collection-color"}
+      disabled={disabled}
+      aria-pressed={selected}
+      onClick={() => onChoose(itemId)}
+    >
       <span className="reward-offer-kind">{kind}</span>
       {kind === "Color" ? (
         <PixelPetArt petType="baby_slime" color={itemId} className="dialog-pet-art" alt="" />
@@ -404,6 +500,23 @@ function RewardChoiceButton({
       )}
       <strong>{pending ? "…" : name}</strong>
     </button>
+  );
+}
+
+function PreviewArrow({ direction }: { direction: "right" | "down" }) {
+  const down = direction === "down";
+  return (
+    <svg
+      className={down ? "reward-preview-arrow is-down" : "reward-preview-arrow"}
+      viewBox={down ? "0 0 24 48" : "0 0 48 24"}
+      aria-hidden="true"
+    >
+      {down ? (
+        <path d="M12 2v36M4 30l8 10 8-10" />
+      ) : (
+        <path d="M2 12h36M30 4l10 8-10 8" />
+      )}
+    </svg>
   );
 }
 

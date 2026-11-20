@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { rewardPreviewLook } from "../components/level-up-reward";
 import { previewRewards } from "../lib/collection-catalog";
+import { RENAME_COUPON_ID } from "../lib/rename-coupon";
 import {
   petAssetPath,
   petStackLayers,
@@ -320,6 +322,20 @@ test("unused sample hats and clothes are removed from the catalog", () => {
   assert.match(clothesCheck, /'little-gentleman-suit'/);
 });
 
+test("a reward preview wears the chosen piece and stays empty for a rename coupon", () => {
+  const pet = { pet_type: "baby_slime", color: "sage", hat: "hat_a", clothes: "clothes_a" };
+  assert.equal(rewardPreviewLook(pet, null), null);
+  assert.equal(rewardPreviewLook(pet, RENAME_COUPON_ID), null);
+  assert.deepEqual(rewardPreviewLook(pet, "rose"), {
+    petType: "baby_slime",
+    color: "rose",
+    hat: "hat_a",
+    clothes: "clothes_a",
+  });
+  assert.equal(rewardPreviewLook(pet, "flower-day-daisy-clip")?.hat, "flower-day-daisy-clip");
+  assert.equal(rewardPreviewLook(pet, "flower-day-daisy-clip")?.color, "sage");
+});
+
 test("choosing a level reward asks before equipping on the pet", () => {
   const claimApply = readFileSync(
     new URL("../supabase/migrations/0035_claim_applies_reward.sql", import.meta.url),
@@ -359,7 +375,16 @@ test("choosing a level reward asks before equipping on the pet", () => {
   assert.match(picker, /useState\(true\)/);
   assert.match(picker, /role="switch"/);
   assert.match(picker, /aria-checked=\{applyNow\}/);
-  assert.match(picker, /finishClaim\(itemId, applyNow/);
+  assert.match(picker, /setPickedId\(itemId\)/);
+  assert.match(picker, /finishClaim\(selectedId, applyNow/);
+  assert.match(picker, /"Confirm"/);
+  assert.match(picker, /className="reward-preview"/);
+  assert.match(picker, /PreviewArrow direction="right"/);
+  assert.match(picker, /PreviewArrow direction="down"/);
+  assert.match(picker, /reward-preview-unknown/);
+  assert.match(picker, /petDisplayName\(pet \?\? \{ pet_type: current\.petType \}\)/);
+  assert.match(picker, /export function rewardPreviewLook/);
+  assert.doesNotMatch(picker, /void finishClaim\(itemId/);
   assert.match(picker, /Pick one color, hat, outfit, or rename coupon/);
   assert.match(
     readFileSync(new URL("../app/globals.css", import.meta.url), "utf8"),
