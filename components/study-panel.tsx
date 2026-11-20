@@ -686,7 +686,7 @@ export function StudyPanel({
                 Cancel
               </button>
               {desktopLink ? (
-                <a className="button button-farm" href={desktopLink}>
+                <a className="button button-farm" href={desktopLink} onClick={onCloseStart}>
                   Open Aurafarm
                 </a>
               ) : (

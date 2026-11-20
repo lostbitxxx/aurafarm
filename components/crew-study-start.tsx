@@ -277,7 +277,13 @@ export function CrewStudyStart({
                 Cancel
               </button>
               {desktopLink ? (
-                <a className="button button-farm" href={desktopLink}>
+                <a
+                  className="button button-farm"
+                  href={desktopLink}
+                  onClick={() => {
+                    setStartOpen(false);
+                  }}
+                >
                   Open Aurafarm
                 </a>
               ) : (

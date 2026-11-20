@@ -188,7 +188,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /TrackerDemo kind="desktop"/);
   assert.match(desk, /TrackerDemo kind="website"/);
   assert.match(desk, /First time aurafarming\? Download here!/);
-  assert.match(desk, /desktopLink \? \([\s\S]*href=\{desktopLink\}[\s\S]*Open Aurafarm/);
+  assert.match(desk, /desktopLink \? \([\s\S]*href=\{desktopLink\}[\s\S]*onClick=\{onCloseStart\}[\s\S]*Open Aurafarm/);
   assert.match(desk, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
   assert.match(desk, /tracker-option-desktop/);
   assert.match(desk, /tracker-option-website/);
