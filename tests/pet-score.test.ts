@@ -185,7 +185,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
-  assert.match(desk, /shownSession\?\.useDesktopPet \? \([\s\S]*study-active[\s\S]*StudyClock/);
+  assert.match(
+    desk,
+    /shownSession && !checkingSession \? \([\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
+  );
+  assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);

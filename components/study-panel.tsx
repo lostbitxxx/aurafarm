@@ -19,9 +19,7 @@ import {
   plannedStudySeconds,
   DEV_TIMER_PASSWORD,
   devTimerPasswordMatches,
-  formatClock,
   formatDuration,
-  formatTimestamp,
   experienceForSession,
   farmerLocalDay,
   focusedSeconds,
@@ -481,16 +479,7 @@ export function StudyPanel({
                         : "Website timer is tracking this session."
                       : "Pick a length and a tracker, then Farm Aura."}
                 </p>
-                {checkingSession ? (
-                  <SessionRefreshStatus />
-                ) : shownSession?.useDesktopPet ? (
-                  <div className="study-active">
-                    <p>
-                      Started <time dateTime={shownSession.startedAt}>{formatTimestamp(shownSession.startedAt)}</time>
-                    </p>
-                    <p>{formatClock(shownSession.plannedSeconds)} chosen</p>
-                  </div>
-                ) : null}
+                {checkingSession ? <SessionRefreshStatus /> : null}
                 {error ? (
                   <p className="form-error" role="alert">
                     {error}
@@ -502,8 +491,12 @@ export function StudyPanel({
                   End session early
                 </button>
               ) : null}
-              {shownSession && !checkingSession && !shownSession.useDesktopPet ? (
-                <StudyClock session={shownSession} rushed={rushed} onFinished={() => finishSession("")} />
+              {shownSession && !checkingSession ? (
+                <StudyClock
+                  session={shownSession}
+                  rushed={rushed}
+                  onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
+                />
               ) : null}
               {shownSession?.useDesktopPet && launchUrl ? (
                 <div className="scene-actions is-start">
