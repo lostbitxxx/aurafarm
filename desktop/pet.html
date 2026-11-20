@@ -23,6 +23,18 @@
         height: 100%;
         pointer-events: none;
       }
+      /* Keep the sprite on the rail side; chat (and window) extend away from the bar. */
+      body.edge-right #pet-root {
+        align-items: flex-end;
+      }
+      body.edge-left #pet-root {
+        align-items: flex-start;
+      }
+      body.edge-top #pet-root {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+      }
       #pet-root #pet-stack {
         pointer-events: auto;
       }
@@ -48,6 +60,10 @@
         transition: opacity 220ms ease, transform 220ms ease;
         pointer-events: none;
       }
+      body.edge-top .pet-chat {
+        margin: 0 0.45rem 0 0;
+        transform: translateX(-4px);
+      }
       .pet-chat::before,
       .pet-chat::after {
         content: "";
@@ -71,9 +87,35 @@
         border-right: 5.5px solid transparent;
         border-top: 5.5px solid #fffdf6;
       }
+      /* Top dock: tip points right toward the pet. */
+      body.edge-top .pet-chat::before {
+        left: auto;
+        right: -7px;
+        bottom: 50%;
+        margin: 0;
+        border-left: 7px solid #9daa90;
+        border-right: 0;
+        border-top: 7px solid transparent;
+        border-bottom: 7px solid transparent;
+        transform: translateY(50%);
+      }
+      body.edge-top .pet-chat::after {
+        left: auto;
+        right: -5px;
+        bottom: 50%;
+        margin: 0;
+        border-left: 5.5px solid #fffdf6;
+        border-right: 0;
+        border-top: 5.5px solid transparent;
+        border-bottom: 5.5px solid transparent;
+        transform: translateY(50%);
+      }
       .pet-chat.is-on {
         opacity: 1;
         transform: translateY(0);
+      }
+      body.edge-top .pet-chat.is-on {
+        transform: translateX(0);
       }
       .pet-chat:not(.is-on) {
         visibility: hidden;
@@ -89,7 +131,6 @@
         flex: none;
         width: 70px;
         height: 70px;
-        cursor: grab;
         pointer-events: auto;
       }
       #pet-stack.is-dragging {
@@ -108,11 +149,18 @@
         display: block;
         width: 100%;
         height: 100%;
+        border: 0;
+        outline: none;
         image-rendering: pixelated;
+      }
+      /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
+      .pet-layer:not([src]),
+      .pet-layer[hidden] {
+        display: none;
       }
     </style>
   </head>
-  <body>
+  <body class="edge-right">
     <div id="pet-root" aria-hidden="true">
       <p id="pet-chat" class="pet-chat"></p>
       <div id="pet-stack">
@@ -120,9 +168,9 @@
         <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
         <span class="pet-figure">
           <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
-          <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
-          <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
-          <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
+          <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" hidden />
+          <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" hidden />
+          <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" hidden />
         </span>
         <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
         <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />

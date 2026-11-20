@@ -17,6 +17,8 @@ let shownPose = "idle";
 let shownFlip = false;
 let dockDragging = false;
 let activePointerId = null;
+/** True while the overlay accepts mouse hits for dragging. */
+let mouseCaptured = false;
 
 function setLayer(node, src) {
   if (!node) return;
@@ -59,7 +61,27 @@ function screenPoint(event) {
 }
 
 function setPetMouseIgnore(ignore) {
+  mouseCaptured = !ignore;
   window.pet.setIgnoreMouse?.(ignore);
+}
+
+function overPetHit(event) {
+  const x = event.clientX;
+  const y = event.clientY;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  const rect = petStack.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+/** Capture mouse only over the sprite so the transparent pad stays click-through. */
+function syncPetMouseTarget(event) {
+  if (dockDragging) return;
+  const over = overPetHit(event);
+  if (over) {
+    if (!mouseCaptured) setPetMouseIgnore(false);
+    return;
+  }
+  if (mouseCaptured) setPetMouseIgnore(true);
 }
 
 function clearDockDrag() {
@@ -74,15 +96,17 @@ function clearDockDrag() {
       // Capture may already be cleared.
     }
   }
+  if (petStack.matches?.(":hover")) {
+    setPetMouseIgnore(false);
+    return;
+  }
   setPetMouseIgnore(true);
 }
 
-petStack.addEventListener("mouseenter", () => {
-  setPetMouseIgnore(false);
-});
-
-petStack.addEventListener("mouseleave", () => {
-  if (!dockDragging) setPetMouseIgnore(true);
+document.addEventListener("mousemove", syncPetMouseTarget, { passive: true });
+window.addEventListener("mouseleave", () => {
+  if (dockDragging) return;
+  setPetMouseIgnore(true);
 });
 
 petStack.addEventListener("pointerdown", (event) => {
@@ -122,10 +146,7 @@ petStack.addEventListener("lostpointercapture", (event) => {
   if (!dockDragging) return;
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   window.pet.dockDragCancel();
-  activePointerId = null;
-  dockDragging = false;
-  petStack.classList.remove("is-dragging");
-  setPetMouseIgnore(true);
+  clearDockDrag();
 });
 
 window.addEventListener("blur", () => {
@@ -134,7 +155,19 @@ window.addEventListener("blur", () => {
   clearDockDrag();
 });
 
+const EDGE_CLASSES = ["edge-left", "edge-right", "edge-top", "edge-bottom"];
+
+function applyDockEdge(edge) {
+  const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
+  for (const name of EDGE_CLASSES) {
+    document.body.classList.toggle(name, name === `edge-${next}`);
+  }
+}
+
+applyDockEdge("right");
+
 window.pet.onState((state) => {
+  if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;

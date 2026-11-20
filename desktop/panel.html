@@ -110,6 +110,53 @@
         outline: 3px solid #8261a7;
         outline-offset: -3px;
       }
+      /* Expand / collapse hint: centered on the progress rail; flips when open. */
+      #panel-chevron {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        color: var(--shell-ink);
+        opacity: 0.62;
+      }
+      #panel-chevron svg {
+        display: block;
+        width: 11px;
+        height: 11px;
+        transition: transform 180ms ease;
+      }
+      /* Closed: point into the content (expand). Open: opposite (collapse). */
+      body.edge-right #panel-chevron svg {
+        transform: rotate(180deg);
+      }
+      body.edge-right.is-open #panel-chevron svg {
+        transform: rotate(0deg);
+      }
+      body.edge-left #panel-chevron svg {
+        transform: rotate(0deg);
+      }
+      body.edge-left.is-open #panel-chevron svg {
+        transform: rotate(180deg);
+      }
+      body.edge-top #panel-chevron svg {
+        transform: rotate(90deg);
+      }
+      body.edge-top.is-open #panel-chevron svg {
+        transform: rotate(-90deg);
+      }
+      body.edge-bottom #panel-chevron svg {
+        transform: rotate(-90deg);
+      }
+      body.edge-bottom.is-open #panel-chevron svg {
+        transform: rotate(90deg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #panel-chevron svg {
+          transition: none;
+        }
+      }
       /* Study time fill: green grows from the bottom (left on top dock). Flush with the rail. */
       #session-fill {
         position: absolute;
@@ -149,7 +196,7 @@
         border-radius: 0;
         background: transparent;
         box-shadow: none;
-        padding: 1.75rem 0.55rem 0.55rem 0.55rem;
+        padding: 0.55rem;
         overflow: auto;
         opacity: 0;
         visibility: hidden;
@@ -171,65 +218,6 @@
         #panel-body {
           transition: none;
         }
-      }
-      #pet-switch-row {
-        position: absolute;
-        top: 0.4rem;
-        right: 0.45rem;
-        z-index: 1;
-        display: flex;
-        flex: none;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 0.45rem;
-        margin: 0;
-      }
-      body.edge-right #pet-switch-row {
-        right: 0.45rem;
-      }
-      #pet-switch-label {
-        font-size: 0.92rem;
-        font-weight: 550;
-        color: #23392d;
-      }
-      #panel-body #pet-toggle {
-        position: relative;
-        display: block;
-        flex: none;
-        width: 26px;
-        height: 16px;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        border-radius: 16px;
-        background: #e9e9eb;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-      }
-      #panel-body #pet-toggle[aria-checked="true"] {
-        background: #34c759;
-      }
-      #pet-switch-knob {
-        position: absolute;
-        top: 1px;
-        left: 1px;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #fff;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.06);
-        transition: transform 0.2s ease;
-      }
-      #panel-body #pet-toggle[aria-checked="true"] #pet-switch-knob {
-        transform: translateX(10px);
-      }
-      #panel-body #pet-toggle:hover {
-        filter: none;
-      }
-      #panel-body #pet-toggle:focus-visible {
-        outline: 3px solid #8261a7;
-        outline-offset: 3px;
       }
       #panel-stage {
         flex: 1 1 auto;
@@ -318,7 +306,14 @@
         pointer-events: auto;
         cursor: grab;
       }
-      #panel-pet-stack.is-dragging {
+      #panel-pet-stack:hover,
+      #panel-pet-stack .pet-figure,
+      #panel-pet-stack .pet-layer {
+        cursor: grab;
+      }
+      #panel-pet-stack.is-dragging,
+      #panel-pet-stack.is-dragging .pet-figure,
+      #panel-pet-stack.is-dragging .pet-layer {
         cursor: grabbing;
       }
       #panel-pet-stack.is-study .pet-figure {
@@ -334,7 +329,15 @@
         display: block;
         width: 100%;
         height: 100%;
+        border: 0;
+        outline: none;
         image-rendering: pixelated;
+        cursor: grab;
+      }
+      /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
+      #panel-pet .pet-layer:not([src]),
+      #panel-pet .pet-layer[hidden] {
+        display: none;
       }
       #panel-actions {
         display: grid;
@@ -371,10 +374,10 @@
       p {
         margin: 0;
       }
-      #panel-body button:not(#pet-toggle)[hidden] {
+      #panel-body button[hidden] {
         display: none;
       }
-      #panel-body button:not(#pet-toggle) {
+      #panel-body button {
         display: block;
         width: 100%;
         margin: 0;
@@ -383,10 +386,10 @@
         font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
       }
-      #panel-body button:not(#pet-toggle):hover {
+      #panel-body button:hover {
         filter: brightness(0.97);
       }
-      #panel-body button:not(#pet-toggle):focus-visible {
+      #panel-body button:focus-visible {
         outline: 3px solid #8261a7;
         outline-offset: 3px;
       }
@@ -417,13 +420,21 @@
       <div id="dock-rail">
         <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
           <span id="session-fill" aria-hidden="true"></span>
+          <span id="panel-chevron" aria-hidden="true">
+            <svg viewBox="0 0 12 12" focusable="false">
+              <path
+                d="M4.25 2.25 8.5 6 4.25 9.75"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
         </button>
       </div>
       <div id="panel-body">
-        <div id="pet-switch-row">
-          <span id="pet-switch-label">Show pet</span>
-          <button id="pet-toggle" type="button" role="switch" aria-checked="true" aria-labelledby="pet-switch-label"><span id="pet-switch-knob"></span></button>
-        </div>
         <div id="panel-stage">
           <div id="panel-pet" aria-hidden="true">
             <p id="panel-pet-chat" class="pet-chat"></p>
@@ -432,9 +443,9 @@
               <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
               <span class="pet-figure">
                 <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
-                <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
-                <img class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
-                <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
+                <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" hidden />
+                <img class="pet-layer is-body" data-layer="body" alt="" draggable="false" hidden />
+                <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" hidden />
               </span>
               <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
               <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />

@@ -546,6 +546,9 @@ export function LivingRoom({
   dailyGoalMinutes = null,
   isStudyDay = true,
   headerAside = null,
+  headerCenter = null,
+  headTitle = null,
+  headSubtitle = null,
 }: {
   userId: string;
   pets: PetCard[];
@@ -563,7 +566,15 @@ export function LivingRoom({
   dailyGoalMinutes?: number | null;
   isStudyDay?: boolean;
   headerAside?: ReactNode;
+  /** Centered header slot (study countdown while a session is active). */
+  headerCenter?: ReactNode;
+  /** Replaces the living-room title while a study session is active. */
+  headTitle?: string | null;
+  headSubtitle?: string | null;
 }) {
+  const roomTitle = headTitle ?? "Your little living room";
+  const roomSubtitle = headSubtitle ?? "Your favorite companions, at home.";
+  const studyingHead = Boolean(headTitle);
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
@@ -685,12 +696,13 @@ export function LivingRoom({
   }
 
   return (
-    <section className="living-room-block" aria-label="Your little living room">
-      <div className="room-top">
+    <section className="living-room-block" aria-label={roomTitle}>
+      <div className={studyingHead ? "room-top is-studying" : "room-top"}>
         <div className="room-head">
-          <h2 className="room-title">Your little living room</h2>
-          <p className="room-subtitle">Your favorite companions, at home.</p>
+          <h2 className="room-title">{roomTitle}</h2>
+          <p className="room-subtitle">{roomSubtitle}</p>
         </div>
+        {headerCenter ? <div className="room-center">{headerCenter}</div> : null}
         {headerAside}
       </div>
       <div className="living-room-stage">

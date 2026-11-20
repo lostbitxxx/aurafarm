@@ -4,12 +4,14 @@ import { test } from "node:test";
 
 const require = createRequire(import.meta.url);
 const {
+  CHAT_NO_SESSION,
   CHAT_CLOSING,
   CHAT_DISTRACTED,
   CHAT_FOCUSED,
   CHAT_RECOVERED,
   chatBubbleCopy,
 } = require("../desktop/chat-bubble.js") as {
+  CHAT_NO_SESSION: string;
   CHAT_CLOSING: string;
   CHAT_DISTRACTED: string;
   CHAT_FOCUSED: string;
@@ -23,9 +25,14 @@ const {
   }) => { text: string; scope: "none" | "pet" | "panel" };
 };
 
-test("chat bubbles stay empty without an active study session", () => {
-  assert.deepEqual(chatBubbleCopy({ panelOpen: true, onDistracted: true }), { text: "", scope: "none" });
-  assert.deepEqual(chatBubbleCopy({ closing: true }), { text: "", scope: "none" });
+test("no study session prompts starting on the web", () => {
+  assert.deepEqual(chatBubbleCopy({}), { text: CHAT_NO_SESSION, scope: "pet" });
+  assert.deepEqual(chatBubbleCopy({ panelOpen: true, onDistracted: true }), {
+    text: CHAT_NO_SESSION,
+    scope: "pet",
+  });
+  assert.deepEqual(chatBubbleCopy({ closing: true }), { text: CHAT_NO_SESSION, scope: "pet" });
+  assert.equal(CHAT_NO_SESSION, "Start a study session on our web!");
 });
 
 test("closing beats distraction and open-bar idle lines", () => {

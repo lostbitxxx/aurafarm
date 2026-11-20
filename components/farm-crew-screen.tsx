@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { refreshFarmCrewRoom } from "@/lib/actions/farm-crew";
 import { completeStudyTimer, endStudyEarly } from "@/lib/actions/study";
-import { farmerLocalDay, formatClock, formatTimestamp, type ActiveStudySession } from "@/lib/study";
+import { farmerLocalDay, type ActiveStudySession } from "@/lib/study";
 import { loadFarmCrewLeaderboard } from "@/lib/actions/leaderboard";
 import { managesFarmCrew, type FarmCrewRoom } from "@/lib/farm-crew";
 import type { LeaderboardMode, LeaderboardRow } from "@/lib/leaderboard";
@@ -13,6 +13,7 @@ import { CrewAdminDialog } from "./crew-admin-dialog";
 import { HeaderMenu } from "./header-menu";
 import { CrewRoom } from "./crew-room";
 import { CrewStudyStart } from "./crew-study-start";
+import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { FarmDialog } from "./farm-dialog";
 import { LeaderboardPanel } from "./leaderboard-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -126,16 +127,29 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
         ) : null}
         {detail ? (
           <section className="living-room-block crew-room-stage" aria-label={detail.name}>
-            <div className="crew-top">
+            <div className={session ? "crew-top is-studying" : "crew-top"}>
               <div className="room-head crew-room-head">
-                <PixelPetArt petType={detail.petType} color={detail.color} className="dialog-pet-art" alt="" />
-                <div>
-                  <h1 className="room-title">{detail.name}</h1>
-                  <p className="room-subtitle">
-                    {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
-                  </p>
-                  {detail.description ? <p className="panel-hint">{detail.description}</p> : null}
-                </div>
+                {session ? (
+                  <div>
+                    <h1 className="room-title">Studying with you</h1>
+                    <p className="room-subtitle">
+                      {session.useDesktopPet
+                        ? "Desktop pet is tracking this session."
+                        : "Website timer is tracking this session."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <PixelPetArt petType={detail.petType} color={detail.color} className="dialog-pet-art" alt="" />
+                    <div>
+                      <h1 className="room-title">{detail.name}</h1>
+                      <p className="room-subtitle">
+                        {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
+                      </p>
+                      {detail.description ? <p className="panel-hint">{detail.description}</p> : null}
+                    </div>
+                  </>
+                )}
               </div>
               {session ? (
                 <CrewSessionTimer
@@ -229,23 +243,19 @@ function CrewSessionTimer({
 
   return (
     <>
-      <div className="below-room crew-timer">
-        <div className="session-copy">
-          <p className="pet-name">Studying with you</p>
-          <p className="growth-label">
-            {session.useDesktopPet
-              ? "Desktop pet is tracking this session."
-              : "Website timer is tracking this session."}
+      <div className="room-center">
+        <StudyClock
+          session={session}
+          rushed={false}
+          onFinished={session.useDesktopPet ? null : onFinished}
+        />
+      </div>
+      <div className="desk-session-actions">
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
           </p>
-          {session.useDesktopPet ? (
-            <div className="study-active">
-              <p>
-                Started <time dateTime={session.startedAt}>{formatTimestamp(session.startedAt)}</time>
-              </p>
-              <p>{formatClock(session.plannedSeconds)} chosen</p>
-            </div>
-          ) : null}
-        </div>
+        ) : null}
         <button
           type="button"
           className="button button-ghost button-end-early"
@@ -257,14 +267,7 @@ function CrewSessionTimer({
         >
           End session early
         </button>
-        {session.useDesktopPet ? null : <StudyClock session={session} rushed={false} onFinished={onFinished} />}
-        {launchUrl ? (
-          <div className="scene-actions is-start">
-            <a className="button button-start" href={launchUrl}>
-              Open Aurafarm
-            </a>
-          </div>
-        ) : null}
+        {launchUrl ? <DesktopLaunchHelp href={launchUrl} /> : null}
       </div>
       {earlyOpen ? (
         <div className="tracker-pop" role="presentation" onClick={() => (pending ? null : setEarlyOpen(false))}>

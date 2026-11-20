@@ -222,7 +222,13 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /topbar-brand/);
   assert.match(screen, /CrewSessionTimer[\s\S]*<CrewRoom/);
   assert.match(screen, /StudyClock/);
+  assert.match(screen, /crew-top is-studying/);
+  assert.match(screen, /Studying with you/);
   assert.match(screen, /Website timer is tracking this session/);
+  assert.match(screen, /room-center/);
+  assert.match(screen, /desk-session-actions/);
+  assert.match(screen, /DesktopLaunchHelp href=\{launchUrl\}/);
+  assert.match(screen, /useDesktopPet \? null : onFinished/);
   assert.match(screen, /End session early/);
   assert.match(screen, /endStudyEarly/);
   assert.match(screen, /Keep studying/);
@@ -232,6 +238,11 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(start, /startStudySession/);
   assert.match(start, /How long will you study\?/);
   assert.match(start, /FARM AURA/);
+  assert.match(start, /DesktopLaunchHelp href=\{desktopLink\}/);
+  assert.match(start, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
+  assert.match(start, /tracker-option-desktop/);
+  assert.match(start, /tracker-option-website/);
+  assert.match(start, /href=\{desktopLink\}[\s\S]*setStartOpen\(false\)[\s\S]*Open Aurafarm/);
   const crewDesk = readFileSync(new URL("../lib/farm-crew-desk.ts", import.meta.url), "utf8");
   assert.match(crewDesk, /preferred_session_minutes/);
   assert.match(crewDesk, /study_sessions/);
