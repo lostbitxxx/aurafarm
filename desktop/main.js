@@ -76,7 +76,9 @@ const PANEL_HEIGHT = DOCK_DEFAULTS.panelLength;
 const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
 const PET_SIZE = DOCK_DEFAULTS.petSize;
 /** Extra window height above the sprite for the chat bubble. */
-const PET_CHAT_PAD = 44;
+const PET_CHAT_PAD = 64;
+/** Pet window width so multi-line chat fits; sprite stays centered. */
+const PET_CHAT_WIDTH = 168;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
@@ -224,12 +226,13 @@ function publish() {
   }
 }
 
-/** Top-left of the pet BrowserWindow (chat pad above the sprite). */
+/** Top-left of the pet BrowserWindow (chat pad above the sprite; wider for chat). */
 function petWindowRect(spriteOrigin) {
+  const padX = Math.max(0, (PET_CHAT_WIDTH - PET_SIZE) / 2);
   return {
-    x: Math.round(spriteOrigin.x),
+    x: Math.round(spriteOrigin.x - padX),
     y: Math.round(spriteOrigin.y - PET_CHAT_PAD),
-    width: PET_SIZE,
+    width: PET_CHAT_WIDTH,
     height: PET_SIZE + PET_CHAT_PAD,
   };
 }

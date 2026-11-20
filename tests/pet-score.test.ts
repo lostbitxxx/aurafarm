@@ -343,11 +343,13 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(petScript, /chatBubbleScope/);
   assert.match(main, /chatBubbleCopy/);
-  assert.match(main, /PET_CHAT_PAD/);
+  assert.match(main, /PET_CHAT_PAD = 64/);
+  assert.match(main, /PET_CHAT_WIDTH = 168/);
   assert.match(main, /petClosing/);
   assert.doesNotMatch(main, /Closing \$\{host\}/);
   assert.doesNotMatch(main, /function showBubble|function hideBubble|bubbleHost/);
   const chat = readFileSync(new URL("../desktop/chat-bubble.js", import.meta.url), "utf8");
+  assert.match(chat, /Start a study session on our web!/);
   assert.match(chat, /That's enough!!!/);
   assert.match(chat, /Lock in bro >:\(/);
   assert.match(chat, /auramaxxing\.\.\./);

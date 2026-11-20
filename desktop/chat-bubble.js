@@ -1,5 +1,6 @@
 /** Chat copy above the desktop pet for distraction / close / open-bar idle. */
 
+const CHAT_NO_SESSION = "Start a study session on our web!";
 const CHAT_CLOSING = "That's enough!!!";
 const CHAT_DISTRACTED = "Lock in bro >:(";
 const CHAT_FOCUSED = "auramaxxing...";
@@ -24,7 +25,7 @@ function chatBubbleCopy(input = {}) {
   const everDistracted = Boolean(input.everDistracted);
   const panelOpen = Boolean(input.panelOpen);
 
-  if (!sessionActive) return { text: "", scope: "none" };
+  if (!sessionActive) return { text: CHAT_NO_SESSION, scope: "pet" };
   if (closing) return { text: CHAT_CLOSING, scope: "pet" };
   if (onDistracted) return { text: CHAT_DISTRACTED, scope: "pet" };
   if (!panelOpen) return { text: "", scope: "none" };
@@ -33,6 +34,7 @@ function chatBubbleCopy(input = {}) {
 }
 
 module.exports = {
+  CHAT_NO_SESSION,
   CHAT_CLOSING,
   CHAT_DISTRACTED,
   CHAT_FOCUSED,
