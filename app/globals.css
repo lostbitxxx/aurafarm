@@ -684,7 +684,6 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   justify-content: center;
   gap: 0.75rem;
   margin-top: 0.9rem;
-  transition: gap 0.45s ease;
 }
 
 .tracker-option {
@@ -700,34 +699,17 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   transition:
     opacity 0.4s ease,
     transform 0.45s ease,
-    flex-grow 0.45s ease,
-    flex-basis 0.45s ease,
-    max-width 0.45s ease,
-    padding 0.45s ease,
-    border-width 0.3s ease,
     border-color 0.2s ease;
 }
 
-.tracker-cards.is-desktop-ready {
-  gap: 0;
-}
-
+/* Keep both card slots so the start dialog size does not change. */
 .tracker-cards.is-desktop-ready .tracker-option-desktop {
-  flex: 0 1 18.5rem;
-  max-width: 18.5rem;
+  transform: translateX(calc(50% + 0.375rem));
 }
 
 .tracker-cards.is-desktop-ready .tracker-option-website {
-  flex: 0 0 0;
   opacity: 0;
   transform: translateX(1.75rem);
-  max-width: 0;
-  min-width: 0;
-  padding-top: 0.75rem;
-  padding-bottom: 0.85rem;
-  padding-inline: 0;
-  border-width: 0;
-  overflow: hidden;
   pointer-events: none;
 }
 
@@ -1179,29 +1161,31 @@ a.tracker-download { color: #6d7a62; }
   }
 
   .tracker-cards.is-desktop-ready .tracker-option-desktop {
-    flex: 1 1 auto;
-    max-width: none;
-    width: 100%;
+    transform: none;
   }
 
   .tracker-cards.is-desktop-ready .tracker-option-website {
-    flex: 0 0 0;
-    max-height: 0;
-    max-width: none;
-    padding: 0;
-    margin: 0;
     transform: translateX(1.25rem);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tracker-cards,
   .tracker-option {
     transition: none;
   }
 
+  .tracker-cards.is-desktop-ready .tracker-option-desktop {
+    transform: translateX(calc(50% + 0.375rem));
+  }
+
   .tracker-cards.is-desktop-ready .tracker-option-website {
     transform: none;
+  }
+
+  @media (max-width: 720px) {
+    .tracker-cards.is-desktop-ready .tracker-option-desktop {
+      transform: none;
+    }
   }
 }
 

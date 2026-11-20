@@ -194,12 +194,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /tracker-option-website/);
   assert.match(desk, /aria-hidden=\{Boolean\(desktopLink\)\}/);
   const deskCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(deskCss, /\.tracker-cards\.is-desktop-ready \{[\s\S]*gap: 0;/);
-  assert.match(
-    deskCss,
-    /\.tracker-cards\.is-desktop-ready \.tracker-option-website \{[\s\S]*opacity: 0;[\s\S]*translateX\(1\.75rem\)/,
-  );
-  assert.match(deskCss, /\.tracker-cards\.is-desktop-ready \.tracker-option-desktop \{[\s\S]*max-width: 18\.5rem;/);
+  const readyWebsite = deskCss.match(/\.tracker-cards\.is-desktop-ready \.tracker-option-website \{[^}]+\}/);
+  const readyDesktop = deskCss.match(/\.tracker-cards\.is-desktop-ready \.tracker-option-desktop \{[^}]+\}/);
+  assert.ok(readyWebsite);
+  assert.ok(readyDesktop);
+  assert.match(readyWebsite[0], /opacity: 0;/);
+  assert.match(readyWebsite[0], /translateX\(1\.75rem\)/);
+  assert.doesNotMatch(readyWebsite[0], /max-width:\s*0|flex:\s*0\s+0\s+0|max-height:\s*0/);
+  assert.match(readyDesktop[0], /translateX\(calc\(50% \+ 0\.375rem\)\)/);
+  assert.doesNotMatch(readyDesktop[0], /max-width:\s*18\.5rem/);
   assert.match(desk, /shownSession\?\.useDesktopPet && launchUrl \? \([\s\S]*href=\{launchUrl\}[\s\S]*Open Aurafarm/);
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
