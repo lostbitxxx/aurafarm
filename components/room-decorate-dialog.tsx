@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { buyRoomSkin } from "@/lib/actions/room-decor";
 import {
   ROOM_DECOR_CATEGORIES,
   decorOptions,
   equipRoomSkin,
   isRoomItemPlaced,
+  roomSkinKey,
+  roomSkinPrice,
   roomSkinSrc,
   skinOwned,
   type DecorOption,
@@ -39,18 +42,24 @@ function DecorArt({
   crop,
   alt,
   roomy = false,
+  blurred = false,
 }: {
   src: string;
   crop: { x: number; y: number; width: number; height: number } | null;
   alt: string;
   /** Detail preview: leave space around the piece without changing the frame box. */
   roomy?: boolean;
+  blurred?: boolean;
 }) {
+  const blurClass = blurred ? " is-blurred" : "";
   if (!crop) {
-    return <img className="decor-art-fit" src={src} alt={alt} draggable={false} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img className={`decor-art-fit${blurClass}`} src={src} alt={alt} draggable={false} />
+    );
   }
   return (
-    <span className="decor-art-crop">
+    <span className={`decor-art-crop${blurClass}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={alt} draggable={false} style={previewStyle(crop, roomy ? 0.35 : 0)} />
     </span>
@@ -59,20 +68,38 @@ function DecorArt({
 
 export function RoomDecorateDialog({
   decor,
+  coins,
+  ownedSkinKeys,
   onChange,
+  onCoinsChange,
+  onOwnedSkinsChange,
   onClose,
 }: {
   decor: RoomDecor;
+  coins: number;
+  ownedSkinKeys: ReadonlySet<string>;
   onChange: (next: RoomDecor) => void;
+  onCoinsChange: (coins: number) => void;
+  onOwnedSkinsChange: (keys: ReadonlySet<string>) => void;
   onClose: () => void;
 }) {
   const [categoryId, setCategoryId] = useState<RoomDecorCategoryId>("floor");
   const [detailId, setDetailId] = useState("floor:base");
+  const [buyError, setBuyError] = useState("");
+  const [pending, startTransition] = useTransition();
   const categories = ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false);
   const category = categories.find((item) => item.id === categoryId) ?? categories[0];
   const options = useMemo(() => decorOptions(category.id), [category.id]);
   const detail = options.find((skin) => skin.key === detailId) ?? options[0];
   const strips = category.id === "floor" || category.id === "wall";
+
+  function optionPlaced(skin: DecorOption) {
+    return isRoomItemPlaced(decor, skin.categoryId) && decor.skins[skin.categoryId] === skin.skinId;
+  }
+
+  const detailOwned = detail ? skinOwned(detail.categoryId, detail.skinId, ownedSkinKeys) : false;
+  const detailEquipped = detail ? optionPlaced(detail) : false;
+  const detailPrice = detail ? roomSkinPrice(detail.categoryId, detail.skinId) : null;
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -89,20 +116,38 @@ export function RoomDecorateDialog({
     );
     setCategoryId(nextId);
     setDetailId(equipped?.key ?? nextOptions[0]?.key ?? "floor:base");
-  }
-
-  function optionPlaced(skin: DecorOption) {
-    return isRoomItemPlaced(decor, skin.categoryId) && decor.skins[skin.categoryId] === skin.skinId;
+    setBuyError("");
   }
 
   function chooseSkin(skin: DecorOption) {
-    // First click previews; second click on the same owned skin equips.
-    if (skin.key !== detailId) {
-      setDetailId(skin.key);
-      return;
-    }
-    if (!skinOwned(skin.skinId)) return;
-    onChange(equipRoomSkin(decor, skin.categoryId, skin.skinId));
+    // Select for detail preview only; Buy / Equip buttons apply the change.
+    setDetailId(skin.key);
+    setBuyError("");
+  }
+
+  function onEquip() {
+    if (!detail || !detailOwned) return;
+    onChange(equipRoomSkin(decor, detail.categoryId, detail.skinId, ownedSkinKeys));
+  }
+
+  function onBuy() {
+    if (!detail || detailOwned || detailPrice == null) return;
+    setBuyError("");
+    startTransition(async () => {
+      const result = await buyRoomSkin(detail.categoryId, detail.skinId);
+      if (result.error) {
+        setBuyError(result.error);
+        return;
+      }
+      const next = new Set(ownedSkinKeys);
+      next.add(roomSkinKey(detail.categoryId, detail.skinId));
+      if (detail.categoryId === "wall") {
+        next.add(roomSkinKey("trim", detail.skinId));
+      }
+      onOwnedSkinsChange(next);
+      if (typeof result.coins === "number") onCoinsChange(result.coins);
+      else onCoinsChange(Math.max(0, coins - detailPrice));
+    });
   }
 
   return (
@@ -116,6 +161,9 @@ export function RoomDecorateDialog({
       >
         <header className="decor-card-head">
           <h2 id="decor-title">Decorations</h2>
+          <p className="decor-coins" aria-live="polite">
+            Coins <span>{coins}</span>
+          </p>
           <button type="button" className="decor-close" onClick={onClose} aria-label="Close decorations">
             Close
           </button>
@@ -140,7 +188,7 @@ export function RoomDecorateDialog({
             <div className={strips ? "decor-grid is-strips" : "decor-grid"}>
               {options.length === 0 ? <p className="decor-empty">No decorations yet.</p> : null}
               {options.map((skin) => {
-                const owned = skinOwned(skin.skinId);
+                const owned = skinOwned(skin.categoryId, skin.skinId, ownedSkinKeys);
                 const equipped = optionPlaced(skin);
                 const selected = skin.key === detail?.key;
                 return (
@@ -149,20 +197,24 @@ export function RoomDecorateDialog({
                     type="button"
                     className={
                       strips
-                        ? `decor-tile is-strip is-${category.id}${equipped ? " is-equipped" : ""}${selected ? " is-selected" : ""}`
-                        : `${equipped ? "decor-tile is-equipped" : "decor-tile"}${selected ? " is-selected" : ""}`
+                        ? `decor-tile is-strip is-${category.id}${equipped ? " is-equipped" : ""}${selected ? " is-selected" : ""}${owned ? "" : " is-locked"}`
+                        : `${equipped ? "decor-tile is-equipped" : "decor-tile"}${selected ? " is-selected" : ""}${owned ? "" : " is-locked"}`
                     }
                     aria-pressed={equipped}
                     aria-current={selected ? "true" : undefined}
                     onClick={() => chooseSkin(skin)}
                   >
+                    <DecorArt
+                      src={roomSkinSrc(skin.categoryId, skin.skinId)}
+                      crop={skin.crop}
+                      alt=""
+                      roomy
+                      blurred={!owned}
+                    />
                     {owned ? (
-                      <DecorArt
-                        src={roomSkinSrc(skin.categoryId, skin.skinId)}
-                        crop={skin.crop}
-                        alt=""
-                        roomy
-                      />
+                      <span className="decor-owned-tag" aria-hidden="true">
+                        Owned
+                      </span>
                     ) : (
                       <span className="decor-locked" aria-hidden="true">
                         ?
@@ -176,25 +228,63 @@ export function RoomDecorateDialog({
           </div>
           {detail ? (
             <aside className="decor-detail">
-              <div className={strips ? `decor-detail-frame is-strip is-${category.id}` : "decor-detail-frame"}>
-                {skinOwned(detail.skinId) ? (
-                  <DecorArt
-                    src={roomSkinSrc(detail.categoryId, detail.skinId)}
-                    crop={detail.crop}
-                    alt=""
-                    roomy
-                  />
-                ) : (
+              <div
+                className={
+                  strips
+                    ? `decor-detail-frame is-strip is-${category.id}${detailOwned ? "" : " is-locked"}`
+                    : `decor-detail-frame${detailOwned ? "" : " is-locked"}`
+                }
+              >
+                <DecorArt
+                  src={roomSkinSrc(detail.categoryId, detail.skinId)}
+                  crop={detail.crop}
+                  alt=""
+                  roomy
+                  blurred={!detailOwned}
+                />
+                {!detailOwned ? (
                   <span className="decor-locked" aria-hidden="true">
                     ?
                   </span>
-                )}
+                ) : null}
               </div>
               <h3>{detail.name}</h3>
               <p className="decor-obtained">
-                {skinOwned(detail.skinId) ? "Included with your room" : "Not obtained yet"}
+                {detail.skinId === "base"
+                  ? "Included with your room"
+                  : detailOwned
+                    ? "Owned"
+                    : detailPrice != null
+                      ? `${detailPrice} coins`
+                      : "Not obtained yet"}
               </p>
               <p className="decor-copy">{detail.description}</p>
+              {detailOwned ? (
+                <button
+                  type="button"
+                  className="decor-action"
+                  disabled={detailEquipped}
+                  onClick={onEquip}
+                >
+                  {detailEquipped ? "Equipped" : "Equip"}
+                </button>
+              ) : detailPrice != null ? (
+                <button
+                  type="button"
+                  className="decor-action"
+                  disabled={pending || coins < detailPrice}
+                  onClick={onBuy}
+                >
+                  {pending ? "…" : `Buy · ${detailPrice} coins`}
+                </button>
+              ) : (
+                <p className="decor-obtained">Not obtained yet</p>
+              )}
+              {buyError ? (
+                <p className="form-error" role="alert">
+                  {buyError}
+                </p>
+              ) : null}
               <div className="decor-dots" aria-hidden="true">
                 {options.map((skin) => (
                   <i key={skin.key} className={skin.key === detail.key ? "is-on" : undefined} />

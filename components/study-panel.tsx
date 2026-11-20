@@ -74,6 +74,9 @@ export function StudyPanel({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  coins = 0,
+  ownedRoomSkins = [],
+  onCoinsChange,
   renameCoupons = 0,
   showPetNames = true,
   onOpenInventory,
@@ -121,6 +124,9 @@ export function StudyPanel({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  coins?: number;
+  ownedRoomSkins?: readonly { categoryId: string; skinId: string }[];
+  onCoinsChange?: (coins: number) => void;
   renameCoupons?: number;
   showPetNames?: boolean;
   onOpenInventory: () => void;
@@ -455,6 +461,9 @@ export function StudyPanel({
           placedIds={placedIds}
           placementReady={placementReady}
           showPetNames={showPetNames}
+          coins={coins}
+          ownedRoomSkins={ownedRoomSkins}
+          onCoinsChange={onCoinsChange}
           onOpenPet={setDetailPetId}
           onOpenInventory={onOpenInventory}
           onOpenSong={onOpenSong}

@@ -5723,6 +5723,20 @@ button.dialog-row {
   font-weight: 600;
 }
 
+.decor-coins {
+  position: absolute;
+  left: 0;
+  top: 0.15rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #596650;
+}
+
+.decor-coins span {
+  color: #23392d;
+  font-weight: 600;
+}
+
 .decor-close {
   position: absolute;
   right: 0;
@@ -5890,14 +5904,42 @@ button.dialog-row {
   max-width: none;
 }
 
+.decor-owned-tag {
+  position: absolute;
+  top: 0.28rem;
+  right: 0.28rem;
+  z-index: 1;
+  pointer-events: none;
+  padding: 0.14rem 0.42rem;
+  border: 1.5px solid #23392d;
+  border-radius: 999px;
+  background: #c5ef47;
+  color: #23392d;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+.decor-tile.is-strip .decor-owned-tag {
+  top: 0.2rem;
+  right: 0.25rem;
+  font-size: 0.58rem;
+  padding: 0.08rem 0.28rem;
+}
+
 .decor-locked {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
+  pointer-events: none;
   font-family: var(--serif);
   font-size: 2rem;
+  font-weight: 600;
   color: #23392d;
+  text-shadow: 0 0 0.35rem #fffdf8, 0 0 0.2rem #fffdf8;
 }
 
 .decor-detail {
@@ -5945,9 +5987,7 @@ button.dialog-row {
 
 .decor-tile:not(.is-strip) > .decor-locked,
 .decor-detail-frame:not(.is-strip) > .decor-locked {
-  width: 84%;
-  height: 84%;
-  margin: 8%;
+  inset: 8%;
 }
 
 .decor-detail h3 {
@@ -5968,6 +6008,35 @@ button.dialog-row {
 
 .decor-copy {
   margin-top: 0.45rem;
+}
+
+.decor-art-crop.is-blurred img,
+.decor-art-fit.is-blurred,
+.decor-tile.is-locked .decor-art-crop img,
+.decor-tile.is-locked .decor-art-fit,
+.decor-detail-frame.is-locked .decor-art-crop img,
+.decor-detail-frame.is-locked .decor-art-fit {
+  filter: blur(5px);
+  transform-origin: center;
+}
+
+.decor-action {
+  margin-top: 0.7rem;
+  width: 100%;
+  border: 1.5px solid #23392d;
+  border-radius: 4px;
+  background: #c5ef47;
+  color: #23392d;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.decor-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #e8ebd9;
 }
 
 .decor-dots {

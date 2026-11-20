@@ -65,6 +65,7 @@ export function DashboardScreen({
   userId,
   displayName,
   totalStudySeconds,
+  coins: initialCoins = 0,
   streakCount,
   streakLocalDate,
   pets,
@@ -73,6 +74,7 @@ export function DashboardScreen({
   ownedColorIds,
   ownedHatIds,
   ownedClothesIds,
+  ownedRoomSkins: initialOwnedRoomSkins = [],
   ownedSongs,
   songsError,
   earnedAchievements,
@@ -101,6 +103,7 @@ export function DashboardScreen({
   userId: string;
   displayName: string;
   totalStudySeconds: number;
+  coins?: number;
   streakCount: number;
   streakLocalDate: string | null;
   pets: PetCard[];
@@ -109,6 +112,7 @@ export function DashboardScreen({
   ownedColorIds: readonly string[];
   ownedHatIds: readonly string[];
   ownedClothesIds: readonly string[];
+  ownedRoomSkins?: readonly { categoryId: string; skinId: string }[];
   ownedSongs: readonly OwnedSong[];
   songsError: string | null;
   earnedAchievements: readonly string[];
@@ -169,6 +173,8 @@ export function DashboardScreen({
   const [ownedColors, setOwnedColors] = useState(ownedColorIds);
   const [ownedHats, setOwnedHats] = useState(ownedHatIds);
   const [ownedClothes, setOwnedClothes] = useState(ownedClothesIds);
+  const [coins, setCoins] = useState(initialCoins);
+  const [ownedRoomSkins, setOwnedRoomSkins] = useState(initialOwnedRoomSkins);
   const [ownedSongRows, setOwnedSongRows] = useState(ownedSongs);
   const [songDisplay, setSongDisplay] = useState<string | null>(null);
   const [rewards, setRewards] = useState(pendingRewards);
@@ -201,12 +207,16 @@ export function DashboardScreen({
     )
     .join("|");
   const ownedSignature = `${ownedColorIds.join(",")}|${ownedHatIds.join(",")}|${ownedClothesIds.join(",")}`;
+  const roomSkinSignature = initialOwnedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
+  const coinsSignature = String(initialCoins);
   const rewardSignature = pendingRewards.map((reward) => reward.id).join("|");
   const songSignature = ownedSongs.map((song) => `${song.id}:${song.seen ? 1 : 0}`).join("|");
   const friendSignature = friends.map((friend) => `${friend.friendId}:${friend.status}:${friend.incoming}`).join("|");
   const renameSignature = `${initialRenameCoupons}|${initialShowPetNames ? 1 : 0}`;
   const [petsSnap, setPetsSnap] = useState(petsSignature);
   const [ownedSnap, setOwnedSnap] = useState(ownedSignature);
+  const [roomSkinSnap, setRoomSkinSnap] = useState(roomSkinSignature);
+  const [coinsSnap, setCoinsSnap] = useState(coinsSignature);
   const [rewardSnap, setRewardSnap] = useState(rewardSignature);
   const [songSnap, setSongSnap] = useState(songSignature);
   const [friendSnap, setFriendSnap] = useState(friendSignature);
@@ -222,6 +232,16 @@ export function DashboardScreen({
     setOwnedColors(ownedColorIds);
     setOwnedHats(ownedHatIds);
     setOwnedClothes(ownedClothesIds);
+  }
+
+  if (roomSkinSignature !== roomSkinSnap) {
+    setRoomSkinSnap(roomSkinSignature);
+    setOwnedRoomSkins(initialOwnedRoomSkins);
+  }
+
+  if (coinsSignature !== coinsSnap) {
+    setCoinsSnap(coinsSignature);
+    setCoins(initialCoins);
   }
 
   if (renameSignature !== renameSnap) {
@@ -417,6 +437,7 @@ export function DashboardScreen({
       <SiteHeader
         displayName={displayName}
         studySeconds={totalStudySeconds}
+        coins={coins}
         streakCount={liveStreakCount}
         onOpenShop={() => showSection("shop")}
         onOpenInventory={() => showSection("inventory")}
@@ -464,6 +485,9 @@ export function DashboardScreen({
         ownedColorIds={ownedColors}
         ownedHatIds={ownedHats}
         ownedClothesIds={ownedClothes}
+        coins={coins}
+        ownedRoomSkins={ownedRoomSkins}
+        onCoinsChange={setCoins}
         renameCoupons={renameCoupons}
         showPetNames={showPetNames}
         onOpenInventory={() => showSection("inventory")}

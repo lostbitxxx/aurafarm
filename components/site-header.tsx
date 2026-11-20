@@ -10,6 +10,7 @@ import { HeaderMenu } from "./header-menu";
 export function SiteHeader({
   displayName,
   studySeconds,
+  coins,
   streakCount,
   onOpenShop,
   onOpenInventory,
@@ -22,6 +23,7 @@ export function SiteHeader({
 }: {
   displayName: string;
   studySeconds?: number;
+  coins?: number;
   streakCount?: number;
   onOpenShop?: () => void;
   onOpenInventory?: () => void;
@@ -35,6 +37,7 @@ export function SiteHeader({
   const streakLabel = streakPillLabel(streakCount);
   const tutorialCurrent = (target: string) => (tutorialTarget === target ? "true" : undefined);
   const studyLabel = typeof studySeconds === "number" ? formatDuration(studySeconds) : null;
+  const coinsLabel = typeof coins === "number" ? String(Math.max(0, Math.trunc(coins))) : null;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsId = useId();
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -140,6 +143,11 @@ export function SiteHeader({
         <span className="streak-pill" title={streakLabel}>
           <span aria-hidden="true">🔥</span> {streakLabel}
         </span>
+        {coinsLabel != null ? (
+          <span className="points-balance topbar-desktop">
+            Coins <span>{coinsLabel}</span>
+          </span>
+        ) : null}
         {studyLabel ? (
           <span className="points-balance topbar-desktop">
             Study <span>{studyLabel}</span>
@@ -203,6 +211,11 @@ export function SiteHeader({
               Pets
             </Link>
           )}
+          {coinsLabel != null ? (
+            <p className="points-balance topbar-drawer-study">
+              Coins <span>{coinsLabel}</span>
+            </p>
+          ) : null}
           {studyLabel ? (
             <p className="points-balance topbar-drawer-study">
               Study <span>{studyLabel}</span>
