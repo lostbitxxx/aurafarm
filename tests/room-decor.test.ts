@@ -69,7 +69,7 @@ test("default furniture footprints match the wander obstacles", () => {
   );
   assert.match(seats[0]?.description ?? "", /Seats 1 pet/);
   assert.match(seats[1]?.description ?? "", /Seats 2 pets/);
-  assert.match(seats[2]?.description ?? "", /Seats 4 pets/);
+  assert.match(seats[2]?.description ?? "", /Seats 3 pets/);
   assert.deepEqual(
     ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false).map((item) => item.label),
     ["Floor", "Wall", "Carpet", "Lamp", "Shelf", "Sofa", "Plant"],
