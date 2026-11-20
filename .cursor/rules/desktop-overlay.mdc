@@ -7,20 +7,23 @@ alwaysApply: false
 # Desktop overlay UX
 
 ## Shape and surface
-- One cream `#shell` that morphs — do not add a separate left cream card beside the EXP rail.
+- One cream `#shell` that morphs — do not add a separate left cream card beside the session rail.
 - Boxy rounded corners (`~14px`), not pill/`border-radius: 999px` on the shell.
-- EXP rail stays on the docked edge (right/left/top); content lives inside the same shell.
+- Session-time rail stays on the docked edge (right/left/top): green fill grows with study progress; no grey XP track or level badge.
 
 ## Open / close motion
 - Prefer function-driven stages over stepped frame `setBounds` loops.
-- Open: extend **down** (tall strip) then **out** (full width), then fade content in.
-- Close: fade content out, then reverse (narrow, then shorten).
+- Open (sides): content square matches closed strip length; outer width adds `barThickness` for the session rail, then fade content in.
+- Open (top): grow thickness to content square + rail, then widen along the edge.
+- Close: fade content out, then reverse (narrow; top also shortens).
 - Use native `setBounds(bounds, true)` on macOS when motion is allowed; respect reduced motion (instant bounds, no waits).
 - Keep `panelToggleSeq` so rapid toggles cancel stale timeouts.
 
 ## Pet
-- Anchor the pet beside the EXP rail (`barThickness`), not the far edge of the open panel window.
-- Pet stays click-through; handle-only dragging; no bottom dock target (left/right/top only).
+- Closed bar: anchor the pet beside the session rail (`barThickness`).
+- Open bar: hide the external pet window and show the pet inside the cream shell; restore the external pet when closing a distracted tab (walk animation).
+- Drag from the pet only (closed external sprite or open in-panel sprite); the session rail opens/closes the bar; no drag handle; no bottom dock target (left/right/top only).
+- Chat bubbles sit above the pet with a sharp triangle tip (fade in). Live distraction / close copy show for open or closed; open-bar-only idle lines stay in-panel.
 
 ## Do not
 - Invent XP or change session/score APIs for overlay polish.

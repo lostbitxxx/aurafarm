@@ -85,11 +85,11 @@ test("a study link shows the equipped pet for that session's user", () => {
   const panel = readFileSync(new URL("../desktop/panel.html", import.meta.url), "utf8");
   const panelScript = readFileSync(new URL("../desktop/panel.js", import.meta.url), "utf8");
   assert.match(panel, /id="finish"/);
-  assert.match(panel, /Finish focused session/);
+  assert.match(panel, /Finish session :\)/);
   assert.match(panel, /id="finish"[^>]*hidden/);
   assert.match(panelScript, /finishButton\.hidden = !state\.finishLabel/);
   assert.match(panelScript, /window\.pet\.finish\(\)/);
-  assert.match(panelScript, /state\.finishLabel \|\| "Finish focused session"/);
+  assert.match(panelScript, /state\.finishLabel \|\| "Finish session :\)"/);
   assert.doesNotMatch(desktop, /sprite\.html/);
   assert.match(desktop, /did-finish-load", publish/);
   assert.match(desktop, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);

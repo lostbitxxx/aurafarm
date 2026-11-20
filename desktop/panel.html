@@ -15,16 +15,14 @@
       body {
         --shell-cream: #f7f3e8;
         --shell-border: #9daa90;
-        --track-sage: #cfd6c6;
-        --fill-purple: #9d8db8;
-        --fill-band: rgba(55, 40, 78, 0.16);
+        --session-green: #5fbf4a;
         --shell-ink: #23392d;
-        --shell-radius: 14px;
+        --shell-radius: 10px;
         margin: 0;
         box-sizing: border-box;
         height: 100%;
         overflow: hidden;
-        padding: 6px;
+        padding: 3px;
         font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         font-size: 1rem;
         line-height: 1.35;
@@ -43,7 +41,8 @@
         border: 1.5px solid var(--shell-border);
         border-radius: var(--shell-radius);
         background: var(--shell-cream);
-        box-shadow: 2px 3px 0 rgba(35, 57, 45, 0.14);
+        /* No offset shadow — it read as a second bar stacked behind the rail. */
+        box-shadow: none;
         color: var(--shell-ink);
       }
       body.edge-left #shell,
@@ -65,66 +64,30 @@
         z-index: 1;
         display: flex;
         flex: none;
-        align-items: center;
+        align-items: stretch;
         box-sizing: border-box;
         margin: 0;
+        padding: 0;
         background: transparent;
         color: var(--shell-ink);
       }
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
         flex-direction: column;
-        width: 40px;
+        width: 25px;
+        max-width: 100%;
         height: 100%;
-        padding: 6px 0;
       }
       body.edge-top #dock-rail,
       body.edge-bottom #dock-rail {
         flex-direction: row;
         width: 100%;
-        height: 40px;
-        padding: 0 6px;
-      }
-      #dock-handle {
-        display: grid;
-        place-items: center;
-        flex: none;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        border-radius: 10px;
-        background: transparent;
-        color: var(--shell-ink);
-        cursor: grab;
-        -webkit-app-region: no-drag;
-      }
-      #dock-handle:active {
-        cursor: grabbing;
-      }
-      #dock-handle:focus-visible {
-        outline: 3px solid #8261a7;
-        outline-offset: -3px;
-      }
-      body.edge-left #dock-handle,
-      body.edge-right #dock-handle {
-        width: 100%;
-        height: 28px;
-      }
-      body.edge-top #dock-handle,
-      body.edge-bottom #dock-handle {
-        width: 28px;
-        height: 100%;
-      }
-      #dock-handle svg {
-        display: block;
-        width: 12px;
-        height: 12px;
-        pointer-events: none;
+        height: 25px;
+        max-height: 100%;
       }
       #panel-toggle {
         position: relative;
-        display: grid;
-        place-items: center;
+        display: block;
         flex: 1;
         min-width: 0;
         min-height: 0;
@@ -138,85 +101,39 @@
       body.edge-left #panel-toggle,
       body.edge-right #panel-toggle {
         width: 100%;
-        padding: 4px 0;
       }
       body.edge-top #panel-toggle,
       body.edge-bottom #panel-toggle {
         height: 100%;
-        padding: 0 4px;
       }
       #panel-toggle:focus-visible {
         outline: 3px solid #8261a7;
         outline-offset: -3px;
       }
-      #exp-track {
-        position: relative;
-        display: block;
-        overflow: hidden;
-        border-radius: 8px;
-        background: var(--track-sage);
-        pointer-events: none;
-      }
-      body.edge-left #exp-track,
-      body.edge-right #exp-track {
-        width: 10px;
-        height: 100%;
-      }
-      body.edge-top #exp-track,
-      body.edge-bottom #exp-track {
-        width: 100%;
-        height: 10px;
-      }
-      #exp-fill {
+      /* Study time fill: green grows from the bottom (left on top dock). Flush with the rail. */
+      #session-fill {
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
         height: 0%;
-        background-color: var(--fill-purple);
-        background-image: repeating-linear-gradient(
-          to top,
-          transparent 0 9px,
-          var(--fill-band) 9px 11px
-        );
+        background: var(--session-green);
+        border-radius: 0;
         pointer-events: none;
+        transition: height 0.85s linear, width 0.85s linear;
       }
-      body.edge-top #exp-fill,
-      body.edge-bottom #exp-fill {
+      body.edge-top #session-fill,
+      body.edge-bottom #session-fill {
         top: 0;
         bottom: 0;
         right: auto;
         width: 0%;
         height: auto;
-        background-image: repeating-linear-gradient(
-          to right,
-          transparent 0 9px,
-          var(--fill-band) 9px 11px
-        );
       }
-      #exp-level {
-        display: grid;
-        place-items: center;
-        flex: none;
-        min-width: 2.2em;
-        color: var(--shell-ink);
-        font: 650 10px/1.1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
-        letter-spacing: 0.02em;
-        pointer-events: none;
-        user-select: none;
-        white-space: nowrap;
-      }
-      body.edge-left #exp-level,
-      body.edge-right #exp-level {
-        width: 100%;
-        height: 24px;
-      }
-      body.edge-top #exp-level,
-      body.edge-bottom #exp-level {
-        width: auto;
-        min-width: 2.4em;
-        height: 100%;
-        padding: 0 4px;
+      @media (prefers-reduced-motion: reduce) {
+        #session-fill {
+          transition: none;
+        }
       }
       #panel-body {
         position: relative;
@@ -232,7 +149,7 @@
         border-radius: 0;
         background: transparent;
         box-shadow: none;
-        padding: 0.55rem 0.55rem 0.55rem 0.55rem;
+        padding: 1.75rem 0.55rem 0.55rem 0.55rem;
         overflow: auto;
         opacity: 0;
         visibility: hidden;
@@ -314,46 +231,145 @@
         outline: 3px solid #8261a7;
         outline-offset: 3px;
       }
-      #session-block {
-        display: grid;
-        gap: 0.45rem;
-        margin-top: 0;
+      #panel-stage {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+        padding: 0.15rem 0 0.35rem;
+      }
+      #panel-pet {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        width: min(100%, 9.5rem);
+        min-height: 8rem;
+        pointer-events: none;
+      }
+      body.is-open #panel-pet.is-visible {
+        display: flex;
+      }
+      .pet-chat {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 2.2rem;
+        max-width: 9.5rem;
+        margin: 0 0 0.45rem;
+        padding: 0.35rem 0.45rem;
+        border: 1.5px solid #9daa90;
+        border-radius: 4px;
+        background: #fffdf6;
+        color: #23392d;
+        font: 650 10px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+      .pet-chat::before,
+      .pet-chat::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+      .pet-chat::before {
+        bottom: -7px;
+        margin-left: -7px;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-top: 7px solid #9daa90;
+      }
+      .pet-chat::after {
+        bottom: -5px;
+        margin-left: -5.5px;
+        border-left: 5.5px solid transparent;
+        border-right: 5.5px solid transparent;
+        border-top: 5.5px solid #fffdf6;
+      }
+      .pet-chat.is-on {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .pet-chat:not(.is-on) {
+        /* Keep the reserved chat slot so the pet stays centered under it. */
+        visibility: hidden;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .pet-chat {
+          transition: none;
+        }
+      }
+      #panel-pet-stack {
+        position: relative;
+        display: block;
+        width: 90px;
+        height: 90px;
+        flex: none;
+        pointer-events: auto;
+        cursor: grab;
+      }
+      #panel-pet-stack.is-dragging {
+        cursor: grabbing;
+      }
+      #panel-pet-stack.is-study .pet-figure {
+        inset: 8% 17% 28% 17%;
+      }
+      #panel-pet .pet-figure {
+        position: absolute;
+        inset: 0;
+      }
+      #panel-pet .pet-layer {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
       }
       #panel-actions {
         display: grid;
         gap: 0.45rem;
+        flex: none;
         margin-top: auto;
         margin-bottom: 0;
       }
-      form,
+      #panel-actions #status,
+      #panel-actions #note {
+        font-size: 0.82rem;
+      }
+      #panel-actions #status {
+        min-width: 0;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        line-height: 1.25;
+      }
+      #panel-action-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.85fr) minmax(3.25rem, 0.85fr);
+        gap: 0.35rem;
+        align-items: stretch;
+      }
+      #panel-action-row:not(:has(#finish:not([hidden]))) {
+        grid-template-columns: 1fr;
+      }
+      #panel-body #panel-action-row #finish,
+      #panel-body #panel-action-row #quit {
+        width: 100%;
+        min-width: 0;
+      }
       p {
         margin: 0;
-      }
-      label {
-        display: grid;
-        gap: 0.25rem;
-        font-weight: 500;
-        color: #23392d;
-      }
-      input,
-      textarea {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid #9daa90;
-        border-radius: 12px;
-        padding: 0.45rem 0.6rem;
-        font: inherit;
-        color: #23392d;
-        background: #fffdf6;
-      }
-      textarea {
-        min-height: 2.25rem;
-        resize: none;
-      }
-      input:focus,
-      textarea:focus {
-        outline: 3px solid #8261a7;
-        outline-offset: 3px;
       }
       #panel-body button:not(#pet-toggle)[hidden] {
         display: none;
@@ -366,9 +382,6 @@
         padding: 0.5rem 0.85rem;
         font: 600 1rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         cursor: pointer;
-      }
-      #panel-body #session-token button {
-        margin-top: 0.7rem;
       }
       #panel-body button:not(#pet-toggle):hover {
         filter: brightness(0.97);
@@ -388,20 +401,7 @@
         color: #23392d;
         border: 1px solid #9daa90;
       }
-      #timer {
-        position: absolute;
-        top: 50%;
-        left: 0.45rem;
-        right: 0.45rem;
-        transform: translateY(-50%);
-        font-size: 2.9rem;
-        font-weight: 650;
-        line-height: 1.2;
-        text-align: center;
-        color: #23392d;
-      }
       #note,
-      #bubble,
       #status,
       #update-label {
         color: #596650;
@@ -415,47 +415,47 @@
   <body class="edge-right">
     <div id="shell">
       <div id="dock-rail">
-        <button id="dock-handle" type="button" aria-label="Move Aurafarm overlay" title="Move">
-          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M6 1.1v9.8M1.1 6h9.8M3.2 3.2 1.1 6l2.1 2.8M8.8 3.2 10.9 6 8.8 8.8M3.2 3.2 6 1.1l2.8 2.1M3.2 8.8 6 10.9l2.8-2.1"
-            />
-          </svg>
-        </button>
         <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
-          <span id="exp-track"><span id="exp-fill"></span></span>
+          <span id="session-fill" aria-hidden="true"></span>
         </button>
-        <span id="exp-level" aria-live="polite"></span>
       </div>
       <div id="panel-body">
         <div id="pet-switch-row">
           <span id="pet-switch-label">Show pet</span>
           <button id="pet-toggle" type="button" role="switch" aria-checked="true" aria-labelledby="pet-switch-label"><span id="pet-switch-knob"></span></button>
         </div>
-        <div id="session-block">
-          <form id="session-token">
-            <label>Session token <textarea name="token" autocomplete="off" required></textarea></label>
-            <button class="primary" type="submit">Use session token</button>
-          </form>
+        <div id="panel-stage">
+          <div id="panel-pet" aria-hidden="true">
+            <p id="panel-pet-chat" class="pet-chat"></p>
+            <div id="panel-pet-stack">
+              <img class="pet-layer is-floor" data-layer="floor" alt="" draggable="false" hidden />
+              <img class="pet-layer is-chair" data-layer="chair" alt="" draggable="false" hidden />
+              <span class="pet-figure">
+                <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
+                <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" />
+                <img class="pet-layer is-body" data-layer="body" alt="" draggable="false" />
+                <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" />
+              </span>
+              <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
+              <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />
+            </div>
+          </div>
+        </div>
+        <div id="panel-actions">
           <p id="update" hidden>
             <span id="update-label"></span>
             <button id="update-button" class="primary" type="button">Download update</button>
           </p>
-          <p id="timer" hidden></p>
-          <p id="status">Paste a session token.</p>
-          <p id="bubble" hidden></p>
-        </div>
-        <div id="panel-actions">
-          <button id="finish" class="finish" type="button" hidden>Finish focused session</button>
+          <p id="status">Let's study together!</p>
           <p id="note"></p>
-          <button id="quit" class="ghost" type="button">Quit</button>
+          <div id="panel-action-row">
+            <button id="finish" class="finish" type="button" hidden>Finish session :)</button>
+            <button id="quit" class="ghost" type="button">Quit</button>
+          </div>
         </div>
       </div>
     </div>
+    <script src="pet-art.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>

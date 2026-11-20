@@ -1,7 +1,7 @@
 /** Builds the score the pet submits when the user finishes a session. */
 
 function finishLabel(blockedCount) {
-  return blockedCount > 0 ? "Finish distracted session" : "Finish focused session";
+  return blockedCount > 0 ? "Finish session :|" : "Finish session :)";
 }
 
 function wholeSecondsSince(startedAt, nowMs) {

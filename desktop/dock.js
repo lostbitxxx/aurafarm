@@ -14,14 +14,17 @@ const DEFAULTS = {
   insetBottom: 0,
   petSize: 70,
   /** Outer capsule thickness (vertical width / horizontal height), including chrome pad. */
-  barThickness: 52,
-  /** Track length along the edge (exclusive of handle + level + pad). */
-  barLength: 168,
-  panelSpan: 320,
-  panelLength: 275,
-  handleSize: 28,
-  levelSize: 24,
-  chromePad: 6,
+  barThickness: 31,
+  /** Track length along the edge (exclusive of pad). Chrome length ≈ 238 (1.2× prior). */
+  barLength: 232,
+  /** Open content square side (matches collapsed chrome). Outer width adds barThickness. */
+  panelSpan: 238,
+  /** Top tall grows content thickness to panelSpan; open height adds barThickness for the rail. */
+  panelLength: 238,
+  /** Drag uses the whole shell; no dedicated handle or level chrome. */
+  handleSize: 0,
+  levelSize: 0,
+  chromePad: 3,
 };
 
 function isVerticalEdge(edge) {
@@ -78,7 +81,8 @@ function collapsedChromeLength(cfg) {
 /**
  * @param {string} edge
  * @param {boolean | "closed" | "tall" | "open"} open
- *   closed = strip only; tall = strip at open height (phase 1); open = full panel
+ *   closed = strip only; tall = side strip before widen (same height as closed);
+ *   open = content square (panelSpan) plus progress-bar thickness on the docked edge
  */
 function panelSize(edge, open, area, options = {}) {
   const cfg = resolveConfig(options);
@@ -86,42 +90,45 @@ function panelSize(edge, open, area, options = {}) {
   const maxW = Math.max(0, area.width - inset * 2);
   const maxH = Math.max(0, area.height - inset - insetBottom);
   const mode = open === true || open === "open" ? "open" : open === "tall" ? "tall" : "closed";
-  const openHeight = Math.min(Math.max(cfg.panelLength, collapsedChromeLength(cfg)), maxH);
+  const chrome = collapsedChromeLength(cfg);
+  const stripHeight = Math.min(chrome, maxH);
+  const contentSide = Math.min(Math.max(cfg.panelSpan, chrome), maxW, maxH);
+  const bar = cfg.barThickness;
   if (isVerticalEdge(edge)) {
     if (mode === "open") {
+      // Extra width matches the EXP rail so the cream body stays a content square.
       return {
-        width: Math.min(cfg.panelSpan + cfg.barThickness, maxW),
-        height: openHeight,
+        width: Math.min(contentSide + bar, maxW),
+        height: contentSide,
       };
     }
     if (mode === "tall") {
       return {
-        width: Math.min(cfg.barThickness, maxW),
-        height: openHeight,
+        width: Math.min(bar, maxW),
+        height: stripHeight,
       };
     }
     return {
-      width: Math.min(cfg.barThickness, maxW),
-      height: Math.min(collapsedChromeLength(cfg), maxH),
+      width: Math.min(bar, maxW),
+      height: stripHeight,
     };
   }
-  const openWidth = Math.min(Math.max(cfg.panelSpan, collapsedChromeLength(cfg)), maxW);
   if (mode === "open") {
     return {
-      width: openWidth,
-      height: Math.min(cfg.panelLength + cfg.barThickness, maxH),
+      width: contentSide,
+      height: Math.min(contentSide + bar, maxH),
     };
   }
   if (mode === "tall") {
-    // For top dock, "down" grows thickness toward content before widening along the edge.
+    // For top dock, "down" grows thickness toward the content square before widening.
     return {
-      width: Math.min(collapsedChromeLength(cfg), maxW),
-      height: Math.min(cfg.panelLength + cfg.barThickness, maxH),
+      width: Math.min(chrome, maxW),
+      height: Math.min(contentSide + bar, maxH),
     };
   }
   return {
-    width: Math.min(collapsedChromeLength(cfg), maxW),
-    height: Math.min(cfg.barThickness, maxH),
+    width: Math.min(chrome, maxW),
+    height: Math.min(bar, maxH),
   };
 }
 
