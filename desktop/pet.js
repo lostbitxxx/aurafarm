@@ -67,6 +67,8 @@ function clearDockDrag() {
   activePointerId = null;
   dockDragging = false;
   petStack.classList.remove("is-dragging");
+  document.documentElement.style.cursor = "";
+  document.body.style.cursor = "";
   if (pointerId !== null && petStack.hasPointerCapture?.(pointerId)) {
     try {
       petStack.releasePointerCapture(pointerId);
@@ -78,11 +80,17 @@ function clearDockDrag() {
 }
 
 petStack.addEventListener("mouseenter", () => {
+  // Accept hits so CSS grab cursor paints over the transparent overlay.
   setPetMouseIgnore(false);
+  document.documentElement.style.cursor = "grab";
+  document.body.style.cursor = "grab";
 });
 
 petStack.addEventListener("mouseleave", () => {
-  if (!dockDragging) setPetMouseIgnore(true);
+  if (dockDragging) return;
+  document.documentElement.style.cursor = "";
+  document.body.style.cursor = "";
+  setPetMouseIgnore(true);
 });
 
 petStack.addEventListener("pointerdown", (event) => {
@@ -91,6 +99,8 @@ petStack.addEventListener("pointerdown", (event) => {
   dockDragging = true;
   activePointerId = event.pointerId;
   petStack.classList.add("is-dragging");
+  document.documentElement.style.cursor = "grabbing";
+  document.body.style.cursor = "grabbing";
   petStack.setPointerCapture?.(event.pointerId);
   const point = screenPoint(event);
   window.pet.dockDragStart(point.x, point.y);

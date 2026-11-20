@@ -279,6 +279,12 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /id="panel-body"/);
   assert.doesNotMatch(panel, /id="timer-fill"/);
   assert.doesNotMatch(panel, /id="panel-arrow"/);
+  assert.match(panel, /id="panel-chevron"/);
+  assert.match(panel, /body\.edge-right #panel-chevron svg/);
+  assert.match(panel, /body\.edge-right\.is-open #panel-chevron svg/);
+  assert.match(panel, /#panel-pet-stack:hover/);
+  assert.match(petPage, /#pet-stack:hover/);
+  assert.match(petScript, /document\.documentElement\.style\.cursor = "grab"/);
   assert.doesNotMatch(panel, /id="pet-lane"/);
   assert.doesNotMatch(script, /clampPetX|startPetWalk|pet-lane/);
   assert.doesNotMatch(panel, /id="pet-switch-row"|id="pet-toggle"|Show pet/);

@@ -92,7 +92,14 @@
         cursor: grab;
         pointer-events: auto;
       }
-      #pet-stack.is-dragging {
+      #pet-stack:hover,
+      #pet-stack .pet-figure,
+      #pet-stack .pet-layer {
+        cursor: grab;
+      }
+      #pet-stack.is-dragging,
+      #pet-stack.is-dragging .pet-figure,
+      #pet-stack.is-dragging .pet-layer {
         cursor: grabbing;
       }
       #pet-stack.is-study .pet-figure {
@@ -111,6 +118,7 @@
         border: 0;
         outline: none;
         image-rendering: pixelated;
+        cursor: grab;
       }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       .pet-layer:not([src]),

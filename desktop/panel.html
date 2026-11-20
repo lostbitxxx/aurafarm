@@ -110,6 +110,53 @@
         outline: 3px solid #8261a7;
         outline-offset: -3px;
       }
+      /* Expand / collapse hint: centered on the progress rail; flips when open. */
+      #panel-chevron {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        color: var(--shell-ink);
+        opacity: 0.62;
+      }
+      #panel-chevron svg {
+        display: block;
+        width: 11px;
+        height: 11px;
+        transition: transform 180ms ease;
+      }
+      /* Closed: point into the content (expand). Open: opposite (collapse). */
+      body.edge-right #panel-chevron svg {
+        transform: rotate(180deg);
+      }
+      body.edge-right.is-open #panel-chevron svg {
+        transform: rotate(0deg);
+      }
+      body.edge-left #panel-chevron svg {
+        transform: rotate(0deg);
+      }
+      body.edge-left.is-open #panel-chevron svg {
+        transform: rotate(180deg);
+      }
+      body.edge-top #panel-chevron svg {
+        transform: rotate(90deg);
+      }
+      body.edge-top.is-open #panel-chevron svg {
+        transform: rotate(-90deg);
+      }
+      body.edge-bottom #panel-chevron svg {
+        transform: rotate(-90deg);
+      }
+      body.edge-bottom.is-open #panel-chevron svg {
+        transform: rotate(90deg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #panel-chevron svg {
+          transition: none;
+        }
+      }
       /* Study time fill: green grows from the bottom (left on top dock). Flush with the rail. */
       #session-fill {
         position: absolute;
@@ -259,7 +306,14 @@
         pointer-events: auto;
         cursor: grab;
       }
-      #panel-pet-stack.is-dragging {
+      #panel-pet-stack:hover,
+      #panel-pet-stack .pet-figure,
+      #panel-pet-stack .pet-layer {
+        cursor: grab;
+      }
+      #panel-pet-stack.is-dragging,
+      #panel-pet-stack.is-dragging .pet-figure,
+      #panel-pet-stack.is-dragging .pet-layer {
         cursor: grabbing;
       }
       #panel-pet-stack.is-study .pet-figure {
@@ -278,6 +332,7 @@
         border: 0;
         outline: none;
         image-rendering: pixelated;
+        cursor: grab;
       }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       #panel-pet .pet-layer:not([src]),
@@ -365,6 +420,18 @@
       <div id="dock-rail">
         <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
           <span id="session-fill" aria-hidden="true"></span>
+          <span id="panel-chevron" aria-hidden="true">
+            <svg viewBox="0 0 12 12" focusable="false">
+              <path
+                d="M4.25 2.25 8.5 6 4.25 9.75"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
         </button>
       </div>
       <div id="panel-body">
