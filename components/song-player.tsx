@@ -31,7 +31,8 @@ const CONFETTI = [
   { left: "78%", delay: "0.12s", duration: "1.8s", color: "#c6ef4a", rotate: "-12deg" },
 ];
 
-const DEFAULT_VOLUME = 0.7;
+const MAX_VOLUME = 0.2;
+const DEFAULT_VOLUME = MAX_VOLUME * 0.7;
 const MOBILE_PLAYBACK = "(max-width: 1120px)";
 
 function songStorageKey(userId: string) {
@@ -40,7 +41,7 @@ function songStorageKey(userId: string) {
 
 function clampVolume(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_VOLUME;
-  return Math.min(1, Math.max(0, value));
+  return Math.min(MAX_VOLUME, Math.max(0, value));
 }
 
 function readSavedSong(userId: string) {
@@ -272,7 +273,7 @@ export function DeskSong({
   const progressMax = duration > 0 ? duration : 0;
   const progressValue = progressMax > 0 ? Math.min(elapsed, progressMax) : 0;
   const progressPercent = progressMax > 0 ? (progressValue / progressMax) * 100 : 0;
-  const volumePercent = volume * 100;
+  const volumePercent = MAX_VOLUME > 0 ? (volume / MAX_VOLUME) * 100 : 0;
 
   return (
     <>
@@ -367,7 +368,7 @@ export function DeskSong({
                 type="range"
                 className="song-progress-range song-volume-range"
                 min={0}
-                max={1}
+                max={MAX_VOLUME}
                 step={0.01}
                 value={volume}
                 aria-label="Volume"
