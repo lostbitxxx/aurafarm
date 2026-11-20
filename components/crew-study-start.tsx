@@ -192,8 +192,18 @@ export function CrewStudyStart({
                 .
               </p>
             )}
-            <div className="tracker-cards" role="group" aria-label="Session tracker">
-              <div className={useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
+            <div
+              className={desktopLink ? "tracker-cards is-desktop-ready" : "tracker-cards"}
+              role="group"
+              aria-label="Session tracker"
+            >
+              <div
+                className={
+                  useDesktopPet
+                    ? "tracker-option tracker-option-desktop is-selected"
+                    : "tracker-option tracker-option-desktop"
+                }
+              >
                 <button
                   type="button"
                   className="tracker-option-pick"
@@ -230,12 +240,20 @@ export function CrewStudyStart({
                   </a>
                 ) : null}
               </div>
-              <div className={!useDesktopPet ? "tracker-option is-selected" : "tracker-option"}>
+              <div
+                className={
+                  !useDesktopPet
+                    ? "tracker-option tracker-option-website is-selected"
+                    : "tracker-option tracker-option-website"
+                }
+                aria-hidden={Boolean(desktopLink)}
+              >
                 <button
                   type="button"
                   className="tracker-option-pick"
                   aria-pressed={!useDesktopPet}
                   disabled={pending || Boolean(desktopLink)}
+                  tabIndex={desktopLink ? -1 : undefined}
                   onClick={() => setTrackerChoice(false)}
                 >
                   <span className="tracker-option-name">Website timer</span>

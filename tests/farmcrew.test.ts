@@ -232,6 +232,9 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(start, /startStudySession/);
   assert.match(start, /How long will you study\?/);
   assert.match(start, /FARM AURA/);
+  assert.match(start, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
+  assert.match(start, /tracker-option-desktop/);
+  assert.match(start, /tracker-option-website/);
   const crewDesk = readFileSync(new URL("../lib/farm-crew-desk.ts", import.meta.url), "utf8");
   assert.match(crewDesk, /preferred_session_minutes/);
   assert.match(crewDesk, /study_sessions/);

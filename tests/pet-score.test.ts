@@ -189,6 +189,17 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /TrackerDemo kind="website"/);
   assert.match(desk, /First time aurafarming\? Download here!/);
   assert.match(desk, /desktopLink \? \([\s\S]*href=\{desktopLink\}[\s\S]*Open Aurafarm/);
+  assert.match(desk, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
+  assert.match(desk, /tracker-option-desktop/);
+  assert.match(desk, /tracker-option-website/);
+  assert.match(desk, /aria-hidden=\{Boolean\(desktopLink\)\}/);
+  const deskCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(deskCss, /\.tracker-cards\.is-desktop-ready \{[\s\S]*gap: 0;/);
+  assert.match(
+    deskCss,
+    /\.tracker-cards\.is-desktop-ready \.tracker-option-website \{[\s\S]*opacity: 0;[\s\S]*translateX\(1\.75rem\)/,
+  );
+  assert.match(deskCss, /\.tracker-cards\.is-desktop-ready \.tracker-option-desktop \{[\s\S]*max-width: 18\.5rem;/);
   assert.match(desk, /shownSession\?\.useDesktopPet && launchUrl \? \([\s\S]*href=\{launchUrl\}[\s\S]*Open Aurafarm/);
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
