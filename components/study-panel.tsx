@@ -500,11 +500,7 @@ export function StudyPanel({
                     End session early
                   </button>
                 ) : null}
-                {shownSession.useDesktopPet && launchUrl ? (
-                  <div className="scene-actions is-start">
-                    <DesktopLaunchHelp href={launchUrl} />
-                  </div>
-                ) : null}
+                {shownSession.useDesktopPet && launchUrl ? <DesktopLaunchHelp href={launchUrl} /> : null}
               </div>
             ) : (
               <div className="below-room desk-session">

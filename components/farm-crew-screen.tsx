@@ -267,11 +267,7 @@ function CrewSessionTimer({
         >
           End session early
         </button>
-        {launchUrl ? (
-          <div className="scene-actions is-start">
-            <DesktopLaunchHelp href={launchUrl} />
-          </div>
-        ) : null}
+        {launchUrl ? <DesktopLaunchHelp href={launchUrl} /> : null}
       </div>
       {earlyOpen ? (
         <div className="tracker-pop" role="presentation" onClick={() => (pending ? null : setEarlyOpen(false))}>
