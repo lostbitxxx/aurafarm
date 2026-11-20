@@ -13,6 +13,7 @@ import { CrewAdminDialog } from "./crew-admin-dialog";
 import { HeaderMenu } from "./header-menu";
 import { CrewRoom } from "./crew-room";
 import { CrewStudyStart } from "./crew-study-start";
+import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { FarmDialog } from "./farm-dialog";
 import { LeaderboardPanel } from "./leaderboard-dialog";
 import { PixelPetArt } from "./pixel-pet";
@@ -268,9 +269,7 @@ function CrewSessionTimer({
         </button>
         {launchUrl ? (
           <div className="scene-actions is-start">
-            <a className="button button-start" href={launchUrl}>
-              Open Aurafarm
-            </a>
+            <DesktopLaunchHelp href={launchUrl} />
           </div>
         ) : null}
       </div>

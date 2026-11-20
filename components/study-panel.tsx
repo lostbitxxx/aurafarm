@@ -33,6 +33,7 @@ import {
 } from "@/lib/study";
 import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
 import { StudyClock } from "./study-clock";
+import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { LivingRoom } from "./living-room";
 import { PetDetailDialog } from "./pet-detail-dialog";
 import { TrackerDemo } from "./study-tracker-demo";
@@ -501,9 +502,7 @@ export function StudyPanel({
                 ) : null}
                 {shownSession.useDesktopPet && launchUrl ? (
                   <div className="scene-actions is-start">
-                    <a className="button button-start" href={launchUrl}>
-                      Open Aurafarm
-                    </a>
+                    <DesktopLaunchHelp href={launchUrl} />
                   </div>
                 ) : null}
               </div>

@@ -16,6 +16,7 @@ import {
   type ActiveStudySession,
 } from "@/lib/study";
 import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
+import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { TrackerDemo } from "./study-tracker-demo";
 
 function preferredStudySeconds(minutes: number | null) {
@@ -97,9 +98,7 @@ export function CrewStudyStart({
         </div>
         <div className="scene-actions is-start">
           {desktopLink ? (
-            <a className="button button-start" href={desktopLink}>
-              Open Aurafarm
-            </a>
+            <DesktopLaunchHelp href={desktopLink} />
           ) : (
             <button type="button" className="button button-start" disabled={pending} onClick={() => setStartOpen(true)}>
               Start studying →

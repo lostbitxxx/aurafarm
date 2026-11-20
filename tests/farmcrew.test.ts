@@ -227,6 +227,7 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /Website timer is tracking this session/);
   assert.match(screen, /room-center/);
   assert.match(screen, /desk-session-actions/);
+  assert.match(screen, /DesktopLaunchHelp href=\{launchUrl\}/);
   assert.match(screen, /useDesktopPet \? null : onFinished/);
   assert.match(screen, /End session early/);
   assert.match(screen, /endStudyEarly/);
@@ -237,6 +238,7 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(start, /startStudySession/);
   assert.match(start, /How long will you study\?/);
   assert.match(start, /FARM AURA/);
+  assert.match(start, /DesktopLaunchHelp href=\{desktopLink\}/);
   assert.match(start, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
   assert.match(start, /tracker-option-desktop/);
   assert.match(start, /tracker-option-website/);
