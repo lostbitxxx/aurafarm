@@ -472,9 +472,43 @@ export function StudyPanel({
                 : "Website timer is tracking this session."
               : null
           }
+          headerCenter={
+            shownSession && !checkingSession ? (
+              <StudyClock
+                session={shownSession}
+                rushed={rushed}
+                onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
+              />
+            ) : null
+          }
           headerAside={
-            <div className="below-room desk-session">
-              {shownSession ? null : (
+            shownSession ? (
+              <div className="desk-session-actions">
+                {error ? (
+                  <p className="form-error" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+                {!checkingSession ? (
+                  <button
+                    type="button"
+                    className="button button-ghost button-end-early"
+                    disabled={pending}
+                    onClick={onOpenEarly}
+                  >
+                    End session early
+                  </button>
+                ) : null}
+                {shownSession.useDesktopPet && launchUrl ? (
+                  <div className="scene-actions is-start">
+                    <a className="button button-start" href={launchUrl}>
+                      Open Aurafarm
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="below-room desk-session">
                 <div className="session-copy">
                   <p className="pet-name">
                     {checkingSession ? "Checking this session" : "Ready for a little focus?"}
@@ -489,40 +523,6 @@ export function StudyPanel({
                     </p>
                   ) : null}
                 </div>
-              )}
-              {shownSession && !checkingSession ? (
-                <StudyClock
-                  session={shownSession}
-                  rushed={rushed}
-                  onFinished={shownSession.useDesktopPet ? null : () => finishSession("")}
-                />
-              ) : null}
-              {shownSession ? (
-                <div className="desk-session-actions">
-                  {error ? (
-                    <p className="form-error" role="alert">
-                      {error}
-                    </p>
-                  ) : null}
-                  {!checkingSession ? (
-                    <button
-                      type="button"
-                      className="button button-ghost button-end-early"
-                      disabled={pending}
-                      onClick={onOpenEarly}
-                    >
-                      End session early
-                    </button>
-                  ) : null}
-                  {shownSession.useDesktopPet && launchUrl ? (
-                    <div className="scene-actions is-start">
-                      <a className="button button-start" href={launchUrl}>
-                        Open Aurafarm
-                      </a>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
                 <div className="scene-actions is-start">
                   <button
                     type="button"
@@ -538,8 +538,8 @@ export function StudyPanel({
                     Start studying →
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )
           }
         />
       </section>

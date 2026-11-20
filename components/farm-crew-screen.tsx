@@ -242,37 +242,37 @@ function CrewSessionTimer({
 
   return (
     <>
-      <div className="below-room crew-timer">
+      <div className="room-center">
         <StudyClock
           session={session}
           rushed={false}
           onFinished={session.useDesktopPet ? null : onFinished}
         />
-        <div className="desk-session-actions">
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <button
-            type="button"
-            className="button button-ghost button-end-early"
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              setEarlyOpen(true);
-            }}
-          >
-            End session early
-          </button>
-          {launchUrl ? (
-            <div className="scene-actions is-start">
-              <a className="button button-start" href={launchUrl}>
-                Open Aurafarm
-              </a>
-            </div>
-          ) : null}
-        </div>
+      </div>
+      <div className="desk-session-actions">
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="button button-ghost button-end-early"
+          disabled={pending}
+          onClick={() => {
+            setError(null);
+            setEarlyOpen(true);
+          }}
+        >
+          End session early
+        </button>
+        {launchUrl ? (
+          <div className="scene-actions is-start">
+            <a className="button button-start" href={launchUrl}>
+              Open Aurafarm
+            </a>
+          </div>
+        ) : null}
       </div>
       {earlyOpen ? (
         <div className="tracker-pop" role="presentation" onClick={() => (pending ? null : setEarlyOpen(false))}>

@@ -546,6 +546,7 @@ export function LivingRoom({
   dailyGoalMinutes = null,
   isStudyDay = true,
   headerAside = null,
+  headerCenter = null,
   headTitle = null,
   headSubtitle = null,
 }: {
@@ -565,6 +566,8 @@ export function LivingRoom({
   dailyGoalMinutes?: number | null;
   isStudyDay?: boolean;
   headerAside?: ReactNode;
+  /** Centered header slot (study countdown while a session is active). */
+  headerCenter?: ReactNode;
   /** Replaces the living-room title while a study session is active. */
   headTitle?: string | null;
   headSubtitle?: string | null;
@@ -699,6 +702,7 @@ export function LivingRoom({
           <h2 className="room-title">{roomTitle}</h2>
           <p className="room-subtitle">{roomSubtitle}</p>
         </div>
+        {headerCenter ? <div className="room-center">{headerCenter}</div> : null}
         {headerAside}
       </div>
       <div className="living-room-stage">

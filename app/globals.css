@@ -2913,38 +2913,7 @@ button.dialog-row {
   min-width: 0;
 }
 
-.room-top.is-studying {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 1rem;
-}
-
-.room-top.is-studying .room-head {
-  grid-column: 1;
-  text-align: left;
-}
-
-.room-top.is-studying .desk-session {
-  display: contents;
-}
-
-.room-top.is-studying .study-clock {
-  grid-column: 2;
-  justify-self: center;
-  margin: 0;
-  font-size: clamp(2.8rem, 4.5vw, 3.5rem);
-}
-
-.room-top.is-studying .desk-session-actions {
-  grid-column: 3;
-  justify-self: end;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 1.15rem;
-}
-
+.room-top.is-studying,
 .crew-top.is-studying {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -2952,23 +2921,28 @@ button.dialog-row {
   gap: 1rem;
 }
 
+.room-top.is-studying .room-head,
 .crew-top.is-studying .crew-room-head {
   grid-column: 1;
+  justify-self: start;
   justify-content: flex-start;
   text-align: left;
 }
 
-.crew-top.is-studying .crew-timer {
-  display: contents;
-}
-
-.crew-top.is-studying .study-clock {
+.room-top.is-studying .room-center,
+.crew-top.is-studying .room-center {
   grid-column: 2;
   justify-self: center;
+  text-align: center;
+}
+
+.room-top.is-studying .room-center .study-clock,
+.crew-top.is-studying .room-center .study-clock {
   margin: 0;
   font-size: clamp(2.8rem, 4.5vw, 3.5rem);
 }
 
+.room-top.is-studying .desk-session-actions,
 .crew-top.is-studying .desk-session-actions {
   grid-column: 3;
   justify-self: end;
@@ -5362,58 +5336,32 @@ button.dialog-row {
   }
   .below-room { flex-direction: column; align-items: flex-start; }
   .crew-top { flex-direction: column; align-items: flex-start; }
-  .crew-top.is-studying {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .crew-top.is-studying .crew-room-head {
-    grid-column: auto;
-    text-align: left;
-  }
-  .crew-top.is-studying .crew-timer {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    grid-column: auto;
-  }
-  .crew-top.is-studying .study-clock {
-    grid-column: auto;
-    justify-self: auto;
-  }
-  .crew-top.is-studying .desk-session-actions {
-    grid-column: auto;
-    justify-self: auto;
-  }
-  .crew-top .below-room { text-align: left; justify-content: flex-start; }
-  .crew-timer { display: flex; flex-direction: row; align-items: center; }
-  .room-top { flex-direction: column; align-items: flex-start; }
+  .crew-top.is-studying,
   .room-top.is-studying {
     display: flex;
     flex-direction: column;
     align-items: stretch;
   }
+  .crew-top.is-studying .crew-room-head,
   .room-top.is-studying .room-head {
     grid-column: auto;
     text-align: left;
   }
-  .room-top.is-studying .desk-session {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .room-top.is-studying .study-clock {
-    grid-column: auto;
-    justify-self: auto;
-  }
+  .crew-top.is-studying .room-center,
+  .room-top.is-studying .room-center,
+  .crew-top.is-studying .desk-session-actions,
   .room-top.is-studying .desk-session-actions {
     grid-column: auto;
     justify-self: auto;
   }
+  .crew-top.is-studying .room-center,
+  .room-top.is-studying .room-center {
+    order: -1;
+    align-self: center;
+  }
+  .crew-top .below-room { text-align: left; justify-content: flex-start; }
+  .crew-timer { display: flex; flex-direction: row; align-items: center; }
+  .room-top { flex-direction: column; align-items: flex-start; }
   .room-top .below-room { text-align: left; justify-content: flex-start; }
   .room-top .desk-session { flex-direction: row; align-items: center; }
   .living-room {

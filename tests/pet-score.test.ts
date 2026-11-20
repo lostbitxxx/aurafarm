@@ -209,20 +209,22 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /onConfirmTracker/);
   assert.match(desk, /headTitle=\{shownSession \? "Studying with you" : null\}/);
   assert.match(desk, /Desktop pet is tracking this session\.[\s\S]*Website timer is tracking this session\./);
+  assert.match(desk, /headerCenter=\{/);
   assert.match(desk, /desk-session-actions/);
   assert.match(
     desk,
-    /shownSession && !checkingSession \? \([\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
+    /headerCenter=\{[\s\S]*StudyClock[\s\S]*onFinished=\{shownSession\.useDesktopPet \? null : \(\) => finishSession\(""\)\}/,
   );
   assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
   const living = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   assert.match(living, /headTitle \?\? "Your little living room"/);
   assert.match(living, /headSubtitle \?\? "Your favorite companions, at home\."/);
   assert.match(living, /studyingHead \? "room-top is-studying" : "room-top"/);
-  assert.match(deskCss, /\.room-top\.is-studying \{[\s\S]*grid-template-columns:/);
-  assert.match(deskCss, /\.room-top\.is-studying \.room-head \{[\s\S]*grid-column: 1;[\s\S]*text-align: left;/);
-  assert.match(deskCss, /\.room-top\.is-studying \.study-clock \{[\s\S]*grid-column: 2;[\s\S]*justify-self: center;/);
-  assert.match(deskCss, /\.room-top\.is-studying \.desk-session-actions \{[\s\S]*grid-column: 3;/);
+  assert.match(living, /headerCenter \? <div className="room-center">\{headerCenter\}<\/div>/);
+  assert.match(deskCss, /\.room-top\.is-studying,[\s\S]*grid-template-columns:/);
+  assert.match(deskCss, /\.room-top\.is-studying \.room-head,[\s\S]*grid-column: 1;[\s\S]*text-align: left;/);
+  assert.match(deskCss, /\.room-top\.is-studying \.room-center,[\s\S]*grid-column: 2;[\s\S]*justify-self: center;/);
+  assert.match(deskCss, /\.room-top\.is-studying \.desk-session-actions,[\s\S]*grid-column: 3;/);
   assert.match(desk, /id="dev-title"[\s\S]*type="password"[\s\S]*Finish now/);
   assert.match(desk, /End session early/);
   assert.match(desk, /id="early-title"[\s\S]*bigger bonus[\s\S]*motivation-quote[\s\S]*Keep studying/);
