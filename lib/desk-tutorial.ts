@@ -5,7 +5,8 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "shop",
     title: "Shop",
-    body: "Click Shop to see what is inside.",
+    body: "Click Shop to buy pets and items.",
+    openBody: "Buy pets and items with your study progress here.",
   },
   {
     id: "collection",
@@ -13,7 +14,8 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "collection",
     title: "Collection",
-    body: "Click the clothes drawer on the storage rack to open Collection.",
+    body: "Click the clothes drawer on the rack to open your Collection.",
+    openBody: "Browse and wear colors, hats, and clothes you unlock here.",
   },
   {
     id: "pets",
@@ -21,7 +23,8 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "inventory",
     title: "Pets",
-    body: "Click Pets to see what is inside.",
+    body: "Click Pets to view, equip, and customize your pets.",
+    openBody: "See your pets, equip one for the desk, and open pet details here.",
   },
   {
     id: "achievements",
@@ -29,7 +32,8 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "achievements",
     title: "Achievements",
-    body: "Click the trophy on the storage rack to open Achievements.",
+    body: "Click the trophy on the rack to see your Achievements.",
+    openBody: "Track milestones and badges you've earned here.",
   },
   {
     id: "song",
@@ -37,7 +41,8 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "song",
     title: "Song",
-    body: "Click the gramophone on the storage rack to open Song.",
+    body: "Click the gramophone on the rack to play Song.",
+    openBody: "Play unlocked study songs and control volume here.",
   },
   {
     id: "social",
@@ -45,14 +50,22 @@ export const DESK_TUTORIAL_STEPS = [
     kind: "dialog",
     section: "social",
     title: "Blackboard",
-    body: "Click the blackboard to open it.",
+    body: "Click the blackboard to open friends, crews, and the leaderboard.",
+    openBody: "Manage friends, farm crews, and the leaderboard here.",
   },
   {
     id: "start",
     target: "start",
     kind: "start",
     title: "Start studying",
-    body: "Start a study session when you want a little focus.",
+    body: "Click Start studying to begin a focus session.",
+  },
+  {
+    id: "replay",
+    target: "settings",
+    kind: "settings",
+    title: "Replay later",
+    body: "Click Settings anytime, then choose Replay tutorial to see this guide again.",
   },
 ] as const;
 
