@@ -77,10 +77,8 @@ const PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS.barLength;
 const PET_SIZE = DOCK_DEFAULTS.petSize;
 /** Extra window height above the sprite for the chat bubble. */
 const PET_CHAT_PAD = 64;
-/** Pet window width so multi-line chat fits; aligned away from the rail. */
+/** Pet window width so multi-line chat fits; sprite stays centered. */
 const PET_CHAT_WIDTH = 168;
-/** Gap between the pet sprite and the session rail so chat never covers the bar. */
-const PET_CHAT_GAP = 8;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
@@ -270,9 +268,6 @@ function dockOptions() {
     handleSize: DOCK_DEFAULTS.handleSize,
     levelSize: 0,
     chromePad: DOCK_DEFAULTS.chromePad,
-    chatWidth: PET_CHAT_WIDTH,
-    chatPad: PET_CHAT_PAD,
-    chatGap: PET_CHAT_GAP,
   };
 }
 
