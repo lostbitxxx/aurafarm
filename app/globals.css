@@ -1473,12 +1473,19 @@ a.tracker-download { color: #6d7a62; }
   container-type: size;
 }
 
-.crew-desk .living-room {
+.crew-desk .living-room-shell {
   flex: none;
   width: min(100%, calc(100cqh * 2 / 1));
   max-width: 100%;
-  height: auto;
   max-height: 100%;
+}
+
+.crew-desk .living-room {
+  flex: none;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100% - 2.75rem);
   aspect-ratio: 2 / 1;
 }
 
@@ -1519,12 +1526,19 @@ a.tracker-download { color: #6d7a62; }
   container-type: size;
 }
 
-.dashboard-desk .living-room {
+.dashboard-desk .living-room-shell {
   flex: none;
   width: min(100%, calc(100cqh * 2 / 1));
   max-width: 100%;
-  height: auto;
   max-height: 100%;
+}
+
+.dashboard-desk .living-room {
+  flex: none;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100% - 2.75rem);
   aspect-ratio: 2 / 1;
 }
 
@@ -5596,6 +5610,14 @@ button.dialog-row {
   border: 0;
 }
 
+.living-room-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  width: 100%;
+}
+
 .room-side-dock {
   position: absolute;
   top: 0.4rem;
@@ -5609,11 +5631,6 @@ button.dialog-row {
   pointer-events: none;
 }
 
-.room-side-spacer {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
 .room-side-dock .room-cylinder {
   position: relative;
   top: auto;
@@ -5622,7 +5639,7 @@ button.dialog-row {
   min-height: 0;
   width: 100%;
   /* The room-wide scale is for a capsule pinned to the corner. In the dock it
-     paints past the layout box and covers the edit button. */
+     paints past the layout box; keep transform off so it fits the rail. */
   transform: none;
   z-index: 1;
 }
@@ -5631,6 +5648,16 @@ button.dialog-row {
   flex: 1 1 auto;
   height: auto;
   min-height: 12rem;
+}
+
+.room-tool-rail {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
+  pointer-events: none;
 }
 
 .room-tool-button {
@@ -5647,13 +5674,7 @@ button.dialog-row {
   color: #fff;
   box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.25);
   cursor: pointer;
-}
-
-.room-tool-button.is-bottom {
-  position: relative;
-  z-index: 2;
   flex: none;
-  margin-top: auto;
 }
 
 .room-tool-button:hover,
