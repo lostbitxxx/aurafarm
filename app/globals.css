@@ -1513,8 +1513,9 @@ a.tracker-download { color: #6d7a62; }
   min-height: 0;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 0.35rem;
   container-type: size;
 }
 
@@ -2959,6 +2960,7 @@ button.dialog-row {
   justify-content: flex-end;
   gap: 1.15rem;
   margin-top: 0;
+  margin-left: auto;
   text-align: right;
 }
 
@@ -2977,6 +2979,7 @@ button.dialog-row {
 
 .room-top .desk-session .scene-actions.is-start {
   align-self: center;
+  order: 1;
 }
 
 .room-top .desk-session .button-end-early {
@@ -5361,9 +5364,17 @@ button.dialog-row {
   }
   .crew-top .below-room { text-align: left; justify-content: flex-start; }
   .crew-timer { display: flex; flex-direction: row; align-items: center; }
-  .room-top { flex-direction: column; align-items: flex-start; }
+  .room-top { flex-direction: column; align-items: stretch; }
   .room-top .below-room { text-align: left; justify-content: flex-start; }
-  .room-top .desk-session { flex-direction: row; align-items: center; }
+  .room-top .desk-session {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+  .room-top .desk-session .scene-actions.is-start {
+    order: 1;
+  }
   .living-room {
     height: auto;
     aspect-ratio: 2 / 1;
