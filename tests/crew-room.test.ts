@@ -7,23 +7,27 @@ import {
   CREW_OBSTACLES,
   CREW_PEDESTAL,
   CREW_SEATS,
+  CREW_SEATS_PATH,
   CREW_START_SPOTS,
-  CREW_TABLE_PATH,
   crewSpawnSpot,
   crewStartSpotsAreOpen,
   dropOnCrewSeat,
+  ejectFromCrewSeats,
   poseFromRow,
+  resolveCrewDrop,
+  spotInAnyCrewSeat,
 } from "../lib/crew-room-layout";
 import { spotHitsObstacle } from "../lib/living-room-layout";
+import { petStackLayers } from "../lib/pet-assets";
 
-test("lobby tables ring the pedestal and stay on open floor", () => {
+test("lobby seats ring the pedestal and stay on open floor", () => {
   assert.equal(CREW_LIBRARY_PATH, "/pet-assets/room/crew/library.svg");
-  assert.equal(CREW_TABLE_PATH, "/pet-assets/room/crew/table.svg");
+  assert.equal(CREW_SEATS_PATH, "/pet-assets/room/crew/seats.svg");
   const library = readFileSync(new URL("../public/pet-assets/room/crew/library.svg", import.meta.url), "utf8");
-  const table = readFileSync(new URL("../public/pet-assets/room/crew/table.svg", import.meta.url), "utf8");
+  const seats = readFileSync(new URL("../public/pet-assets/room/crew/seats.svg", import.meta.url), "utf8");
   assert.equal(library.match(/href="#shelf"/g)?.length, 1);
   assert.doesNotMatch(library, /href="#chair"/);
-  assert.match(table, /fill="#6e4b32"/);
+  assert.match(seats, /fill="#6e4b32"/);
   assert.match(library, /x="492" y="18" width="92" height="86" fill="#8a6a48"/);
   assert.match(library, /fill="#3a5a40"/);
   assert.equal(CREW_BLACKBOARD.x, 492);
@@ -31,9 +35,12 @@ test("lobby tables ring the pedestal and stay on open floor", () => {
   const room = readFileSync(new URL("../components/crew-room.tsx", import.meta.url), "utf8");
   assert.match(room, /aria-label="Leaderboard"/);
   assert.match(room, /onOpenLeaderboard/);
-  assert.match(room, /CREW_TABLE_PATH/);
-  assert.match(room, /crew-lobby-table/);
-  assert.match(room, /studyFurniture/);
+  assert.match(room, /CREW_SEATS_PATH/);
+  assert.match(room, /crew-lobby-seat/);
+  assert.match(room, /lobbyDesk/);
+  assert.match(room, /useStudyPose/);
+  assert.match(room, /resolveCrewDrop/);
+  assert.match(room, /!present\.has\(pose\.userId\)/);
   assert.equal(CREW_SEATS.length, 6);
   const lefts = CREW_SEATS.map((seat) => seat.anchor.left);
   const tops = CREW_SEATS.map((seat) => seat.anchor.top);
@@ -42,21 +49,66 @@ test("lobby tables ring the pedestal and stay on open floor", () => {
   assert.ok(Math.min(...tops) < CREW_PEDESTAL.top);
   assert.ok(Math.max(...tops) > CREW_PEDESTAL.top);
   assert.equal(spotHitsObstacle(CREW_PEDESTAL, CREW_OBSTACLES), true);
+  const seatWidth = CREW_SEATS[0].maxLeft - CREW_SEATS[0].minLeft;
+  const seatHeight = CREW_SEATS[0].maxTop - CREW_SEATS[0].minTop;
   for (const seat of CREW_SEATS) {
     assert.ok(Math.hypot(seat.anchor.left - CREW_PEDESTAL.left, seat.anchor.top - CREW_PEDESTAL.top) > 10);
+    assert.ok(Math.abs(seat.maxLeft - seat.minLeft - seatWidth) < 0.001);
+    assert.ok(Math.abs(seat.maxTop - seat.minTop - seatHeight) < 0.001);
   }
+  const frontRight = CREW_SEATS.find((seat) => seat.id === "se");
+  assert.ok(frontRight);
+  assert.equal(dropOnCrewSeat(frontRight.anchor, new Set())?.id, "se");
+  assert.equal(
+    dropOnCrewSeat({ left: frontRight.anchor.left, top: frontRight.maxTop - 0.5 }, new Set())?.id,
+    "se",
+  );
+  // Just right of the tight sprite box, still on the 5 o'clock footprint.
+  assert.equal(dropOnCrewSeat({ left: 71.2, top: 72 }, new Set())?.id, "se");
+  assert.equal(resolveCrewDrop({ left: 71.2, top: 72 }, new Set()).seat?.id, "se");
+  // The tabletop sits just below the back-right chair. That drop stays on 5 o'clock.
+  assert.equal(dropOnCrewSeat({ left: frontRight.anchor.left, top: 56 }, new Set())?.id, "se");
+  assert.equal(dropOnCrewSeat({ left: frontRight.anchor.left, top: 60 }, new Set())?.id, "se");
+  assert.equal(dropOnCrewSeat({ left: frontRight.anchor.left, top: 64 }, new Set(["se"])), null);
   assert.equal(crewStartSpotsAreOpen(), true);
   for (const spot of CREW_START_SPOTS) {
     assert.equal(dropOnCrewSeat(spot, new Set()), null);
   }
 });
 
-test("a farmer can take a free lobby table and not a taken one", () => {
+test("a farmer can take a free lobby seat and not a taken one", () => {
   const west = CREW_SEATS.find((seat) => seat.id === "w");
   assert.ok(west);
   assert.equal(dropOnCrewSeat(west.anchor, new Set())?.id, "w");
   assert.equal(dropOnCrewSeat(west.anchor, new Set(["w"])), null);
   assert.equal(dropOnCrewSeat(CREW_PEDESTAL, new Set()), null);
+});
+
+test("occupied seat drops eject to floor outside every sit zone", () => {
+  const west = CREW_SEATS.find((seat) => seat.id === "w");
+  assert.ok(west);
+  const dropped = resolveCrewDrop(west.anchor, new Set(["w"]));
+  assert.equal(dropped.seat, null);
+  assert.equal(spotInAnyCrewSeat(dropped.spot), false);
+  assert.equal(spotHitsObstacle(dropped.spot, CREW_OBSTACLES), false);
+  const ejected = ejectFromCrewSeats(west.anchor);
+  assert.equal(spotInAnyCrewSeat(ejected), false);
+});
+
+test("sitting study stack uses lobby desk and shared pens", () => {
+  const lobby = petStackLayers("baby_slime", "study1", { lobbyDesk: true });
+  assert.equal(lobby.chair, "/pet-assets/props/study/chair.svg");
+  assert.equal(lobby.desk, "/pet-assets/props/study/desk-long.svg");
+  assert.equal(lobby.pen, "/pet-assets/props/study/pen-1.svg");
+  assert.equal(lobby.floor, null);
+  const offSeat = petStackLayers("baby_slime", "study1");
+  assert.equal(offSeat.desk, "/pet-assets/props/study/desk.svg");
+  assert.equal(offSeat.floor, "/pet-assets/props/study/floor.svg");
+  const desk = readFileSync(new URL("../public/pet-assets/props/study/desk-long.svg", import.meta.url), "utf8");
+  assert.match(desk, /viewBox="0 0 64 116"/);
+  assert.match(desk, /v70/);
+  const pen = readFileSync(new URL("../public/pet-assets/props/study/pen-1.svg", import.meta.url), "utf8");
+  assert.match(pen, /scale\(1 -1\)/);
 });
 
 test("the same farmer spawns in the same spot", () => {

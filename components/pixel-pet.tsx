@@ -43,6 +43,7 @@ export function PixelPetArt({
   hat = null,
   clothes = null,
   studyFurniture = true,
+  lobbyDesk = false,
   className,
   alt = "",
 }: {
@@ -51,8 +52,10 @@ export function PixelPetArt({
   color?: string | null;
   hat?: string | null;
   clothes?: string | null;
-  /** Study desk/chair/floor props; false when a lobby table already provides the desk. */
+  /** Study desk/chair/floor props. */
   studyFurniture?: boolean;
+  /** When sitting in the FarmCrew lobby, use the lobby desk + pens stack. */
+  lobbyDesk?: boolean;
   className?: string;
   alt?: string;
 }) {
@@ -74,13 +77,14 @@ export function PixelPetArt({
     hat: dropHat ? null : hat,
     clothes: dropClothes ? null : clothes,
     studyFurniture,
+    lobbyDesk,
   });
 
   const frameClass = [
     "pixel-pet",
     "pixel-pet-art",
     stack.stage === "study" ? "is-study" : null,
-    studyFurniture ? null : "is-lobby-table",
+    lobbyDesk ? "is-lobby-desk" : null,
     className,
   ]
     .filter(Boolean)
@@ -129,6 +133,31 @@ export function PixelPetArt({
       {stack.pen ? <LayerImg className="pixel-pet-layer is-pen" src={stack.pen} /> : null}
     </span>
   );
+}
+
+/** Alternate study1/study2 so the desktop pen flips between pen-1 and pen-2. */
+export function useStudyPose(active: boolean) {
+  const [studyFrame, setStudyFrame] = useState<PetPose>("study1");
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!active || reduceMotion) return;
+    const id = window.setInterval(() => {
+      setStudyFrame((current) => (current === "study1" ? "study2" : "study1"));
+    }, 480);
+    return () => window.clearInterval(id);
+  }, [active, reduceMotion]);
+
+  if (!active || reduceMotion) return "study1";
+  return studyFrame === "study2" ? "study2" : "study1";
 }
 
 export function useWalkPose(active: boolean) {
