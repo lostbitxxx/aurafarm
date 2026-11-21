@@ -222,7 +222,13 @@ export type PetStackLayers = {
 export function petStackLayers(
   petType: string,
   pose: PetPose,
-  options: { color?: PetColor; hat?: string | null; clothes?: string | null } = {},
+  options: {
+    color?: PetColor;
+    hat?: string | null;
+    clothes?: string | null;
+    /** When false, study poses keep pose limbs/face but skip desk/chair/floor props. */
+    studyFurniture?: boolean;
+  } = {},
 ): PetStackLayers {
   const species = speciesForPetType(petType);
   const color = options.color ?? colorForPetType(petType);
@@ -230,8 +236,10 @@ export function petStackLayers(
   const legs = legModeForPose(pose);
   const face = faceModeForPose(pose);
   const study = isStudyPose(pose);
+  const furniture = options.studyFurniture !== false;
   const clothes = wornClothesAsset(options.clothes, petType);
   const hat = wornHatAsset(options.hat);
+  const showStudyProps = study && furniture;
 
   return {
     stage: study ? "study" : "pet",
@@ -241,10 +249,10 @@ export function petStackLayers(
     clothes,
     face: `${base}/face/${face}.svg`,
     hat,
-    floor: study ? "/pet-assets/props/study/floor.svg" : null,
-    chair: study ? "/pet-assets/props/study/chair.svg" : null,
-    desk: study ? "/pet-assets/props/study/desk.svg" : null,
-    pen: study ? `/pet-assets/props/study/pen-${pose === "study2" ? "2" : "1"}.svg` : null,
+    floor: showStudyProps ? "/pet-assets/props/study/floor.svg" : null,
+    chair: showStudyProps ? "/pet-assets/props/study/chair.svg" : null,
+    desk: showStudyProps ? "/pet-assets/props/study/desk.svg" : null,
+    pen: showStudyProps ? `/pet-assets/props/study/pen-${pose === "study2" ? "2" : "1"}.svg` : null,
   };
 }
 

@@ -1,12 +1,13 @@
 /**
- * FarmCrew library geometry in the shared 600×300 room.
- * Chairs ring the pedestal. Anchors are where a sitting pet's feet rest.
+ * FarmCrew lobby geometry in the shared 600×300 room.
+ * Six study tables ring the pedestal. Anchors are where a sitting pet's feet rest.
  */
 
 import { spotHitsObstacle, type RoomObstacle } from "@/lib/living-room-layout";
 import type { WanderSpot } from "@/lib/living-room-wander";
 
 export const CREW_LIBRARY_PATH = "/pet-assets/room/crew/library.svg";
+export const CREW_TABLE_PATH = "/pet-assets/room/crew/table.svg";
 
 /** Right-wall blackboard. Same box the library shelf used to fill. */
 export const CREW_BLACKBOARD = { x: 492, y: 18, width: 92, height: 86 };
@@ -46,7 +47,7 @@ function seatAt(id: string, x: number, y: number): CrewSeat {
   };
 }
 
-/** Back row, sides, then the front row. Pixel spots match library.svg. */
+/** Back row, sides, then the front row. Pixel spots match lobby table anchors. */
 export const CREW_SEATS: readonly CrewSeat[] = [
   seatAt("nw", 200, 118),
   seatAt("ne", 400, 118),
@@ -55,6 +56,16 @@ export const CREW_SEATS: readonly CrewSeat[] = [
   seatAt("sw", 214, 214),
   seatAt("se", 386, 214),
 ];
+
+/** Pixel origin of each lobby table inside the 600×300 lobby art. */
+export function crewTablePixel(seatId: string): { x: number; y: number } | null {
+  const seat = crewSeatById(seatId);
+  if (!seat) return null;
+  return {
+    x: (seat.anchor.left / 100) * ROOM_W,
+    y: (seat.anchor.top / 100) * ROOM_H,
+  };
+}
 
 /** Feet of the communal pet, on the pedestal slab. */
 export const CREW_PEDESTAL: WanderSpot = { left: 50, top: (138 / ROOM_H) * 100 };

@@ -42,6 +42,7 @@ export function PixelPetArt({
   color = null,
   hat = null,
   clothes = null,
+  studyFurniture = true,
   className,
   alt = "",
 }: {
@@ -50,6 +51,8 @@ export function PixelPetArt({
   color?: string | null;
   hat?: string | null;
   clothes?: string | null;
+  /** Study desk/chair/floor props; false when a lobby table already provides the desk. */
+  studyFurniture?: boolean;
   className?: string;
   alt?: string;
 }) {
@@ -70,12 +73,14 @@ export function PixelPetArt({
     color: sampleColor(color) ?? undefined,
     hat: dropHat ? null : hat,
     clothes: dropClothes ? null : clothes,
+    studyFurniture,
   });
 
   const frameClass = [
     "pixel-pet",
     "pixel-pet-art",
     stack.stage === "study" ? "is-study" : null,
+    studyFurniture ? null : "is-lobby-table",
     className,
   ]
     .filter(Boolean)

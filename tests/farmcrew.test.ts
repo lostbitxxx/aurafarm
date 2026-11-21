@@ -222,7 +222,9 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /topbar-brand/);
   assert.match(screen, /CrewSessionTimer[\s\S]*<CrewRoom/);
   assert.match(screen, /StudyClock/);
-  assert.match(screen, /crew-top is-studying/);
+  assert.match(screen, /room-top is-studying/);
+  assert.match(screen, /room-back-button/);
+  assert.match(screen, /living-room-shell/);
   assert.match(screen, /Studying with you/);
   assert.match(screen, /Website timer is tracking this session/);
   assert.match(screen, /room-center/);

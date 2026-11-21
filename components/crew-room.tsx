@@ -7,7 +7,9 @@ import {
   CREW_LIBRARY_PATH,
   CREW_OBSTACLES,
   CREW_PEDESTAL,
+  CREW_SEATS,
   CREW_START_SPOTS,
+  CREW_TABLE_PATH,
   CREW_WALK_BOUNDS,
   crewDisplaySpot,
   crewSpawnSpot,
@@ -270,9 +272,13 @@ function CrewFarmer({
 
   const spot = mine ? position : shown;
   const sitting = mine ? Boolean(seatId) && !dragging : pose?.mode === "sitting";
+  const atTable = sitting;
   const draggingNow = mine ? dragging : pose?.mode === "dragging";
   const moving = ownWalking || remoteWalking || draggingNow;
   const shownFace = mine ? faceLeft : Boolean(pose?.faceLeft);
+  const studyPose = studying && !moving;
+  // On a lobby table: study limbs without the small study desk props (table is the desk).
+  const studyFurniture = studyPose && !atTable;
 
   const place = (clientX: number, clientY: number, wrapHeight: number) => {
     const room = roomRef.current?.getBoundingClientRect();
@@ -317,8 +323,14 @@ function CrewFarmer({
           color={occupant.color}
           hat={occupant.hat}
           clothes={occupant.clothes}
-          pose={studying && !moving ? "study1" : ownWalking || remoteWalking ? walkPose : "idle"}
-          className={ownWalking || remoteWalking ? "is-walking" : undefined}
+          pose={studyPose ? "study1" : ownWalking || remoteWalking ? walkPose : "idle"}
+          studyFurniture={studyFurniture || !studyPose}
+          className={[
+            ownWalking || remoteWalking ? "is-walking" : "",
+            atTable ? "is-at-lobby-table" : "",
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined}
           alt=""
         />
       </span>
@@ -341,7 +353,8 @@ function CrewFarmer({
       style={{
         left: `${spot.left}%`,
         top: `${spot.top}%`,
-        zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(sitting ? spot.top + 2 : spot.top),
+        // Sit just under the tabletop layer so the desk reads in front of the pet.
+        zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(sitting ? spot.top : spot.top),
       }}
     >
       {mine ? (
@@ -415,77 +428,117 @@ export function CrewRoom({
     return seats;
   }, [poses, viewerId]);
 
+  const occupiedTables = useMemo(() => {
+    const ids = new Set<string>();
+    for (const pose of Object.values(poses)) {
+      if (pose.mode === "sitting" && pose.seatId) ids.add(pose.seatId);
+    }
+    return ids;
+  }, [poses]);
+
+  const studyingTables = useMemo(() => {
+    const ids = new Set<string>();
+    for (const occupant of occupants) {
+      if (!crewShowsAurafarming(occupant, viewerId, viewerStudying)) continue;
+      const pose = poses[occupant.farmerId];
+      if (pose?.mode === "sitting" && pose.seatId) ids.add(pose.seatId);
+    }
+    return ids;
+  }, [occupants, poses, viewerId, viewerStudying]);
+
   return (
-    <div className="living-room-stage">
-      <div className="living-room crew-room" ref={roomRef}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="living-room-art" src={CREW_LIBRARY_PATH} alt="" draggable={false} />
-        {onOpenLeaderboard ? (
-          <svg
-            className="living-room-wall-hotspots"
-            viewBox="0 0 600 300"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ zIndex: 210 }}
-          >
-            <rect
-              className="room-rack-hotspot"
-              role="button"
-              tabIndex={0}
-              aria-label="Leaderboard"
-              x={CREW_BLACKBOARD.x}
-              y={CREW_BLACKBOARD.y}
-              width={CREW_BLACKBOARD.width}
-              height={CREW_BLACKBOARD.height}
-              onClick={onOpenLeaderboard}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onOpenLeaderboard();
-                }
-              }}
-            />
-          </svg>
-        ) : null}
-        <div className="living-room-pets">
-          <div
-            className="room-pet-wrap is-sitting is-remote"
-            style={{
-              left: `${CREW_PEDESTAL.left}%`,
-              top: `${CREW_PEDESTAL.top}%`,
-              zIndex: roomDepthZ(CREW_PEDESTAL.top),
+    <div className="living-room crew-room" ref={roomRef}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="living-room-art" src={CREW_LIBRARY_PATH} alt="" draggable={false} />
+      {onOpenLeaderboard ? (
+        <svg
+          className="living-room-wall-hotspots"
+          viewBox="0 0 600 300"
+          preserveAspectRatio="xMidYMid meet"
+          style={{ zIndex: 210 }}
+        >
+          <rect
+            className="room-rack-hotspot"
+            role="button"
+            tabIndex={0}
+            aria-label="Leaderboard"
+            x={CREW_BLACKBOARD.x}
+            y={CREW_BLACKBOARD.y}
+            width={CREW_BLACKBOARD.width}
+            height={CREW_BLACKBOARD.height}
+            onClick={onOpenLeaderboard}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onOpenLeaderboard();
+              }
             }}
-            aria-label="FarmCrew pet"
-          >
-            <div className="room-pet">
-              <span className="room-pet-sprite">
-                <PixelPetArt petType={mascot.petType} color={mascot.color} pose="idle" alt="" />
-              </span>
-            </div>
+          />
+        </svg>
+      ) : null}
+      {CREW_SEATS.map((seat) => {
+        const occupied = occupiedTables.has(seat.id);
+        const farming = studyingTables.has(seat.id);
+        // Table draws above a sitting pet so the desktop reads in front.
+        const z = roomDepthZ(seat.anchor.top) + (occupied ? 3 : 0);
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={seat.id}
+            className={["crew-lobby-table", occupied ? "is-occupied" : "", farming ? "is-studying" : ""]
+              .filter(Boolean)
+              .join(" ")}
+            src={CREW_TABLE_PATH}
+            alt=""
+            draggable={false}
+            data-table={seat.id}
+            style={{
+              left: `${seat.anchor.left}%`,
+              top: `${seat.anchor.top}%`,
+              zIndex: z,
+            }}
+          />
+        );
+      })}
+      <div className="living-room-pets">
+        <div
+          className="room-pet-wrap is-sitting is-remote"
+          style={{
+            left: `${CREW_PEDESTAL.left}%`,
+            top: `${CREW_PEDESTAL.top}%`,
+            zIndex: roomDepthZ(CREW_PEDESTAL.top),
+          }}
+          aria-label="FarmCrew pet"
+        >
+          <div className="room-pet">
+            <span className="room-pet-sprite">
+              <PixelPetArt petType={mascot.petType} color={mascot.color} pose="idle" alt="" />
+            </span>
           </div>
-          {occupants.map((occupant) => (
-            <CrewFarmer
-              key={occupant.farmerId}
-              occupant={occupant}
-              viewerId={viewerId}
-              pose={poses[occupant.farmerId]}
-              loaded={loaded}
-              taken={taken}
-              roomRef={roomRef}
-              publish={publish}
-              viewerStudying={viewerStudying}
-            />
-          ))}
         </div>
-        {error ? (
-          <div className="room-empty">
-            <p>{error}</p>
-          </div>
-        ) : occupants.length === 0 ? (
-          <div className="room-empty">
-            <p>Nobody is in the crew room right now.</p>
-          </div>
-        ) : null}
+        {occupants.map((occupant) => (
+          <CrewFarmer
+            key={occupant.farmerId}
+            occupant={occupant}
+            viewerId={viewerId}
+            pose={poses[occupant.farmerId]}
+            loaded={loaded}
+            taken={taken}
+            roomRef={roomRef}
+            publish={publish}
+            viewerStudying={viewerStudying}
+          />
+        ))}
       </div>
+      {error ? (
+        <div className="room-empty">
+          <p>{error}</p>
+        </div>
+      ) : occupants.length === 0 ? (
+        <div className="room-empty">
+          <p>Nobody is in the crew room right now.</p>
+        </div>
+      ) : null}
     </div>
   );
 }

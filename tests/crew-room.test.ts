@@ -8,6 +8,7 @@ import {
   CREW_PEDESTAL,
   CREW_SEATS,
   CREW_START_SPOTS,
+  CREW_TABLE_PATH,
   crewSpawnSpot,
   crewStartSpotsAreOpen,
   dropOnCrewSeat,
@@ -15,10 +16,14 @@ import {
 } from "../lib/crew-room-layout";
 import { spotHitsObstacle } from "../lib/living-room-layout";
 
-test("library seats ring the pedestal and stay on open floor", () => {
+test("lobby tables ring the pedestal and stay on open floor", () => {
   assert.equal(CREW_LIBRARY_PATH, "/pet-assets/room/crew/library.svg");
+  assert.equal(CREW_TABLE_PATH, "/pet-assets/room/crew/table.svg");
   const library = readFileSync(new URL("../public/pet-assets/room/crew/library.svg", import.meta.url), "utf8");
+  const table = readFileSync(new URL("../public/pet-assets/room/crew/table.svg", import.meta.url), "utf8");
   assert.equal(library.match(/href="#shelf"/g)?.length, 1);
+  assert.doesNotMatch(library, /href="#chair"/);
+  assert.match(table, /fill="#6e4b32"/);
   assert.match(library, /x="492" y="18" width="92" height="86" fill="#8a6a48"/);
   assert.match(library, /fill="#3a5a40"/);
   assert.equal(CREW_BLACKBOARD.x, 492);
@@ -26,6 +31,9 @@ test("library seats ring the pedestal and stay on open floor", () => {
   const room = readFileSync(new URL("../components/crew-room.tsx", import.meta.url), "utf8");
   assert.match(room, /aria-label="Leaderboard"/);
   assert.match(room, /onOpenLeaderboard/);
+  assert.match(room, /CREW_TABLE_PATH/);
+  assert.match(room, /crew-lobby-table/);
+  assert.match(room, /studyFurniture/);
   assert.equal(CREW_SEATS.length, 6);
   const lefts = CREW_SEATS.map((seat) => seat.anchor.left);
   const tops = CREW_SEATS.map((seat) => seat.anchor.top);
@@ -43,7 +51,7 @@ test("library seats ring the pedestal and stay on open floor", () => {
   }
 });
 
-test("a farmer can take a free library seat and not a taken one", () => {
+test("a farmer can take a free lobby table and not a taken one", () => {
   const west = CREW_SEATS.find((seat) => seat.id === "w");
   assert.ok(west);
   assert.equal(dropOnCrewSeat(west.anchor, new Set())?.id, "w");
