@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-28 -30 56 44" shape-rendering="crispEdges">
+  <!-- Lobby study table (was inlined as #chair in library.svg). Origin matches seat anchors. -->
+  <rect x="-28" y="-30" width="56" height="16" fill="#6e4b32"/>
+  <rect x="-24" y="-26" width="48" height="8" fill="#8d6244"/>
+  <rect x="-26" y="-12" width="52" height="14" fill="#cbb892"/>
+  <rect x="-26" y="-12" width="52" height="4" fill="#e4d7b4"/>
+  <rect x="-8" y="-10" width="16" height="8" fill="#6b7c4a"/>
+  <rect x="-22" y="2" width="6" height="12" fill="#6e4b32"/>
+  <rect x="16" y="2" width="6" height="12" fill="#6e4b32"/>
+</svg>

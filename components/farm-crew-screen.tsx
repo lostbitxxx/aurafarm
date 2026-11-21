@@ -16,7 +16,6 @@ import { CrewStudyStart } from "./crew-study-start";
 import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { FarmDialog } from "./farm-dialog";
 import { LeaderboardPanel } from "./leaderboard-dialog";
-import { PixelPetArt } from "./pixel-pet";
 import { SocialPresence } from "./social-presence";
 import { StudyClock } from "./study-clock";
 
@@ -76,9 +75,6 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
           <div className="topbar-brand">
             <span className="wordmark">AuraFarmCrew</span>
             <div className="topbar-desktop-links">
-              <Link href="/dashboard" className="topbar-link">
-                Back to Dashboard
-              </Link>
               {detail && managesFarmCrew(detail.role) ? (
                 <button type="button" className="topbar-link" onClick={() => setPanel("admin")}>
                   Admin
@@ -127,27 +123,24 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
         ) : null}
         {detail ? (
           <section className="living-room-block crew-room-stage" aria-label={detail.name}>
-            <div className={session ? "crew-top is-studying" : "crew-top"}>
-              <div className="room-head crew-room-head">
+            <div className={session ? "room-top is-studying" : "room-top"}>
+              <div className="room-head">
                 {session ? (
-                  <div>
-                    <h1 className="room-title">Studying with you</h1>
+                  <>
+                    <h2 className="room-title">Studying with you</h2>
                     <p className="room-subtitle">
                       {session.useDesktopPet
                         ? "Desktop pet is tracking this session."
                         : "Website timer is tracking this session."}
                     </p>
-                  </div>
+                  </>
                 ) : (
                   <>
-                    <PixelPetArt petType={detail.petType} color={detail.color} className="dialog-pet-art" alt="" />
-                    <div>
-                      <h1 className="room-title">{detail.name}</h1>
-                      <p className="room-subtitle">
-                        {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
-                      </p>
-                      {detail.description ? <p className="panel-hint">{detail.description}</p> : null}
-                    </div>
+                    <h2 className="room-title">{detail.name}</h2>
+                    <p className="room-subtitle">
+                      {detail.memberCount} {detail.memberCount === 1 ? "member" : "members"} · {here} here now
+                    </p>
+                    {detail.description ? <p className="room-desc">{detail.description}</p> : null}
                   </>
                 )}
               </div>
@@ -187,14 +180,23 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
                 {sessionError}
               </p>
             ) : null}
-            <CrewRoom
-              crewId={detail.crewId}
-              viewerId={room.userId}
-              mascot={{ petType: detail.petType, color: detail.color }}
-              occupants={occupants}
-              viewerStudying={Boolean(session)}
-              onOpenLeaderboard={() => setPanel("board")}
-            />
+            <div className="living-room-stage">
+              <div className="living-room-shell">
+                <CrewRoom
+                  crewId={detail.crewId}
+                  viewerId={room.userId}
+                  mascot={{ petType: detail.petType, color: detail.color }}
+                  occupants={occupants}
+                  viewerStudying={Boolean(session)}
+                  onOpenLeaderboard={() => setPanel("board")}
+                />
+                <div className="room-tool-rail">
+                  <Link href="/dashboard" className="button room-back-button">
+                    ← Back to Dashboard
+                  </Link>
+                </div>
+              </div>
+            </div>
           </section>
         ) : (
           <section className="living-room-block" aria-label="FarmCrew">

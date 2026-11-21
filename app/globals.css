@@ -1468,8 +1468,9 @@ a.tracker-download { color: #6d7a62; }
   min-height: 0;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 0.35rem;
   container-type: size;
 }
 
@@ -1540,6 +1541,42 @@ a.tracker-download { color: #6d7a62; }
   height: auto;
   max-height: calc(100% - 2.75rem);
   aspect-ratio: 2 / 1;
+}
+
+.room-back-button {
+  pointer-events: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.crew-lobby-table {
+  position: absolute;
+  width: calc(100% * 56 / 600);
+  height: auto;
+  aspect-ratio: 56 / 44;
+  transform: translate(-50%, -68%);
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.crew-lobby-table.is-studying {
+  /* Longer legs when someone is farming at this table. */
+  transform: translate(-50%, -68%) scaleY(1.22);
+  transform-origin: center top;
+}
+
+.crew-room .pixel-pet.is-study.is-lobby-table .pixel-pet-figure,
+.crew-room .pixel-pet.is-at-lobby-table.is-study .pixel-pet-figure {
+  /* Keep pet size matching idle when the lobby table is the desk. */
+  inset: 0;
 }
 
 .crew-room-head {
@@ -2967,7 +3004,8 @@ button.dialog-row {
   gap: 1.15rem;
 }
 
-.room-top .desk-session {
+.room-top .desk-session,
+.room-top .crew-start {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -3011,6 +3049,12 @@ button.dialog-row {
   margin: 0.25rem 0 0;
   color: var(--ink-soft);
   font-size: 0.9rem;
+}
+
+.room-desc {
+  margin: 0.2rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
 }
 
 .living-room-stage {
