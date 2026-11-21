@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-28 -30 56 44" shape-rendering="crispEdges">
+  <!-- Chair back only. Same origin as table.svg so it stays behind a sitting pet. -->
+  <rect x="-28" y="-30" width="56" height="16" fill="#6e4b32"/>
+  <rect x="-24" y="-26" width="48" height="8" fill="#8d6244"/>
+</svg>

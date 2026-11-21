@@ -9,6 +9,7 @@ import {
   CREW_PEDESTAL,
   CREW_SEATS,
   CREW_START_SPOTS,
+  CREW_CHAIR_BACK_PATH,
   CREW_TABLE_PATH,
   CREW_WALK_BOUNDS,
   crewDisplaySpot,
@@ -479,25 +480,41 @@ export function CrewRoom({
       {CREW_SEATS.map((seat) => {
         const occupied = occupiedTables.has(seat.id);
         const farming = studyingTables.has(seat.id);
-        // Table draws above a sitting pet so the desktop reads in front.
-        const z = roomDepthZ(seat.anchor.top) + (occupied ? 3 : 0);
+        const depth = roomDepthZ(seat.anchor.top);
+        // Chair back stays behind the pet. The desktop stays in front while someone sits.
+        const backZ = depth - 1;
+        const topZ = depth + (occupied ? 3 : 0);
         return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={seat.id}
-            className={["crew-lobby-table", occupied ? "is-occupied" : "", farming ? "is-studying" : ""]
-              .filter(Boolean)
-              .join(" ")}
-            src={CREW_TABLE_PATH}
-            alt=""
-            draggable={false}
-            data-table={seat.id}
-            style={{
-              left: `${seat.anchor.left}%`,
-              top: `${seat.anchor.top}%`,
-              zIndex: z,
-            }}
-          />
+          <span key={seat.id}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="crew-lobby-table"
+              src={CREW_CHAIR_BACK_PATH}
+              alt=""
+              draggable={false}
+              data-chair={seat.id}
+              style={{
+                left: `${seat.anchor.left}%`,
+                top: `${seat.anchor.top}%`,
+                zIndex: backZ,
+              }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className={["crew-lobby-table", occupied ? "is-occupied" : "", farming ? "is-studying" : ""]
+                .filter(Boolean)
+                .join(" ")}
+              src={CREW_TABLE_PATH}
+              alt=""
+              draggable={false}
+              data-table={seat.id}
+              style={{
+                left: `${seat.anchor.left}%`,
+                top: `${seat.anchor.top}%`,
+                zIndex: topZ,
+              }}
+            />
+          </span>
         );
       })}
       <div className="living-room-pets">

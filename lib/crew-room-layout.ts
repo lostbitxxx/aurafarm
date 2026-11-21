@@ -8,6 +8,7 @@ import type { WanderSpot } from "@/lib/living-room-wander";
 
 export const CREW_LIBRARY_PATH = "/pet-assets/room/crew/library.svg";
 export const CREW_TABLE_PATH = "/pet-assets/room/crew/table.svg";
+export const CREW_CHAIR_BACK_PATH = "/pet-assets/room/crew/chair-back.svg";
 
 /** Right-wall blackboard. Same box the library shelf used to fill. */
 export const CREW_BLACKBOARD = { x: 492, y: 18, width: 92, height: 86 };
@@ -35,15 +36,18 @@ export type CrewSeat = {
 const ROOM_W = 600;
 const ROOM_H = 300;
 
+/** Percent of the room around a seat that still counts as a drop. */
+const SEAT_DROP_PAD = 9;
+
 function seatAt(id: string, x: number, y: number): CrewSeat {
   const anchor = { left: (x / ROOM_W) * 100, top: (y / ROOM_H) * 100 };
   return {
     id,
     anchor,
-    minLeft: anchor.left - 6,
-    maxLeft: anchor.left + 6,
-    minTop: anchor.top - 6,
-    maxTop: anchor.top + 6,
+    minLeft: anchor.left - SEAT_DROP_PAD,
+    maxLeft: anchor.left + SEAT_DROP_PAD,
+    minTop: anchor.top - SEAT_DROP_PAD,
+    maxTop: anchor.top + SEAT_DROP_PAD,
   };
 }
 
