@@ -518,13 +518,13 @@ function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" }) {
   }
   return (
     <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
       <path
-        d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"
+        d="M14.7 6.3a4.1 4.1 0 0 0-5.7 5.7L4 17v3h3l5-5a4.1 4.1 0 0 0 5.7-5.7l-2.2 2.2-1.8-1.8 2-2z"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -732,6 +732,7 @@ export function LivingRoom({
         {headerAside}
       </div>
       <div className="living-room-stage">
+        <div className="living-room-shell">
         <div ref={roomRef} className={editing ? "living-room is-editing" : "living-room"}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -884,29 +885,15 @@ export function LivingRoom({
               );
             })
           : null}
-        <div className="room-side-dock">
-          {editing ? (
-            <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
-              <RoomToolIcon kind="decorate" />
-            </button>
-          ) : showCylinder ? (
+        {!editing && showCylinder ? (
+          <div className="room-side-dock">
             <DailyProgressCylinder
               studiedMinutes={dailyStudiedMinutes ?? 0}
               goalMinutes={dailyGoalMinutes ?? 0}
               isStudyDay={isStudyDay}
             />
-          ) : (
-            <span className="room-side-spacer" />
-          )}
-          <button
-            type="button"
-            className="room-tool-button is-bottom"
-            aria-label={editing ? "Save" : "Edit room"}
-            onClick={editing ? saveEdit : beginEdit}
-          >
-            <RoomToolIcon kind={editing ? "save" : "edit"} />
-          </button>
-        </div>
+          </div>
+        ) : null}
         {editing ? null : (
           <div className="living-room-pets">
             {placed.map((pet) => {
@@ -936,6 +923,22 @@ export function LivingRoom({
             </button>
           </div>
         ) : null}
+        </div>
+        <div className="room-tool-rail">
+          {editing ? (
+            <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
+              <RoomToolIcon kind="decorate" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="room-tool-button"
+            aria-label={editing ? "Save" : "Edit room"}
+            onClick={editing ? saveEdit : beginEdit}
+          >
+            <RoomToolIcon kind={editing ? "save" : "edit"} />
+          </button>
+        </div>
         </div>
       </div>
       {editing && decorOpen && draftDecor ? (
