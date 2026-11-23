@@ -23,86 +23,19 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { petDisplayName, shopCatalog, shopPurchaseBlock, type PetCard, type ShopPet } from "@/lib/pets";
+import {
+  highestPetLevel,
+  petDisplayName,
+  shopCatalog,
+  shopPurchaseBlock,
+  type PetCard,
+  type ShopPet,
+} from "@/lib/pets";
 import type { BehaviorAnswers, StudyMode, Weekday } from "@/lib/study-mode";
 import { CustomizeWizard } from "./customize-wizard";
 import { FarmDialog } from "./farm-dialog";
 import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
 import { PixelPetArt } from "./pixel-pet";
-
-export function ShopDialog({
-  ownedTypes,
-  farmerLevel,
-  onClose,
-}: {
-  ownedTypes: string[];
-  farmerLevel: number;
-  onClose: () => void;
-}) {
-  const catalog = shopCatalog();
-  const [owned, setOwned] = useState(ownedTypes);
-  const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onUnlock(pet: ShopPet) {
-    if (pending) return;
-    const blocked = shopPurchaseBlock(pet.pet_type, owned, farmerLevel);
-    if (blocked) {
-      setError(blocked);
-      return;
-    }
-    const previous = owned;
-    setOwned((current) => [...current, pet.pet_type]);
-    setError(null);
-    setPending(pet.pet_type);
-    const result = await buyPet(pet.pet_type);
-    setPending(null);
-    if (result.error) {
-      setOwned(previous);
-      setError(result.error);
-    }
-  }
-
-  return (
-    <FarmDialog title="Shop" onClose={onClose} wide>
-      <p className="panel-hint">Every two levels unlocks the next pet.</p>
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <ul className="dialog-list">
-        {catalog.map((pet) => {
-          const isOwned = owned.includes(pet.pet_type);
-          const locked = farmerLevel < pet.unlockLevel;
-          return (
-            <li key={pet.pet_type} className="dialog-row">
-              <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
-              <div>
-                <strong>{pet.name}</strong>
-                <p className="panel-hint">{pet.note}</p>
-              </div>
-              {isOwned ? (
-                <span className="equipped-flag">Owned</span>
-              ) : locked ? (
-                <span className="shop-lock">Unlocks at level {pet.unlockLevel}</span>
-              ) : (
-                <button
-                  type="button"
-                  className="button button-small"
-                  disabled={pending !== null}
-                  onClick={() => onUnlock(pet)}
-                >
-                  {pending === pet.pet_type ? "…" : "Unlock"}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </FarmDialog>
-  );
-}
 
 type CollectionTab = "colors" | "hats" | "clothes";
 
@@ -563,6 +496,15 @@ function ApplyClothesDialog({
   );
 }
 
+function petListSignature(list: readonly PetCard[]) {
+  return list
+    .map(
+      (pet) =>
+        `${pet.id}:${pet.level}:${pet.xp}:${pet.is_desktop_active}:${pet.name ?? ""}:${pet.color ?? ""}:${pet.hat ?? ""}:${pet.clothes ?? ""}`,
+    )
+    .join("|");
+}
+
 export function InventoryDialog({
   pets,
   placedIds,
@@ -582,11 +524,23 @@ export function InventoryDialog({
   onEquipped?: (petId: string) => void;
   onPetRenamed?: (petId: string, name: string) => void;
 }) {
+  const router = useRouter();
+  const catalog = shopCatalog();
   const [items, setItems] = useState(pets);
+  const [petsSnap, setPetsSnap] = useState(() => petListSignature(pets));
+  const [unlockedTypes, setUnlockedTypes] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingUnlock, setPendingUnlock] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renamePending, setRenamePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const incomingPets = petListSignature(pets);
+  if (incomingPets !== petsSnap) {
+    setPetsSnap(incomingPets);
+    setItems(pets);
+  }
+  const ownedTypes = [...new Set([...items.map((pet) => pet.pet_type), ...unlockedTypes])];
+  const farmerLevel = highestPetLevel(items.map((pet) => pet.level));
 
   async function onEquip(petId: string) {
     if (pendingId || sessionActive) return;
@@ -604,6 +558,25 @@ export function InventoryDialog({
     onEquipped?.(petId);
   }
 
+  async function onUnlock(pet: ShopPet) {
+    if (pendingId || pendingUnlock) return;
+    const blocked = shopPurchaseBlock(pet.pet_type, ownedTypes, farmerLevel);
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    setError(null);
+    setPendingUnlock(pet.pet_type);
+    const result = await buyPet(pet.pet_type);
+    setPendingUnlock(null);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setUnlockedTypes((current) => [...current, pet.pet_type]);
+    router.refresh();
+  }
+
   return (
     <FarmDialog title="My Pets" onClose={onClose} wide>
       {sessionActive ? <p className="panel-hint">{EQUIP_DURING_SESSION_NOTE}</p> : null}
@@ -615,7 +588,7 @@ export function InventoryDialog({
       <ul className="dialog-list">
         {items.map((pet) => {
           const inRoom = placedIds.has(pet.id);
-          const equipBlocked = sessionActive || pendingId !== null || pet.is_desktop_active;
+          const equipBlocked = sessionActive || pendingId !== null || pendingUnlock !== null || pet.is_desktop_active;
           const renaming = renamingId === pet.id;
           return (
             <li key={pet.id} className="dialog-row inventory-pet-row">
@@ -674,6 +647,38 @@ export function InventoryDialog({
           );
         })}
       </ul>
+      {catalog.some((pet) => !ownedTypes.includes(pet.pet_type)) ? (
+        <>
+          <p className="panel-hint">Every two levels unlocks the next pet.</p>
+          <ul className="dialog-list">
+            {catalog.map((pet) => {
+              if (ownedTypes.includes(pet.pet_type)) return null;
+              const locked = farmerLevel < pet.unlockLevel;
+              return (
+                <li key={pet.pet_type} className="dialog-row">
+                  <PixelPetArt petType={pet.pet_type} className="dialog-pet-art" />
+                  <div>
+                    <strong>{pet.name}</strong>
+                    <p className="panel-hint">{pet.note}</p>
+                  </div>
+                  {locked ? (
+                    <span className="shop-lock">Unlocks at level {pet.unlockLevel}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="button button-small"
+                      disabled={pendingId !== null || pendingUnlock !== null}
+                      onClick={() => onUnlock(pet)}
+                    >
+                      {pendingUnlock === pet.pet_type ? "…" : "Unlock"}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
     </FarmDialog>
   );
 }

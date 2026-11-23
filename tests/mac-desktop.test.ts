@@ -29,6 +29,7 @@ test("both session dialogs recommend the desktop pet only on a Mac", () => {
     assert.match(source, /macDesktop !== true/);
     assert.match(source, /※ Recommended ※/);
     assert.match(source, /macDesktop === false[\s\S]*Not supported in this device/);
-    assert.match(source, /macDesktop === true && trackerChoice/);
+    assert.match(source, /const useDesktopPet = macDesktop === true/);
+    assert.doesNotMatch(source, /trackerChoice/);
   }
 });

@@ -183,16 +183,16 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /xattr -cr/);
   assert.match(
     desk,
-    /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*\{customOpen \? \([\s\S]*placeholder="type here"[\s\S]*\) : null\}[\s\S]*Desktop pet[\s\S]*Website timer[\s\S]*FARM AURA/,
+    /id="length-title"[\s\S]*aria-label="Study length"[\s\S]*Custom[\s\S]*\{customOpen \? \([\s\S]*placeholder="type here"[\s\S]*\) : null\}[\s\S]*Desktop pet[\s\S]*FARM AURA/,
   );
   assert.match(desk, /TrackerDemo kind="desktop"/);
-  assert.match(desk, /TrackerDemo kind="website"/);
+  assert.doesNotMatch(desk, /TrackerDemo kind="website"/);
+  assert.doesNotMatch(desk, /tracker-option-name">Website timer/);
   assert.match(desk, /First time aurafarming\? Download here!/);
   assert.match(desk, /desktopLink \? \([\s\S]*href=\{desktopLink\}[\s\S]*onClick=\{onCloseStart\}[\s\S]*Open Aurafarm/);
   assert.match(desk, /desktopLink \? "tracker-cards is-desktop-ready" : "tracker-cards"/);
   assert.match(desk, /tracker-option-desktop/);
-  assert.match(desk, /tracker-option-website/);
-  assert.match(desk, /aria-hidden=\{Boolean\(desktopLink\)\}/);
+  assert.doesNotMatch(desk, /tracker-option-website/);
   const deskCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   const readyWebsite = deskCss.match(/\.tracker-cards\.is-desktop-ready \.tracker-option-website \{[^}]+\}/);
   const readyDesktop = deskCss.match(/\.tracker-cards\.is-desktop-ready \.tracker-option-desktop \{[^}]+\}/);
@@ -224,8 +224,10 @@ test("the sign-in panel can quit the pet", () => {
   );
   assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
   const living = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
-  assert.match(living, /headTitle \?\? "Your little living room"/);
-  assert.match(living, /headSubtitle \?\? "Your favorite companions, at home\."/);
+  assert.match(living, /headTitle \?\? "Ready for a little focus\?"/);
+  assert.match(living, /headSubtitle \?\? "Pick a length and a tracker, then Farm Aura\."/);
+  assert.doesNotMatch(living, /Your little living room/);
+  assert.doesNotMatch(desk, /Ready for a little focus\?/);
   assert.match(living, /studyingHead \? "room-top is-studying" : "room-top"/);
   assert.match(living, /headerCenter \? <div className="room-center">\{headerCenter\}<\/div>/);
   assert.match(deskCss, /\.room-top\.is-studying,[\s\S]*grid-template-columns:/);

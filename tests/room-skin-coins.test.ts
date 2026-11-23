@@ -96,6 +96,8 @@ test("decorate dialog buys and equips with blurred locked art", () => {
   assert.match(dialog, /blurred=\{!detailOwned\}/);
   assert.match(dialog, /buyRoomSkin/);
   assert.match(dialog, /decor-coins/);
+  assert.match(dialog, /COINS_SRC/);
+  assert.doesNotMatch(dialog, />\s*Coins\s*</);
   assert.match(dialog, /decor-locked/);
   assert.match(dialog, /decor-owned-tag/);
   assert.doesNotMatch(dialog, /First click previews/);

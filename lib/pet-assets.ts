@@ -318,3 +318,6 @@ export const EQUIP_DURING_SESSION_NOTE = "You cannot switch equipped pet while s
 
 /** Pixel heart for petting FX and the Pet button. */
 export const PIXEL_HEART_SRC = "/pet-assets/ui/pixel-heart.svg";
+
+/** Pixel coin stack for the coins balance. */
+export const COINS_SRC = "/pet-assets/ui/coins.svg";

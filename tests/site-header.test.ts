@@ -8,7 +8,8 @@ test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
 
   assert.match(header, /topbar-brand/);
   assert.match(header, /className="wordmark"/);
-  assert.match(header, /topbar-desktop-links/);
+  assert.doesNotMatch(header, /topbar-desktop-links/);
+  assert.doesNotMatch(header, />\s*Pets\s*</);
   assert.match(header, /topbar-settings/);
   assert.match(header, /aria-label=\{settingsOpen \? "Close settings" : "Open settings"\}/);
   assert.match(header, /topbar-settings-gear/);

@@ -84,8 +84,19 @@ button.wordmark {
 .topbar-nav a { text-decoration: none; }
 
 .points-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+}
+
+.coins-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  image-rendering: pixelated;
 }
 
 .points-balance span { color: var(--slime); font-weight: 600; }
@@ -3016,7 +3027,7 @@ button.dialog-row {
 
 .room-top .room-head {
   margin-bottom: 0;
-  flex: none;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -3367,7 +3378,9 @@ button.dialog-row {
 .living-room:has(.room-prop-hotspot[data-prop-hotspot="achievements"]:is(:hover, :focus-visible))
   .room-prop-hotspot-pad[data-prop-hotspot="achievements"]::before,
 .living-room:has(.room-prop-hotspot[data-prop-hotspot="blackboard"]:is(:hover, :focus-visible))
-  .room-prop-hotspot-pad[data-prop-hotspot="blackboard"]::before {
+  .room-prop-hotspot-pad[data-prop-hotspot="blackboard"]::before,
+.living-room:has(.room-prop-hotspot[data-prop-hotspot="wormhole"]:is(:hover, :focus-visible))
+  .room-prop-hotspot-pad[data-prop-hotspot="wormhole"]::before {
   background: radial-gradient(
     circle,
     rgba(255, 255, 255, 0.55) 0%,
@@ -3396,6 +3409,12 @@ button.dialog-row {
     drop-shadow(0 0 11px rgba(255, 255, 255, 0.605))
     drop-shadow(0 0 17.6px rgba(255, 255, 255, 0.308));
   transform: translate(-50%, -50%) scale(1.386); /* 1.155 × 1.2 */
+}
+
+.room-prop-hotspot[data-prop-hotspot="wormhole"] .room-prop-hotspot-label {
+  top: auto;
+  bottom: calc(100% + 0.2rem);
+  transform: translate(-50%, -0.25rem);
 }
 
 .room-prop-hotspot:hover .room-prop-hotspot-label,
@@ -5887,6 +5906,9 @@ button.dialog-row {
   position: absolute;
   left: 0;
   top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
   margin: 0;
   font-size: 0.85rem;
   color: #596650;

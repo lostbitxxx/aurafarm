@@ -113,7 +113,8 @@ test("the signed-in header shows study time and coins and public pages do not sh
   assert.match(header, /studySeconds\?: number/);
   assert.match(header, /coins\?: number/);
   assert.match(header, /Study/);
-  assert.match(header, /Coins/);
+  assert.match(header, /COINS_SRC/);
+  assert.doesNotMatch(header, />\s*Coins\s*</);
   assert.doesNotMatch(header, /Points/);
   assert.doesNotMatch(publicHeader, /\bpoints\b/);
   assert.doesNotMatch(publicHeader, /\bcoins\b/);

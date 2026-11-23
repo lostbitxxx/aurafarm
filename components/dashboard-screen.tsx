@@ -13,7 +13,6 @@ import {
   EditPlanDialog,
   HistoryDialog,
   InventoryDialog,
-  ShopDialog,
 } from "./dashboard-dialogs";
 import { AdminReset } from "./admin-reset";
 import { PetStatus } from "./pet-status";
@@ -21,7 +20,7 @@ import { SocialBoardDialog } from "./social-board-dialog";
 import { SocialPresence } from "./social-presence";
 import { previewReward } from "@/lib/collection-catalog";
 import { incomingFriendRequests, type FriendCard, type FriendInvite, type StatusSeen } from "@/lib/friends";
-import { describePet, equippedPet, highestPetLevel, type CollectionReward, type PetCard } from "@/lib/pets";
+import { describePet, equippedPet, type CollectionReward, type PetCard } from "@/lib/pets";
 import { RENAME_COUPON_ID } from "@/lib/rename-coupon";
 import { songById, type OwnedSong } from "@/lib/songs";
 import { sampleClothes, sampleColor, sampleHat } from "@/lib/pet-assets";
@@ -147,9 +146,7 @@ export function DashboardScreen({
   friends: readonly FriendCard[];
   friendsError: string | null;
 }) {
-  const ownedTypes = useMemo(() => [...new Set(pets.map((pet) => pet.pet_type))], [pets]);
   const [dialog, setDialog] = useState<
-    | "shop"
     | "collection"
     | "inventory"
     | "achievements"
@@ -199,7 +196,6 @@ export function DashboardScreen({
   const studyDayToday = isScheduledStudyDay(weeklyStudyDays, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
-  const farmerLevel = highestPetLevel(localPets.map((pet) => pet.level));
   const petsSignature = pets
     .map(
       (pet) =>
@@ -439,8 +435,6 @@ export function DashboardScreen({
         studySeconds={totalStudySeconds}
         coins={coins}
         streakCount={liveStreakCount}
-        onOpenShop={() => showSection("shop")}
-        onOpenInventory={() => showSection("inventory")}
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
@@ -506,9 +500,6 @@ export function DashboardScreen({
         onTutorialStart={tour.onStart}
         onRegisterDevFinish={onRegisterDevFinish}
       />
-      {dialog === "shop" ? (
-        <ShopDialog ownedTypes={ownedTypes} farmerLevel={farmerLevel} onClose={() => setDialog(null)} />
-      ) : null}
       {dialog === "collection" ? (
         <CollectionDialog
           pets={localPets}

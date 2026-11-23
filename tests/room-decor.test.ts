@@ -4,6 +4,7 @@ import test from "node:test";
 import { ROOM_FURNITURE, ROOM_OBSTACLES, furnitureWalkObstacles } from "../lib/living-room-layout";
 import {
   coverBox,
+  decorHandles,
   decorObstacles,
   defaultRoomDecor,
   equipRoomSkin,
@@ -76,6 +77,10 @@ test("default furniture footprints match the wander obstacles", () => {
     ROOM_DECOR_CATEGORIES.filter((item) => item.sidebar !== false).map((item) => item.label),
     ["Floor", "Wall", "Carpet", "Lamp", "Shelf", "Sofa", "Plant"],
   );
+  const movedShelter = moveRoomItem(decor, "shelter", 12, -4);
+  assert.equal(movedShelter.offsets.shelter.dx, 12);
+  assert.equal(movedShelter.offsets.shelter.dy, -4);
+  assert.equal(decorHandles(decor).some((handle) => handle.id === "shelter" && handle.label === "Adopt"), true);
 });
 
 test("equipping a wall skin keeps trim on the same theme", () => {

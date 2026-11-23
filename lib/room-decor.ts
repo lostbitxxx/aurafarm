@@ -13,6 +13,7 @@ import {
   ROOM_VIEW_HEIGHT,
   ROOM_VIEW_WIDTH,
   SOFA_BOUNDS,
+  WORMHOLE_BOUNDS,
   pxToLeftPercent,
   pxToTopPercent,
   type RoomFurnitureId,
@@ -39,9 +40,10 @@ export type RoomDecorCategoryId =
   | "armchair"
   | "loveseat"
   | "sofa"
-  | "plant";
+  | "plant"
+  | "shelter";
 
-export type DecorMoverId = RoomFurnitureId | "carpet";
+export type DecorMoverId = RoomFurnitureId | "carpet" | "shelter";
 
 export type RoomSkin = {
   id: string;
@@ -270,6 +272,17 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
       { id: "pothos", name: "Pothos", description: "A trailing pothos." },
     ],
   },
+  {
+    id: "shelter",
+    label: "Adopt",
+    folder: "wormhole",
+    optional: false,
+    mover: "shelter",
+    crop: WORMHOLE_BOUNDS,
+    /** Hidden from the decorate list. It only slides in edit mode. */
+    sidebar: false,
+    skins: [{ id: "base", name: "Adopt", description: "Opens My Pets. Drag it while editing the room." }],
+  },
 ];
 
 const CATEGORY_BY_ID = new Map(ROOM_DECOR_CATEGORIES.map((category) => [category.id, category]));
@@ -294,6 +307,7 @@ const MOVER_IDS: readonly DecorMoverId[] = [
   "blackboard",
   "storage-rack",
   "bookshelf",
+  "shelter",
 ];
 
 export function roomDecorCategory(id: RoomDecorCategoryId) {
@@ -437,6 +451,7 @@ function zeroOffsets(): Record<DecorMoverId, RoomDecorOffset> {
     blackboard: { dx: 0, dy: 0 },
     "storage-rack": { dx: 0, dy: 0 },
     bookshelf: { dx: 0, dy: 0 },
+    shelter: { dx: 0, dy: 0 },
   };
 }
 
@@ -465,6 +480,7 @@ export function cloneRoomDecor(decor: RoomDecor): RoomDecor {
 
 export function moverBounds(id: DecorMoverId): RoomRectPx {
   if (id === "carpet") return CARPET_DRAG_BOUNDS;
+  if (id === "shelter") return WORMHOLE_BOUNDS;
   const piece = ROOM_FURNITURE.find((item) => item.id === id);
   return piece?.bounds ?? { x: 0, y: 0, width: 60, height: 60 };
 }

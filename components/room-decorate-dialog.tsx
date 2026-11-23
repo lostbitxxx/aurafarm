@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { buyRoomSkin } from "@/lib/actions/room-decor";
+import { COINS_SRC } from "@/lib/pet-assets";
 import {
   ROOM_DECOR_CATEGORIES,
   decorOptions,
@@ -161,8 +162,9 @@ export function RoomDecorateDialog({
       >
         <header className="decor-card-head">
           <h2 id="decor-title">Decorations</h2>
-          <p className="decor-coins" aria-live="polite">
-            Coins <span>{coins}</span>
+          <p className="decor-coins" aria-live="polite" aria-label={`${coins} coins`}>
+            <img className="coins-icon" src={COINS_SRC} alt="" width={16} height={16} draggable={false} />
+            <span>{coins}</span>
           </p>
           <button type="button" className="decor-close" onClick={onClose} aria-label="Close decorations">
             Close

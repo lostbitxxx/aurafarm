@@ -49,12 +49,12 @@ test("the desk requires an account and the old shop page is gone", () => {
     new URL("../components/public-header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /onOpenShop\?: \(\) => void/);
-  assert.match(header, /onClick=\{onOpenShop\}/);
+  assert.doesNotMatch(header, /onOpenShop/);
+  assert.doesNotMatch(header, />\s*Shop\s*</);
   assert.doesNotMatch(header, /href="\/shop"/);
   assert.doesNotMatch(header, /href="\/inventory"/);
   assert.doesNotMatch(header, /Collection/);
-  assert.match(header, />Pets</);
+  assert.doesNotMatch(header, />\s*Pets\s*</);
   assert.doesNotMatch(header, />Inventory</);
   assert.doesNotMatch(header, /Achievements/);
   assert.doesNotMatch(publicHeader, /\/shop/);
@@ -62,6 +62,10 @@ test("the desk requires an account and the old shop page is gone", () => {
   const livingRoom = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   assert.match(livingRoom, /onOpenCollection/);
   assert.match(livingRoom, /onOpenAchievements/);
+  assert.match(livingRoom, /WORMHOLE_SRC/);
+  assert.match(livingRoom, /data-tutorial="shop"/);
+  assert.match(livingRoom, /aria-label="Pets"/);
+  assert.match(livingRoom, /onClick=\{onOpenInventory\}/);
   const action = readFileSync(new URL("../lib/actions/pets.ts", import.meta.url), "utf8");
   assert.match(action, /shopPurchaseBlock/);
   assert.match(action, /highestPetLevel/);
@@ -79,9 +83,13 @@ test("the desk requires an account and the old shop page is gone", () => {
   assert.match(dialog, /Unlocks at level \{pet\.unlockLevel\}/);
   assert.match(dialog, /"Unlock"/);
   assert.doesNotMatch(dialog, /"Buy"/);
-  assert.match(dashboard, /onOpenShop=\{\(\) => showSection\("shop"\)\}/);
-  assert.match(dashboard, /farmerLevel=\{farmerLevel\}/);
-  assert.match(dashboard, /highestPetLevel/);
+  assert.doesNotMatch(dashboard, /ShopDialog/);
+  assert.doesNotMatch(dashboard, /onOpenShop/);
+  assert.doesNotMatch(dashboard, /showSection\("shop"\)/);
+  assert.match(dashboard, /showSection\("inventory"\)/);
+  assert.match(dialog, /highestPetLevel/);
+  assert.doesNotMatch(dialog, /export function ShopDialog/);
+  assert.doesNotMatch(dialog, /title="Shop"/);
 
   const sql = readFileSync(
     new URL("../supabase/migrations/0023_shop_level_unlock.sql", import.meta.url),
