@@ -21,6 +21,7 @@ import {
   crewDisplaySpot,
   crewSeatById,
   crewSpawnSpot,
+  followCrewPose,
   resolveCrewDrop,
   type CrewPose,
   type CrewPoseMode,
@@ -93,6 +94,7 @@ function CrewFarmer({
   const lastSentRef = useRef(0);
   const timerRef = useRef(0);
   const sendIdRef = useRef(0);
+  const sendingRef = useRef(false);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -199,31 +201,25 @@ function CrewFarmer({
   useEffect(() => {
     if (mine) return;
     let frame = 0;
-    const tick = () => {
+    let last = performance.now();
+    const tick = (now: number) => {
       frame = window.requestAnimationFrame(tick);
+      const dt = (now - last) / 1000;
+      last = now;
       const currentPose = poseRef.current;
       const target = currentPose ? crewDisplaySpot(currentPose) : crewSpawnSpot(occupant.farmerId);
-      const mode = currentPose?.mode;
-      const current = shownRef.current;
-      const glide = mode === "walking" || mode === "dragging";
-      const next = glide
-        ? {
-            left: current.left + (target.left - current.left) * 0.35,
-            top: current.top + (target.top - current.top) * 0.35,
-          }
-        : target;
-      if (Math.abs(next.left - current.left) < 0.05 && Math.abs(next.top - current.top) < 0.05) {
-        if (current.left === target.left && current.top === target.top) return;
-        shownRef.current = target;
-        setShown(target);
-        return;
-      }
+      const room = roomRef.current;
+      const next = followCrewPose(shownRef.current, target, currentPose?.mode, dt, {
+        width: room?.clientWidth ?? 640,
+        height: room?.clientHeight ?? 320,
+      });
+      if (next.left === shownRef.current.left && next.top === shownRef.current.top) return;
       shownRef.current = next;
       setShown(next);
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [mine, occupant.farmerId]);
+  }, [mine, occupant.farmerId, roomRef]);
 
   useEffect(() => {
     if (!mine || !ready) return;
@@ -238,27 +234,45 @@ function CrewFarmer({
     };
     pendingRef.current = next;
     const send = () => {
+      if (sendingRef.current) return;
       const pending = pendingRef.current;
       if (!pending) return;
+      sendingRef.current = true;
       const id = ++sendIdRef.current;
       lastSentRef.current = Date.now();
-      void publish(pending).then((stored) => {
-        if (sendIdRef.current !== id || !stored) return;
-        if (pending.mode === "sitting" && stored.mode !== "sitting") {
-          const freed = resolveWanderSpot(
-            { left: pending.left, top: pending.top },
-            CREW_WALK_BOUNDS,
-            CREW_OBSTACLES,
-            CREW_START_SPOTS,
-          );
-          positionRef.current = freed;
-          setSeatId(null);
-          setPosition(freed);
-        }
-      });
+      void publish(pending)
+        .then((stored) => {
+          if (sendIdRef.current !== id || !stored) return;
+          if (pending.mode === "sitting" && stored.mode !== "sitting") {
+            const freed = resolveWanderSpot(
+              { left: pending.left, top: pending.top },
+              CREW_WALK_BOUNDS,
+              CREW_OBSTACLES,
+              CREW_START_SPOTS,
+            );
+            positionRef.current = freed;
+            setSeatId(null);
+            setPosition(freed);
+          }
+        })
+        .finally(() => {
+          sendingRef.current = false;
+          const latest = pendingRef.current;
+          if (!latest || latest === pending) return;
+          const elapsedNow = Date.now() - lastSentRef.current;
+          if (latest.mode !== "walking" || elapsedNow >= 100) {
+            send();
+            return;
+          }
+          if (timerRef.current) return;
+          timerRef.current = window.setTimeout(() => {
+            timerRef.current = 0;
+            send();
+          }, 100 - elapsedNow);
+        });
     };
     const elapsed = Date.now() - lastSentRef.current;
-    if (mode !== "walking" || elapsed >= 250) {
+    if (mode !== "walking" || elapsed >= 100) {
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
         timerRef.current = 0;
@@ -266,11 +280,11 @@ function CrewFarmer({
       send();
       return;
     }
-    if (timerRef.current) return;
+    if (timerRef.current || sendingRef.current) return;
     timerRef.current = window.setTimeout(() => {
       timerRef.current = 0;
       send();
-    }, 250 - elapsed);
+    }, 100 - elapsed);
   }, [dragging, faceLeft, mine, position, publish, ready, seatId, viewerId, walking]);
 
   useEffect(() => {
@@ -404,7 +418,7 @@ function CrewFarmer({
         style={{
           left: `${spot.left}%`,
           top: `${spot.top}%`,
-          zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(spot.top),
+          zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(spot.top) + (sitting ? 2 : 0),
         }}
       >
         {mine ? (
@@ -513,7 +527,7 @@ export function CrewRoom({
       {CREW_SEATS.map((seat) => {
         const occupied = occupiedTables.has(seat.id);
         const farming = studyingTables.has(seat.id);
-        // Decorative empty seats sit behind the pet study stack.
+        // Seats sit just behind a pet whose feet rest on this anchor.
         const z = Math.max(1, roomDepthZ(seat.anchor.top) - 1);
         return (
           // eslint-disable-next-line @next/next/no-img-element
