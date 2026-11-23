@@ -109,10 +109,15 @@ test("living room hosts the daily cylinder in the top-right", () => {
   assert.match(cylinder, /room-cylinder-caption-subtitle/);
   assert.match(cylinder, /room-cylinder-caption-detail/);
   assert.match(cylinder, /cylinderCaption/);
+  assert.match(room, /data-wall-skin=\{decor\.skins\.wall\}/);
   assert.match(css, /room-cylinder-caption/);
   assert.match(css, /room-cylinder-caption-title/);
   assert.match(css, /room-cylinder-caption-subtitle/);
   assert.match(css, /room-cylinder-caption-detail/);
+  assert.match(css, /\.room-cylinder-caption-title\s*\{[^}]*font-weight:\s*700/);
+  assert.match(css, /\[data-wall-skin="orbital"\]/);
+  assert.match(css, /\[data-wall-skin="leather"\]/);
+  assert.match(css, /#fff6e4/);
   assert.match(cylinder, /is-in-liquid/);
   assert.match(css, /is-in-liquid/);
   assert.match(css, /cylinder-fire/);

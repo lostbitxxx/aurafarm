@@ -733,7 +733,11 @@ export function LivingRoom({
       </div>
       <div className="living-room-stage">
         <div className="living-room-shell">
-        <div ref={roomRef} className={editing ? "living-room is-editing" : "living-room"}>
+        <div
+          ref={roomRef}
+          className={editing ? "living-room is-editing" : "living-room"}
+          data-wall-skin={decor.skins.wall}
+        >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="living-room-layer is-wall"
