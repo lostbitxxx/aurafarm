@@ -9,6 +9,8 @@ import {
   pxToTopPercent,
 } from "../lib/living-room-layout";
 import {
+  DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS,
+  DECOR_CENTER_SNAP_RADIUS_PCT,
   DECOR_HISTORY_LIMIT,
   clampMoverOffset,
   coverBox,
@@ -16,6 +18,7 @@ import {
   defaultRoomDecor,
   emptyDecorHistory,
   equipRoomSkin,
+  horizontalCenterDx,
   isFurniturePlaced,
   isRoomItemPlaced,
   moveRoomItem,
@@ -30,6 +33,7 @@ import {
   roomSkinSrc,
   setRoomItemPlaced,
   undoDecor,
+  withHorizontalCenterSnap,
 } from "../lib/room-decor";
 
 test("a new room keeps must-have pieces and only the base skin", () => {
@@ -139,6 +143,7 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /writeRoomDecor/);
   assert.match(source, /pushDecorHistory/);
   assert.match(source, /commitDraft/);
+  assert.match(source, /withHorizontalCenterSnap/);
   assert.match(dialog, /Decorations/);
   assert.match(dialog, /Buy · \{detailPrice\}/);
   assert.match(dialog, /COIN_ICON_SRC/);
@@ -200,6 +205,17 @@ test("movers stay fully inside the room frame", () => {
 
   const leftShove = clampMoverOffset("storage-rack", rack, -200, 0);
   assert.ok(left0 + leftShove.dx >= -0.001);
+});
+
+test("horizontal center snap only engages when the pointer is fast", () => {
+  const bounds = moverBounds("lamp");
+  const target = horizontalCenterDx(bounds);
+  const near = clampMoverOffset("lamp", bounds, target + DECOR_CENTER_SNAP_RADIUS_PCT * 0.5, 0);
+  const slow = withHorizontalCenterSnap("lamp", near, DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS * 0.2);
+  assert.equal(slow.dx, near.dx);
+  const fast = withHorizontalCenterSnap("lamp", near, DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS * 2);
+  assert.equal(fast.dx, clampMoverOffset("lamp", bounds, target, near.dy).dx);
+  assert.equal(fast.dy, near.dy);
 });
 
 test("carpet stays strictly in the floor area", () => {

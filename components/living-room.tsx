@@ -39,6 +39,7 @@ import {
   roomDecorEqual,
   roomFurnitureSrc,
   undoDecor,
+  withHorizontalCenterSnap,
   writeRoomDecor,
   type DecorHistory,
   type DecorMoverId,
@@ -766,11 +767,26 @@ export function LivingRoom({
       height: room.height,
     };
     let live = startDecor;
+    let lastPointerX = event.clientX;
+    let lastPointerY = event.clientY;
+    let lastPointerTime = performance.now();
     const move = (pointer: PointerEvent) => {
       if (pointer.pointerId !== drag.pointerId) return;
+      const now = performance.now();
+      const dt = Math.max(now - lastPointerTime, 1);
+      const speed =
+        Math.hypot(pointer.clientX - lastPointerX, pointer.clientY - lastPointerY) / dt;
+      lastPointerX = pointer.clientX;
+      lastPointerY = pointer.clientY;
+      lastPointerTime = now;
       const dx = drag.dx + ((pointer.clientX - drag.startX) / Math.max(drag.width, 1)) * 100;
       const dy = drag.dy + ((pointer.clientY - drag.startY) / Math.max(drag.height, 1)) * 100;
       live = moveRoomItem(startDecor, drag.id, dx, dy);
+      const snapped = withHorizontalCenterSnap(drag.id, live.offsets[drag.id], speed);
+      if (snapped.dx !== live.offsets[drag.id].dx || snapped.dy !== live.offsets[drag.id].dy) {
+        live = cloneRoomDecor(live);
+        live.offsets[drag.id] = snapped;
+      }
       setDraftDecor(live);
     };
     const up = (pointer: PointerEvent) => {

@@ -25,6 +25,12 @@ import {
 /** Session edit Undo/Redo depth (cleared on Save / leave edit). */
 export const DECOR_HISTORY_LIMIT = 5;
 
+/** How close (percent of room width) to horizontal center before a fast drag snaps. */
+export const DECOR_CENTER_SNAP_RADIUS_PCT = 2.5;
+
+/** Pointer speed (px/ms) required to engage horizontal center snap. Slow crawls stay free. */
+export const DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS = 0.35;
+
 /** Small top margin so wall pieces stay below the ceiling trim. */
 const WALL_CEILING_MARGIN_PCT = 1;
 
@@ -582,6 +588,34 @@ export function moveRoomItem(decor: RoomDecor, id: DecorMoverId, dx: number, dy:
   const next = cloneRoomDecor(decor);
   next.offsets[id] = clampMoverOffset(id, moverBounds(id), dx, dy);
   return next;
+}
+
+/** `dx` that centers a mover left–right in the room (vertical position unchanged). */
+export function horizontalCenterDx(bounds: RoomRectPx) {
+  const left0 = pxToLeftPercent(bounds.x);
+  const width = pxToLeftPercent(bounds.width);
+  return (100 - width) / 2 - left0;
+}
+
+/**
+ * Snap only on the horizontal axis when the pointer is moving fast enough and the
+ * piece is near room center. Slow movement never snaps, so fine placement stays free.
+ */
+export function withHorizontalCenterSnap(
+  id: DecorMoverId,
+  offset: RoomDecorOffset,
+  pointerSpeedPxPerMs: number,
+): RoomDecorOffset {
+  const bounds = moverBounds(id);
+  const targetDx = horizontalCenterDx(bounds);
+  const speed = Number.isFinite(pointerSpeedPxPerMs) ? Math.max(0, pointerSpeedPxPerMs) : 0;
+  if (
+    speed >= DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS &&
+    Math.abs(offset.dx - targetDx) <= DECOR_CENTER_SNAP_RADIUS_PCT
+  ) {
+    return clampMoverOffset(id, bounds, targetDx, offset.dy);
+  }
+  return offset;
 }
 
 export type DecorHistory = {
