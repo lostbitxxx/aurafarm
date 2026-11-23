@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
-import { streakPillLabel } from "@/lib/pet-assets";
+import { COIN_ICON_SRC, streakPillLabel } from "@/lib/pet-assets";
 import { formatDuration } from "@/lib/study";
 import { HeaderMenu } from "./header-menu";
 
@@ -144,8 +144,10 @@ export function SiteHeader({
           <span aria-hidden="true">🔥</span> {streakLabel}
         </span>
         {coinsLabel != null ? (
-          <span className="points-balance topbar-desktop">
-            Coins <span>{coinsLabel}</span>
+          <span className="points-balance coin-balance topbar-desktop" aria-label={`Coins ${coinsLabel}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="coin-icon" src={COIN_ICON_SRC} alt="" draggable={false} />
+            <span>{coinsLabel}</span>
           </span>
         ) : null}
         {studyLabel ? (
@@ -212,8 +214,10 @@ export function SiteHeader({
             </Link>
           )}
           {coinsLabel != null ? (
-            <p className="points-balance topbar-drawer-study">
-              Coins <span>{coinsLabel}</span>
+            <p className="points-balance coin-balance topbar-drawer-study" aria-label={`Coins ${coinsLabel}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="coin-icon" src={COIN_ICON_SRC} alt="" draggable={false} />
+              <span>{coinsLabel}</span>
             </p>
           ) : null}
           {studyLabel ? (

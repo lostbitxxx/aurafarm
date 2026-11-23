@@ -114,7 +114,9 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /is-editing/);
   assert.match(source, /writeRoomDecor/);
   assert.match(dialog, /Decorations/);
-  assert.match(dialog, /Buy · \$\{detailPrice\} coins/);
+  assert.match(dialog, /Buy · \{detailPrice\}/);
+  assert.match(dialog, /COIN_ICON_SRC/);
+  assert.match(dialog, /decor-rate/);
   assert.match(dialog, /"Equip"/);
   assert.doesNotMatch(dialog, /decor-cat-toggle/);
   assert.doesNotMatch(dialog, /Remove \$\{item\.label\}/);

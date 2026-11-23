@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 12 12" shape-rendering="crispEdges">
+  <!-- Pixel coin for dashboard + Decorations prices. -->
+  <path fill="#8a5a18" d="M4 1h4v1h1v1h1v4H9v1H8v1H4V8H3V7H2V3h1V2h1V1z"/>
+  <path fill="#e2b23a" d="M4 2h4v1h1v4H8v1H4V7H3V3h1V2z"/>
+  <path fill="#f6d86a" d="M5 3h2v1h1v2H7v1H5V6H4V4h1V3z"/>
+  <path fill="#fff3b0" d="M5 3h1v1H5z"/>
+</svg>

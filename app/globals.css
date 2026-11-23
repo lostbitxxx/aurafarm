@@ -90,6 +90,21 @@ button.wordmark {
 
 .points-balance span { color: var(--slime); font-weight: 600; }
 
+.coin-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.12em;
+  image-rendering: pixelated;
+  flex: none;
+}
+
+.coin-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
 .hero, .auth-layout, .desk {
   width: min(1120px, calc(100% - 8vw));
   margin: 0 auto;
@@ -5895,6 +5910,62 @@ button.dialog-row {
 .decor-coins span {
   color: #23392d;
   font-weight: 600;
+}
+
+.decor-rate {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0.75rem 0 0;
+  color: #596650;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.decor-price-tag {
+  position: absolute;
+  z-index: 2;
+  top: 0.28rem;
+  right: 0.28rem;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.4rem;
+  border: 1.5px solid #23392d;
+  border-radius: 999px;
+  background: #fff9ed;
+  color: #23392d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.decor-tile.is-strip .decor-price-tag {
+  top: 0.2rem;
+  right: 0.25rem;
+  font-size: 0.62rem;
+  padding: 0.08rem 0.28rem;
+}
+
+.decor-price-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-weight: 650;
+  color: #23392d;
+}
+
+.decor-action-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
 }
 
 .decor-close {
