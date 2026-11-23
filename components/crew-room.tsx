@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import { crewShowsAurafarming, type CrewOccupant } from "@/lib/farm-crew";
 import {
   CREW_BLACKBOARD,
@@ -9,11 +16,12 @@ import {
   CREW_PEDESTAL,
   CREW_SEATS,
   CREW_START_SPOTS,
-  CREW_TABLE_PATH,
+  CREW_SEATS_PATH,
   CREW_WALK_BOUNDS,
   crewDisplaySpot,
+  crewSeatById,
   crewSpawnSpot,
-  dropOnCrewSeat,
+  resolveCrewDrop,
   type CrewPose,
   type CrewPoseMode,
 } from "@/lib/crew-room-layout";
@@ -34,7 +42,7 @@ import {
   type WanderDir,
   type WanderSpot,
 } from "@/lib/living-room-wander";
-import { PixelPetArt, useWalkPose } from "./pixel-pet";
+import { PixelPetArt, useStudyPose, useWalkPose } from "./pixel-pet";
 
 function clampDrag(spot: WanderSpot): WanderSpot {
   return {
@@ -94,6 +102,7 @@ function CrewFarmer({
   takenRef.current = taken;
   poseRef.current = pose;
   const ownWalking = mine && ready && walking && !studying && !dragging && !seatId;
+  const studyFrame = useStudyPose(studying && !dragging);
   const remoteWalking = !mine && pose?.mode === "walking";
   const walkPose = useWalkPose(ownWalking || remoteWalking);
 
@@ -277,41 +286,60 @@ function CrewFarmer({
   const moving = ownWalking || remoteWalking || draggingNow;
   const shownFace = mine ? faceLeft : Boolean(pose?.faceLeft);
   const studyPose = studying && !moving;
-  // On a lobby table: study limbs without the small study desk props (table is the desk).
-  const studyFurniture = studyPose && !atTable;
+  // Off-seat studying uses the default study desk; seated studying uses lobby desk + pens.
+  const useLobbyDesk = Boolean(studyPose && atTable);
+  const studyFurniture = studyPose;
+  const seat = sitting ? crewSeatById(seatId ?? pose?.seatId) : null;
 
-  const place = (clientX: number, clientY: number, wrapHeight: number) => {
+  const petWrapHeight = () => {
+    const room = roomRef.current?.getBoundingClientRect();
+    // Match .room-pet-wrap width scale so seat-sized grab targets do not skew feet.
+    return room ? room.height * (86 / 466) : 0;
+  };
+
+  const place = (clientX: number, clientY: number) => {
     const room = roomRef.current?.getBoundingClientRect();
     if (!room) return;
     const pointer = pointerPercentInRoom(clientX, clientY, room);
-    const next = clampDrag(spotFromForeheadPointer(pointer.left, pointer.top, room, wrapHeight));
+    const next = clampDrag(spotFromForeheadPointer(pointer.left, pointer.top, room, petWrapHeight()));
     positionRef.current = next;
     setPosition(next);
   };
 
-  const finishDrag = (wrapHeight: number) => {
+  const beginDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+    };
+  };
+
+  const moveDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!drag.dragging) {
+      if (!dragPastThreshold(drag.startX, drag.startY, event.clientX, event.clientY)) return;
+      drag.dragging = true;
+      draggingRef.current = true;
+      setDragging(true);
+      setSeatId(null);
+    }
+    place(event.clientX, event.clientY);
+  };
+
+  const finishDrag = () => {
     const drag = dragRef.current;
     dragRef.current = null;
     draggingRef.current = false;
     setDragging(false);
     if (!drag?.dragging) return;
-    const seat = dropOnCrewSeat(positionRef.current, takenRef.current);
-    if (seat) {
-      positionRef.current = seat.anchor;
-      setPosition(seat.anchor);
-      setSeatId(seat.id);
-      return;
-    }
-    const freed = resolveWanderSpot(
-      positionRef.current,
-      CREW_WALK_BOUNDS,
-      CREW_OBSTACLES,
-      CREW_START_SPOTS,
-    );
-    positionRef.current = freed;
-    setPosition(freed);
-    setSeatId(null);
-    void wrapHeight;
+    const dropped = resolveCrewDrop(positionRef.current, takenRef.current);
+    positionRef.current = dropped.spot;
+    setPosition(dropped.spot);
+    setSeatId(dropped.seat?.id ?? null);
   };
 
   const body = (
@@ -323,14 +351,10 @@ function CrewFarmer({
           color={occupant.color}
           hat={occupant.hat}
           clothes={occupant.clothes}
-          pose={studyPose ? "study1" : ownWalking || remoteWalking ? walkPose : "idle"}
-          studyFurniture={studyFurniture || !studyPose}
-          className={[
-            ownWalking || remoteWalking ? "is-walking" : "",
-            atTable ? "is-at-lobby-table" : "",
-          ]
-            .filter(Boolean)
-            .join(" ") || undefined}
+          pose={studyPose ? studyFrame : ownWalking || remoteWalking ? walkPose : "idle"}
+          studyFurniture={studyFurniture}
+          lobbyDesk={useLobbyDesk}
+          className={ownWalking || remoteWalking ? "is-walking" : undefined}
           alt=""
         />
       </span>
@@ -340,65 +364,72 @@ function CrewFarmer({
     </>
   );
 
-  return (
-    <div
-      className={[
-        "room-pet-wrap",
-        sitting ? "is-sitting" : "",
-        draggingNow ? "is-dragging" : "",
-        mine ? "" : "is-remote",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+  const grab = mine && seat && !draggingNow ? (
+    <button
+      type="button"
+      className="crew-seat-grab"
+      aria-label={`Move ${occupant.displayName}`}
       style={{
-        left: `${spot.left}%`,
-        top: `${spot.top}%`,
-        // Sit just under the tabletop layer so the desk reads in front of the pet.
-        zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(sitting ? spot.top : spot.top),
+        left: `${seat.minLeft}%`,
+        top: `${seat.minTop}%`,
+        width: `${seat.maxLeft - seat.minLeft}%`,
+        height: `${seat.maxTop - seat.minTop}%`,
       }}
-    >
-      {mine ? (
-        <button
-          type="button"
-          className="room-pet"
-          aria-label={`Move ${occupant.displayName}`}
-          onPointerDown={(event) => {
-            if (event.button !== 0) return;
-            event.currentTarget.setPointerCapture(event.pointerId);
-            dragRef.current = {
-              pointerId: event.pointerId,
-              startX: event.clientX,
-              startY: event.clientY,
-              dragging: false,
-            };
-          }}
-          onPointerMove={(event) => {
-            const drag = dragRef.current;
-            if (!drag || drag.pointerId !== event.pointerId) return;
-            if (!drag.dragging) {
-              if (!dragPastThreshold(drag.startX, drag.startY, event.clientX, event.clientY)) return;
-              drag.dragging = true;
-              draggingRef.current = true;
-              setDragging(true);
-              setSeatId(null);
-            }
-            place(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect().height);
-          }}
-          onPointerUp={(event) => {
-            const drag = dragRef.current;
-            if (!drag || drag.pointerId !== event.pointerId) return;
-            finishDrag(event.currentTarget.getBoundingClientRect().height);
-          }}
-          onPointerCancel={() => {
-            finishDrag(0);
-          }}
-        >
-          {body}
-        </button>
-      ) : (
-        <div className="room-pet">{body}</div>
-      )}
-    </div>
+      onPointerDown={beginDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={(event) => {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        finishDrag();
+      }}
+      onPointerCancel={() => {
+        finishDrag();
+      }}
+    />
+  ) : null;
+
+  return (
+    <>
+      {grab}
+      <div
+        className={[
+          "room-pet-wrap",
+          sitting ? "is-sitting" : "",
+          sitting ? "is-on-lobby-seat" : "",
+          draggingNow ? "is-dragging" : "",
+          mine ? "" : "is-remote",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{
+          left: `${spot.left}%`,
+          top: `${spot.top}%`,
+          zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(spot.top),
+        }}
+      >
+        {mine ? (
+          <button
+            type="button"
+            className="room-pet"
+            aria-label={`Move ${occupant.displayName}`}
+            onPointerDown={beginDrag}
+            onPointerMove={moveDrag}
+            onPointerUp={(event) => {
+              const drag = dragRef.current;
+              if (!drag || drag.pointerId !== event.pointerId) return;
+              finishDrag();
+            }}
+            onPointerCancel={() => {
+              finishDrag();
+            }}
+          >
+            {body}
+          </button>
+        ) : (
+          <div className="room-pet">{body}</div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -420,13 +451,16 @@ export function CrewRoom({
   const roomRef = useRef<HTMLDivElement>(null);
   const { poses, loaded, error, publish } = useCrewPoses(crewId);
   const taken = useMemo(() => {
+    // Only people actually in the room hold a seat. A leftover pose from someone
+    // who left was blocking the 5 o'clock chair while it looked empty.
+    const present = new Set(occupants.map((occupant) => occupant.farmerId));
     const seats = new Set<string>();
     for (const pose of Object.values(poses)) {
-      if (pose.userId === viewerId) continue;
+      if (pose.userId === viewerId || !present.has(pose.userId)) continue;
       if (pose.mode === "sitting" && pose.seatId) seats.add(pose.seatId);
     }
     return seats;
-  }, [poses, viewerId]);
+  }, [occupants, poses, viewerId]);
 
   const occupiedTables = useMemo(() => {
     const ids = new Set<string>();
@@ -479,19 +513,19 @@ export function CrewRoom({
       {CREW_SEATS.map((seat) => {
         const occupied = occupiedTables.has(seat.id);
         const farming = studyingTables.has(seat.id);
-        // Table draws above a sitting pet so the desktop reads in front.
-        const z = roomDepthZ(seat.anchor.top) + (occupied ? 3 : 0);
+        // Decorative empty seats sit behind the pet study stack.
+        const z = Math.max(1, roomDepthZ(seat.anchor.top) - 1);
         return (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={seat.id}
-            className={["crew-lobby-table", occupied ? "is-occupied" : "", farming ? "is-studying" : ""]
+            className={["crew-lobby-seat", occupied ? "is-occupied" : "", farming ? "is-studying" : ""]
               .filter(Boolean)
               .join(" ")}
-            src={CREW_TABLE_PATH}
+            src={CREW_SEATS_PATH}
             alt=""
             draggable={false}
-            data-table={seat.id}
+            data-seat={seat.id}
             style={{
               left: `${seat.anchor.left}%`,
               top: `${seat.anchor.top}%`,

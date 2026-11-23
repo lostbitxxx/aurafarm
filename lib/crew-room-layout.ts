@@ -1,13 +1,18 @@
 /**
  * FarmCrew lobby geometry in the shared 600×300 room.
- * Six study tables ring the pedestal. Anchors are where a sitting pet's feet rest.
+ * Six study seats ring the pedestal. Anchors are where a sitting pet's feet rest.
  */
 
 import { spotHitsObstacle, type RoomObstacle } from "@/lib/living-room-layout";
-import type { WanderSpot } from "@/lib/living-room-wander";
+import {
+  clampSpotToWalkBand,
+  ejectFromObstacle,
+  resolveWanderSpot,
+  type WanderSpot,
+} from "@/lib/living-room-wander";
 
 export const CREW_LIBRARY_PATH = "/pet-assets/room/crew/library.svg";
-export const CREW_TABLE_PATH = "/pet-assets/room/crew/table.svg";
+export const CREW_SEATS_PATH = "/pet-assets/room/crew/seats.svg";
 
 /** Right-wall blackboard. Same box the library shelf used to fill. */
 export const CREW_BLACKBOARD = { x: 492, y: 18, width: 92, height: 86 };
@@ -34,20 +39,30 @@ export type CrewSeat = {
 
 const ROOM_W = 600;
 const ROOM_H = 300;
+/**
+ * Same rectangle as `.crew-lobby-seat`:
+ * width 56/600, height 44/300, transform translate(-50%, -78%).
+ * Anchor sits halfway across and 78% down that box for every seat.
+ */
+const SEAT_WIDTH_PCT = (56 / ROOM_W) * 100;
+const SEAT_HEIGHT_PCT = (44 / ROOM_H) * 100;
+const SEAT_ANCHOR_X = 0.5;
+const SEAT_ANCHOR_Y = 0.78;
+/** Same extra grab on every seat so a pet dropped in front of the legs still sits. */
+const SEAT_PAD_X = 1.5;
+const SEAT_PAD_BOTTOM = 8;
+const SEAT_EJECT_PAD = 1.25;
 
 function seatAt(id: string, x: number, y: number): CrewSeat {
   const anchor = { left: (x / ROOM_W) * 100, top: (y / ROOM_H) * 100 };
-  return {
-    id,
-    anchor,
-    minLeft: anchor.left - 6,
-    maxLeft: anchor.left + 6,
-    minTop: anchor.top - 6,
-    maxTop: anchor.top + 6,
-  };
+  const minLeft = anchor.left - SEAT_WIDTH_PCT * SEAT_ANCHOR_X - SEAT_PAD_X;
+  const maxLeft = anchor.left + SEAT_WIDTH_PCT * (1 - SEAT_ANCHOR_X) + SEAT_PAD_X;
+  const minTop = anchor.top - SEAT_HEIGHT_PCT * SEAT_ANCHOR_Y;
+  const maxTop = anchor.top + SEAT_HEIGHT_PCT * (1 - SEAT_ANCHOR_Y) + SEAT_PAD_BOTTOM;
+  return { id, anchor, minLeft, maxLeft, minTop, maxTop };
 }
 
-/** Back row, sides, then the front row. Pixel spots match lobby table anchors. */
+/** Back row, sides, then the front row. Pixel spots match lobby seat anchors. */
 export const CREW_SEATS: readonly CrewSeat[] = [
   seatAt("nw", 200, 118),
   seatAt("ne", 400, 118),
@@ -57,7 +72,7 @@ export const CREW_SEATS: readonly CrewSeat[] = [
   seatAt("se", 386, 214),
 ];
 
-/** Pixel origin of each lobby table inside the 600×300 lobby art. */
+/** Pixel origin of each lobby seat inside the 600×300 lobby art. */
 export function crewTablePixel(seatId: string): { x: number; y: number } | null {
   const seat = crewSeatById(seatId);
   if (!seat) return null;
@@ -89,11 +104,11 @@ export const CREW_OBSTACLES: readonly RoomObstacle[] = [
 
 export const CREW_START_SPOTS: readonly WanderSpot[] = [
   { left: 50, top: 86 },
-  { left: 18, top: 82 },
-  { left: 82, top: 82 },
-  { left: 36, top: 86 },
-  { left: 64, top: 86 },
+  { left: 12, top: 88 },
+  { left: 90, top: 88 },
   { left: 50, top: 78 },
+  { left: 50, top: 70 },
+  { left: 50, top: 36 },
 ];
 
 const SEAT_IDS = new Set(CREW_SEATS.map((seat) => seat.id));
@@ -112,33 +127,172 @@ export function crewSpawnSpot(userId: string): WanderSpot {
   return CREW_START_SPOTS[hash % CREW_START_SPOTS.length];
 }
 
+export function spotInCrewSeat(spot: WanderSpot, seat: CrewSeat): boolean {
+  return (
+    spot.left >= seat.minLeft &&
+    spot.left <= seat.maxLeft &&
+    spot.top >= seat.minTop &&
+    spot.top <= seat.maxTop
+  );
+}
+
+/** True when the spot sits inside any lobby seat hitbox. */
+export function spotInAnyCrewSeat(spot: WanderSpot): boolean {
+  return CREW_SEATS.some((seat) => spotInCrewSeat(spot, seat));
+}
+
 /**
- * Drop onto the nearest free chair whose hit box contains the spot.
- * A taken chair rejects the drop so the pet stays on the floor.
+ * Same margin around every table sprite. Measured to the drawn desk, not the
+ * foot anchor, so the back-row chairs cannot swallow the 5 o'clock tabletop.
+ */
+const SEAT_REACH = 8;
+
+function spriteBox(seat: CrewSeat) {
+  return {
+    left: seat.anchor.left - SEAT_WIDTH_PCT * SEAT_ANCHOR_X,
+    right: seat.anchor.left + SEAT_WIDTH_PCT * (1 - SEAT_ANCHOR_X),
+    top: seat.anchor.top - SEAT_HEIGHT_PCT * SEAT_ANCHOR_Y,
+    bottom: seat.anchor.top + SEAT_HEIGHT_PCT * (1 - SEAT_ANCHOR_Y),
+  };
+}
+
+function distanceToSprite(spot: WanderSpot, seat: CrewSeat): number {
+  const box = spriteBox(seat);
+  const dx = spot.left < box.left ? box.left - spot.left : spot.left > box.right ? spot.left - box.right : 0;
+  const dy = spot.top < box.top ? box.top - spot.top : spot.top > box.bottom ? spot.top - box.bottom : 0;
+  return Math.hypot(dx, dy);
+}
+
+/**
+ * Drop onto the closest free seat whose table is under the spot.
+ * A taken closest seat rejects the drop so the pet does not hop to another chair.
  */
 export function dropOnCrewSeat(spot: WanderSpot, taken: ReadonlySet<string>): CrewSeat | null {
   let best: CrewSeat | null = null;
   let bestDist = Infinity;
   for (const seat of CREW_SEATS) {
-    if (taken.has(seat.id)) continue;
-    if (
-      spot.left < seat.minLeft ||
-      spot.left > seat.maxLeft ||
-      spot.top < seat.minTop ||
-      spot.top > seat.maxTop
-    ) {
-      continue;
-    }
-    const dist = Math.hypot(spot.left - seat.anchor.left, spot.top - seat.anchor.top);
-    if (dist < bestDist) {
-      best = seat;
-      bestDist = dist;
-    }
+    const dist = distanceToSprite(spot, seat);
+    if (dist > SEAT_REACH || dist >= bestDist) continue;
+    best = seat;
+    bestDist = dist;
   }
+  if (!best || taken.has(best.id)) return null;
   return best;
 }
 
-/** Sitting pets use the chair anchor so every screen agrees on the cushion. */
+function seatBoxes(): RoomObstacle[] {
+  return CREW_SEATS.map((seat) => ({
+    minLeft: seat.minLeft,
+    maxLeft: seat.maxLeft,
+    minTop: seat.minTop,
+    maxTop: seat.maxTop,
+  }));
+}
+
+function isCrewFloorSafe(spot: WanderSpot): boolean {
+  const clamped = clampSpotToWalkBand(spot, CREW_WALK_BOUNDS);
+  if (clamped.left !== spot.left || clamped.top !== spot.top) return false;
+  if (spotHitsObstacle(spot, CREW_OBSTACLES)) return false;
+  if (spotInAnyCrewSeat(spot)) return false;
+  return true;
+}
+
+/**
+ * Push off occupied seat hitboxes (and room obstacles) onto open floor that
+ * will not immediately re-trigger another sit zone.
+ */
+export function ejectFromCrewSeats(spot: WanderSpot): WanderSpot {
+  let current = clampSpotToWalkBand(spot, CREW_WALK_BOUNDS);
+  if (isCrewFloorSafe(current)) return current;
+
+  const blocks = [...seatBoxes(), ...CREW_OBSTACLES];
+  for (let step = 0; step < 12; step += 1) {
+    if (isCrewFloorSafe(current)) return current;
+    const box = blocks.find(
+      (item) =>
+        current.left >= item.minLeft &&
+        current.left <= item.maxLeft &&
+        current.top >= item.minTop &&
+        current.top <= item.maxTop,
+    );
+    if (!box) break;
+    const ranked = [
+      { left: box.maxLeft + SEAT_EJECT_PAD, top: current.top },
+      { left: box.minLeft - SEAT_EJECT_PAD, top: current.top },
+      { left: current.left, top: box.maxTop + SEAT_EJECT_PAD },
+      { left: current.left, top: box.minTop - SEAT_EJECT_PAD },
+      ...ejectFromObstacle(current, box, CREW_WALK_BOUNDS, SEAT_EJECT_PAD),
+    ];
+    let advanced = false;
+    for (const candidate of ranked) {
+      const next = clampSpotToWalkBand(candidate, CREW_WALK_BOUNDS);
+      if (next.left === current.left && next.top === current.top) continue;
+      current = next;
+      advanced = true;
+      break;
+    }
+    if (!advanced) break;
+  }
+
+  if (isCrewFloorSafe(current)) return current;
+
+  let best: WanderSpot | null = null;
+  let bestDist = Infinity;
+  for (const candidate of CREW_START_SPOTS) {
+    const next = clampSpotToWalkBand(candidate, CREW_WALK_BOUNDS);
+    if (!isCrewFloorSafe(next)) continue;
+    const dist = Math.hypot(next.left - spot.left, next.top - spot.top);
+    if (dist < bestDist) {
+      best = next;
+      bestDist = dist;
+    }
+  }
+  if (best) return best;
+
+  const freed = resolveWanderSpot(current, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  if (isCrewFloorSafe(freed)) return freed;
+
+  // Last resort: spiral search for open floor outside every sit zone.
+  for (let radius = 1; radius <= 40; radius += 1) {
+    for (const dir of [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+      { x: 1, y: -1 },
+      { x: 1, y: 1 },
+      { x: -1, y: -1 },
+      { x: -1, y: 1 },
+    ]) {
+      const next = clampSpotToWalkBand(
+        { left: current.left + dir.x * radius * 0.75, top: current.top + dir.y * radius * 0.75 },
+        CREW_WALK_BOUNDS,
+      );
+      if (isCrewFloorSafe(next)) return next;
+    }
+  }
+  return freed;
+}
+
+/**
+ * Finish a drag: sit on a free seat under the spot, else stand on open floor
+ * that does not land inside any sit hitbox (occupied seats eject clear).
+ */
+export function resolveCrewDrop(
+  spot: WanderSpot,
+  taken: ReadonlySet<string>,
+): { seat: CrewSeat | null; spot: WanderSpot } {
+  const seat = dropOnCrewSeat(spot, taken);
+  if (seat) return { seat, spot: seat.anchor };
+  if (spotInAnyCrewSeat(spot) || spotHitsObstacle(spot, CREW_OBSTACLES)) {
+    return { seat: null, spot: ejectFromCrewSeats(spot) };
+  }
+  const freed = resolveWanderSpot(spot, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  if (spotInAnyCrewSeat(freed)) return { seat: null, spot: ejectFromCrewSeats(freed) };
+  return { seat: null, spot: freed };
+}
+
+/** Sitting pets use the seat anchor so every screen agrees on the cushion. */
 export function crewDisplaySpot(pose: CrewPose): WanderSpot {
   if (pose.mode === "sitting") {
     const seat = crewSeatById(pose.seatId);
