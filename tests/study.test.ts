@@ -34,6 +34,7 @@ import {
   focusedSeconds,
   formatClock,
   formatDuration,
+  formatStudyXpAsDuration,
   formatHistoryMode,
   formatHistoryTime,
   formatHistoryXp,
@@ -122,6 +123,10 @@ test("durations stay in whole hours, minutes, and seconds", () => {
   assert.equal(formatDuration(45), "45s");
   assert.equal(formatDuration(125), "2m 5s");
   assert.equal(formatDuration(3661), "1h 1m");
+  assert.equal(formatStudyXpAsDuration(0), "0h 0m");
+  assert.equal(formatStudyXpAsDuration(64), "1h 4m");
+  assert.equal(formatStudyXpAsDuration(4064), "67h 44m");
+  assert.equal(formatStudyXpAsDuration(-3), "0h 0m");
 });
 
 test("study lengths default to 5 minutes and offer 30, 60, and 90", () => {
