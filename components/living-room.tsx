@@ -25,16 +25,23 @@ import {
   decorHandles,
   decorObstacles,
   defaultRoomDecor,
+  emptyDecorHistory,
   isFurniturePlaced,
   isRoomItemPlaced,
   moverBounds,
   moveRoomItem,
   offsetTransform,
   ownedRoomSkinKeys,
+  pushDecorHistory,
   readRoomDecor,
+  redoDecor,
   roomBackgroundSrc,
+  roomDecorEqual,
   roomFurnitureSrc,
+  undoDecor,
+  withHorizontalCenterSnap,
   writeRoomDecor,
+  type DecorHistory,
   type DecorMoverId,
   type RoomDecor,
 } from "@/lib/room-decor";
@@ -498,7 +505,7 @@ function RoomPet({
   );
 }
 
-function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" }) {
+function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" | "undo" | "redo" }) {
   if (kind === "save") {
     return (
       <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -513,6 +520,34 @@ function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" }) {
         <rect x="13.5" y="4" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
         <rect x="4" y="13.5" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
         <rect x="13.5" y="13.5" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (kind === "undo") {
+    return (
+      <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M9 8H5V4M5 8c2.2-2.5 5.2-4 8.5-4a9 9 0 1 1-8.1 5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (kind === "redo") {
+    return (
+      <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M15 8h4V4M19 8c-2.2-2.5-5.2-4-8.5-4a9 9 0 1 0 8.1 5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }
@@ -585,6 +620,7 @@ export function LivingRoom({
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
+  const [decorHistory, setDecorHistory] = useState<DecorHistory>(() => emptyDecorHistory());
   const [decorOpen, setDecorOpen] = useState(false);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
@@ -631,6 +667,7 @@ export function LivingRoom({
     const loaded = readRoomDecor(userId, ownedSkinKeys);
     setSavedDecor(loaded);
     setDraftDecor(null);
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
     setSeats(reconcileSeats(loaded, readRoomSeats(userId)));
     setSeatsReady(true);
@@ -678,6 +715,7 @@ export function LivingRoom({
 
   function beginEdit() {
     setDraftDecor(cloneRoomDecor(savedDecor));
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
   }
 
@@ -686,7 +724,30 @@ export function LivingRoom({
     writeRoomDecor(userId, draftDecor);
     setSavedDecor(draftDecor);
     setDraftDecor(null);
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
+  }
+
+  function commitDraft(next: RoomDecor) {
+    if (!draftDecor || roomDecorEqual(draftDecor, next)) return;
+    setDecorHistory((history) => pushDecorHistory(history, draftDecor));
+    setDraftDecor(next);
+  }
+
+  function onUndoEdit() {
+    if (!draftDecor) return;
+    const result = undoDecor(decorHistory, draftDecor);
+    if (!result) return;
+    setDecorHistory(result.history);
+    setDraftDecor(result.decor);
+  }
+
+  function onRedoEdit() {
+    if (!draftDecor) return;
+    const result = redoDecor(decorHistory, draftDecor);
+    if (!result) return;
+    setDecorHistory(result.history);
+    setDraftDecor(result.decor);
   }
 
   function onHandlePointerDown(event: ReactPointerEvent<HTMLButtonElement>, id: DecorMoverId) {
@@ -694,6 +755,7 @@ export function LivingRoom({
     if (!room || !draftDecor) return;
     event.preventDefault();
     const offset = draftDecor.offsets[id] ?? { dx: 0, dy: 0 };
+    const startDecor = cloneRoomDecor(draftDecor);
     const drag = {
       id,
       pointerId: event.pointerId,
@@ -704,17 +766,39 @@ export function LivingRoom({
       width: room.width,
       height: room.height,
     };
+    let live = startDecor;
+    let centerSnapped = false;
+    let lastPointerX = event.clientX;
+    let lastPointerY = event.clientY;
+    let lastPointerTime = performance.now();
     const move = (pointer: PointerEvent) => {
       if (pointer.pointerId !== drag.pointerId) return;
+      const now = performance.now();
+      const dt = Math.max(now - lastPointerTime, 1);
+      const speed =
+        Math.hypot(pointer.clientX - lastPointerX, pointer.clientY - lastPointerY) / dt;
+      lastPointerX = pointer.clientX;
+      lastPointerY = pointer.clientY;
+      lastPointerTime = now;
       const dx = drag.dx + ((pointer.clientX - drag.startX) / Math.max(drag.width, 1)) * 100;
       const dy = drag.dy + ((pointer.clientY - drag.startY) / Math.max(drag.height, 1)) * 100;
-      setDraftDecor((current) => (current ? moveRoomItem(current, drag.id, dx, dy) : current));
+      live = moveRoomItem(startDecor, drag.id, dx, dy);
+      const snap = withHorizontalCenterSnap(drag.id, live.offsets[drag.id], speed, centerSnapped);
+      centerSnapped = snap.snapped;
+      if (snap.offset.dx !== live.offsets[drag.id].dx || snap.offset.dy !== live.offsets[drag.id].dy) {
+        live = cloneRoomDecor(live);
+        live.offsets[drag.id] = snap.offset;
+      }
+      setDraftDecor(live);
     };
     const up = (pointer: PointerEvent) => {
       if (pointer.pointerId !== drag.pointerId) return;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      if (!roomDecorEqual(live, startDecor)) {
+        setDecorHistory((history) => pushDecorHistory(history, startDecor));
+      }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -930,9 +1014,29 @@ export function LivingRoom({
         </div>
         <div className="room-tool-rail">
           {editing ? (
-            <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
-              <RoomToolIcon kind="decorate" />
-            </button>
+            <>
+              <button
+                type="button"
+                className="room-tool-button"
+                aria-label="Undo"
+                disabled={decorHistory.past.length === 0}
+                onClick={onUndoEdit}
+              >
+                <RoomToolIcon kind="undo" />
+              </button>
+              <button
+                type="button"
+                className="room-tool-button"
+                aria-label="Redo"
+                disabled={decorHistory.future.length === 0}
+                onClick={onRedoEdit}
+              >
+                <RoomToolIcon kind="redo" />
+              </button>
+              <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
+                <RoomToolIcon kind="decorate" />
+              </button>
+            </>
           ) : null}
           <button
             type="button"
@@ -950,7 +1054,7 @@ export function LivingRoom({
           decor={draftDecor}
           coins={liveCoins}
           ownedSkinKeys={ownedSkinKeys}
-          onChange={setDraftDecor}
+          onChange={commitDraft}
           onCoinsChange={(next) => {
             setLiveCoins(next);
             onCoinsChange?.(next);
