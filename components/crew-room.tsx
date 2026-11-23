@@ -27,7 +27,7 @@ import {
   type CrewPoseMode,
 } from "@/lib/crew-room-layout";
 import { useCrewPoses } from "@/lib/crew-room-sync";
-import { roomDepthZ, ROOM_DRAG_Z, ROOM_LABEL_Z } from "@/lib/living-room-layout";
+import { petStandingTop, roomDepthZ, ROOM_DRAG_Z, ROOM_LABEL_Z } from "@/lib/living-room-layout";
 import {
   dragPastThreshold,
   facingFromDirection,
@@ -260,6 +260,7 @@ function CrewFarmer({
               CREW_WALK_BOUNDS,
               CREW_OBSTACLES,
               CREW_START_SPOTS,
+              "point",
             );
             positionRef.current = freed;
             setSeatId(null);
@@ -449,7 +450,12 @@ function CrewFarmer({
         style={{
           left: `${spot.left}%`,
           top: `${spot.top}%`,
-          zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(spot.top) + (sitting ? 2 : 0),
+          zIndex: draggingNow
+            ? ROOM_DRAG_Z
+            : roomDepthZ(
+                petStandingTop(spot.top, sitting && !draggingNow ? "feet" : "floor") +
+                  (sitting && !draggingNow ? 2 : 0),
+              ),
         }}
       >
         {mine ? (

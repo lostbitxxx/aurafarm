@@ -8,6 +8,7 @@ import {
   LOVESEAT_BOUNDS,
   ROOM_FURNITURE,
   SOFA_BOUNDS,
+  paintDepthTop,
   pxToLeftPercent,
   pxToTopPercent,
   roomDepthZ,
@@ -76,9 +77,11 @@ export function seatAnchor(decor: RoomDecor, assignment: SeatAssignment): Wander
   };
 }
 
-export function seatPaintZ(pieceId: SeatPieceId) {
+/** Sitting pet paints just in front of the seat piece (drop-to-sit wins over walk collision). */
+export function seatPaintZ(decor: RoomDecor, pieceId: SeatPieceId) {
   const piece = ROOM_FURNITURE.find((item) => item.id === pieceId);
-  return roomDepthZ((piece?.depthTop ?? 50) + 2);
+  const dy = offsetOf(decor, pieceId).dy;
+  return roomDepthZ(paintDepthTop(piece?.depthTop ?? 50, dy) + 2);
 }
 
 function hitRect(pieceId: SeatPieceId, decor: RoomDecor) {

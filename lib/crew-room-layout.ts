@@ -283,7 +283,7 @@ export function ejectFromCrewSeats(spot: WanderSpot): WanderSpot {
   }
   if (best) return best;
 
-  const freed = resolveWanderSpot(current, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  const freed = resolveWanderSpot(current, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS, "point");
   if (isCrewFloorSafe(freed)) return freed;
 
   // Last resort: spiral search for open floor outside every sit zone.
@@ -321,7 +321,7 @@ export function resolveCrewDrop(
   if (spotInAnyCrewSeat(spot) || spotHitsObstacle(spot, CREW_OBSTACLES)) {
     return { seat: null, spot: ejectFromCrewSeats(spot) };
   }
-  const freed = resolveWanderSpot(spot, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  const freed = resolveWanderSpot(spot, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS, "point");
   if (spotInAnyCrewSeat(freed)) return { seat: null, spot: ejectFromCrewSeats(freed) };
   return { seat: null, spot: freed };
 }

@@ -3787,8 +3787,10 @@ button.dialog-row {
   /*
     Drawn for a ~466px-tall room (same reference as .room-cylinder).
     Scale with living-room cqh so pets shrink with the 2:1 stage.
+    Fixed height = sprite only so standing-line math matches the wrap center.
   */
   width: calc(100cqh * 86 / 466);
+  height: calc(100cqh * 70 / 466);
   transform: translate(-50%, -50%);
   /* Inline z-index from foot depth; fallback keeps pets above the base room. */
   z-index: 2;
@@ -3882,21 +3884,17 @@ button.dialog-row {
 }
 
 .room-equipped {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 110%);
+  white-space: nowrap;
   background: #c5ef47;
   color: #23392d;
   padding: 0.15em 0.4em;
   border-radius: 999px;
   font-size: calc(100cqh * 10.4 / 466);
   font-weight: 700;
-}
-
-/* Keep the badge off the layout height so seated feet share one cushion line. */
-.room-pet-wrap.is-sitting .room-equipped {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translate(-50%, 110%);
-  white-space: nowrap;
 }
 
 .room-empty {
