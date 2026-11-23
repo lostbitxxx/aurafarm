@@ -699,8 +699,10 @@ export function LivingRoom({
   const rackDepth = paintDepthTop(STORAGE_RACK_DEPTH_TOP, decor.offsets["storage-rack"]?.dy ?? 0);
   const rackZ = roomDepthZ(rackDepth) + 1;
   const rackPadZ = Math.max(1, roomDepthZ(rackDepth) - 1);
-  const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
-  const blackboardPadZ = Math.max(1, roomDepthZ(BLACKBOARD_DEPTH_TOP));
+  // Art stays at the stack floor (behind floor furniture). Pad under art, hit above art.
+  const blackboardArtZ = roomDepthZ(BLACKBOARD_DEPTH_TOP);
+  const blackboardPadZ = Math.max(0, blackboardArtZ - 1);
+  const blackboardZ = blackboardArtZ + 1;
   const wormholeZ = roomDepthZ(depthTopFromBounds(WORMHOLE_BOUNDS));
   const wormholeShift = offsetTransform(decor, "shelter");
   const wormholeBox = coverBox(
@@ -952,7 +954,7 @@ export function LivingRoom({
               style={{
                 zIndex:
                   item.id === "blackboard"
-                    ? roomDepthZ(BLACKBOARD_DEPTH_TOP)
+                    ? blackboardArtZ
                     : roomDepthZ(paintDepthTop(item.depthTop, decor.offsets[item.id]?.dy ?? 0)),
                 transform: offsetTransform(decor, item.id),
               }}

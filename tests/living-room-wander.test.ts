@@ -409,6 +409,10 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(css, /rotate\(-10deg\)/);
   assert.match(css, /\.room-prop-hotspot/);
   assert.match(css, /\.room-prop-hotspot-pad/);
+  assert.match(css, /data-prop-hotspot="blackboard"\]::before/);
+  assert.match(css, /ellipse at center/);
+  assert.match(source, /blackboardArtZ/);
+  assert.match(source, /blackboardPadZ/);
   assert.match(css, /\.room-rack-hotspot/);
   // Pets must not sit in a low stacking context or drag order cannot beat furniture.
   assert.match(css, /\.living-room-pets\s*\{[^}]*pointer-events:\s*none/);
