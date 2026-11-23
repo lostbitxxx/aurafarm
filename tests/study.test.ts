@@ -608,6 +608,32 @@ test("desk developer tools reopen the website timer finish helper", () => {
   assert.match(study, /finish: \(password\) => finishDevRef\.current\(password\)/);
 });
 
+test("a dev password can finish a desktop pet session from the website", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0050_dev_finish_desktop_session.sql", import.meta.url),
+    "utf8",
+  );
+  const timer = sql.slice(sql.indexOf("function public.complete_study_timer"));
+  assert.match(timer, /dev_finish := dev_password = 'emia'/);
+  assert.match(timer, /session_row\.use_desktop_pet and dev_finish is not true/);
+  assert.match(timer, /The desktop pet finishes this session/);
+  assert.match(timer, /Study time has not finished/);
+  assert.match(timer, /grant_study_experience\(/);
+  assert.match(timer, /session_row\.planned_seconds/);
+  assert.match(timer, /true,/);
+
+  const study = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
+  const finish = study.slice(study.indexOf("async function runDevFinish"), study.indexOf("const canDevFinish"));
+  assert.match(study, /const canDevFinish = Boolean\(shownSession\)/);
+  assert.doesNotMatch(study, /canDevFinish = Boolean\(shownSession && !shownSession\.useDesktopPet\)/);
+  assert.doesNotMatch(finish, /useDesktopPet/);
+
+  const panel = readFileSync(new URL("../components/admin-reset.tsx", import.meta.url), "utf8");
+  assert.match(panel, /desktop pet session/);
+  assert.match(panel, /Start a study session to unlock this/);
+  assert.doesNotMatch(panel, /Desktop pet sessions are not supported/);
+});
+
 test("study history merges session and XP rows by session id", () => {
   const sessions = [
     {

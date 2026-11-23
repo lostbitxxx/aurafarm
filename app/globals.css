@@ -469,7 +469,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
 
 .paper-shell .session-result {
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .paper-shell .session-result p {
@@ -478,11 +478,46 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   line-height: 1.45;
 }
 
+.paper-shell .session-result .session-facts {
+  margin: 0;
+  display: grid;
+  border-top: 1px solid #c5cbb9;
+  border-bottom: 1px solid #c5cbb9;
+}
+
 .paper-shell .session-result .session-fact {
-  padding: 0.8rem 0.9rem;
-  border: 1px solid #9daa90;
-  border-radius: 14px;
-  background: #fffdf6;
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 8.5rem) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: baseline;
+  padding: 0.7rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.paper-shell .session-result .session-fact + .session-fact {
+  border-top: 1px solid #e0e4d6;
+}
+
+.paper-shell .session-result .session-fact dt {
+  margin: 0;
+  color: #596650;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.paper-shell .session-result .session-fact dd {
+  margin: 0;
+  color: var(--dialog-ink);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.paper-shell .session-result .session-detail {
+  margin: 0;
+  color: #596650;
+  line-height: 1.45;
 }
 
 .paper-shell .session-result .score-points {

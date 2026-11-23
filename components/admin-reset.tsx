@@ -98,7 +98,7 @@ export function AdminReset({
     if (pending || !onFinishWebsiteSession) return;
     if (!canFinishWebsiteSession) {
       setFinishDone(false);
-      setFinishError("Start a website timer session first.");
+      setFinishError("Start a study session first.");
       return;
     }
     if (!devTimerPasswordMatches(finishPassword)) {
@@ -125,8 +125,8 @@ export function AdminReset({
         <section className="admin-tool" aria-labelledby="admin-finish-title">
           <h3 id="admin-finish-title">End session early</h3>
           <p>
-            Dev only. Finishes the active website timer now with the full finish bonus and streak credit.
-            Desktop pet sessions are not supported here.
+            Dev only. Finishes the active website timer or desktop pet session now with the full finish
+            bonus and streak credit.
           </p>
           {canFinishWebsiteSession ? (
             <form onSubmit={onFinishSession}>
@@ -144,7 +144,7 @@ export function AdminReset({
               </button>
             </form>
           ) : (
-            <p className="panel-hint">Start a website timer session to unlock this.</p>
+            <p className="panel-hint">Start a study session to unlock this.</p>
           )}
           {finishDone ? <p className="form-success">Session finished.</p> : null}
           {finishError ? (
