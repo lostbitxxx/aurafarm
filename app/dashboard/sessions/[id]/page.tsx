@@ -37,19 +37,33 @@ export default async function StudyScorePage({
             {score.state === "finished" ? (
               <>
                 <p className="score-points">{score.xp} XP</p>
-                <p className="session-fact">{score.distracted ? "Distracted" : "Focused"}</p>
-                <p className="session-fact">{formatDuration(score.durationSeconds)}</p>
-                <p className="session-fact">
-                  {score.blockedLabels.length > 0
-                    ? score.blockedLabels.join(", ")
-                    : "No blocked sites"}
-                </p>
-                <p className="session-fact">
-                  <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
-                </p>
+                <dl className="session-facts">
+                  <div className="session-fact">
+                    <dt>Focus</dt>
+                    <dd>{score.distracted ? "Distracted" : "Focused"}</dd>
+                  </div>
+                  <div className="session-fact">
+                    <dt>Duration</dt>
+                    <dd>{formatDuration(score.durationSeconds)}</dd>
+                  </div>
+                  <div className="session-fact">
+                    <dt>Blocked sites</dt>
+                    <dd>
+                      {score.blockedLabels.length > 0
+                        ? score.blockedLabels.join(", ")
+                        : "None"}
+                    </dd>
+                  </div>
+                  <div className="session-fact">
+                    <dt>Finished</dt>
+                    <dd>
+                      <time dateTime={score.createdAt}>{formatTimestamp(score.createdAt)}</time>
+                    </dd>
+                  </div>
+                </dl>
               </>
             ) : (
-              <p className="session-fact">{copy.detail}</p>
+              <p className="session-detail">{copy.detail}</p>
             )}
             <RefreshDeskOnFinish finished={score.state === "finished"} />
             <CloseDeskTab refresh={score.state === "finished"}>Back to the desk</CloseDeskTab>

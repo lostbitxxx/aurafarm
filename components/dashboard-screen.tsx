@@ -576,7 +576,7 @@ export function DashboardScreen({
             canFinishWebsiteSession={canDevFinish}
             onFinishWebsiteSession={async (password) => {
               const finish = finishDevSessionRef.current;
-              if (!finish) return { error: "Start a website timer session first." };
+              if (!finish) return { error: "Start a study session first." };
               const result = await finish(password);
               if (!result.error) setDialog(null);
               return result;

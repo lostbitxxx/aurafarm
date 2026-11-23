@@ -89,5 +89,5 @@
     <rect x="276" y="150" width="48" height="4" fill="#a68458"/>
   </g>
 
-  <!-- Tables are separate layers (table.svg) so pets can sit behind the tabletop. -->
+  <!-- Seats are separate layers (seats.svg); studying pets stack their own lobby desk. -->
 </svg>

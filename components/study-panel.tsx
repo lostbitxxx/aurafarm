@@ -355,8 +355,8 @@ export function StudyPanel({
   }
 
   async function runDevFinish(password: string) {
-    if (pending || !shownSession || shownSession.useDesktopPet) {
-      return { error: "Start a website timer session first." };
+    if (pending || !shownSession) {
+      return { error: "Start a study session first." };
     }
     if (!devTimerPasswordMatches(password)) {
       return { error: "That password does not match." };
@@ -370,7 +370,7 @@ export function StudyPanel({
     return result;
   }
 
-  const canDevFinish = Boolean(shownSession && !shownSession.useDesktopPet);
+  const canDevFinish = Boolean(shownSession);
   const finishDevRef = useRef(runDevFinish);
   finishDevRef.current = runDevFinish;
 
@@ -388,7 +388,7 @@ export function StudyPanel({
 
   async function onDevFinish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending || !shownSession || shownSession.useDesktopPet) return;
+    if (pending || !shownSession) return;
     if (!devTimerPasswordMatches(devPassword)) {
       setDevRejected(true);
       return;
@@ -803,7 +803,7 @@ export function StudyPanel({
                 <button
                   type="submit"
                   className="button"
-                  disabled={pending || !shownSession || shownSession.useDesktopPet}
+                  disabled={pending || !shownSession}
                 >
                   Finish now
                 </button>

@@ -6,6 +6,7 @@
  * Pets are layered SVGs stacked at render time:
  * shadow → legs → body → clothes → face → hat
  * Study adds floor + chair behind and desk + pen in front.
+ * Lobby sit uses the same chair/pens with a lobby-styled desk.
  */
 
 export type PetSpecies = "cat" | "bunny";
@@ -228,6 +229,8 @@ export function petStackLayers(
     clothes?: string | null;
     /** When false, study poses keep pose limbs/face but skip desk/chair/floor props. */
     studyFurniture?: boolean;
+    /** Lobby seat sit: chair + lobby desk + pens (no floor mat). */
+    lobbyDesk?: boolean;
   } = {},
 ): PetStackLayers {
   const species = speciesForPetType(petType);
@@ -237,9 +240,15 @@ export function petStackLayers(
   const face = faceModeForPose(pose);
   const study = isStudyPose(pose);
   const furniture = options.studyFurniture !== false;
+  const lobbyDesk = options.lobbyDesk === true;
   const clothes = wornClothesAsset(options.clothes, petType);
   const hat = wornHatAsset(options.hat);
   const showStudyProps = study && furniture;
+  const desk = !showStudyProps
+    ? null
+    : lobbyDesk
+      ? "/pet-assets/props/study/desk-long.svg"
+      : "/pet-assets/props/study/desk.svg";
 
   return {
     stage: study ? "study" : "pet",
@@ -249,9 +258,9 @@ export function petStackLayers(
     clothes,
     face: `${base}/face/${face}.svg`,
     hat,
-    floor: showStudyProps ? "/pet-assets/props/study/floor.svg" : null,
+    floor: showStudyProps && !lobbyDesk ? "/pet-assets/props/study/floor.svg" : null,
     chair: showStudyProps ? "/pet-assets/props/study/chair.svg" : null,
-    desk: showStudyProps ? "/pet-assets/props/study/desk.svg" : null,
+    desk,
     pen: showStudyProps ? `/pet-assets/props/study/pen-${pose === "study2" ? "2" : "1"}.svg` : null,
   };
 }
