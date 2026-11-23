@@ -11,6 +11,7 @@ import {
 import {
   DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS,
   DECOR_CENTER_SNAP_RADIUS_PCT,
+  DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT,
   DECOR_HISTORY_LIMIT,
   clampMoverOffset,
   coverBox,
@@ -212,10 +213,30 @@ test("horizontal center snap only engages when the pointer is fast", () => {
   const target = horizontalCenterDx(bounds);
   const near = clampMoverOffset("lamp", bounds, target + DECOR_CENTER_SNAP_RADIUS_PCT * 0.5, 0);
   const slow = withHorizontalCenterSnap("lamp", near, DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS * 0.2);
-  assert.equal(slow.dx, near.dx);
+  assert.equal(slow.snapped, false);
+  assert.equal(slow.offset.dx, near.dx);
   const fast = withHorizontalCenterSnap("lamp", near, DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS * 2);
-  assert.equal(fast.dx, clampMoverOffset("lamp", bounds, target, near.dy).dx);
-  assert.equal(fast.dy, near.dy);
+  assert.equal(fast.snapped, true);
+  assert.equal(fast.offset.dx, clampMoverOffset("lamp", bounds, target, near.dy).dx);
+  assert.equal(fast.offset.dy, near.dy);
+});
+
+test("horizontal center snap holds with hysteresis until the pointer leaves farther", () => {
+  const bounds = moverBounds("lamp");
+  const target = horizontalCenterDx(bounds);
+  const mid = clampMoverOffset(
+    "lamp",
+    bounds,
+    target + (DECOR_CENTER_SNAP_RADIUS_PCT + DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT) / 2,
+    0,
+  );
+  const held = withHorizontalCenterSnap("lamp", mid, 0, true);
+  assert.equal(held.snapped, true);
+  assert.equal(held.offset.dx, clampMoverOffset("lamp", bounds, target, mid.dy).dx);
+  const far = clampMoverOffset("lamp", bounds, target + DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT + 1, 0);
+  const released = withHorizontalCenterSnap("lamp", far, 0, true);
+  assert.equal(released.snapped, false);
+  assert.equal(released.offset.dx, far.dx);
 });
 
 test("carpet stays strictly in the floor area", () => {

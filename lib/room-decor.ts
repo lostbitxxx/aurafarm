@@ -28,6 +28,9 @@ export const DECOR_HISTORY_LIMIT = 5;
 /** How close (percent of room width) to horizontal center before a fast drag snaps. */
 export const DECOR_CENTER_SNAP_RADIUS_PCT = 2.5;
 
+/** Wider band to *stay* snapped so the magnet does not flicker off immediately. */
+export const DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT = 7;
+
 /** Pointer speed (px/ms) required to engage horizontal center snap. Slow crawls stay free. */
 export const DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS = 0.35;
 
@@ -598,24 +601,29 @@ export function horizontalCenterDx(bounds: RoomRectPx) {
 }
 
 /**
- * Snap only on the horizontal axis when the pointer is moving fast enough and the
- * piece is near room center. Slow movement never snaps, so fine placement stays free.
+ * Snap only on the horizontal axis. Fast near-center grabs; once grabbed, stays
+ * snapped until the free pointer leaves a wider release band (hysteresis).
+ * Pass the *unsnapped* offset so release distance is measured against the cursor.
  */
 export function withHorizontalCenterSnap(
   id: DecorMoverId,
   offset: RoomDecorOffset,
   pointerSpeedPxPerMs: number,
-): RoomDecorOffset {
+  wasSnapped = false,
+): { offset: RoomDecorOffset; snapped: boolean } {
   const bounds = moverBounds(id);
   const targetDx = horizontalCenterDx(bounds);
   const speed = Number.isFinite(pointerSpeedPxPerMs) ? Math.max(0, pointerSpeedPxPerMs) : 0;
-  if (
+  const distance = Math.abs(offset.dx - targetDx);
+  const enter =
+    !wasSnapped &&
     speed >= DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS &&
-    Math.abs(offset.dx - targetDx) <= DECOR_CENTER_SNAP_RADIUS_PCT
-  ) {
-    return clampMoverOffset(id, bounds, targetDx, offset.dy);
+    distance <= DECOR_CENTER_SNAP_RADIUS_PCT;
+  const hold = wasSnapped && distance <= DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT;
+  if (enter || hold) {
+    return { offset: clampMoverOffset(id, bounds, targetDx, offset.dy), snapped: true };
   }
-  return offset;
+  return { offset, snapped: false };
 }
 
 export type DecorHistory = {
