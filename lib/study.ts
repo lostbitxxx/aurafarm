@@ -192,6 +192,14 @@ export function formatDuration(seconds: number) {
   return `${remainder}s`;
 }
 
+/** Pet detail: treat total XP as study minutes → always `Xh Ym`. */
+export function formatStudyXpAsDuration(xp: number) {
+  const minutes = Number.isFinite(xp) ? Math.max(0, Math.floor(xp)) : 0;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
+}
+
 export function plannedStudySeconds(value: unknown) {
   const seconds = typeof value === "number" ? value : Number.NaN;
   if (!Number.isInteger(seconds) || seconds % 60 !== 0) return null;

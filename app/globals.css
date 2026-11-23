@@ -2255,6 +2255,13 @@ button.dialog-row {
   margin: 0;
 }
 
+.pet-detail .growth-label[aria-label="Study time"] {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--dialog-ink);
+}
+
 .pet-rename-circle {
   display: inline-flex;
   align-items: center;

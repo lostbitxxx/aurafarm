@@ -18,7 +18,7 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { petDisplayName, type PetCard } from "@/lib/pets";
-import { experienceProgress } from "@/lib/study";
+import { experienceProgress, formatStudyXpAsDuration } from "@/lib/study";
 import { FarmDialog } from "./farm-dialog";
 import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
 import { PixelPetArt } from "./pixel-pet";
@@ -204,18 +204,8 @@ export function PetDetailDialog({
               Display Lv
             </button>
           </div>
-          <div
-            className="xp-track xp-track-purple"
-            role="meter"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress.intoLevel}
-            aria-label={`${displayName} experience`}
-          >
-            <span className="xp-fill" style={{ width: `${progress.intoLevel}%` }} />
-          </div>
-          <p className="growth-label">
-            {progress.intoLevel} / 100 XP
+          <p className="growth-label" aria-label="Study time">
+            {formatStudyXpAsDuration(progress.xp)}
           </p>
           <div className="accessory-slots" aria-label="Accessories">
             <button

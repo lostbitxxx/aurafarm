@@ -36,6 +36,10 @@ test("pet detail dress-up reuses collection apply actions and owned pickers", ()
   assert.match(detail, /pet-detail-dialog-title/);
   assert.match(detail, /Lv\.\{progress\.level\}/);
   assert.match(detail, /Display Lv/);
+  assert.match(detail, /formatStudyXpAsDuration\(progress\.xp\)/);
+  assert.match(detail, /aria-label="Study time"/);
+  assert.doesNotMatch(detail, /xp-track/);
+  assert.doesNotMatch(detail, /100 XP/);
   assert.match(detail, /pet-detail-level-row/);
   assert.match(detail, /pet-detail-stage/);
   assert.doesNotMatch(detail, /pet-detail-display-name/);
