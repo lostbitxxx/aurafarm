@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -384,9 +385,12 @@ function CrewFarmer({
     </span>
   );
 
+  // Ref so parent identity churn cannot clear/re-set labels every render.
+  const onLabelPoseRef = useRef(onLabelPose);
+  onLabelPoseRef.current = onLabelPose;
+
   useEffect(() => {
-    if (!onLabelPose) return;
-    onLabelPose(occupant.farmerId, {
+    onLabelPoseRef.current?.(occupant.farmerId, {
       left: spot.left,
       top: spot.top,
       sitting: Boolean(sitting) && !draggingNow,
@@ -395,7 +399,6 @@ function CrewFarmer({
       farming: studying,
     });
   }, [
-    onLabelPose,
     occupant.farmerId,
     occupant.displayName,
     spot.left,
@@ -406,9 +409,9 @@ function CrewFarmer({
   ]);
 
   useEffect(() => {
-    if (!onLabelPose) return;
-    return () => onLabelPose(occupant.farmerId, null);
-  }, [onLabelPose, occupant.farmerId]);
+    const id = occupant.farmerId;
+    return () => onLabelPoseRef.current?.(id, null);
+  }, [occupant.farmerId]);
 
   const grab = mine && seat && !draggingNow ? (
     <button
@@ -503,7 +506,7 @@ export function CrewRoom({
   const [petLabelPoses, setPetLabelPoses] = useState<Record<string, CrewPetLabelPose>>({});
   const { poses, loaded, error, publish } = useCrewPoses(crewId);
 
-  function reportPetLabelPose(farmerId: string, pose: CrewPetLabelPose | null) {
+  const reportPetLabelPose = useCallback((farmerId: string, pose: CrewPetLabelPose | null) => {
     setPetLabelPoses((current) => {
       if (!pose) {
         if (!(farmerId in current)) return current;
@@ -525,7 +528,7 @@ export function CrewRoom({
       }
       return { ...current, [farmerId]: pose };
     });
-  }
+  }, []);
 
   const taken = useMemo(() => {
     // Only people actually in the room hold a seat. A leftover pose from someone
