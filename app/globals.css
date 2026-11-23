@@ -2255,7 +2255,7 @@ button.dialog-row {
   margin: 0;
 }
 
-.pet-detail .growth-label[aria-label="Study time"] {
+.pet-detail .pet-detail-study-time {
   font-family: var(--serif);
   font-weight: 600;
   letter-spacing: -0.03em;

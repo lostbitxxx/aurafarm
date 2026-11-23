@@ -204,8 +204,21 @@ export function PetDetailDialog({
               Display Lv
             </button>
           </div>
-          <p className="growth-label" aria-label="Study time">
-            {formatStudyXpAsDuration(progress.xp)}
+          <p className="growth-label pet-detail-study-time">
+            Study time: {formatStudyXpAsDuration(progress.xp)}
+          </p>
+          <div
+            className="xp-track xp-track-purple"
+            role="meter"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress.intoLevel}
+            aria-label={`${displayName} experience`}
+          >
+            <span className="xp-fill" style={{ width: `${progress.intoLevel}%` }} />
+          </div>
+          <p className="growth-label">
+            {progress.intoLevel} / 100 XP
           </p>
           <div className="accessory-slots" aria-label="Accessories">
             <button
