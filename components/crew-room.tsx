@@ -27,7 +27,7 @@ import {
   type CrewPoseMode,
 } from "@/lib/crew-room-layout";
 import { useCrewPoses } from "@/lib/crew-room-sync";
-import { roomDepthZ, ROOM_DRAG_Z } from "@/lib/living-room-layout";
+import { roomDepthZ, ROOM_DRAG_Z, ROOM_LABEL_Z } from "@/lib/living-room-layout";
 import {
   dragPastThreshold,
   facingFromDirection,
@@ -52,6 +52,15 @@ function clampDrag(spot: WanderSpot): WanderSpot {
   };
 }
 
+export type CrewPetLabelPose = {
+  left: number;
+  top: number;
+  sitting: boolean;
+  displayName: string;
+  status: string;
+  farming: boolean;
+};
+
 function CrewFarmer({
   occupant,
   viewerId,
@@ -61,6 +70,7 @@ function CrewFarmer({
   roomRef,
   publish,
   viewerStudying,
+  onLabelPose,
 }: {
   occupant: CrewOccupant;
   viewerId: string;
@@ -70,6 +80,7 @@ function CrewFarmer({
   roomRef: RefObject<HTMLDivElement | null>;
   publish: (pose: CrewPose) => Promise<CrewPose | null>;
   viewerStudying: boolean;
+  onLabelPose?: (farmerId: string, pose: CrewPetLabelPose | null) => void;
 }) {
   const mine = occupant.farmerId === viewerId;
   const studying = crewShowsAurafarming(occupant, viewerId, viewerStudying);
@@ -357,26 +368,46 @@ function CrewFarmer({
   };
 
   const body = (
-    <>
-      <span className="room-pet-label">{occupant.displayName}</span>
-      <span className={shownFace ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
-        <PixelPetArt
-          petType={occupant.petType}
-          color={occupant.color}
-          hat={occupant.hat}
-          clothes={occupant.clothes}
-          pose={studyPose ? studyFrame : ownWalking || remoteWalking ? walkPose : "idle"}
-          studyFurniture={studyFurniture}
-          lobbyDesk={useLobbyDesk}
-          className={ownWalking || remoteWalking ? "is-walking" : undefined}
-          alt=""
-        />
-      </span>
-      <span className={studying ? "crew-room-status is-farming" : "crew-room-status"}>
-        {studying ? "Aurafarming" : "Online"}
-      </span>
-    </>
+    <span className={shownFace ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
+      <PixelPetArt
+        petType={occupant.petType}
+        color={occupant.color}
+        hat={occupant.hat}
+        clothes={occupant.clothes}
+        pose={studyPose ? studyFrame : ownWalking || remoteWalking ? walkPose : "idle"}
+        studyFurniture={studyFurniture}
+        lobbyDesk={useLobbyDesk}
+        className={ownWalking || remoteWalking ? "is-walking" : undefined}
+        alt=""
+      />
+    </span>
   );
+
+  useEffect(() => {
+    if (!onLabelPose) return;
+    onLabelPose(occupant.farmerId, {
+      left: spot.left,
+      top: spot.top,
+      sitting: Boolean(sitting) && !draggingNow,
+      displayName: occupant.displayName,
+      status: studying ? "Aurafarming" : "Online",
+      farming: studying,
+    });
+  }, [
+    onLabelPose,
+    occupant.farmerId,
+    occupant.displayName,
+    spot.left,
+    spot.top,
+    sitting,
+    draggingNow,
+    studying,
+  ]);
+
+  useEffect(() => {
+    if (!onLabelPose) return;
+    return () => onLabelPose(occupant.farmerId, null);
+  }, [onLabelPose, occupant.farmerId]);
 
   const grab = mine && seat && !draggingNow ? (
     <button
@@ -463,7 +494,33 @@ export function CrewRoom({
   onOpenLeaderboard?: () => void;
 }) {
   const roomRef = useRef<HTMLDivElement>(null);
+  const [petLabelPoses, setPetLabelPoses] = useState<Record<string, CrewPetLabelPose>>({});
   const { poses, loaded, error, publish } = useCrewPoses(crewId);
+
+  function reportPetLabelPose(farmerId: string, pose: CrewPetLabelPose | null) {
+    setPetLabelPoses((current) => {
+      if (!pose) {
+        if (!(farmerId in current)) return current;
+        const next = { ...current };
+        delete next[farmerId];
+        return next;
+      }
+      const prev = current[farmerId];
+      if (
+        prev &&
+        prev.left === pose.left &&
+        prev.top === pose.top &&
+        prev.sitting === pose.sitting &&
+        prev.displayName === pose.displayName &&
+        prev.status === pose.status &&
+        prev.farming === pose.farming
+      ) {
+        return current;
+      }
+      return { ...current, [farmerId]: pose };
+    });
+  }
+
   const taken = useMemo(() => {
     // Only people actually in the room hold a seat. A leftover pose from someone
     // who left was blocking the 5 o'clock chair while it looked empty.
@@ -575,7 +632,25 @@ export function CrewRoom({
             roomRef={roomRef}
             publish={publish}
             viewerStudying={viewerStudying}
+            onLabelPose={reportPetLabelPose}
           />
+        ))}
+      </div>
+      <div className="living-room-labels" style={{ zIndex: ROOM_LABEL_Z }} aria-hidden="true">
+        {Object.entries(petLabelPoses).map(([farmerId, pose]) => (
+          <div
+            key={farmerId}
+            className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
+            style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
+          >
+            <span className="room-pet-label">
+              <span className="room-pet-label-line">{pose.displayName}</span>
+            </span>
+            <span className="room-pet-label-spacer" />
+            <span className={pose.farming ? "crew-room-status is-farming" : "crew-room-status"}>
+              {pose.status}
+            </span>
+          </div>
         ))}
       </div>
       {error ? (

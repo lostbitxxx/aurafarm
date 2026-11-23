@@ -14,6 +14,7 @@ import {
   ROOM_DEPTH_Z_MAX,
   ROOM_DRAG_Z,
   ROOM_FURNITURE,
+  ROOM_LABEL_Z,
   ROOM_OBSTACLES,
   ROOM_RACK_HOTSPOTS,
   ROOM_WALK_BOUNDS,
@@ -233,8 +234,11 @@ test("drag z-index sits above every depth-sorted room layer", () => {
   assert.equal(ROOM_DEPTH_Z_MAX, 200);
   assert.ok(ROOM_DRAG_Z > ROOM_DEPTH_Z_MAX);
   assert.ok(ROOM_DRAG_Z > roomDepthZ(100));
+  assert.ok(ROOM_LABEL_Z > ROOM_DEPTH_Z_MAX);
+  assert.ok(ROOM_LABEL_Z > ROOM_DRAG_Z);
   for (const item of ROOM_FURNITURE) {
     assert.ok(ROOM_DRAG_Z > roomDepthZ(item.depthTop), item.id);
+    assert.ok(ROOM_LABEL_Z > roomDepthZ(item.depthTop), item.id);
   }
 });
 
@@ -373,12 +377,18 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /is-struggling/);
   assert.match(source, /clearPettingFx/);
   assert.match(source, /ROOM_DRAG_Z/);
+  assert.match(source, /ROOM_LABEL_Z/);
+  assert.match(source, /living-room-labels/);
   assert.doesNotMatch(source, /roomStartSpot/);
+  assert.doesNotMatch(source, /petPaintDepthTop/);
+  assert.doesNotMatch(source, /paintDepthTop/);
   assert.doesNotMatch(css, /\.room-pet-actions/);
   assert.doesNotMatch(css, /\.room-pet-button/);
   assert.doesNotMatch(css, /\.room-pet-hand/);
   assert.match(css, /\.room-equipped/);
   assert.match(css, /\.living-room-layer/);
+  assert.match(css, /\.living-room-labels/);
+  assert.match(css, /\.room-pet-label-anchor/);
   assert.match(css, /\.room-pet-wrap\.is-dragging/);
   assert.match(css, /room-pet-struggle/);
   assert.match(css, /rotate\(-10deg\)/);

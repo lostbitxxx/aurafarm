@@ -3745,6 +3745,43 @@ button.dialog-row {
   .room-cylinder-fire-strip { animation: none; transform: none; }
 }
 
+.living-room-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Same footprint + transform as `.room-pet-wrap`; name floats above the sprite. */
+.room-pet-label-anchor {
+  position: absolute;
+  width: calc(100cqh * 86 / 466);
+  height: calc(100cqh * 70 / 466);
+  transform: translate(-50%, -50%);
+}
+
+.room-pet-label-anchor.is-sitting {
+  /* Feet on the cushion — match `.room-pet-wrap.is-sitting`. */
+  transform: translate(-50%, -100%);
+}
+
+.room-pet-label-anchor .room-pet-label {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, -0.15rem);
+}
+
+.room-pet-label-anchor .crew-room-status {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-50%, 0.2rem);
+}
+
+.room-pet-label-spacer {
+  display: none;
+}
+
 .room-pet-wrap {
   position: absolute;
   /*

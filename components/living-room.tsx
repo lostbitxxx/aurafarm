@@ -7,6 +7,7 @@ import {
   ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
+  ROOM_LABEL_Z,
   ROOM_OBSTACLES,
   ROOM_RACK_HOTSPOTS,
   ROOM_TRIM_SRC,
@@ -82,6 +83,15 @@ import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Mode = "idle" | "walking" | "petting" | "dragging";
 
+export type RoomPetLabelPose = {
+  left: number;
+  top: number;
+  sitting: boolean;
+  displayName: string;
+  level: number;
+  showLevel: boolean;
+};
+
 function RoomPet({
   pet,
   paused,
@@ -92,6 +102,7 @@ function RoomPet({
   seatZ,
   onTrySit,
   onLiftSeat,
+  onLabelPose,
 }: {
   pet: PetCard;
   paused: boolean;
@@ -102,6 +113,7 @@ function RoomPet({
   seatZ: number | null;
   onTrySit: (spot: WanderSpot) => WanderSpot | null;
   onLiftSeat: () => void;
+  onLabelPose?: (petId: string, pose: RoomPetLabelPose | null) => void;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
@@ -451,6 +463,23 @@ function RoomPet({
     .filter(Boolean)
     .join(" ");
 
+  useEffect(() => {
+    if (!onLabelPose) return;
+    onLabelPose(pet.id, {
+      left: position.left,
+      top: position.top,
+      sitting,
+      displayName,
+      level: progress.level,
+      showLevel: !showPetNames,
+    });
+  }, [onLabelPose, pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
+
+  useEffect(() => {
+    if (!onLabelPose) return;
+    return () => onLabelPose(pet.id, null);
+  }, [onLabelPose, pet.id]);
+
   return (
     <div
       ref={wrapRef}
@@ -475,10 +504,6 @@ function RoomPet({
         onPointerCancel={onPointerCancel}
         onPointerLeave={petting.onPointerLeave}
       >
-        <span className="room-pet-label">
-          <span className="room-pet-label-line">{displayName}</span>
-          {!showPetNames ? <span className="room-pet-label-line">Lv.{progress.level}</span> : null}
-        </span>
         <span className={faceLeft ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
           <PixelPetArt
             petType={pet.pet_type}
@@ -621,6 +646,7 @@ export function LivingRoom({
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
   const [decorHistory, setDecorHistory] = useState<DecorHistory>(() => emptyDecorHistory());
+  const [petLabelPoses, setPetLabelPoses] = useState<Record<string, RoomPetLabelPose>>({});
   const [decorOpen, setDecorOpen] = useState(false);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
@@ -662,6 +688,30 @@ export function LivingRoom({
   const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
   const blackboardPadZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) - 1;
   const carpetShift = offsetTransform(decor, "carpet");
+
+  function reportPetLabelPose(petId: string, pose: RoomPetLabelPose | null) {
+    setPetLabelPoses((current) => {
+      if (!pose) {
+        if (!(petId in current)) return current;
+        const next = { ...current };
+        delete next[petId];
+        return next;
+      }
+      const prev = current[petId];
+      if (
+        prev &&
+        prev.left === pose.left &&
+        prev.top === pose.top &&
+        prev.sitting === pose.sitting &&
+        prev.displayName === pose.displayName &&
+        prev.level === pose.level &&
+        prev.showLevel === pose.showLevel
+      ) {
+        return current;
+      }
+      return { ...current, [petId]: pose };
+    });
+  }
 
   useEffect(() => {
     const loaded = readRoomDecor(userId, ownedSkinKeys);
@@ -998,9 +1048,27 @@ export function LivingRoom({
                   seatZ={assignment ? seatPaintZ(assignment.pieceId) : null}
                   onTrySit={(spot) => trySit(pet.id, spot)}
                   onLiftSeat={() => liftPet(pet.id)}
+                  onLabelPose={reportPetLabelPose}
                 />
               );
             })}
+          </div>
+        )}
+        {editing ? null : (
+          <div className="living-room-labels" style={{ zIndex: ROOM_LABEL_Z }} aria-hidden="true">
+            {Object.entries(petLabelPoses).map(([petId, pose]) => (
+              <div
+                key={petId}
+                className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
+                style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
+              >
+                <span className="room-pet-label">
+                  <span className="room-pet-label-line">{pose.displayName}</span>
+                  {pose.showLevel ? <span className="room-pet-label-line">Lv.{pose.level}</span> : null}
+                </span>
+                <span className="room-pet-label-spacer" />
+              </div>
+            ))}
           </div>
         )}
         {!editing && placementReady && placed.length === 0 ? (

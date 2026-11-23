@@ -326,6 +326,11 @@ export const ROOM_DEPTH_Z_MAX = 200;
  */
 export const ROOM_DRAG_Z = ROOM_DEPTH_Z_MAX + 40;
 
+/**
+ * Name / Lv / Aurafarming labels sit above furniture, idle pets, and a dragged pet.
+ */
+export const ROOM_LABEL_Z = ROOM_DRAG_Z + 10;
+
 /** z-index for Y-sort: larger top% draws in front. */
 export function roomDepthZ(depthTop: number) {
   const safe = Number.isFinite(depthTop) ? depthTop : 0;
