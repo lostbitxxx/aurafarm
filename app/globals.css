@@ -3468,6 +3468,10 @@ button.dialog-row {
   color: var(--ink-soft);
 }
 
+.room-cylinder-caption-title {
+  font-weight: 700;
+}
+
 .room-cylinder-caption-title,
 .room-cylinder-caption-subtitle,
 .room-cylinder-caption-detail {
@@ -3480,6 +3484,25 @@ button.dialog-row {
 
 .room-cylinder.is-rest .room-cylinder-caption {
   color: #5a6a78;
+}
+
+/* Orbital / leather walls are dark; cream captions stay readable over them. */
+.living-room[data-wall-skin="orbital"] .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder-caption {
+  color: #fff6e4;
+  text-shadow:
+    0 0 0.28rem rgba(20, 33, 26, 0.85),
+    0 1px 0 rgba(20, 33, 26, 0.55);
+}
+
+.living-room[data-wall-skin="orbital"] .room-cylinder.is-study.is-burning .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder.is-study.is-burning .room-cylinder-caption {
+  color: #ffe0c2;
+}
+
+.living-room[data-wall-skin="orbital"] .room-cylinder.is-rest .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder.is-rest .room-cylinder-caption {
+  color: #e8eef5;
 }
 
 .room-cylinder-tube {
