@@ -16,6 +16,8 @@ import {
   ROOM_WALL_HOTSPOTS,
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
+  paintDepthTop,
+  petStandingTop,
   roomDepthZ,
   type RoomObstacle,
   type RoomRackHotspotId,
@@ -489,7 +491,12 @@ function RoomPet({
         top: `${position.top}%`,
         // Pets share the room stacking context with furniture (see `.living-room-pets`).
         // Drag lifts above ROOM_DEPTH_Z_MAX so the carried pet is never tucked under a sofa.
-        zIndex: dragging ? ROOM_DRAG_Z : sitting && seatZ != null ? seatZ : roomDepthZ(position.top),
+        zIndex:
+          dragging
+            ? ROOM_DRAG_Z
+            : sitting && seatZ != null
+              ? seatZ
+              : roomDepthZ(petStandingTop(position.top, sitting ? "feet" : "floor")),
       }}
       data-mode={sitting ? "sitting" : mode}
     >
@@ -683,10 +690,11 @@ export function LivingRoom({
     achievements: onOpenAchievements,
     collection: onOpenCollection,
   };
-  const rackZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) + 1;
-  const rackPadZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) - 1;
+  const rackDepth = paintDepthTop(STORAGE_RACK_DEPTH_TOP, decor.offsets["storage-rack"]?.dy ?? 0);
+  const rackZ = roomDepthZ(rackDepth) + 1;
+  const rackPadZ = Math.max(1, roomDepthZ(rackDepth) - 1);
   const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
-  const blackboardPadZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) - 1;
+  const blackboardPadZ = Math.max(1, roomDepthZ(BLACKBOARD_DEPTH_TOP));
   const carpetShift = offsetTransform(decor, "carpet");
 
   function reportPetLabelPose(petId: string, pose: RoomPetLabelPose | null) {
@@ -914,7 +922,10 @@ export function LivingRoom({
               draggable={false}
               data-furniture={item.id}
               style={{
-                zIndex: roomDepthZ(item.depthTop),
+                zIndex:
+                  item.id === "blackboard"
+                    ? roomDepthZ(BLACKBOARD_DEPTH_TOP)
+                    : roomDepthZ(paintDepthTop(item.depthTop, decor.offsets[item.id]?.dy ?? 0)),
                 transform: offsetTransform(decor, item.id),
               }}
             />
@@ -1045,7 +1056,7 @@ export function LivingRoom({
                   onOpen={onOpenPet}
                   obstaclesRef={obstaclesRef}
                   seatedSpot={assignment ? seatAnchor(decor, assignment) : null}
-                  seatZ={assignment ? seatPaintZ(assignment.pieceId) : null}
+                  seatZ={assignment ? seatPaintZ(decor, assignment.pieceId) : null}
                   onTrySit={(spot) => trySit(pet.id, spot)}
                   onLiftSeat={() => liftPet(pet.id)}
                   onLabelPose={reportPetLabelPose}
