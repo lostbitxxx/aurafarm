@@ -1,20 +1,35 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { ROOM_FURNITURE, ROOM_OBSTACLES, furnitureWalkObstacles } from "../lib/living-room-layout";
 import {
+  ROOM_FLOOR_START_Y,
+  ROOM_FURNITURE,
+  ROOM_OBSTACLES,
+  furnitureWalkObstacles,
+  pxToTopPercent,
+} from "../lib/living-room-layout";
+import {
+  DECOR_HISTORY_LIMIT,
+  clampMoverOffset,
   coverBox,
   decorObstacles,
   defaultRoomDecor,
+  emptyDecorHistory,
   equipRoomSkin,
   isFurniturePlaced,
   isRoomItemPlaced,
   moveRoomItem,
+  moverBounds,
   decorOptions,
   parseRoomDecor,
+  pushDecorHistory,
+  redoDecor,
   ROOM_DECOR_CATEGORIES,
+  roomFloorPlacementTopPercent,
+  roomFloorSeamTopPercent,
   roomSkinSrc,
   setRoomItemPlaced,
+  undoDecor,
 } from "../lib/room-decor";
 
 test("a new room keeps must-have pieces and only the base skin", () => {
@@ -58,9 +73,16 @@ test("default furniture footprints match the wander obstacles", () => {
   assert.equal(isRoomItemPlaced(decor, "armchair"), false);
   assert.equal(isRoomItemPlaced(decor, "loveseat"), false);
   assert.equal(isRoomItemPlaced(decor, "sofa"), true);
-  assert.deepEqual(decorObstacles(decor), furnitureWalkObstacles(placed));
-  const moved = moveRoomItem(decor, "lamp", 5, 0);
-  const lamp = decorObstacles(moved).find((block) => Math.abs(block.minLeft - (ROOM_OBSTACLES[1]?.minLeft ?? 0) - 5) < 0.001);
+  // Placement clamps may nudge default offsets; obstacles still track those offsets.
+  assert.equal(decorObstacles(decor).length, furnitureWalkObstacles(placed).length);
+  const lampBase = decorObstacles(decor).find(
+    (block) => Math.abs(block.minLeft - (ROOM_OBSTACLES[1]?.minLeft ?? 0) - decor.offsets.lamp.dx) < 0.001,
+  );
+  assert.ok(lampBase);
+  const moved = moveRoomItem(decor, "lamp", decor.offsets.lamp.dx + 5, decor.offsets.lamp.dy);
+  const lamp = decorObstacles(moved).find(
+    (block) => Math.abs(block.minLeft - (ROOM_OBSTACLES[1]?.minLeft ?? 0) - (decor.offsets.lamp.dx + 5)) < 0.001,
+  );
   assert.ok(lamp);
   const removed = setRoomItemPlaced(decor, "plant", false);
   assert.equal(decorObstacles(removed).length, furnitureWalkObstacles(placed).length - 1);
@@ -110,9 +132,13 @@ test("the living room can edit, decorate, and save", () => {
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(source, /"Edit room"/);
   assert.match(source, /aria-label="Decorate"/);
+  assert.match(source, /aria-label="Undo"/);
+  assert.match(source, /aria-label="Redo"/);
   assert.match(source, /"Save"/);
   assert.match(source, /is-editing/);
   assert.match(source, /writeRoomDecor/);
+  assert.match(source, /pushDecorHistory/);
+  assert.match(source, /commitDraft/);
   assert.match(dialog, /Decorations/);
   assert.match(dialog, /Buy · \{detailPrice\}/);
   assert.match(dialog, /COIN_ICON_SRC/);
@@ -139,4 +165,83 @@ test("equipping one seat clears the other seat pieces", () => {
   const withCouch = equipRoomSkin(withChair, "sofa", "base");
   assert.equal(isRoomItemPlaced(withCouch, "sofa"), true);
   assert.equal(isRoomItemPlaced(withCouch, "armchair"), false);
+});
+
+test("blackboard stays in the wall band and floor pieces keep their feet on the floor", () => {
+  assert.equal(roomFloorSeamTopPercent(), pxToTopPercent(ROOM_FLOOR_START_Y));
+  const board = moverBounds("blackboard");
+  const boardHeight = pxToTopPercent(board.height);
+  const boardTop0 = pxToTopPercent(board.y);
+  const floorSeam = roomFloorSeamTopPercent();
+  const floorPlacement = roomFloorPlacementTopPercent();
+  assert.ok(floorPlacement > floorSeam);
+  const dropped = clampMoverOffset("blackboard", board, 0, 80);
+  assert.ok(boardTop0 + dropped.dy + boardHeight <= floorSeam + 0.001);
+
+  const sofa = moverBounds("sofa");
+  const sofaHeight = pxToTopPercent(sofa.height);
+  const sofaTop0 = pxToTopPercent(sofa.y);
+  const lifted = clampMoverOffset("sofa", sofa, 0, -80);
+  assert.ok(sofaTop0 + lifted.dy + sofaHeight >= floorPlacement - 0.001);
+
+  const decor = defaultRoomDecor();
+  const movedBoard = moveRoomItem(decor, "blackboard", 0, 90);
+  const boardOffsetTop = boardTop0 + movedBoard.offsets.blackboard.dy;
+  assert.ok(boardOffsetTop + boardHeight <= floorSeam + 0.001);
+});
+
+test("movers stay fully inside the room frame", () => {
+  const rack = moverBounds("storage-rack");
+  const width = (rack.width / 600) * 100;
+  const left0 = (rack.x / 600) * 100;
+  const shoved = clampMoverOffset("storage-rack", rack, 200, 0);
+  assert.ok(left0 + shoved.dx >= -0.001);
+  assert.ok(left0 + shoved.dx + width <= 100.001);
+
+  const leftShove = clampMoverOffset("storage-rack", rack, -200, 0);
+  assert.ok(left0 + leftShove.dx >= -0.001);
+});
+
+test("carpet stays strictly in the floor area", () => {
+  const carpet = moverBounds("carpet");
+  const carpetTop0 = pxToTopPercent(carpet.y);
+  const floorSeam = roomFloorSeamTopPercent();
+  const lifted = clampMoverOffset("carpet", carpet, 0, -100);
+  assert.ok(carpetTop0 + lifted.dy >= floorSeam - 0.001);
+
+  const decor = moveRoomItem(defaultRoomDecor(), "carpet", 0, -80);
+  assert.ok(carpetTop0 + decor.offsets.carpet.dy >= floorSeam - 0.001);
+});
+
+test("decor history undo and redo keep five steps and clear redo on push", () => {
+  assert.equal(DECOR_HISTORY_LIMIT, 5);
+  let history = emptyDecorHistory();
+  let current = defaultRoomDecor();
+  const steps = [];
+  for (let i = 1; i <= 6; i += 1) {
+    const previous = current;
+    current = moveRoomItem(current, "lamp", i, 0);
+    history = pushDecorHistory(history, previous);
+    steps.push(previous);
+  }
+  assert.equal(history.past.length, 5);
+  assert.equal(history.future.length, 0);
+
+  const undone = undoDecor(history, current);
+  assert.ok(undone);
+  history = undone.history;
+  current = undone.decor;
+  assert.equal(current.offsets.lamp.dx, steps[5]!.offsets.lamp.dx);
+  assert.equal(history.future.length, 1);
+
+  const redone = redoDecor(history, current);
+  assert.ok(redone);
+  history = redone.history;
+  current = redone.decor;
+  assert.equal(history.future.length, 0);
+
+  const beforePush = current;
+  current = moveRoomItem(current, "plant", 3, 0);
+  history = pushDecorHistory(history, beforePush);
+  assert.equal(history.future.length, 0);
 });
