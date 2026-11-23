@@ -390,6 +390,8 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /ROOM_DRAG_Z/);
   assert.match(source, /ROOM_LABEL_Z/);
   assert.match(source, /living-room-labels/);
+  assert.match(source, /reportPetLabelPose = useCallback/);
+  assert.match(source, /onLabelPoseRef/);
   assert.match(source, /petStandingTop/);
   assert.match(source, /paintDepthTop/);
   assert.doesNotMatch(source, /roomStartSpot/);

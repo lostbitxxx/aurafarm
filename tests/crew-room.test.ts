@@ -41,6 +41,8 @@ test("lobby seats ring the pedestal and stay on open floor", () => {
   assert.match(room, /crew-lobby-seat/);
   assert.match(room, /living-room-labels/);
   assert.match(room, /ROOM_LABEL_Z/);
+  assert.match(room, /reportPetLabelPose = useCallback/);
+  assert.match(room, /onLabelPoseRef/);
   assert.match(room, /lobbyDesk/);
   assert.match(room, /useStudyPose/);
   assert.match(room, /resolveCrewDrop/);

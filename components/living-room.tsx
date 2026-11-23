@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import {
   BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
@@ -465,9 +465,12 @@ function RoomPet({
     .filter(Boolean)
     .join(" ");
 
+  // Ref so parent identity churn cannot clear/re-set labels every render.
+  const onLabelPoseRef = useRef(onLabelPose);
+  onLabelPoseRef.current = onLabelPose;
+
   useEffect(() => {
-    if (!onLabelPose) return;
-    onLabelPose(pet.id, {
+    onLabelPoseRef.current?.(pet.id, {
       left: position.left,
       top: position.top,
       sitting,
@@ -475,12 +478,12 @@ function RoomPet({
       level: progress.level,
       showLevel: !showPetNames,
     });
-  }, [onLabelPose, pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
+  }, [pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
 
   useEffect(() => {
-    if (!onLabelPose) return;
-    return () => onLabelPose(pet.id, null);
-  }, [onLabelPose, pet.id]);
+    const id = pet.id;
+    return () => onLabelPoseRef.current?.(id, null);
+  }, [pet.id]);
 
   return (
     <div
@@ -697,7 +700,7 @@ export function LivingRoom({
   const blackboardPadZ = Math.max(1, roomDepthZ(BLACKBOARD_DEPTH_TOP));
   const carpetShift = offsetTransform(decor, "carpet");
 
-  function reportPetLabelPose(petId: string, pose: RoomPetLabelPose | null) {
+  const reportPetLabelPose = useCallback((petId: string, pose: RoomPetLabelPose | null) => {
     setPetLabelPoses((current) => {
       if (!pose) {
         if (!(petId in current)) return current;
@@ -719,7 +722,7 @@ export function LivingRoom({
       }
       return { ...current, [petId]: pose };
     });
-  }
+  }, []);
 
   useEffect(() => {
     const loaded = readRoomDecor(userId, ownedSkinKeys);
