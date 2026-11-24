@@ -68,7 +68,7 @@ test("live distraction shows Lock in on the pet for open or closed bar", () => {
 });
 
 test("live distraction also asks why you are on that site", () => {
-  assert.equal(chatSiteName("www.youtube.com"), "youtube.com");
+  assert.equal(chatSiteName("www.youtube.com"), "youtube");
   assert.deepEqual(
     chatBubbleCopy({
       sessionActive: true,
@@ -76,7 +76,7 @@ test("live distraction also asks why you are on that site", () => {
       host: "www.YouTube.com",
       lineIndex: 1,
     }),
-    { text: "Why are you on youtube.com?", scope: "pet" },
+    { text: "Why are you on youtube?", scope: "pet" },
   );
   assert.deepEqual(
     chatBubbleCopy({ sessionActive: true, onDistracted: true, lineIndex: 1 }),

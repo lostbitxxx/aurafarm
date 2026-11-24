@@ -20,13 +20,14 @@ const CHAT_RECOVERED_EXTRA = [
   "alright lock back in",
 ];
 
-/** Hostname for the distraction line. Drops a leading www. */
+/** Hostname for the distraction line. Drops a leading www and a trailing .com. */
 function chatSiteName(host) {
   return String(host ?? "")
     .trim()
     .toLowerCase()
     .replace(/\.$/, "")
-    .replace(/^www\./, "");
+    .replace(/^www\./, "")
+    .replace(/\.com$/, "");
 }
 
 function chatDistractedOnSite(host) {
