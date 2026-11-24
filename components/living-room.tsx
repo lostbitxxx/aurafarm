@@ -1140,7 +1140,6 @@ export function LivingRoom({
             </button>
           </div>
         ) : null}
-        </div>
         <div className="room-tool-rail">
           {editing ? (
               <div className="room-tool-group">
@@ -1197,6 +1196,7 @@ export function LivingRoom({
               </span>
             </button>
           )}
+        </div>
         </div>
         </div>
       </div>
