@@ -20,6 +20,7 @@ const {
 const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName, supportedFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
+const { restingPetPose } = require("./pet-art");
 const {
   DEFAULTS: DOCK_DEFAULTS,
   nearestEdge,
@@ -246,7 +247,20 @@ function syncChatBubble(options = {}) {
   return true;
 }
 
+function applyRestingPetPose() {
+  const pose = restingPetPose({
+    sessionActive: Boolean(study?.token),
+    onDistracted: onDistractedHost,
+    closing: petClosing,
+    animating: petAnimating,
+    currentPose: state.petPose,
+  });
+  if (state.petPose === pose) return;
+  state = { ...state, petPose: pose };
+}
+
 function publish() {
+  applyRestingPetPose();
   petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
   syncChatBubble();
   const payload = {

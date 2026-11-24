@@ -5,9 +5,17 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { clampPetX, plainPetPath } = require("../desktop/pet-art.js") as {
+const { clampPetX, plainPetPath, plainPetStack, restingPetPose } = require("../desktop/pet-art.js") as {
   clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
   plainPetPath: (petType: string, pose: string) => string;
+  plainPetStack: (petType: string, pose: string) => { face: string };
+  restingPetPose: (input?: {
+    sessionActive?: boolean;
+    onDistracted?: boolean;
+    closing?: boolean;
+    animating?: boolean;
+    currentPose?: string;
+  }) => string;
 };
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../desktop/pet-move.js") as {
   clampPetOrigin: (
@@ -452,6 +460,33 @@ test("the pet aims beside the traffic lights on the tab strip", () => {
     clampPetOrigin({ x: 2000, y: 2000 }, 70, { x: 0, y: 0, width: 1400, height: 900 }),
     { x: 1330, y: 830 },
   );
+});
+
+test("a focused desktop pet uses the petting love face", () => {
+  assert.equal(restingPetPose({ sessionActive: true }), "blush");
+  assert.equal(restingPetPose({ sessionActive: true, onDistracted: false }), "blush");
+  assert.equal(restingPetPose({ sessionActive: true, onDistracted: true }), "idle");
+  assert.equal(restingPetPose({ sessionActive: false, onDistracted: false }), "idle");
+  assert.equal(restingPetPose({ sessionActive: true, closing: true }), "idle");
+  assert.equal(
+    restingPetPose({ sessionActive: true, animating: true, closing: true, currentPose: "blush" }),
+    "idle",
+  );
+  assert.equal(
+    restingPetPose({ sessionActive: true, onDistracted: true, animating: true, currentPose: "walk2" }),
+    "walk2",
+  );
+  assert.equal(
+    plainPetStack("baby_slime", "blush").face,
+    "/pet-assets/pets/cat/colors/sage/face/blush.svg",
+  );
+  assert.equal(
+    plainPetStack("baby_slime", "idle").face,
+    "/pet-assets/pets/cat/colors/sage/face/normal.svg",
+  );
+  const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  assert.match(main, /restingPetPose/);
+  assert.match(main, /function applyRestingPetPose/);
 });
 
 test("a plain pet uses the default species sprite", () => {
