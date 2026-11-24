@@ -5870,6 +5870,14 @@ button.dialog-row {
   pointer-events: none;
 }
 
+.room-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  pointer-events: none;
+}
+
 .room-tool-slot {
   position: relative;
   display: inline-flex;

@@ -147,6 +147,8 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /className="room-tool-tip"[^>]*>\s*Furniture Gallery/);
   assert.match(css, /\.room-tool-slot:hover \.room-tool-tip/);
   assert.match(css, /\.room-tool-button\.is-edit-furniture\s*\{[^}]*margin-right:\s*auto/);
+  assert.match(source, /className="room-tool-group"/);
+  assert.match(css, /\.room-tool-group\s*\{[^}]*margin-right:\s*auto/);
   assert.match(source, /"Save"/);
   assert.match(source, /is-editing/);
   assert.match(source, /writeRoomDecor/);
