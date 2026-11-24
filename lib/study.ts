@@ -160,6 +160,12 @@ export function buildPetLaunchUrl(code: string) {
   return `aurafarm://session?${params.toString()}`;
 }
 
+/** Hand the launch code to the Mac app in the current tab. */
+export function openPetLaunch(url: string) {
+  if (typeof window === "undefined") return;
+  window.location.assign(url);
+}
+
 export const STUDY_TIME_ZONE = "Asia/Hong_Kong";
 
 export function formatTimestamp(iso: string) {

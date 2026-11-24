@@ -13,6 +13,7 @@ import {
 import type { PetCard } from "@/lib/pets";
 import {
   buildPetLaunchUrl,
+  openPetLaunch,
   DEFAULT_STUDY_SECONDS,
   MAX_STUDY_MINUTES,
   MIN_STUDY_MINUTES,
@@ -308,8 +309,9 @@ export function StudyPanel({
     setLocalPlanned(seconds);
     setLocalDesktop(useDesktopPet);
     if (useDesktopPet) {
-      setDesktopLink(buildPetLaunchUrl(result.launchCode));
-      return;
+      const launchUrl = buildPetLaunchUrl(result.launchCode);
+      setDesktopLink(launchUrl);
+      openPetLaunch(launchUrl);
     }
     setStartOpen(false);
   }

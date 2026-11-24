@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { startStudySession } from "@/lib/actions/study";
 import {
   buildPetLaunchUrl,
+  openPetLaunch,
   DEFAULT_STUDY_SECONDS,
   experienceForSession,
   farmerLocalDay,
@@ -83,7 +84,7 @@ export function CrewStudyStart({
     );
     if (useDesktopPet) {
       setDesktopLink(launchUrl);
-      return;
+      openPetLaunch(launchUrl);
     }
     setStartOpen(false);
   }
