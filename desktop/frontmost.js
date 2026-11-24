@@ -82,6 +82,8 @@ function clearedCloseWatch() {
 function nextCloseWatch(watch, input) {
   const current = watch ?? createCloseWatch();
   if (!input?.enabled) return clearedCloseWatch();
+  // Another app is in front. A blank browser read still keeps the wait.
+  if (input.leftBrowser) return clearedCloseWatch();
 
   const host = hostnameFromUrl(input.rawUrl);
   if (!host) return { ...current, close: false };

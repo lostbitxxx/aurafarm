@@ -29,6 +29,7 @@ const {
       blocklist: readonly string[];
       deskHost: string;
       now: number;
+      leftBrowser?: boolean;
     },
   ) => { host: string; since: number; attemptedHost: string; close: boolean };
   noteCloseAttempt: (watch: {
@@ -329,6 +330,22 @@ test("a different blocked host starts a new 15 second wait", () => {
   assert.equal(youtube.close, false);
   assert.equal(dwell(youtube, "https://www.youtube.com/feed", 45_999).close, false);
   assert.equal(dwell(youtube, "https://www.youtube.com/feed", 46_000).close, true);
+});
+
+test("leaving the browser for another app clears the blocked wait", () => {
+  const seen = dwell(createCloseWatch(), "https://www.youtube.com/watch?v=1", 1_000);
+  assert.equal(seen.host, "www.youtube.com");
+  const away = nextCloseWatch(seen, {
+    enabled: true,
+    rawUrl: "",
+    blocklist: blocked,
+    deskHost: desk,
+    now: 5_000,
+    leftBrowser: true,
+  });
+  assert.equal(away.host, "");
+  assert.equal(away.since, 0);
+  assert.equal(away.close, false);
 });
 
 test("a missing address does not reset the wait or close on its own", () => {
