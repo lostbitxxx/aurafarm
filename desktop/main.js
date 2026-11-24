@@ -90,6 +90,11 @@ let petAnimating = false;
 let petClosing = false;
 /** Last known “on blocklist host” for chat copy between polls. */
 let onDistractedHost = false;
+/** Rotates multi-line chat while the same scenario stays up. */
+let chatLineIndex = 0;
+let chatLineTick = 0;
+let chatLineScenario = "";
+const CHAT_LINE_TICKS = 3;
 let finishing = false;
 let study = null;
 let lastBrowserApp = "";
@@ -186,14 +191,34 @@ function everDistractedThisSession() {
   return Array.isArray(study.distractedHosts) && study.distractedHosts.length > 0;
 }
 
+function chatScenarioKey() {
+  const host = onDistractedHost ? String(study?.closeWatch?.host || "") : "";
+  return [
+    Boolean(study?.token),
+    petClosing,
+    onDistractedHost,
+    everDistractedThisSession(),
+    panelOpen,
+    host,
+  ].join("|");
+}
+
 function syncChatBubble(options = {}) {
   if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
+  const scenario = chatScenarioKey();
+  if (scenario !== chatLineScenario) {
+    chatLineScenario = scenario;
+    chatLineIndex = 0;
+    chatLineTick = 0;
+  }
   const copy = chatBubbleCopy({
     sessionActive: Boolean(study?.token),
     closing: petClosing,
     onDistracted: onDistractedHost,
     everDistracted: everDistractedThisSession(),
     panelOpen,
+    host: onDistractedHost ? study?.closeWatch?.host || "" : "",
+    lineIndex: chatLineIndex,
   });
   const panelPetVisible = panelOpen && !petAnimating;
   if (
@@ -875,6 +900,7 @@ function tickStudyClock() {
   const statusChanged = Boolean(countdown && state.status !== countdown);
   if (statusChanged) state = { ...state, status: countdown };
   if (progressChanged || statusChanged) publish();
+  advanceChatLine();
   // Countdown UI lives on the desk site; the pet only auto-finishes when time is up.
   if (remaining !== null && remaining <= 0) {
     setSessionProgress(1);
@@ -893,6 +919,14 @@ function stopStudyClock() {
   if (!studyClock) return;
   clearInterval(studyClock);
   studyClock = null;
+}
+
+function advanceChatLine() {
+  chatLineTick += 1;
+  if (chatLineTick < CHAT_LINE_TICKS) return;
+  chatLineTick = 0;
+  chatLineIndex += 1;
+  if (syncChatBubble()) publish();
 }
 
 function beginFrontWatch(body, browser = "") {
@@ -947,6 +981,9 @@ function stopFrontWatch() {
   study = null;
   petClosing = false;
   onDistractedHost = false;
+  chatLineIndex = 0;
+  chatLineTick = 0;
+  chatLineScenario = "";
   state = { ...state, chatBubble: "", chatBubbleScope: "none", sessionProgress: 0 };
   const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));

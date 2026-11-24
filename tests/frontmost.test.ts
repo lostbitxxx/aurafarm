@@ -247,8 +247,8 @@ test("a failed browser read is shown instead of a clear session", () => {
     "Watching www.youtube.com",
   );
   assert.equal(
-    closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 16_000),
-    "Watching. Closing www.youtube.com in 0:15.",
+    closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 6_000),
+    "Watching. Closing www.youtube.com in 0:10.",
   );
   assert.equal(
     closeCountdownStatus({ host: "www.youtube.com", since: 1_000 }, 61_000),
@@ -267,18 +267,18 @@ function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: 
   });
 }
 
-test("a blocked host is closed once after 30 seconds on that page", () => {
-  assert.equal(CLOSE_AFTER_MS, 30_000);
+test("a blocked host is closed once after 15 seconds on that page", () => {
+  assert.equal(CLOSE_AFTER_MS, 15_000);
   const start = 1_000;
   const seen = dwell(createCloseWatch(), "https://www.instagram.com/reels", start);
   assert.equal(seen.close, false);
   assert.equal(seen.since, start);
 
-  const still = dwell(seen, "https://www.instagram.com/explore", start + 29_999);
+  const still = dwell(seen, "https://www.instagram.com/explore", start + 14_999);
   assert.equal(still.close, false);
   assert.equal(still.since, start);
 
-  const due = dwell(still, "https://www.instagram.com/", start + 30_000);
+  const due = dwell(still, "https://www.instagram.com/", start + 15_000);
   assert.equal(due.close, true);
   assert.equal(due.host, "www.instagram.com");
 
@@ -321,14 +321,14 @@ test("leaving, a lookalike, the desk, or switching the toggle off clears the wai
   assert.equal(disabled.host, "");
 });
 
-test("a different blocked host starts a new 30 second wait", () => {
+test("a different blocked host starts a new 15 second wait", () => {
   const instagram = dwell(createCloseWatch(), "https://www.instagram.com/", 1_000);
   const youtube = dwell(instagram, "https://www.youtube.com/feed", 31_000);
   assert.equal(youtube.host, "www.youtube.com");
   assert.equal(youtube.since, 31_000);
   assert.equal(youtube.close, false);
-  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 60_999).close, false);
-  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 61_000).close, true);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 45_999).close, false);
+  assert.equal(dwell(youtube, "https://www.youtube.com/feed", 46_000).close, true);
 });
 
 test("a missing address does not reset the wait or close on its own", () => {
@@ -337,8 +337,8 @@ test("a missing address does not reset the wait or close on its own", () => {
   assert.equal(missed.host, "www.tiktok.com");
   assert.equal(missed.since, 2_000);
   assert.equal(missed.close, false);
-  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 31_999).close, false);
-  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 32_000).close, true);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 16_999).close, false);
+  assert.equal(dwell(missed, "https://www.tiktok.com/@farm", 17_000).close, true);
 });
 
 test("the debug line names the reason a blocked tab stays open", () => {
@@ -359,7 +359,7 @@ test("the debug line names the reason a blocked tab stays open", () => {
       decision: { host: "www.youtube.com", since: 1_000, close: false },
       now: 4_000,
     }),
-    /www.youtube.com in Google Chrome for 3s of 30s/,
+    /www.youtube.com in Google Chrome for 3s of 15s/,
   );
   assert.match(
     describeCloseDebug({

@@ -69,7 +69,7 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
   return recordFrontHost(log, rawUrl, blocklist, deskHost);
 }
 
-const CLOSE_AFTER_MS = 30_000;
+const CLOSE_AFTER_MS = 15_000;
 
 function createCloseWatch() {
   return { host: "", since: 0, attemptedHost: "", close: false };

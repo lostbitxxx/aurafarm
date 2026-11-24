@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <li>It does not read background tabs, page contents, or passwords.</li>
           <li>
             During a desktop study session, it comes forward and closes that front tab
-            after 1 minute on a blocklist host.
+            after 15 seconds on a blocklist host.
           </li>
           <li>
             The server stores the duration, the experience, and the blocked hostnames for that
