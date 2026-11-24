@@ -17,7 +17,7 @@ const {
   noteCloseAttempt,
   hostnameFromUrl,
 } = require("./frontmost");
-const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName } = require("./front-browser");
+const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName, supportedFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
 const {
@@ -32,7 +32,7 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin }
 const { remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
-const { chatBubbleCopy } = require("./chat-bubble");
+const { chatBubbleCopy, chatBubbleLines, pickChatLineIndex } = require("./chat-bubble");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -203,21 +203,30 @@ function chatScenarioKey() {
   ].join("|");
 }
 
-function syncChatBubble(options = {}) {
-  if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
-  const scenario = chatScenarioKey();
-  if (scenario !== chatLineScenario) {
-    chatLineScenario = scenario;
-    chatLineIndex = 0;
-    chatLineTick = 0;
-  }
-  const copy = chatBubbleCopy({
+function chatBubbleInput() {
+  return {
     sessionActive: Boolean(study?.token),
     closing: petClosing,
     onDistracted: onDistractedHost,
     everDistracted: everDistractedThisSession(),
     panelOpen,
     host: onDistractedHost ? study?.closeWatch?.host || "" : "",
+  };
+}
+
+function syncChatBubble(options = {}) {
+  if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
+  const scenario = chatScenarioKey();
+  if (scenario !== chatLineScenario) {
+    const wasOpen = chatLineScenario.split("|")[4] === "true";
+    chatLineScenario = scenario;
+    chatLineTick = 0;
+    const preview = chatBubbleLines(chatBubbleInput());
+    const openingBarLines = panelOpen && !wasOpen && preview.scope === "panel";
+    chatLineIndex = openingBarLines ? pickChatLineIndex(preview.lines.length) : 0;
+  }
+  const copy = chatBubbleCopy({
+    ...chatBubbleInput(),
     lineIndex: chatLineIndex,
   });
   const panelPetVisible = panelOpen && !petAnimating;
@@ -1188,12 +1197,14 @@ async function pollFront() {
     if (study !== current) return;
     if (typeof preference.value === "boolean") current.closeBlocked = preference.value;
     const now = Date.now();
+    const leftBrowser = Boolean(reading.app) && !reading.error && !supportedFrontBrowser(reading.app);
     const decision = nextCloseWatch(current.closeWatch, {
       enabled: true,
       rawUrl: reading.url || "",
       blocklist: current.blocklist,
       deskHost: DESK_HOST,
       now,
+      leftBrowser,
     });
     current.closeWatch = decision;
     if (decision.host && decision.since > 0 && now - decision.since >= CLOSE_AFTER_MS) {

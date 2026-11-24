@@ -20,13 +20,14 @@ const CHAT_RECOVERED_EXTRA = [
   "alright lock back in",
 ];
 
-/** Hostname for the distraction line. Drops a leading www. */
+/** Hostname for the distraction line. Drops a leading www and a trailing .com. */
 function chatSiteName(host) {
   return String(host ?? "")
     .trim()
     .toLowerCase()
     .replace(/\.$/, "")
-    .replace(/^www\./, "");
+    .replace(/^www\./, "")
+    .replace(/\.com$/, "");
 }
 
 function chatDistractedOnSite(host) {
@@ -62,9 +63,7 @@ function chatBubbleLines(input = {}) {
     };
   }
   if (!panelOpen) return { lines: [], scope: "none" };
-  if (!everDistracted) {
-    return { lines: [CHAT_FOCUSED, CHAT_FOCUSED_GOOD, ...CHAT_FOCUSED_EXTRA], scope: "panel" };
-  }
+  if (!everDistracted) return { lines: [CHAT_FOCUSED, CHAT_FOCUSED_GOOD, ...CHAT_FOCUSED_EXTRA], scope: "panel" };
   return { lines: [CHAT_RECOVERED, ...CHAT_RECOVERED_EXTRA], scope: "panel" };
 }
 
@@ -90,6 +89,15 @@ function chatBubbleCopy(input = {}) {
   return { text: lines[index], scope };
 }
 
+/** Random index when the bar opens, so it does not always start on the first line. */
+function pickChatLineIndex(count, random = Math.random) {
+  const total = Math.max(0, Math.floor(Number(count) || 0));
+  if (total <= 1) return 0;
+  const roll = Number(random());
+  const unit = Number.isFinite(roll) ? Math.min(Math.max(roll, 0), 0.999999) : 0;
+  return Math.floor(unit * total);
+}
+
 module.exports = {
   CHAT_NO_SESSION,
   CHAT_CLOSING,
@@ -100,4 +108,5 @@ module.exports = {
   chatSiteName,
   chatBubbleLines,
   chatBubbleCopy,
+  pickChatLineIndex,
 };

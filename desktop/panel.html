@@ -220,6 +220,7 @@
         }
       }
       #panel-stage {
+        position: relative;
         flex: 1 1 auto;
         display: flex;
         align-items: center;
@@ -229,15 +230,14 @@
       }
       #panel-pet {
         display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        width: min(100%, 9.5rem);
-        min-height: 8rem;
+        position: absolute;
+        inset: 0;
+        width: auto;
+        height: auto;
         pointer-events: none;
       }
       body.is-open #panel-pet.is-visible {
-        display: flex;
+        display: block;
       }
       .pet-chat {
         position: relative;
@@ -258,8 +258,12 @@
         font: 650 10px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         text-align: center;
         opacity: 0;
-        transform: translateY(4px);
-        transition: opacity 220ms ease, transform 220ms ease;
+        transform-origin: 50% calc(100% + 7px);
+        transform: scale(0.2);
+        transition: opacity 180ms ease, transform 320ms cubic-bezier(0.16, 0.84, 0.24, 1);
+      }
+      .pet-chat.is-instant {
+        transition: none;
       }
       .pet-chat::before,
       .pet-chat::after {
@@ -284,13 +288,17 @@
         border-right: 5.5px solid transparent;
         border-top: 5.5px solid #fffdf6;
       }
+      #panel-pet .pet-chat {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(90px + 0.35rem + 0.45rem);
+        width: min(100%, 9.5rem);
+        margin: 0 auto;
+      }
       .pet-chat.is-on {
         opacity: 1;
-        transform: translateY(0);
-      }
-      .pet-chat:not(.is-on) {
-        /* Keep the reserved chat slot so the pet stays centered under it. */
-        visibility: hidden;
+        transform: scale(1);
       }
       @media (prefers-reduced-motion: reduce) {
         .pet-chat {
@@ -298,10 +306,14 @@
         }
       }
       #panel-pet-stack {
-        position: relative;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0.35rem;
         display: block;
         width: 90px;
         height: 90px;
+        margin-inline: auto;
         flex: none;
         pointer-events: auto;
         cursor: grab;
@@ -467,6 +479,7 @@
       </div>
     </div>
     <script src="pet-art.js"></script>
+    <script src="chat-motion.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>
