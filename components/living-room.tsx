@@ -1096,7 +1096,6 @@ export function LivingRoom({
         </div>
         <div className="room-tool-rail">
           {editing ? (
-            <>
               <div className="room-tool-group">
                 <span className="room-tool-slot">
                   <button
@@ -1139,11 +1138,10 @@ export function LivingRoom({
                     Furniture Gallery
                   </span>
                 </span>
+                <button type="button" className="room-tool-button" aria-label="Save" onClick={saveEdit}>
+                  <RoomToolIcon kind="save" />
+                </button>
               </div>
-              <button type="button" className="room-tool-button" aria-label="Save" onClick={saveEdit}>
-                <RoomToolIcon kind="save" />
-              </button>
-            </>
           ) : (
             <button type="button" className="room-tool-button is-edit-furniture" aria-label="Edit Furniture" onClick={beginEdit}>
               <RoomToolIcon kind="edit" />
