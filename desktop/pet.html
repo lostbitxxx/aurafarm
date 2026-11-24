@@ -27,8 +27,14 @@
       body.edge-right #pet-root {
         align-items: flex-end;
       }
+      body.edge-right .pet-chat {
+        right: 0;
+      }
       body.edge-left #pet-root {
         align-items: flex-start;
+      }
+      body.edge-left .pet-chat {
+        left: 0;
       }
       body.edge-top #pet-root {
         flex-direction: row;
@@ -38,8 +44,20 @@
       #pet-root #pet-stack {
         pointer-events: auto;
       }
+      body.edge-right #pet-stack {
+        right: 0;
+      }
+      body.edge-left #pet-stack {
+        left: 0;
+      }
+      body.edge-top #pet-stack {
+        top: 0;
+        right: 0;
+        bottom: auto;
+      }
       .pet-chat {
-        position: relative;
+        position: absolute;
+        bottom: calc(70px + 0.45rem);
         z-index: 2;
         display: flex;
         align-items: center;
@@ -47,7 +65,7 @@
         box-sizing: border-box;
         max-width: 9.5rem;
         min-height: 2.2rem;
-        margin: 0 0 0.45rem;
+        margin: 0;
         padding: 0.35rem 0.45rem;
         border: 1.5px solid #9daa90;
         border-radius: 4px;
@@ -61,8 +79,11 @@
         pointer-events: none;
       }
       body.edge-top .pet-chat {
-        margin: 0 0.45rem 0 0;
-        transform: translateX(-4px);
+        top: 50%;
+        right: calc(70px + 0.45rem);
+        bottom: auto;
+        margin: 0;
+        transform: translate(-4px, -50%);
       }
       .pet-chat::before,
       .pet-chat::after {
@@ -115,7 +136,7 @@
         transform: translateY(0);
       }
       body.edge-top .pet-chat.is-on {
-        transform: translateX(0);
+        transform: translate(0, -50%);
       }
       .pet-chat:not(.is-on) {
         visibility: hidden;
@@ -126,7 +147,8 @@
         }
       }
       #pet-stack {
-        position: relative;
+        position: absolute;
+        bottom: 0;
         display: block;
         flex: none;
         width: 70px;

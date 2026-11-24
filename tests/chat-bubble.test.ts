@@ -12,6 +12,7 @@ const {
   CHAT_RECOVERED,
   chatSiteName,
   chatBubbleCopy,
+  pickChatLineIndex,
 } = require("../desktop/chat-bubble.js") as {
   CHAT_NO_SESSION: string;
   CHAT_CLOSING: string;
@@ -29,6 +30,7 @@ const {
     host?: string;
     lineIndex?: number;
   }) => { text: string; scope: "none" | "pet" | "panel" };
+  pickChatLineIndex: (count: number, random?: () => number) => number;
 };
 
 test("no study session prompts starting on the web", () => {
@@ -123,4 +125,10 @@ test("open-bar idle lines stay panel-only", () => {
       scope: "panel",
     })),
   );
+});
+
+test("reopening the bar can start on any open-bar line", () => {
+  assert.equal(pickChatLineIndex(5, () => 0), 0);
+  assert.equal(pickChatLineIndex(5, () => 0.99), 4);
+  assert.equal(pickChatLineIndex(1, () => 0.5), 0);
 });

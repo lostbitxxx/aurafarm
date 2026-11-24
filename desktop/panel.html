@@ -220,6 +220,7 @@
         }
       }
       #panel-stage {
+        position: relative;
         flex: 1 1 auto;
         display: flex;
         align-items: center;
@@ -229,15 +230,14 @@
       }
       #panel-pet {
         display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        width: min(100%, 9.5rem);
-        min-height: 8rem;
+        position: absolute;
+        inset: 0;
+        width: auto;
+        height: auto;
         pointer-events: none;
       }
       body.is-open #panel-pet.is-visible {
-        display: flex;
+        display: block;
       }
       .pet-chat {
         position: relative;
@@ -284,12 +284,19 @@
         border-right: 5.5px solid transparent;
         border-top: 5.5px solid #fffdf6;
       }
+      #panel-pet .pet-chat {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(90px + 0.35rem + 0.45rem);
+        width: min(100%, 9.5rem);
+        margin: 0 auto;
+      }
       .pet-chat.is-on {
         opacity: 1;
         transform: translateY(0);
       }
       .pet-chat:not(.is-on) {
-        /* Keep the reserved chat slot so the pet stays centered under it. */
         visibility: hidden;
       }
       @media (prefers-reduced-motion: reduce) {
@@ -298,10 +305,14 @@
         }
       }
       #panel-pet-stack {
-        position: relative;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0.35rem;
         display: block;
         width: 90px;
         height: 90px;
+        margin-inline: auto;
         flex: none;
         pointer-events: auto;
         cursor: grab;

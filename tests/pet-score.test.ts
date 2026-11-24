@@ -348,6 +348,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(petScript, /chatBubbleScope/);
   assert.match(main, /chatBubbleCopy/);
+  assert.match(main, /pickChatLineIndex/);
+  assert.match(main, /CHAT_LINE_TICKS = 3/);
+  assert.match(panel, /#panel-pet-stack \{[^}]*position: absolute/);
+  assert.match(petPage, /#pet-stack \{[^}]*position: absolute/);
   assert.match(main, /PET_CHAT_PAD = 64/);
   assert.match(main, /PET_CHAT_WIDTH = 168/);
   assert.match(main, /spriteOrigin\.x - overhang/);
