@@ -51,9 +51,7 @@ function applyChatBubble(state) {
   if (!petChat) return;
   const scope = state.chatBubbleScope;
   const text = typeof state.chatBubble === "string" ? state.chatBubble : "";
-  const show = Boolean(text) && scope === "pet";
-  petChat.textContent = show ? text : "";
-  petChat.classList.toggle("is-on", show);
+  replayChatBubble(petChat, text, Boolean(text) && scope === "pet");
 }
 
 function screenPoint(event) {

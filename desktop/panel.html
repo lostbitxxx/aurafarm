@@ -258,8 +258,12 @@
         font: 650 10px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         text-align: center;
         opacity: 0;
-        transform: translateY(4px);
-        transition: opacity 220ms ease, transform 220ms ease;
+        transform-origin: 50% calc(100% + 7px);
+        transform: scale(0.2);
+        transition: opacity 180ms ease, transform 320ms cubic-bezier(0.16, 0.84, 0.24, 1);
+      }
+      .pet-chat.is-instant {
+        transition: none;
       }
       .pet-chat::before,
       .pet-chat::after {
@@ -294,10 +298,7 @@
       }
       .pet-chat.is-on {
         opacity: 1;
-        transform: translateY(0);
-      }
-      .pet-chat:not(.is-on) {
-        visibility: hidden;
+        transform: scale(1);
       }
       @media (prefers-reduced-motion: reduce) {
         .pet-chat {
@@ -478,6 +479,7 @@
       </div>
     </div>
     <script src="pet-art.js"></script>
+    <script src="chat-motion.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>

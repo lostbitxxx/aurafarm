@@ -80,16 +80,13 @@ function applyPanelPet(state) {
   const show = state.panelPetVisible === true;
   panelPet.classList.toggle("is-visible", show);
   if (!show) {
-    panelPetChat.textContent = "";
-    panelPetChat.classList.remove("is-on");
+    replayChatBubble(panelPetChat, "", false);
     return;
   }
   applyPanelPetSprite();
   const text = typeof state.chatBubble === "string" ? state.chatBubble : "";
   const scope = state.chatBubbleScope;
-  const showChat = Boolean(text) && (scope === "pet" || scope === "panel");
-  panelPetChat.textContent = showChat ? text : "";
-  panelPetChat.classList.toggle("is-on", showChat);
+  replayChatBubble(panelPetChat, text, Boolean(text) && (scope === "pet" || scope === "panel"));
 }
 
 function applySessionFill(state) {

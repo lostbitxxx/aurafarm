@@ -132,3 +132,48 @@ test("reopening the bar can start on any open-bar line", () => {
   assert.equal(pickChatLineIndex(5, () => 0.99), 4);
   assert.equal(pickChatLineIndex(1, () => 0.5), 0);
 });
+
+test("a new chat line expands out instead of swapping in place", () => {
+  const { replayChatBubble } = require("../desktop/chat-motion.js") as {
+    replayChatBubble: (node: {
+      textContent: string;
+      chatSeq?: number;
+      offsetWidth: number;
+      classList: { contains: (name: string) => boolean; add: (name: string) => void; remove: (name: string) => void };
+    }, text: string, show: boolean) => void;
+  };
+  const frames: Array<() => void> = [];
+  const previous = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = ((fn: () => void) => {
+    frames.push(fn);
+    return frames.length;
+  }) as typeof requestAnimationFrame;
+  const names = new Set(["is-on"]);
+  const node = {
+    textContent: "auramaxxing...",
+    offsetWidth: 40,
+    classList: {
+      contains: (name: string) => names.has(name),
+      add: (name: string) => {
+        names.add(name);
+      },
+      remove: (name: string) => {
+        names.delete(name);
+      },
+    },
+  };
+  try {
+    replayChatBubble(node, "auramaxxing...", true);
+    assert.equal(frames.length, 0);
+    replayChatBubble(node, "locked in fr", true);
+    assert.equal(node.textContent, "locked in fr");
+    assert.equal(node.classList.contains("is-on"), false);
+    assert.equal(node.classList.contains("is-instant"), true);
+    frames.shift()?.();
+    assert.equal(node.classList.contains("is-instant"), false);
+    frames.shift()?.();
+    assert.equal(node.classList.contains("is-on"), true);
+  } finally {
+    globalThis.requestAnimationFrame = previous;
+  }
+});
