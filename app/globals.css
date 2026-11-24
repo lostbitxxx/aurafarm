@@ -5878,6 +5878,15 @@ button.dialog-row {
   pointer-events: none;
 }
 
+.living-room > .room-tool-rail {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 260;
+  padding-top: 0;
+  justify-content: flex-start;
+}
+
 .room-tool-group {
   display: flex;
   align-items: center;
@@ -5949,6 +5958,18 @@ button.dialog-row {
 .room-tool-slot:hover .room-tool-tip,
 .room-tool-slot:focus-within .room-tool-tip {
   opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* The rail sits in the top-left corner, so the label drops below the icon. */
+.living-room > .room-tool-rail .room-tool-tip {
+  bottom: auto;
+  top: calc(100% + 0.32rem);
+  transform: translate(-50%, -0.18rem);
+}
+
+.living-room > .room-tool-rail .room-tool-slot:hover .room-tool-tip,
+.living-room > .room-tool-rail .room-tool-slot:focus-within .room-tool-tip {
   transform: translate(-50%, 0);
 }
 
