@@ -5950,6 +5950,7 @@ button.dialog-row {
   align-items: center;
   justify-content: flex-start;
   width: auto;
+  margin-right: auto;
   padding: 0 8px;
   overflow: hidden;
   transition:

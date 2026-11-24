@@ -1126,28 +1126,30 @@ export function LivingRoom({
                 </span>
               </span>
               <span className="room-tool-slot">
-                <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
+                <button
+                  type="button"
+                  className="room-tool-button"
+                  aria-label="Furniture Gallery"
+                  onClick={() => setDecorOpen(true)}
+                >
                   <RoomToolIcon kind="decorate" />
                 </button>
                 <span className="room-tool-tip" aria-hidden="true">
-                  Decorate
+                  Furniture Gallery
                 </span>
               </span>
+              <button type="button" className="room-tool-button" aria-label="Save" onClick={saveEdit}>
+                <RoomToolIcon kind="save" />
+              </button>
             </>
-          ) : null}
-          <button
-            type="button"
-            className={editing ? "room-tool-button" : "room-tool-button is-edit-furniture"}
-            aria-label={editing ? "Save" : "Edit Furniture"}
-            onClick={editing ? saveEdit : beginEdit}
-          >
-            <RoomToolIcon kind={editing ? "save" : "edit"} />
-            {editing ? null : (
+          ) : (
+            <button type="button" className="room-tool-button is-edit-furniture" aria-label="Edit Furniture" onClick={beginEdit}>
+              <RoomToolIcon kind="edit" />
               <span className="room-tool-label">
                 <span>Edit Furniture</span>
               </span>
-            )}
-          </button>
+            </button>
+          )}
         </div>
         </div>
       </div>

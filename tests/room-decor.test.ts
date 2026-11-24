@@ -138,13 +138,15 @@ test("the living room can edit, decorate, and save", () => {
   assert.match(source, /"Edit Furniture"/);
   assert.match(source, /is-edit-furniture/);
   assert.match(css, /\.room-tool-button\.is-edit-furniture:is\(:hover, :focus-visible\)/);
-  assert.match(source, /aria-label="Decorate"/);
+  assert.match(source, /aria-label="Furniture Gallery"/);
+  assert.doesNotMatch(source, /aria-label="Decorate"/);
   assert.match(source, /aria-label="Undo"/);
   assert.match(source, /aria-label="Redo"/);
   assert.match(source, /className="room-tool-tip"[^>]*>\s*Undo/);
   assert.match(source, /className="room-tool-tip"[^>]*>\s*Redo/);
-  assert.match(source, /className="room-tool-tip"[^>]*>\s*Decorate/);
+  assert.match(source, /className="room-tool-tip"[^>]*>\s*Furniture Gallery/);
   assert.match(css, /\.room-tool-slot:hover \.room-tool-tip/);
+  assert.match(css, /\.room-tool-button\.is-edit-furniture\s*\{[^}]*margin-right:\s*auto/);
   assert.match(source, /"Save"/);
   assert.match(source, /is-editing/);
   assert.match(source, /writeRoomDecor/);
