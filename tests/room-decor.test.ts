@@ -135,7 +135,9 @@ test("the living room can edit, decorate, and save", () => {
   const source = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const dialog = readFileSync(new URL("../components/room-decorate-dialog.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(source, /"Edit room"/);
+  assert.match(source, /"Edit Furniture"/);
+  assert.match(source, /is-edit-furniture/);
+  assert.match(css, /\.room-tool-button\.is-edit-furniture:is\(:hover, :focus-visible\)/);
   assert.match(source, /aria-label="Decorate"/);
   assert.match(source, /aria-label="Undo"/);
   assert.match(source, /aria-label="Redo"/);

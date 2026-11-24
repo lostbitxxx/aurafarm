@@ -1122,11 +1122,16 @@ export function LivingRoom({
           ) : null}
           <button
             type="button"
-            className="room-tool-button"
-            aria-label={editing ? "Save" : "Edit room"}
+            className={editing ? "room-tool-button" : "room-tool-button is-edit-furniture"}
+            aria-label={editing ? "Save" : "Edit Furniture"}
             onClick={editing ? saveEdit : beginEdit}
           >
             <RoomToolIcon kind={editing ? "save" : "edit"} />
+            {editing ? null : (
+              <span className="room-tool-label">
+                <span>Edit Furniture</span>
+              </span>
+            )}
           </button>
         </div>
         </div>
