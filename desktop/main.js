@@ -3,7 +3,8 @@ const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const { parseAurafarmLink } = require("./links");
+const { launchLinksFromArgs, parseAurafarmLink } = require("./links");
+const { ensureDevProtocolHandler, pendingLaunchFile, takePendingLaunchLinks } = require("./dev-protocol-app");
 const {
   CLOSE_AFTER_MS,
   createCloseWatch,
@@ -127,6 +128,7 @@ let state = {
   chatBubbleScope: "none",
 };
 const pendingLinks = [];
+let acceptLaunchLinks = false;
 
 function loadPublicEnv(file) {
   if (!fs.existsSync(file)) return;
@@ -1266,13 +1268,45 @@ async function handleLink(link) {
   }
 }
 
+function launchValues(argv, readPending) {
+  const values = launchLinksFromArgs(argv || []);
+  if (readPending) {
+    try {
+      values.push(...takePendingLaunchLinks(pendingLaunchFile(__dirname)));
+    } catch (error) {
+      console.error("Could not read a pending aurafarm:// link.", error);
+    }
+  }
+  const seen = new Set();
+  const unique = [];
+  for (const value of values) {
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    unique.push(value);
+  }
+  return unique;
+}
+
+async function deliverLaunchValues(values) {
+  if (!values.length) return;
+  petLog("[pet] opening aurafarm:// link");
+  for (const value of values) await handleLink(parseAurafarmLink(value));
+}
+
 function registerMacProtocol() {
   if (process.platform !== "darwin") return;
-  if (process.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient("aurafarm", process.execPath, [path.resolve(process.argv[1])]);
-  } else {
-    app.setAsDefaultProtocolClient("aurafarm");
+  if (!app.isPackaged) {
+    // setAsDefaultProtocolClient ignores the app path on macOS, so a cold
+    // aurafarm:// open launches Electron.app and shows "Electron path-to-app".
+    try {
+      const handler = ensureDevProtocolHandler({ electronExecutable: process.execPath });
+      console.log(`[pet] aurafarm:// opens ${handler.destApp}`);
+    } catch (error) {
+      console.error("Could not register the aurafarm:// handler.", error);
+    }
+    return;
   }
+  app.setAsDefaultProtocolClient("aurafarm");
 }
 
 ipcMain.handle("sign-in", (_event, body) => signIn(body?.email ?? "", body?.password ?? ""));
@@ -1330,9 +1364,7 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
-    for (const arg of argv) {
-      if (arg.startsWith("aurafarm://")) void handleLink(parseAurafarmLink(arg));
-    }
+    void deliverLaunchValues(launchValues(argv, true));
   });
 
   let petPresenceReleased = false;
@@ -1402,14 +1434,14 @@ if (!gotLock) {
     void noteFrontApp();
     setInterval(() => {
       void noteFrontApp();
+      if (acceptLaunchLinks) void deliverLaunchValues(launchValues([], true));
     }, 1000);
     setDebug(describeCloseDebug({ session: false }));
     await loadRemoteConfig();
     await restoreSession();
     void checkForUpdate();
-    for (const arg of [...process.argv, ...pendingLinks]) {
-      if (arg.startsWith("aurafarm://")) await handleLink(parseAurafarmLink(arg));
-    }
+    await deliverLaunchValues(launchValues([...process.argv, ...pendingLinks], true));
+    acceptLaunchLinks = true;
     setInterval(() => {
       void refreshPet();
     }, PET_REFRESH_MS);
