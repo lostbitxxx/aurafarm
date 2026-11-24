@@ -13,6 +13,8 @@ import {
   crewStartSpotsAreOpen,
   dropOnCrewSeat,
   ejectFromCrewSeats,
+  followCrewPose,
+  newerCrewPose,
   poseFromRow,
   resolveCrewDrop,
   spotInAnyCrewSeat,
@@ -37,6 +39,10 @@ test("lobby seats ring the pedestal and stay on open floor", () => {
   assert.match(room, /onOpenLeaderboard/);
   assert.match(room, /CREW_SEATS_PATH/);
   assert.match(room, /crew-lobby-seat/);
+  assert.match(room, /living-room-labels/);
+  assert.match(room, /ROOM_LABEL_Z/);
+  assert.match(room, /reportPetLabelPose = useCallback/);
+  assert.match(room, /onLabelPoseRef/);
   assert.match(room, /lobbyDesk/);
   assert.match(room, /useStudyPose/);
   assert.match(room, /resolveCrewDrop/);
@@ -82,6 +88,17 @@ test("a farmer can take a free lobby seat and not a taken one", () => {
   assert.equal(dropOnCrewSeat(west.anchor, new Set())?.id, "w");
   assert.equal(dropOnCrewSeat(west.anchor, new Set(["w"])), null);
   assert.equal(dropOnCrewSeat(CREW_PEDESTAL, new Set()), null);
+});
+
+test("a remote pet walks toward the latest pose without passing it", () => {
+  const room = { width: 600, height: 300 };
+  const current = { left: 20, top: 70 };
+  const target = { left: 30, top: 70 };
+  const step = followCrewPose(current, target, "walking", 0.05, room);
+  assert.ok(step.left > current.left);
+  assert.ok(step.left < target.left);
+  assert.equal(followCrewPose(current, target, "sitting", 0.05, room).left, target.left);
+  assert.equal(followCrewPose(current, { left: 80, top: 70 }, "walking", 1, room).left, 80);
 });
 
 test("occupied seat drops eject to floor outside every sit zone", () => {
@@ -145,12 +162,40 @@ test("pose rows keep a known chair and drop an unknown one", () => {
   );
 });
 
-test("crew poses are read and written with the signed-in server session", () => {
+test("a later pose replaces an earlier one and an unstamped echo does not rewind it", () => {
+  const older = poseFromRow({
+    user_id: "farmer-1",
+    left_pct: 10,
+    top_pct: 20,
+    mode: "walking",
+    face_left: false,
+    updated_at: "2026-11-23T09:00:00.000Z",
+  });
+  const newer = poseFromRow({
+    user_id: "farmer-1",
+    left_pct: 40,
+    top_pct: 50,
+    mode: "walking",
+    face_left: true,
+    updated_at: "2026-11-23T09:00:01.000Z",
+  });
+  assert.ok(older && newer);
+  assert.equal(newerCrewPose(older, newer).left, 40);
+  assert.equal(newerCrewPose(newer, older).left, 40);
+  const echo = { ...newer, left: 1, updatedAt: undefined };
+  assert.equal(newerCrewPose(newer, echo).left, 40);
+  assert.equal(newerCrewPose(undefined, echo).left, 1);
+});
+
+test("crew poses publish through the server and arrive on the realtime stream", () => {
   const sync = readFileSync(new URL("../lib/crew-room-sync.ts", import.meta.url), "utf8");
   const actions = readFileSync(new URL("../lib/actions/farm-crew.ts", import.meta.url), "utf8");
   assert.match(sync, /listFarmCrewPoses/);
   assert.match(sync, /setFarmCrewPose/);
-  assert.doesNotMatch(sync, /@\/lib\/supabase\/client/);
+  assert.match(sync, /postgres_changes/);
+  assert.match(sync, /farm_crew_pose/);
+  assert.match(sync, /newerCrewPose/);
+  assert.match(sync, /@\/lib\/supabase\/client/);
   assert.match(actions, /function listFarmCrewPoses/);
   assert.match(actions, /function setFarmCrewPose/);
   assert.match(actions, /list_farm_crew_poses/);
@@ -169,5 +214,18 @@ test("crew pose migration lets a member publish and keeps a taken chair", () => 
   assert.match(sql, /function public\.list_farm_crew_poses/);
   assert.match(sql, /member\.user_id = auth\.uid\(\)/);
   assert.match(sql, /supabase_realtime/);
+  assert.doesNotMatch(sql, /grant insert|grant update|grant delete/);
+});
+
+test("crew pose realtime migration lets members hear rows without reading the member table", () => {
+  const sql = readFileSync(new URL("../supabase/migrations/0050_crew_pose_realtime.sql", import.meta.url), "utf8");
+  assert.match(sql, /function public\.can_read_farm_crew_pose/);
+  assert.match(sql, /security definer/);
+  assert.match(sql, /member\.status = 'accepted'/);
+  assert.match(sql, /grant select on public\.farm_crew_pose to authenticated/);
+  assert.match(sql, /farm_crew_pose_select/);
+  assert.match(sql, /supabase_realtime/);
+  assert.match(sql, /replica identity full/);
+  assert.doesNotMatch(sql, /grant select on public\.farm_crew_member/);
   assert.doesNotMatch(sql, /grant insert|grant update|grant delete/);
 });

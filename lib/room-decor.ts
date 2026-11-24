@@ -8,6 +8,7 @@
 import {
   ARMCHAIR_BOUNDS,
   LOVESEAT_BOUNDS,
+  ROOM_FLOOR_START_Y,
   ROOM_FURNITURE,
   ROOM_RACK_HOTSPOTS,
   ROOM_VIEW_HEIGHT,
@@ -21,6 +22,21 @@ import {
   type RoomObstacle,
   type RoomRectPx,
 } from "@/lib/living-room-layout";
+
+/** Session edit Undo/Redo depth (cleared on Save / leave edit). */
+export const DECOR_HISTORY_LIMIT = 5;
+
+/** How close (percent of room width) to horizontal center before a fast drag snaps. */
+export const DECOR_CENTER_SNAP_RADIUS_PCT = 2.5;
+
+/** Wider band to *stay* snapped so the magnet does not flicker off immediately. */
+export const DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT = 7;
+
+/** Pointer speed (px/ms) required to engage horizontal center snap. Slow crawls stay free. */
+export const DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS = 0.35;
+
+/** Small top margin so wall pieces stay below the ceiling trim. */
+const WALL_CEILING_MARGIN_PCT = 1;
 
 const RACK_SONG_BOUNDS = ROOM_RACK_HOTSPOTS.find((spot) => spot.id === "song")!.bounds;
 const RACK_TROPHY_BOUNDS = ROOM_RACK_HOTSPOTS.find((spot) => spot.id === "achievements")!.bounds;
@@ -455,6 +471,14 @@ function zeroOffsets(): Record<DecorMoverId, RoomDecorOffset> {
   };
 }
 
+function clampedZeroOffsets(): Record<DecorMoverId, RoomDecorOffset> {
+  const offsets = zeroOffsets();
+  for (const id of MOVER_IDS) {
+    offsets[id] = clampMoverOffset(id, moverBounds(id), 0, 0);
+  }
+  return offsets;
+}
+
 export function defaultRoomDecor(): RoomDecor {
   const skins = {} as Record<RoomDecorCategoryId, string>;
   const placed = {} as Record<RoomDecorCategoryId, boolean>;
@@ -462,7 +486,7 @@ export function defaultRoomDecor(): RoomDecor {
     skins[category.id] = "base";
     placed[category.id] = category.id !== "armchair" && category.id !== "loveseat";
   }
-  return { skins, placed, offsets: zeroOffsets() };
+  return { skins, placed, offsets: clampedZeroOffsets() };
 }
 
 export function cloneRoomDecor(decor: RoomDecor): RoomDecor {
@@ -485,6 +509,22 @@ export function moverBounds(id: DecorMoverId): RoomRectPx {
   return piece?.bounds ?? { x: 0, y: 0, width: 60, height: 60 };
 }
 
+/** Visual wall/floor seam in percent of room height (pets walk on/below this). */
+export function roomFloorSeamTopPercent() {
+  return pxToTopPercent(ROOM_FLOOR_START_Y);
+}
+
+/**
+ * Floor movers may not ride higher than this (seam + half the storage-rack height),
+ * so leaning pieces sit lower than the painted wall line.
+ */
+export function roomFloorPlacementTopPercent() {
+  const rack = ROOM_FURNITURE.find((item) => item.id === "storage-rack");
+  const halfRack = (rack?.bounds.height ?? 65) / 2;
+  return pxToTopPercent(ROOM_FLOOR_START_Y + halfRack);
+}
+
+/** Keep a mover fully inside the room frame (no hanging off the edges). */
 export function clampRoomOffset(bounds: RoomRectPx, dx: number, dy: number): RoomDecorOffset {
   const safeDx = Number.isFinite(dx) ? dx : 0;
   const safeDy = Number.isFinite(dy) ? dy : 0;
@@ -492,9 +532,43 @@ export function clampRoomOffset(bounds: RoomRectPx, dx: number, dy: number): Roo
   const top0 = pxToTopPercent(bounds.y);
   const width = pxToLeftPercent(bounds.width);
   const height = pxToTopPercent(bounds.height);
-  const left = Math.min(100 - width * 0.35, Math.max(-width * 0.35, left0 + safeDx));
-  const top = Math.min(100 - height * 0.35, Math.max(-height * 0.35, top0 + safeDy));
+  const left = Math.min(100 - width, Math.max(0, left0 + safeDx));
+  const top = Math.min(100 - height, Math.max(0, top0 + safeDy));
   return { dx: left - left0, dy: top - top0 };
+}
+
+/**
+ * In-frame clamp plus wall/floor bands:
+ * - blackboard: whole piece stays in the wall band (bottom ≤ visual floor seam).
+ * - carpet: whole piece stays strictly in the floor area (top ≥ visual floor seam).
+ * - other furniture: feet/bottom stay on/below the lowered floor placement line; top may lean onto the wall.
+ */
+export function clampMoverOffset(
+  id: DecorMoverId,
+  bounds: RoomRectPx,
+  dx: number,
+  dy: number,
+): RoomDecorOffset {
+  const framed = clampRoomOffset(bounds, dx, dy);
+  const top0 = pxToTopPercent(bounds.y);
+  const height = pxToTopPercent(bounds.height);
+  let top = top0 + framed.dy;
+  const wallFloorSeam = roomFloorSeamTopPercent();
+  const floorPlacement = roomFloorPlacementTopPercent();
+  if (id === "blackboard") {
+    const maxTop = wallFloorSeam - height;
+    const minTop = WALL_CEILING_MARGIN_PCT;
+    top = Math.min(maxTop, Math.max(minTop, top));
+  } else if (id === "carpet") {
+    // Rug stays fully on the floor — no wall lean.
+    top = Math.min(100 - height, Math.max(wallFloorSeam, top));
+  } else if (top + height < floorPlacement) {
+    // Feet stay on the floor side of the placement line (lean upward is fine).
+    top = floorPlacement - height;
+  }
+  // Keep fully in frame after band adjustments.
+  top = Math.min(100 - height, Math.max(0, top));
+  return { dx: framed.dx, dy: top - top0 };
 }
 
 export function setRoomItemPlaced(decor: RoomDecor, categoryId: RoomDecorCategoryId, placed: boolean): RoomDecor {
@@ -531,8 +605,93 @@ export function equipRoomSkin(
 
 export function moveRoomItem(decor: RoomDecor, id: DecorMoverId, dx: number, dy: number): RoomDecor {
   const next = cloneRoomDecor(decor);
-  next.offsets[id] = clampRoomOffset(moverBounds(id), dx, dy);
+  next.offsets[id] = clampMoverOffset(id, moverBounds(id), dx, dy);
   return next;
+}
+
+/** `dx` that centers a mover left–right in the room (vertical position unchanged). */
+export function horizontalCenterDx(bounds: RoomRectPx) {
+  const left0 = pxToLeftPercent(bounds.x);
+  const width = pxToLeftPercent(bounds.width);
+  return (100 - width) / 2 - left0;
+}
+
+/**
+ * Snap only on the horizontal axis. Fast near-center grabs; once grabbed, stays
+ * snapped until the free pointer leaves a wider release band (hysteresis).
+ * Pass the *unsnapped* offset so release distance is measured against the cursor.
+ */
+export function withHorizontalCenterSnap(
+  id: DecorMoverId,
+  offset: RoomDecorOffset,
+  pointerSpeedPxPerMs: number,
+  wasSnapped = false,
+): { offset: RoomDecorOffset; snapped: boolean } {
+  const bounds = moverBounds(id);
+  const targetDx = horizontalCenterDx(bounds);
+  const speed = Number.isFinite(pointerSpeedPxPerMs) ? Math.max(0, pointerSpeedPxPerMs) : 0;
+  const distance = Math.abs(offset.dx - targetDx);
+  const enter =
+    !wasSnapped &&
+    speed >= DECOR_CENTER_SNAP_MIN_SPEED_PX_PER_MS &&
+    distance <= DECOR_CENTER_SNAP_RADIUS_PCT;
+  const hold = wasSnapped && distance <= DECOR_CENTER_SNAP_RELEASE_RADIUS_PCT;
+  if (enter || hold) {
+    return { offset: clampMoverOffset(id, bounds, targetDx, offset.dy), snapped: true };
+  }
+  return { offset, snapped: false };
+}
+
+export type DecorHistory = {
+  past: RoomDecor[];
+  future: RoomDecor[];
+};
+
+export function emptyDecorHistory(): DecorHistory {
+  return { past: [], future: [] };
+}
+
+export function roomDecorEqual(a: RoomDecor, b: RoomDecor) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Push `previous` before applying a new draft. Caps at DECOR_HISTORY_LIMIT; clears redo. */
+export function pushDecorHistory(history: DecorHistory, previous: RoomDecor): DecorHistory {
+  return {
+    past: [...history.past, cloneRoomDecor(previous)].slice(-DECOR_HISTORY_LIMIT),
+    future: [],
+  };
+}
+
+export function undoDecor(
+  history: DecorHistory,
+  current: RoomDecor,
+): { history: DecorHistory; decor: RoomDecor } | null {
+  if (history.past.length === 0) return null;
+  const past = history.past.slice(0, -1);
+  const decor = history.past[history.past.length - 1]!;
+  return {
+    decor: cloneRoomDecor(decor),
+    history: {
+      past,
+      future: [cloneRoomDecor(current), ...history.future].slice(0, DECOR_HISTORY_LIMIT),
+    },
+  };
+}
+
+export function redoDecor(
+  history: DecorHistory,
+  current: RoomDecor,
+): { history: DecorHistory; decor: RoomDecor } | null {
+  if (history.future.length === 0) return null;
+  const [decor, ...future] = history.future;
+  return {
+    decor: cloneRoomDecor(decor!),
+    history: {
+      past: [...history.past, cloneRoomDecor(current)].slice(-DECOR_HISTORY_LIMIT),
+      future,
+    },
+  };
 }
 
 /** Map a viewBox rectangle onto a room that paints layers with object-fit: contain. */
@@ -617,8 +776,9 @@ export function parseRoomDecor(
         : id === "loveseat" && legacySofa
           ? undefined
           : savedOffsets?.[id];
-    if (!offset || typeof offset.dx !== "number" || typeof offset.dy !== "number") continue;
-    next.offsets[id] = clampRoomOffset(moverBounds(id), offset.dx, offset.dy);
+    const dx = offset && typeof offset.dx === "number" ? offset.dx : 0;
+    const dy = offset && typeof offset.dy === "number" ? offset.dy : 0;
+    next.offsets[id] = clampMoverOffset(id, moverBounds(id), dx, dy);
   }
   return next;
 }

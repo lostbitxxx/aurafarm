@@ -18,7 +18,7 @@ import {
   SAMPLE_HATS,
 } from "@/lib/pet-assets";
 import { petDisplayName, type PetCard } from "@/lib/pets";
-import { experienceProgress } from "@/lib/study";
+import { experienceProgress, formatStudyXpAsDuration } from "@/lib/study";
 import { FarmDialog } from "./farm-dialog";
 import { PetRenameCircleButton, PetRenameForm } from "./pet-rename-controls";
 import { PixelPetArt } from "./pixel-pet";
@@ -204,6 +204,9 @@ export function PetDetailDialog({
               Display Lv
             </button>
           </div>
+          <p className="growth-label pet-detail-study-time">
+            Study time: {formatStudyXpAsDuration(progress.xp)}
+          </p>
           <div
             className="xp-track xp-track-purple"
             role="meter"

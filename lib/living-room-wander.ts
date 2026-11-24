@@ -1,10 +1,13 @@
 /** Pure helpers for Living Room idle / stroll motion (in-memory only). */
 
 import {
+  petStandingTop,
   ROOM_OBSTACLES,
   ROOM_START_SPOTS,
   ROOM_WALK_BOUNDS,
   spotHitsObstacle,
+  standingHitsObstacle,
+  wrapCenterFromStanding,
   type RoomObstacle,
 } from "@/lib/living-room-layout";
 
@@ -90,11 +93,11 @@ export function randomWanderSpot(
       left: randomBetween(bounds.minLeft, bounds.maxLeft, rand),
       top: randomBetween(bounds.minTop, bounds.maxTop, rand),
     };
-    if (!spotHitsObstacle(candidate, obstacles)) return candidate;
+    if (!standingHitsObstacle(candidate, obstacles)) return candidate;
   }
   for (const candidate of ROOM_START_SPOTS) {
-    const next = clampSpotToWalkBand(candidate, bounds);
-    if (!spotHitsObstacle(next, obstacles)) return next;
+    const next = clampSpotToWalkBand(candidate, bounds, "floor");
+    if (!standingHitsObstacle(next, obstacles)) return next;
   }
   return resolveWanderSpot(
     {
@@ -162,20 +165,19 @@ export function stepWanderSpot(
 
   const nextLeft = spot.left + ((unit.x * speedPx * dt) / width) * 100;
   const nextTop = spot.top + ((unit.y * speedPx * verticalRatio * dt) / height) * 100;
-  const left = Math.min(bounds.maxLeft, Math.max(bounds.minLeft, nextLeft));
-  const top = Math.min(bounds.maxTop, Math.max(bounds.minTop, nextTop));
+  const candidate = clampSpotToWalkBand({ left: nextLeft, top: nextTop }, bounds, "floor");
+  const nextStanding = petStandingTop(nextTop, "floor");
   const hitEdge =
     nextLeft < bounds.minLeft ||
     nextLeft > bounds.maxLeft ||
-    nextTop < bounds.minTop ||
-    nextTop > bounds.maxTop;
+    nextStanding < bounds.minTop ||
+    nextStanding > bounds.maxTop;
 
-  const candidate = { left, top };
-  if (spotHitsObstacle(candidate, obstacles)) {
+  if (standingHitsObstacle(candidate, obstacles)) {
     return { spot, hitBound: true, moved: false };
   }
 
-  const moved = Math.abs(left - spot.left) > 1e-4 || Math.abs(top - spot.top) > 1e-4;
+  const moved = Math.abs(candidate.left - spot.left) > 1e-4 || Math.abs(candidate.top - spot.top) > 1e-4;
   return { spot: candidate, hitBound: hitEdge, moved };
 }
 
@@ -187,11 +189,26 @@ export function facingFromDirection(dir: WanderDir, currentFaceLeft: boolean): b
   return dir.x < 0;
 }
 
-export function clampSpotToWalkBand(spot: WanderSpot, bounds: WalkBounds = WALK_BOUNDS): WanderSpot {
-  return {
-    left: Math.min(bounds.maxLeft, Math.max(bounds.minLeft, spot.left)),
-    top: Math.min(bounds.maxTop, Math.max(bounds.minTop, spot.top)),
-  };
+/**
+ * Clamp a spot into the walk band.
+ * - `point`: `top` is already the standing line / seat anchor (FarmCrew).
+ * - `floor`: `top` is wrap center; clamp the standing line, then store center again.
+ */
+export function clampSpotToWalkBand(
+  spot: WanderSpot,
+  bounds: WalkBounds = WALK_BOUNDS,
+  mode: "floor" | "point" = "point",
+): WanderSpot {
+  const left = Math.min(bounds.maxLeft, Math.max(bounds.minLeft, spot.left));
+  if (mode === "point") {
+    return {
+      left,
+      top: Math.min(bounds.maxTop, Math.max(bounds.minTop, spot.top)),
+    };
+  }
+  const standing = petStandingTop(spot.top, "floor");
+  const clampedStanding = Math.min(bounds.maxTop, Math.max(bounds.minTop, standing));
+  return { left, top: wrapCenterFromStanding(clampedStanding) };
 }
 
 function hitsBox(spot: WanderSpot, box: RoomObstacle) {
@@ -209,43 +226,61 @@ export function ejectFromObstacle(
   box: RoomObstacle,
   bounds: WalkBounds = WALK_BOUNDS,
   pad = OBSTACLE_EJECT_PAD,
+  mode: "floor" | "point" = "point",
 ): WanderSpot[] {
+  const above =
+    mode === "floor" ? wrapCenterFromStanding(box.minTop - pad) : box.minTop - pad;
+  const below =
+    mode === "floor" ? wrapCenterFromStanding(box.maxTop + pad) : box.maxTop + pad;
   return [
     { left: box.maxLeft + pad, top: spot.top },
     { left: box.minLeft - pad, top: spot.top },
-    { left: spot.left, top: box.maxTop + pad },
-    { left: spot.left, top: box.minTop - pad },
-    { left: box.maxLeft + pad, top: box.minTop - pad },
-    { left: box.maxLeft + pad, top: box.maxTop + pad },
-  ].map((candidate) => clampSpotToWalkBand(candidate, bounds));
+    { left: spot.left, top: below },
+    { left: spot.left, top: above },
+    { left: box.maxLeft + pad, top: above },
+    { left: box.maxLeft + pad, top: below },
+  ].map((candidate) => clampSpotToWalkBand(candidate, bounds, mode));
 }
 
 /**
  * If a pet is already inside a no-go footprint (e.g. sofa zone grew), push it to a safe spot.
  * Walks right/around overlapping props (sofa → lamp) then falls back to open start corridors.
+ * `mode: "floor"` uses the standing line; `"point"` treats `top` as the contact point (FarmCrew).
  */
 export function resolveWanderSpot(
   spot: WanderSpot,
   bounds: WalkBounds = WALK_BOUNDS,
   obstacles: readonly RoomObstacle[] = ROOM_OBSTACLES,
   fallbacks: readonly WanderSpot[] = ROOM_START_SPOTS,
+  mode: "floor" | "point" = "floor",
 ): WanderSpot {
-  let current = clampSpotToWalkBand(spot, bounds);
-  if (!spotHitsObstacle(current, obstacles)) return current;
+  const blocked = (candidate: WanderSpot) =>
+    mode === "floor" ? standingHitsObstacle(candidate, obstacles) : spotHitsObstacle(candidate, obstacles);
+  const probe = (candidate: WanderSpot) =>
+    mode === "floor"
+      ? { left: candidate.left, top: petStandingTop(candidate.top, "floor") }
+      : candidate;
+
+  let current = clampSpotToWalkBand(spot, bounds, mode);
+  if (!blocked(current)) return current;
 
   // Prefer open floor to the right of left-wall furniture; iterate if another prop blocks.
   for (let step = 0; step < 8; step += 1) {
-    if (!spotHitsObstacle(current, obstacles)) return current;
-    const box = obstacles.find((item) => hitsBox(current, item));
+    if (!blocked(current)) return current;
+    const box = obstacles.find((item) => hitsBox(probe(current), item));
     if (!box) break;
+    const midTop =
+      mode === "floor"
+        ? wrapCenterFromStanding((bounds.minTop + bounds.maxTop) / 2)
+        : (bounds.minTop + bounds.maxTop) / 2;
     const ranked = [
       { left: box.maxLeft + OBSTACLE_EJECT_PAD, top: current.top },
-      { left: box.maxLeft + OBSTACLE_EJECT_PAD, top: (bounds.minTop + bounds.maxTop) / 2 },
-      ...ejectFromObstacle(current, box, bounds),
+      { left: box.maxLeft + OBSTACLE_EJECT_PAD, top: midTop },
+      ...ejectFromObstacle(current, box, bounds, OBSTACLE_EJECT_PAD, mode),
     ];
     let advanced = false;
     for (const candidate of ranked) {
-      const next = clampSpotToWalkBand(candidate, bounds);
+      const next = clampSpotToWalkBand(candidate, bounds, mode);
       if (next.left === current.left && next.top === current.top) continue;
       current = next;
       advanced = true;
@@ -253,11 +288,11 @@ export function resolveWanderSpot(
     }
     if (!advanced) break;
   }
-  if (!spotHitsObstacle(current, obstacles)) return current;
+  if (!blocked(current)) return current;
 
   for (const candidate of fallbacks) {
-    const next = clampSpotToWalkBand(candidate, bounds);
-    if (!spotHitsObstacle(next, obstacles)) return next;
+    const next = clampSpotToWalkBand(candidate, bounds, mode);
+    if (!blocked(next)) return next;
   }
 
   const offsets: WanderDir[] = [
@@ -275,12 +310,17 @@ export function resolveWanderSpot(
       const next = clampSpotToWalkBand(
         { left: current.left + dir.x * radius, top: current.top + dir.y * radius },
         bounds,
+        mode,
       );
-      if (!spotHitsObstacle(next, obstacles)) return next;
+      if (!blocked(next)) return next;
     }
   }
 
-  return clampSpotToWalkBand({ left: bounds.maxLeft, top: (bounds.minTop + bounds.maxTop) / 2 }, bounds);
+  return clampSpotToWalkBand(
+    { left: bounds.maxLeft, top: (bounds.minTop + bounds.maxTop) / 2 },
+    bounds,
+    mode,
+  );
 }
 
 /**

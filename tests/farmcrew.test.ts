@@ -269,6 +269,8 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.doesNotMatch(page, /export const dynamic/);
   assert.match(room, /Aurafarming/);
   assert.match(room, /living-room/);
+  assert.match(room, /living-room-labels/);
+  assert.match(room, /ROOM_LABEL_Z/);
   assert.match(room, /CREW_LIBRARY_PATH/);
   assert.match(room, /is-remote/);
   assert.match(room, /occupant\.farmerId === viewerId/);

@@ -8,6 +8,7 @@ import {
   clampSpotToWalkBand,
   ejectFromObstacle,
   resolveWanderSpot,
+  WANDER_SPEED_PX,
   type WanderSpot,
 } from "@/lib/living-room-wander";
 
@@ -26,6 +27,8 @@ export type CrewPose = {
   mode: CrewPoseMode;
   seatId: string | null;
   faceLeft: boolean;
+  /** Server time of this pose. Missing on a local publish echo. */
+  updatedAt?: string;
 };
 
 export type CrewSeat = {
@@ -180,6 +183,37 @@ export function dropOnCrewSeat(spot: WanderSpot, taken: ReadonlySet<string>): Cr
   return best;
 }
 
+/**
+ * Move a remote pet toward the latest pose at about walking speed.
+ * A long gap snaps, so a pet that just appeared does not crawl across the room.
+ * Sitting snaps onto the chair. Walking and dragging keep a steady pace and
+ * speed up a little when they fall behind.
+ */
+export function followCrewPose(
+  current: WanderSpot,
+  target: WanderSpot,
+  mode: CrewPoseMode | undefined,
+  dtSec: number,
+  room: { width: number; height: number },
+): WanderSpot {
+  const width = Math.max(room.width, 1);
+  const height = Math.max(room.height, 1);
+  const dx = ((target.left - current.left) / 100) * width;
+  const dy = ((target.top - current.top) / 100) * height;
+  const dist = Math.hypot(dx, dy);
+  if (mode === "sitting" || dist > 110 || dist < 0.4) return target;
+  const dt = Math.min(Math.max(dtSec, 0), 0.05);
+  const base =
+    mode === "dragging" ? WANDER_SPEED_PX * 4.5 : mode === "walking" ? WANDER_SPEED_PX : WANDER_SPEED_PX * 1.8;
+  const catchup = Math.min(2.2, Math.max(1, dist / 16));
+  const step = Math.min(dist, base * catchup * dt);
+  const scale = step / dist;
+  return {
+    left: current.left + ((dx * scale) / width) * 100,
+    top: current.top + ((dy * scale) / height) * 100,
+  };
+}
+
 function seatBoxes(): RoomObstacle[] {
   return CREW_SEATS.map((seat) => ({
     minLeft: seat.minLeft,
@@ -249,7 +283,7 @@ export function ejectFromCrewSeats(spot: WanderSpot): WanderSpot {
   }
   if (best) return best;
 
-  const freed = resolveWanderSpot(current, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  const freed = resolveWanderSpot(current, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS, "point");
   if (isCrewFloorSafe(freed)) return freed;
 
   // Last resort: spiral search for open floor outside every sit zone.
@@ -287,7 +321,7 @@ export function resolveCrewDrop(
   if (spotInAnyCrewSeat(spot) || spotHitsObstacle(spot, CREW_OBSTACLES)) {
     return { seat: null, spot: ejectFromCrewSeats(spot) };
   }
-  const freed = resolveWanderSpot(spot, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS);
+  const freed = resolveWanderSpot(spot, CREW_WALK_BOUNDS, CREW_OBSTACLES, CREW_START_SPOTS, "point");
   if (spotInAnyCrewSeat(freed)) return { seat: null, spot: ejectFromCrewSeats(freed) };
   return { seat: null, spot: freed };
 }
@@ -308,6 +342,7 @@ export function poseFromRow(row: {
   mode?: unknown;
   seat_id?: unknown;
   face_left?: unknown;
+  updated_at?: unknown;
 }): CrewPose | null {
   if (typeof row.user_id !== "string") return null;
   if (row.mode !== "idle" && row.mode !== "walking" && row.mode !== "sitting" && row.mode !== "dragging") {
@@ -317,7 +352,7 @@ export function poseFromRow(row: {
   const top = Number(row.top_pct);
   if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
   const seatId = typeof row.seat_id === "string" && SEAT_IDS.has(row.seat_id) ? row.seat_id : null;
-  return {
+  const pose: CrewPose = {
     userId: row.user_id,
     left,
     top,
@@ -325,6 +360,23 @@ export function poseFromRow(row: {
     seatId: row.mode === "sitting" ? seatId : null,
     faceLeft: row.face_left === true,
   };
+  if (typeof row.updated_at === "string") {
+    const at = Date.parse(row.updated_at);
+    if (Number.isFinite(at)) pose.updatedAt = new Date(at).toISOString();
+  }
+  return pose;
+}
+
+/** Keep the pose that the server wrote later. A local echo has no timestamp. */
+export function newerCrewPose(current: CrewPose | undefined, incoming: CrewPose): CrewPose {
+  if (!current) return incoming;
+  if (!incoming.updatedAt) return current.updatedAt ? current : incoming;
+  if (!current.updatedAt) return incoming;
+  const currentAt = Date.parse(current.updatedAt);
+  const incomingAt = Date.parse(incoming.updatedAt);
+  if (!Number.isFinite(incomingAt)) return Number.isFinite(currentAt) ? current : incoming;
+  if (!Number.isFinite(currentAt) || incomingAt >= currentAt) return incoming;
+  return current;
 }
 
 export function crewStartSpotsAreOpen() {

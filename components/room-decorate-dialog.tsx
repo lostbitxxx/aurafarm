@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { buyRoomSkin } from "@/lib/actions/room-decor";
-import { COINS_SRC } from "@/lib/pet-assets";
+import { COIN_ICON_SRC } from "@/lib/pet-assets";
 import {
   ROOM_DECOR_CATEGORIES,
   decorOptions,
@@ -16,6 +16,13 @@ import {
   type RoomDecor,
   type RoomDecorCategoryId,
 } from "@/lib/room-decor";
+
+function CoinIcon() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="coin-icon" src={COIN_ICON_SRC} alt="" draggable={false} />
+  );
+}
 
 function previewStyle(
   crop: { x: number; y: number; width: number; height: number },
@@ -162,8 +169,8 @@ export function RoomDecorateDialog({
       >
         <header className="decor-card-head">
           <h2 id="decor-title">Decorations</h2>
-          <p className="decor-coins" aria-live="polite" aria-label={`${coins} coins`}>
-            <img className="coins-icon" src={COINS_SRC} alt="" width={16} height={16} draggable={false} />
+          <p className="decor-coins coin-balance" aria-live="polite" aria-label={`Coins ${coins}`}>
+            <CoinIcon />
             <span>{coins}</span>
           </p>
           <button type="button" className="decor-close" onClick={onClose} aria-label="Close decorations">
@@ -193,6 +200,7 @@ export function RoomDecorateDialog({
                 const owned = skinOwned(skin.categoryId, skin.skinId, ownedSkinKeys);
                 const equipped = optionPlaced(skin);
                 const selected = skin.key === detail?.key;
+                const price = roomSkinPrice(skin.categoryId, skin.skinId);
                 return (
                   <button
                     key={skin.key}
@@ -217,12 +225,23 @@ export function RoomDecorateDialog({
                       <span className="decor-owned-tag" aria-hidden="true">
                         Owned
                       </span>
+                    ) : price != null && price > 0 ? (
+                      <span className="decor-price-tag" aria-hidden="true">
+                        <CoinIcon />
+                        {price}
+                      </span>
                     ) : (
                       <span className="decor-locked" aria-hidden="true">
                         ?
                       </span>
                     )}
-                    <span className="sr-only">{owned ? skin.name : `${skin.name}, not obtained`}</span>
+                    <span className="sr-only">
+                      {owned
+                        ? skin.name
+                        : price != null && price > 0
+                          ? `${skin.name}, ${price} coins`
+                          : `${skin.name}, not obtained`}
+                    </span>
                   </button>
                 );
               })}
@@ -245,20 +264,32 @@ export function RoomDecorateDialog({
                   blurred={!detailOwned}
                 />
                 {!detailOwned ? (
-                  <span className="decor-locked" aria-hidden="true">
-                    ?
-                  </span>
+                  detailPrice != null && detailPrice > 0 ? (
+                    <span className="decor-price-tag" aria-hidden="true">
+                      <CoinIcon />
+                      {detailPrice}
+                    </span>
+                  ) : (
+                    <span className="decor-locked" aria-hidden="true">
+                      ?
+                    </span>
+                  )
                 ) : null}
               </div>
               <h3>{detail.name}</h3>
               <p className="decor-obtained">
-                {detail.skinId === "base"
-                  ? "Included with your room"
-                  : detailOwned
-                    ? "Owned"
-                    : detailPrice != null
-                      ? `${detailPrice} coins`
-                      : "Not obtained yet"}
+                {detail.skinId === "base" ? (
+                  "Included with your room"
+                ) : detailOwned ? (
+                  "Owned"
+                ) : detailPrice != null ? (
+                  <span className="decor-price-line">
+                    <CoinIcon />
+                    {detailPrice}
+                  </span>
+                ) : (
+                  "Not obtained yet"
+                )}
               </p>
               <p className="decor-copy">{detail.description}</p>
               {detailOwned ? (
@@ -273,11 +304,18 @@ export function RoomDecorateDialog({
               ) : detailPrice != null ? (
                 <button
                   type="button"
-                  className="decor-action"
+                  className="decor-action decor-action-buy"
                   disabled={pending || coins < detailPrice}
                   onClick={onBuy}
                 >
-                  {pending ? "…" : `Buy · ${detailPrice} coins`}
+                  {pending ? (
+                    "…"
+                  ) : (
+                    <>
+                      Buy · {detailPrice}
+                      <CoinIcon />
+                    </>
+                  )}
                 </button>
               ) : (
                 <p className="decor-obtained">Not obtained yet</p>
@@ -295,6 +333,10 @@ export function RoomDecorateDialog({
             </aside>
           ) : null}
         </div>
+        <p className="decor-rate" aria-label="1min = 1coin">
+          1min = 1
+          <CoinIcon />
+        </p>
       </div>
     </div>
   );

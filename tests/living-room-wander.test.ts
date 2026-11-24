@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   bottomHalfObstacle,
+  FURNITURE_BLOCK_FROM,
   footprintObstacle,
-  LOVESEAT_BLOCK_FROM,
+  PET_STANDING_FROM_CENTER_PCT,
+  petStandingTop,
   pxToLeftPercent,
   pxToTopPercent,
   ROOM_CARPET_SRC,
@@ -14,13 +16,15 @@ import {
   ROOM_DEPTH_Z_MAX,
   ROOM_DRAG_Z,
   ROOM_FURNITURE,
+  ROOM_LABEL_Z,
   ROOM_OBSTACLES,
   ROOM_RACK_HOTSPOTS,
   ROOM_WALK_BOUNDS,
   STORAGE_RACK_DEPTH_TOP,
   roomDepthZ,
   roomStartSpot,
-  spotHitsObstacle,
+  standingHitsObstacle,
+  wrapCenterFromStanding,
 } from "../lib/living-room-layout";
 import {
   DRAG_START_PX,
@@ -82,7 +86,7 @@ test("direction is normalized so diagonals do not gain speed", () => {
 
 test("vertical steps are slower than horizontal for the same elapsed time", () => {
   const room = { width: 400, height: 315 };
-  const start = { left: 42, top: 48 };
+  const start = { left: 44, top: 64 };
   const right = stepWanderSpot(start, { x: 1, y: 0 }, 1, room);
   const down = stepWanderSpot(start, { x: 0, y: 1 }, 1, room);
   const dx = Math.abs(right.spot.left - start.left);
@@ -94,7 +98,7 @@ test("vertical steps are slower than horizontal for the same elapsed time", () =
 
 test("large elapsed steps are clamped so background tabs do not jump", () => {
   const room = { width: 400, height: 315 };
-  const start = { left: 42, top: 48 };
+  const start = { left: 44, top: 64 };
   const capped = stepWanderSpot(start, { x: 1, y: 0 }, 5, room);
   const expected = stepWanderSpot(start, { x: 1, y: 0 }, WANDER_MAX_DT_SEC, room);
   assert.deepEqual(capped.spot, expected.spot);
@@ -102,76 +106,67 @@ test("large elapsed steps are clamped so background tabs do not jump", () => {
 
 test("hitting a bound clamps the spot and reports hitBound", () => {
   const room = { width: 400, height: 315 };
-  const atEdge = { left: WALK_BOUNDS.maxLeft, top: 50 };
+  const atEdge = { left: WALK_BOUNDS.maxLeft, top: 64 };
   const result = stepWanderSpot(atEdge, { x: 1, y: 0 }, 0.05, room);
   assert.equal(result.spot.left, WALK_BOUNDS.maxLeft);
   assert.equal(result.hitBound, true);
 });
 
-test("bottom-half furniture footprints block wander steps", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
-  assert.ok(loveseat);
-  const midLeft = (loveseat.block.minLeft + loveseat.block.maxLeft) / 2;
-  const midTop = (loveseat.block.minTop + loveseat.block.maxTop) / 2;
-  assert.equal(spotHitsObstacle({ left: midLeft, top: midTop }), true);
+test("standing line blocks on furniture lower-half bases", () => {
+  const sofa = ROOM_FURNITURE.find((item) => item.id === "sofa");
+  assert.ok(sofa);
+  assert.deepEqual(sofa.block, bottomHalfObstacle(sofa.bounds));
+  const midLeft = (sofa.block.minLeft + sofa.block.maxLeft) / 2;
+  const feetInBlock = {
+    left: midLeft,
+    top: wrapCenterFromStanding((sofa.block.minTop + sofa.block.maxTop) / 2),
+  };
+  assert.equal(standingHitsObstacle(feetInBlock), true);
 
   const room = { width: 400, height: 315 };
-  // One capped step is ~0.2% vertically; stand just above the footprint.
   const justOutside = {
     left: midLeft,
-    top: loveseat.block.minTop - 0.05,
+    top: wrapCenterFromStanding(sofa.block.minTop - 0.05),
   };
-  assert.equal(spotHitsObstacle(justOutside), false);
+  assert.equal(standingHitsObstacle(justOutside), false);
   const intoFurniture = stepWanderSpot(justOutside, { x: 0, y: 1 }, 0.05, room);
   assert.equal(intoFurniture.moved, false);
   assert.equal(intoFurniture.hitBound, true);
   assert.deepEqual(intoFurniture.spot, justOutside);
 });
 
-test("start spots stay off furniture footprints and on the floor", () => {
+test("start spots keep standing lines off furniture and on the floor", () => {
   for (let i = 0; i < 8; i += 1) {
     const spot = roomStartSpot(i);
-    assert.equal(spotHitsObstacle(spot), false);
-    assert.ok(spot.top >= WALK_BOUNDS.minTop);
-    assert.ok(spot.top <= WALK_BOUNDS.maxTop);
+    assert.equal(standingHitsObstacle(spot), false);
+    const standing = petStandingTop(spot.top, "floor");
+    assert.ok(standing >= WALK_BOUNDS.minTop);
+    assert.ok(standing <= WALK_BOUNDS.maxTop);
   }
 });
 
-test("resolveWanderSpot ejects a pet stuck inside the loveseat footprint", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
-  assert.ok(loveseat);
+test("resolveWanderSpot ejects a pet whose standing line is in the sofa base", () => {
+  const sofa = ROOM_FURNITURE.find((item) => item.id === "sofa");
+  assert.ok(sofa);
   const stuck = {
-    left: (loveseat.block.minLeft + loveseat.block.maxLeft) / 2,
-    top: (loveseat.block.minTop + loveseat.block.maxTop) / 2,
+    left: (sofa.block.minLeft + sofa.block.maxLeft) / 2,
+    top: wrapCenterFromStanding((sofa.block.minTop + sofa.block.maxTop) / 2),
   };
-  assert.equal(spotHitsObstacle(stuck), true);
+  assert.equal(standingHitsObstacle(stuck), true);
   const freed = resolveWanderSpot(stuck);
-  assert.equal(spotHitsObstacle(freed), false);
-  assert.ok(freed.top >= WALK_BOUNDS.minTop && freed.top <= WALK_BOUNDS.maxTop);
-  // Must clear the sofa column, not sit in the dead strip against the wall.
-  assert.ok(freed.left > loveseat.block.maxLeft);
+  assert.equal(standingHitsObstacle(freed), false);
+  assert.ok(petStandingTop(freed.top, "floor") >= WALK_BOUNDS.minTop);
+  assert.ok(petStandingTop(freed.top, "floor") <= WALK_BOUNDS.maxTop);
+  assert.ok(freed.left > sofa.block.maxLeft);
 });
 
-test("loveseat column has no walkable pocket against the wall", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
-  assert.ok(loveseat);
-  assert.equal(loveseat.block.minTop, WALK_BOUNDS.minTop);
-  assert.equal(spotHitsObstacle({ left: 14, top: WALK_BOUNDS.minTop }), true);
-  assert.equal(spotHitsObstacle({ left: 34, top: 46 }), false);
-});
-
-test("loveseat no-walk zone starts higher than a plain bottom half", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
-  assert.ok(loveseat);
-  assert.ok(LOVESEAT_BLOCK_FROM < 0.5);
-  const raw = footprintObstacle(loveseat.bounds, LOVESEAT_BLOCK_FROM);
-  const half = bottomHalfObstacle(loveseat.bounds);
-  assert.ok(raw.minTop < half.minTop);
-  // Sealed up to the walk-band top so pets cannot hide in the wall strip.
-  assert.equal(loveseat.block.minTop, WALK_BOUNDS.minTop);
-  assert.equal(loveseat.block.maxLeft, raw.maxLeft);
+test("furniture no-walk zones are the lower half of each piece", () => {
+  assert.equal(FURNITURE_BLOCK_FROM, 0.5);
+  for (const item of ROOM_FURNITURE) {
+    if (item.id === "blackboard") continue;
+    assert.deepEqual(item.block, footprintObstacle(item.bounds, FURNITURE_BLOCK_FROM), item.id);
+  }
   assert.ok(ROOM_OBSTACLES.length === ROOM_FURNITURE.filter((item) => item.id !== "blackboard").length);
-  // Purple rug is floor/carpet, not a solid furniture id (former "sofa" art).
   assert.deepEqual(
     [...ROOM_FURNITURE.map((item) => item.id)].sort(),
     ["armchair", "blackboard", "bookshelf", "lamp", "loveseat", "plant", "sofa", "storage-rack"],
@@ -184,8 +179,7 @@ test("carpet is a floor layer path and does not block wander", () => {
   assert.match(ROOM_CARPET_SRC, /\/carpet\/base\.svg$/);
   const carpet = readFileSync(new URL("../public/pet-assets/room/carpet/base.svg", import.meta.url), "utf8");
   assert.match(carpet, /viewBox="0 0 600 300"/);
-  // Mid-carpet spot must stay walkable (treated like floor).
-  assert.equal(spotHitsObstacle({ left: 50, top: 72 }), false);
+  assert.equal(standingHitsObstacle({ left: 50, top: 72 }), false);
 });
 
 test("furniture depth sorts so lower footprints draw in front", () => {
@@ -196,16 +190,21 @@ test("furniture depth sorts so lower footprints draw in front", () => {
   assert.ok(roomDepthZ(plant.depthTop) > roomDepthZ(loveseat.depthTop));
 });
 
-test("bookshelf sorts behind the walk band without growing its no-walk box", () => {
+test("shelf and rack use bbox-bottom depth with lower-half collision", () => {
   const shelf = ROOM_FURNITURE.find((item) => item.id === "bookshelf");
-  assert.ok(shelf);
+  const rack = ROOM_FURNITURE.find((item) => item.id === "storage-rack");
+  const board = ROOM_FURNITURE.find((item) => item.id === "blackboard");
+  assert.ok(shelf && rack && board);
   assert.equal(shelf.depthTop, BOOKSHELF_DEPTH_TOP);
-  assert.ok(shelf.depthTop < ROOM_WALK_BOUNDS.minTop);
-  assert.ok(shelf.depthTop < depthTopFromBounds(shelf.bounds));
-  // Collision footprint stays the default bottom-half of the bbox.
-  assert.deepEqual(shelf.block, footprintObstacle(shelf.bounds, 0.5));
-  // A pet standing at the walk-band top near the shelf paints over it.
-  assert.ok(roomDepthZ(ROOM_WALK_BOUNDS.minTop) > roomDepthZ(shelf.depthTop));
+  assert.equal(shelf.depthTop, depthTopFromBounds(shelf.bounds));
+  assert.deepEqual(shelf.block, footprintObstacle(shelf.bounds, FURNITURE_BLOCK_FROM));
+  assert.equal(rack.depthTop, STORAGE_RACK_DEPTH_TOP);
+  assert.equal(rack.depthTop, depthTopFromBounds(rack.bounds));
+  assert.deepEqual(rack.block, footprintObstacle(rack.bounds, FURNITURE_BLOCK_FROM));
+  // Blackboard stays behind every floor piece and typical standing lines.
+  assert.equal(board.depthTop, 0);
+  assert.ok(roomDepthZ(board.depthTop) < roomDepthZ(shelf.depthTop));
+  assert.ok(roomDepthZ(petStandingTop(ROOM_WALK_BOUNDS.minTop, "feet")) > roomDepthZ(board.depthTop));
 });
 
 test("storage rack sits between sofa and shelf with drawer hotspots", () => {
@@ -216,7 +215,6 @@ test("storage rack sits between sofa and shelf with drawer hotspots", () => {
   assert.equal(rack.depthTop, STORAGE_RACK_DEPTH_TOP);
   assert.ok(rack.bounds.x > loveseat.bounds.x + loveseat.bounds.width);
   assert.ok(rack.bounds.x + rack.bounds.width < shelf.bounds.x);
-  assert.deepEqual(rack.block, footprintObstacle(rack.bounds, 0.55));
   assert.deepEqual(
     ROOM_RACK_HOTSPOTS.map((spot) => spot.id),
     ["song", "achievements", "collection"],
@@ -229,12 +227,27 @@ test("storage rack sits between sofa and shelf with drawer hotspots", () => {
   }
 });
 
+test("standing line sits below wrap center by the painted feet offset", () => {
+  assert.ok(PET_STANDING_FROM_CENTER_PCT > 5 && PET_STANDING_FROM_CENTER_PCT < 8);
+  assert.equal(petStandingTop(50, "feet"), 50);
+  assert.equal(petStandingTop(50, "floor"), 50 + PET_STANDING_FROM_CENTER_PCT);
+  const plant = ROOM_FURNITURE.find((item) => item.id === "plant");
+  assert.ok(plant);
+  // Center above the pot bottom, feet at/below it → pet paints in front.
+  const centerAbovePot = plant.depthTop - 2;
+  assert.ok(roomDepthZ(centerAbovePot) < roomDepthZ(plant.depthTop));
+  assert.ok(roomDepthZ(petStandingTop(centerAbovePot, "floor")) > roomDepthZ(plant.depthTop));
+});
+
 test("drag z-index sits above every depth-sorted room layer", () => {
   assert.equal(ROOM_DEPTH_Z_MAX, 200);
   assert.ok(ROOM_DRAG_Z > ROOM_DEPTH_Z_MAX);
   assert.ok(ROOM_DRAG_Z > roomDepthZ(100));
+  assert.ok(ROOM_LABEL_Z > ROOM_DEPTH_Z_MAX);
+  assert.ok(ROOM_LABEL_Z > ROOM_DRAG_Z);
   for (const item of ROOM_FURNITURE) {
     assert.ok(ROOM_DRAG_Z > roomDepthZ(item.depthTop), item.id);
+    assert.ok(ROOM_LABEL_Z > roomDepthZ(item.depthTop), item.id);
   }
 });
 
@@ -253,9 +266,10 @@ test("randomWanderSpot stays on the walkable floor", () => {
   };
   for (let i = 0; i < 20; i += 1) {
     const spot = randomWanderSpot(rand);
-    assert.equal(spotHitsObstacle(spot), false);
+    assert.equal(standingHitsObstacle(spot), false);
     assert.ok(spot.left >= WALK_BOUNDS.minLeft && spot.left <= WALK_BOUNDS.maxLeft);
-    assert.ok(spot.top >= WALK_BOUNDS.minTop && spot.top <= WALK_BOUNDS.maxTop);
+    const standing = petStandingTop(spot.top, "floor");
+    assert.ok(standing >= WALK_BOUNDS.minTop && standing <= WALK_BOUNDS.maxTop);
   }
 });
 
@@ -297,16 +311,17 @@ test("drag helpers use forehead offset and a movement threshold", () => {
 });
 
 test("dropping on furniture resolves to a walkable spot", () => {
-  const loveseat = ROOM_FURNITURE.find((item) => item.id === "sofa");
-  assert.ok(loveseat);
+  const sofa = ROOM_FURNITURE.find((item) => item.id === "sofa");
+  assert.ok(sofa);
   const ontoSofa = {
-    left: (loveseat.block.minLeft + loveseat.block.maxLeft) / 2,
-    top: (loveseat.block.minTop + loveseat.block.maxTop) / 2,
+    left: (sofa.block.minLeft + sofa.block.maxLeft) / 2,
+    top: wrapCenterFromStanding((sofa.block.minTop + sofa.block.maxTop) / 2),
   };
-  assert.equal(spotHitsObstacle(ontoSofa), true);
+  assert.equal(standingHitsObstacle(ontoSofa), true);
   const placed = resolveWanderSpot(ontoSofa);
-  assert.equal(spotHitsObstacle(placed), false);
-  assert.ok(placed.top >= WALK_BOUNDS.minTop && placed.top <= WALK_BOUNDS.maxTop);
+  assert.equal(standingHitsObstacle(placed), false);
+  const standing = petStandingTop(placed.top, "floor");
+  assert.ok(standing >= WALK_BOUNDS.minTop && standing <= WALK_BOUNDS.maxTop);
 });
 
 test("Living Room uses layered room art, stroll helpers, and no dedicated Pet button", () => {
@@ -373,13 +388,23 @@ test("Living Room uses layered room art, stroll helpers, and no dedicated Pet bu
   assert.match(source, /is-struggling/);
   assert.match(source, /clearPettingFx/);
   assert.match(source, /ROOM_DRAG_Z/);
+  assert.match(source, /ROOM_LABEL_Z/);
+  assert.match(source, /living-room-labels/);
+  assert.match(source, /reportPetLabelPose = useCallback/);
+  assert.match(source, /onLabelPoseRef/);
+  assert.match(source, /petStandingTop/);
+  assert.match(source, /paintDepthTop/);
   assert.doesNotMatch(source, /roomStartSpot/);
   assert.doesNotMatch(css, /\.room-pet-actions/);
   assert.doesNotMatch(css, /\.room-pet-button/);
   assert.doesNotMatch(css, /\.room-pet-hand/);
   assert.match(css, /\.room-equipped/);
   assert.match(css, /\.living-room-layer/);
+  assert.match(css, /\.living-room-labels/);
+  assert.match(css, /\.room-pet-label-anchor/);
   assert.match(css, /\.room-pet-wrap\.is-dragging/);
+  assert.match(layout, /PET_STANDING_FROM_CENTER_PCT/);
+  assert.match(layout, /standingHitsObstacle/);
   assert.match(css, /room-pet-struggle/);
   assert.match(css, /rotate\(-10deg\)/);
   assert.match(css, /\.room-prop-hotspot/);

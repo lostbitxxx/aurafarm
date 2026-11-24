@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -21,12 +22,13 @@ import {
   crewDisplaySpot,
   crewSeatById,
   crewSpawnSpot,
+  followCrewPose,
   resolveCrewDrop,
   type CrewPose,
   type CrewPoseMode,
 } from "@/lib/crew-room-layout";
 import { useCrewPoses } from "@/lib/crew-room-sync";
-import { roomDepthZ, ROOM_DRAG_Z } from "@/lib/living-room-layout";
+import { petStandingTop, roomDepthZ, ROOM_DRAG_Z, ROOM_LABEL_Z } from "@/lib/living-room-layout";
 import {
   dragPastThreshold,
   facingFromDirection,
@@ -51,6 +53,15 @@ function clampDrag(spot: WanderSpot): WanderSpot {
   };
 }
 
+export type CrewPetLabelPose = {
+  left: number;
+  top: number;
+  sitting: boolean;
+  displayName: string;
+  status: string;
+  farming: boolean;
+};
+
 function CrewFarmer({
   occupant,
   viewerId,
@@ -60,6 +71,7 @@ function CrewFarmer({
   roomRef,
   publish,
   viewerStudying,
+  onLabelPose,
 }: {
   occupant: CrewOccupant;
   viewerId: string;
@@ -69,6 +81,7 @@ function CrewFarmer({
   roomRef: RefObject<HTMLDivElement | null>;
   publish: (pose: CrewPose) => Promise<CrewPose | null>;
   viewerStudying: boolean;
+  onLabelPose?: (farmerId: string, pose: CrewPetLabelPose | null) => void;
 }) {
   const mine = occupant.farmerId === viewerId;
   const studying = crewShowsAurafarming(occupant, viewerId, viewerStudying);
@@ -93,6 +106,7 @@ function CrewFarmer({
   const lastSentRef = useRef(0);
   const timerRef = useRef(0);
   const sendIdRef = useRef(0);
+  const sendingRef = useRef(false);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -199,31 +213,25 @@ function CrewFarmer({
   useEffect(() => {
     if (mine) return;
     let frame = 0;
-    const tick = () => {
+    let last = performance.now();
+    const tick = (now: number) => {
       frame = window.requestAnimationFrame(tick);
+      const dt = (now - last) / 1000;
+      last = now;
       const currentPose = poseRef.current;
       const target = currentPose ? crewDisplaySpot(currentPose) : crewSpawnSpot(occupant.farmerId);
-      const mode = currentPose?.mode;
-      const current = shownRef.current;
-      const glide = mode === "walking" || mode === "dragging";
-      const next = glide
-        ? {
-            left: current.left + (target.left - current.left) * 0.35,
-            top: current.top + (target.top - current.top) * 0.35,
-          }
-        : target;
-      if (Math.abs(next.left - current.left) < 0.05 && Math.abs(next.top - current.top) < 0.05) {
-        if (current.left === target.left && current.top === target.top) return;
-        shownRef.current = target;
-        setShown(target);
-        return;
-      }
+      const room = roomRef.current;
+      const next = followCrewPose(shownRef.current, target, currentPose?.mode, dt, {
+        width: room?.clientWidth ?? 640,
+        height: room?.clientHeight ?? 320,
+      });
+      if (next.left === shownRef.current.left && next.top === shownRef.current.top) return;
       shownRef.current = next;
       setShown(next);
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [mine, occupant.farmerId]);
+  }, [mine, occupant.farmerId, roomRef]);
 
   useEffect(() => {
     if (!mine || !ready) return;
@@ -238,27 +246,46 @@ function CrewFarmer({
     };
     pendingRef.current = next;
     const send = () => {
+      if (sendingRef.current) return;
       const pending = pendingRef.current;
       if (!pending) return;
+      sendingRef.current = true;
       const id = ++sendIdRef.current;
       lastSentRef.current = Date.now();
-      void publish(pending).then((stored) => {
-        if (sendIdRef.current !== id || !stored) return;
-        if (pending.mode === "sitting" && stored.mode !== "sitting") {
-          const freed = resolveWanderSpot(
-            { left: pending.left, top: pending.top },
-            CREW_WALK_BOUNDS,
-            CREW_OBSTACLES,
-            CREW_START_SPOTS,
-          );
-          positionRef.current = freed;
-          setSeatId(null);
-          setPosition(freed);
-        }
-      });
+      void publish(pending)
+        .then((stored) => {
+          if (sendIdRef.current !== id || !stored) return;
+          if (pending.mode === "sitting" && stored.mode !== "sitting") {
+            const freed = resolveWanderSpot(
+              { left: pending.left, top: pending.top },
+              CREW_WALK_BOUNDS,
+              CREW_OBSTACLES,
+              CREW_START_SPOTS,
+              "point",
+            );
+            positionRef.current = freed;
+            setSeatId(null);
+            setPosition(freed);
+          }
+        })
+        .finally(() => {
+          sendingRef.current = false;
+          const latest = pendingRef.current;
+          if (!latest || latest === pending) return;
+          const elapsedNow = Date.now() - lastSentRef.current;
+          if (latest.mode !== "walking" || elapsedNow >= 100) {
+            send();
+            return;
+          }
+          if (timerRef.current) return;
+          timerRef.current = window.setTimeout(() => {
+            timerRef.current = 0;
+            send();
+          }, 100 - elapsedNow);
+        });
     };
     const elapsed = Date.now() - lastSentRef.current;
-    if (mode !== "walking" || elapsed >= 250) {
+    if (mode !== "walking" || elapsed >= 100) {
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
         timerRef.current = 0;
@@ -266,11 +293,11 @@ function CrewFarmer({
       send();
       return;
     }
-    if (timerRef.current) return;
+    if (timerRef.current || sendingRef.current) return;
     timerRef.current = window.setTimeout(() => {
       timerRef.current = 0;
       send();
-    }, 250 - elapsed);
+    }, 100 - elapsed);
   }, [dragging, faceLeft, mine, position, publish, ready, seatId, viewerId, walking]);
 
   useEffect(() => {
@@ -343,26 +370,48 @@ function CrewFarmer({
   };
 
   const body = (
-    <>
-      <span className="room-pet-label">{occupant.displayName}</span>
-      <span className={shownFace ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
-        <PixelPetArt
-          petType={occupant.petType}
-          color={occupant.color}
-          hat={occupant.hat}
-          clothes={occupant.clothes}
-          pose={studyPose ? studyFrame : ownWalking || remoteWalking ? walkPose : "idle"}
-          studyFurniture={studyFurniture}
-          lobbyDesk={useLobbyDesk}
-          className={ownWalking || remoteWalking ? "is-walking" : undefined}
-          alt=""
-        />
-      </span>
-      <span className={studying ? "crew-room-status is-farming" : "crew-room-status"}>
-        {studying ? "Aurafarming" : "Online"}
-      </span>
-    </>
+    <span className={shownFace ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
+      <PixelPetArt
+        petType={occupant.petType}
+        color={occupant.color}
+        hat={occupant.hat}
+        clothes={occupant.clothes}
+        pose={studyPose ? studyFrame : ownWalking || remoteWalking ? walkPose : "idle"}
+        studyFurniture={studyFurniture}
+        lobbyDesk={useLobbyDesk}
+        className={ownWalking || remoteWalking ? "is-walking" : undefined}
+        alt=""
+      />
+    </span>
   );
+
+  // Ref so parent identity churn cannot clear/re-set labels every render.
+  const onLabelPoseRef = useRef(onLabelPose);
+  onLabelPoseRef.current = onLabelPose;
+
+  useEffect(() => {
+    onLabelPoseRef.current?.(occupant.farmerId, {
+      left: spot.left,
+      top: spot.top,
+      sitting: Boolean(sitting) && !draggingNow,
+      displayName: occupant.displayName,
+      status: studying ? "Aurafarming" : "Online",
+      farming: studying,
+    });
+  }, [
+    occupant.farmerId,
+    occupant.displayName,
+    spot.left,
+    spot.top,
+    sitting,
+    draggingNow,
+    studying,
+  ]);
+
+  useEffect(() => {
+    const id = occupant.farmerId;
+    return () => onLabelPoseRef.current?.(id, null);
+  }, [occupant.farmerId]);
 
   const grab = mine && seat && !draggingNow ? (
     <button
@@ -404,7 +453,12 @@ function CrewFarmer({
         style={{
           left: `${spot.left}%`,
           top: `${spot.top}%`,
-          zIndex: draggingNow ? ROOM_DRAG_Z : roomDepthZ(spot.top),
+          zIndex: draggingNow
+            ? ROOM_DRAG_Z
+            : roomDepthZ(
+                petStandingTop(spot.top, sitting && !draggingNow ? "feet" : "floor") +
+                  (sitting && !draggingNow ? 2 : 0),
+              ),
         }}
       >
         {mine ? (
@@ -449,7 +503,33 @@ export function CrewRoom({
   onOpenLeaderboard?: () => void;
 }) {
   const roomRef = useRef<HTMLDivElement>(null);
+  const [petLabelPoses, setPetLabelPoses] = useState<Record<string, CrewPetLabelPose>>({});
   const { poses, loaded, error, publish } = useCrewPoses(crewId);
+
+  const reportPetLabelPose = useCallback((farmerId: string, pose: CrewPetLabelPose | null) => {
+    setPetLabelPoses((current) => {
+      if (!pose) {
+        if (!(farmerId in current)) return current;
+        const next = { ...current };
+        delete next[farmerId];
+        return next;
+      }
+      const prev = current[farmerId];
+      if (
+        prev &&
+        prev.left === pose.left &&
+        prev.top === pose.top &&
+        prev.sitting === pose.sitting &&
+        prev.displayName === pose.displayName &&
+        prev.status === pose.status &&
+        prev.farming === pose.farming
+      ) {
+        return current;
+      }
+      return { ...current, [farmerId]: pose };
+    });
+  }, []);
+
   const taken = useMemo(() => {
     // Only people actually in the room hold a seat. A leftover pose from someone
     // who left was blocking the 5 o'clock chair while it looked empty.
@@ -513,7 +593,7 @@ export function CrewRoom({
       {CREW_SEATS.map((seat) => {
         const occupied = occupiedTables.has(seat.id);
         const farming = studyingTables.has(seat.id);
-        // Decorative empty seats sit behind the pet study stack.
+        // Seats sit just behind a pet whose feet rest on this anchor.
         const z = Math.max(1, roomDepthZ(seat.anchor.top) - 1);
         return (
           // eslint-disable-next-line @next/next/no-img-element
@@ -561,7 +641,25 @@ export function CrewRoom({
             roomRef={roomRef}
             publish={publish}
             viewerStudying={viewerStudying}
+            onLabelPose={reportPetLabelPose}
           />
+        ))}
+      </div>
+      <div className="living-room-labels" style={{ zIndex: ROOM_LABEL_Z }} aria-hidden="true">
+        {Object.entries(petLabelPoses).map(([farmerId, pose]) => (
+          <div
+            key={farmerId}
+            className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
+            style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
+          >
+            <span className="room-pet-label">
+              <span className="room-pet-label-line">{pose.displayName}</span>
+            </span>
+            <span className="room-pet-label-spacer" />
+            <span className={pose.farming ? "crew-room-status is-farming" : "crew-room-status"}>
+              {pose.status}
+            </span>
+          </div>
         ))}
       </div>
       {error ? (

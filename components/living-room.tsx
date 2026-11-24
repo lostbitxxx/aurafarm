@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import {
   BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
   ROOM_DRAG_Z,
   ROOM_FLOOR_SRC,
   ROOM_FURNITURE,
+  ROOM_LABEL_Z,
   ROOM_OBSTACLES,
   ROOM_RACK_HOTSPOTS,
   ROOM_TRIM_SRC,
@@ -18,6 +19,8 @@ import {
   WORMHOLE_BOUNDS,
   WORMHOLE_SRC,
   depthTopFromBounds,
+  paintDepthTop,
+  petStandingTop,
   roomDepthZ,
   type RoomObstacle,
   type RoomRackHotspotId,
@@ -28,16 +31,23 @@ import {
   decorHandles,
   decorObstacles,
   defaultRoomDecor,
+  emptyDecorHistory,
   isFurniturePlaced,
   isRoomItemPlaced,
   moverBounds,
   moveRoomItem,
   offsetTransform,
   ownedRoomSkinKeys,
+  pushDecorHistory,
   readRoomDecor,
+  redoDecor,
   roomBackgroundSrc,
+  roomDecorEqual,
   roomFurnitureSrc,
+  undoDecor,
+  withHorizontalCenterSnap,
   writeRoomDecor,
+  type DecorHistory,
   type DecorMoverId,
   type RoomDecor,
 } from "@/lib/room-decor";
@@ -78,6 +88,15 @@ import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Mode = "idle" | "walking" | "petting" | "dragging";
 
+export type RoomPetLabelPose = {
+  left: number;
+  top: number;
+  sitting: boolean;
+  displayName: string;
+  level: number;
+  showLevel: boolean;
+};
+
 function RoomPet({
   pet,
   paused,
@@ -88,6 +107,7 @@ function RoomPet({
   seatZ,
   onTrySit,
   onLiftSeat,
+  onLabelPose,
 }: {
   pet: PetCard;
   paused: boolean;
@@ -98,6 +118,7 @@ function RoomPet({
   seatZ: number | null;
   onTrySit: (spot: WanderSpot) => WanderSpot | null;
   onLiftSeat: () => void;
+  onLabelPose?: (petId: string, pose: RoomPetLabelPose | null) => void;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
@@ -447,6 +468,26 @@ function RoomPet({
     .filter(Boolean)
     .join(" ");
 
+  // Ref so parent identity churn cannot clear/re-set labels every render.
+  const onLabelPoseRef = useRef(onLabelPose);
+  onLabelPoseRef.current = onLabelPose;
+
+  useEffect(() => {
+    onLabelPoseRef.current?.(pet.id, {
+      left: position.left,
+      top: position.top,
+      sitting,
+      displayName,
+      level: progress.level,
+      showLevel: !showPetNames,
+    });
+  }, [pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
+
+  useEffect(() => {
+    const id = pet.id;
+    return () => onLabelPoseRef.current?.(id, null);
+  }, [pet.id]);
+
   return (
     <div
       ref={wrapRef}
@@ -456,7 +497,12 @@ function RoomPet({
         top: `${position.top}%`,
         // Pets share the room stacking context with furniture (see `.living-room-pets`).
         // Drag lifts above ROOM_DEPTH_Z_MAX so the carried pet is never tucked under a sofa.
-        zIndex: dragging ? ROOM_DRAG_Z : sitting && seatZ != null ? seatZ : roomDepthZ(position.top),
+        zIndex:
+          dragging
+            ? ROOM_DRAG_Z
+            : sitting && seatZ != null
+              ? seatZ
+              : roomDepthZ(petStandingTop(position.top, sitting ? "feet" : "floor")),
       }}
       data-mode={sitting ? "sitting" : mode}
     >
@@ -471,10 +517,6 @@ function RoomPet({
         onPointerCancel={onPointerCancel}
         onPointerLeave={petting.onPointerLeave}
       >
-        <span className="room-pet-label">
-          <span className="room-pet-label-line">{displayName}</span>
-          {!showPetNames ? <span className="room-pet-label-line">Lv.{progress.level}</span> : null}
-        </span>
         <span className={faceLeft ? "room-pet-sprite is-flipped" : "room-pet-sprite"}>
           <PixelPetArt
             petType={pet.pet_type}
@@ -501,7 +543,7 @@ function RoomPet({
   );
 }
 
-function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" }) {
+function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" | "undo" | "redo" }) {
   if (kind === "save") {
     return (
       <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -516,6 +558,34 @@ function RoomToolIcon({ kind }: { kind: "edit" | "decorate" | "save" }) {
         <rect x="13.5" y="4" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
         <rect x="4" y="13.5" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
         <rect x="13.5" y="13.5" width="6.5" height="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (kind === "undo") {
+    return (
+      <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M9 8H5V4M5 8c2.2-2.5 5.2-4 8.5-4a9 9 0 1 1-8.1 5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (kind === "redo") {
+    return (
+      <svg className="room-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M15 8h4V4M19 8c-2.2-2.5-5.2-4-8.5-4a9 9 0 1 0 8.1 5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }
@@ -588,6 +658,8 @@ export function LivingRoom({
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
+  const [decorHistory, setDecorHistory] = useState<DecorHistory>(() => emptyDecorHistory());
+  const [petLabelPoses, setPetLabelPoses] = useState<Record<string, RoomPetLabelPose>>({});
   const [decorOpen, setDecorOpen] = useState(false);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
@@ -624,10 +696,11 @@ export function LivingRoom({
     achievements: onOpenAchievements,
     collection: onOpenCollection,
   };
-  const rackZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) + 1;
-  const rackPadZ = roomDepthZ(STORAGE_RACK_DEPTH_TOP) - 1;
+  const rackDepth = paintDepthTop(STORAGE_RACK_DEPTH_TOP, decor.offsets["storage-rack"]?.dy ?? 0);
+  const rackZ = roomDepthZ(rackDepth) + 1;
+  const rackPadZ = Math.max(1, roomDepthZ(rackDepth) - 1);
   const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
-  const blackboardPadZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) - 1;
+  const blackboardPadZ = Math.max(1, roomDepthZ(BLACKBOARD_DEPTH_TOP));
   const wormholeZ = roomDepthZ(depthTopFromBounds(WORMHOLE_BOUNDS));
   const wormholeShift = offsetTransform(decor, "shelter");
   const wormholeBox = coverBox(
@@ -644,10 +717,35 @@ export function LivingRoom({
   };
   const carpetShift = offsetTransform(decor, "carpet");
 
+  const reportPetLabelPose = useCallback((petId: string, pose: RoomPetLabelPose | null) => {
+    setPetLabelPoses((current) => {
+      if (!pose) {
+        if (!(petId in current)) return current;
+        const next = { ...current };
+        delete next[petId];
+        return next;
+      }
+      const prev = current[petId];
+      if (
+        prev &&
+        prev.left === pose.left &&
+        prev.top === pose.top &&
+        prev.sitting === pose.sitting &&
+        prev.displayName === pose.displayName &&
+        prev.level === pose.level &&
+        prev.showLevel === pose.showLevel
+      ) {
+        return current;
+      }
+      return { ...current, [petId]: pose };
+    });
+  }, []);
+
   useEffect(() => {
     const loaded = readRoomDecor(userId, ownedSkinKeys);
     setSavedDecor(loaded);
     setDraftDecor(null);
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
     setSeats(reconcileSeats(loaded, readRoomSeats(userId)));
     setSeatsReady(true);
@@ -695,6 +793,7 @@ export function LivingRoom({
 
   function beginEdit() {
     setDraftDecor(cloneRoomDecor(savedDecor));
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
   }
 
@@ -703,7 +802,30 @@ export function LivingRoom({
     writeRoomDecor(userId, draftDecor);
     setSavedDecor(draftDecor);
     setDraftDecor(null);
+    setDecorHistory(emptyDecorHistory());
     setDecorOpen(false);
+  }
+
+  function commitDraft(next: RoomDecor) {
+    if (!draftDecor || roomDecorEqual(draftDecor, next)) return;
+    setDecorHistory((history) => pushDecorHistory(history, draftDecor));
+    setDraftDecor(next);
+  }
+
+  function onUndoEdit() {
+    if (!draftDecor) return;
+    const result = undoDecor(decorHistory, draftDecor);
+    if (!result) return;
+    setDecorHistory(result.history);
+    setDraftDecor(result.decor);
+  }
+
+  function onRedoEdit() {
+    if (!draftDecor) return;
+    const result = redoDecor(decorHistory, draftDecor);
+    if (!result) return;
+    setDecorHistory(result.history);
+    setDraftDecor(result.decor);
   }
 
   function onHandlePointerDown(event: ReactPointerEvent<HTMLButtonElement>, id: DecorMoverId) {
@@ -711,6 +833,7 @@ export function LivingRoom({
     if (!room || !draftDecor) return;
     event.preventDefault();
     const offset = draftDecor.offsets[id] ?? { dx: 0, dy: 0 };
+    const startDecor = cloneRoomDecor(draftDecor);
     const drag = {
       id,
       pointerId: event.pointerId,
@@ -721,17 +844,39 @@ export function LivingRoom({
       width: room.width,
       height: room.height,
     };
+    let live = startDecor;
+    let centerSnapped = false;
+    let lastPointerX = event.clientX;
+    let lastPointerY = event.clientY;
+    let lastPointerTime = performance.now();
     const move = (pointer: PointerEvent) => {
       if (pointer.pointerId !== drag.pointerId) return;
+      const now = performance.now();
+      const dt = Math.max(now - lastPointerTime, 1);
+      const speed =
+        Math.hypot(pointer.clientX - lastPointerX, pointer.clientY - lastPointerY) / dt;
+      lastPointerX = pointer.clientX;
+      lastPointerY = pointer.clientY;
+      lastPointerTime = now;
       const dx = drag.dx + ((pointer.clientX - drag.startX) / Math.max(drag.width, 1)) * 100;
       const dy = drag.dy + ((pointer.clientY - drag.startY) / Math.max(drag.height, 1)) * 100;
-      setDraftDecor((current) => (current ? moveRoomItem(current, drag.id, dx, dy) : current));
+      live = moveRoomItem(startDecor, drag.id, dx, dy);
+      const snap = withHorizontalCenterSnap(drag.id, live.offsets[drag.id], speed, centerSnapped);
+      centerSnapped = snap.snapped;
+      if (snap.offset.dx !== live.offsets[drag.id].dx || snap.offset.dy !== live.offsets[drag.id].dy) {
+        live = cloneRoomDecor(live);
+        live.offsets[drag.id] = snap.offset;
+      }
+      setDraftDecor(live);
     };
     const up = (pointer: PointerEvent) => {
       if (pointer.pointerId !== drag.pointerId) return;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      if (!roomDecorEqual(live, startDecor)) {
+        setDecorHistory((history) => pushDecorHistory(history, startDecor));
+      }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -750,7 +895,11 @@ export function LivingRoom({
       </div>
       <div className="living-room-stage">
         <div className="living-room-shell">
-        <div ref={roomRef} className={editing ? "living-room is-editing" : "living-room"}>
+        <div
+          ref={roomRef}
+          className={editing ? "living-room is-editing" : "living-room"}
+          data-wall-skin={decor.skins.wall}
+        >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="living-room-layer is-wall"
@@ -801,7 +950,10 @@ export function LivingRoom({
               draggable={false}
               data-furniture={item.id}
               style={{
-                zIndex: roomDepthZ(item.depthTop),
+                zIndex:
+                  item.id === "blackboard"
+                    ? roomDepthZ(BLACKBOARD_DEPTH_TOP)
+                    : roomDepthZ(paintDepthTop(item.depthTop, decor.offsets[item.id]?.dy ?? 0)),
                 transform: offsetTransform(decor, item.id),
               }}
             />
@@ -954,12 +1106,30 @@ export function LivingRoom({
                   onOpen={onOpenPet}
                   obstaclesRef={obstaclesRef}
                   seatedSpot={assignment ? seatAnchor(decor, assignment) : null}
-                  seatZ={assignment ? seatPaintZ(assignment.pieceId) : null}
+                  seatZ={assignment ? seatPaintZ(decor, assignment.pieceId) : null}
                   onTrySit={(spot) => trySit(pet.id, spot)}
                   onLiftSeat={() => liftPet(pet.id)}
+                  onLabelPose={reportPetLabelPose}
                 />
               );
             })}
+          </div>
+        )}
+        {editing ? null : (
+          <div className="living-room-labels" style={{ zIndex: ROOM_LABEL_Z }} aria-hidden="true">
+            {Object.entries(petLabelPoses).map(([petId, pose]) => (
+              <div
+                key={petId}
+                className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
+                style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
+              >
+                <span className="room-pet-label">
+                  <span className="room-pet-label-line">{pose.displayName}</span>
+                  {pose.showLevel ? <span className="room-pet-label-line">Lv.{pose.level}</span> : null}
+                </span>
+                <span className="room-pet-label-spacer" />
+              </div>
+            ))}
           </div>
         )}
         {!editing && placementReady && placed.length === 0 ? (
@@ -973,9 +1143,29 @@ export function LivingRoom({
         </div>
         <div className="room-tool-rail">
           {editing ? (
-            <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
-              <RoomToolIcon kind="decorate" />
-            </button>
+            <>
+              <button
+                type="button"
+                className="room-tool-button"
+                aria-label="Undo"
+                disabled={decorHistory.past.length === 0}
+                onClick={onUndoEdit}
+              >
+                <RoomToolIcon kind="undo" />
+              </button>
+              <button
+                type="button"
+                className="room-tool-button"
+                aria-label="Redo"
+                disabled={decorHistory.future.length === 0}
+                onClick={onRedoEdit}
+              >
+                <RoomToolIcon kind="redo" />
+              </button>
+              <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
+                <RoomToolIcon kind="decorate" />
+              </button>
+            </>
           ) : null}
           <button
             type="button"
@@ -993,7 +1183,7 @@ export function LivingRoom({
           decor={draftDecor}
           coins={liveCoins}
           ownedSkinKeys={ownedSkinKeys}
-          onChange={setDraftDecor}
+          onChange={commitDraft}
           onCoinsChange={(next) => {
             setLiveCoins(next);
             onCoinsChange?.(next);

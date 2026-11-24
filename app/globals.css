@@ -84,22 +84,26 @@ button.wordmark {
 .topbar-nav a { text-decoration: none; }
 
 .points-balance {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
 
-.coins-icon {
-  display: block;
-  width: 16px;
-  height: 16px;
-  flex: none;
+.points-balance span { color: var(--slime); font-weight: 600; }
+
+.coin-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.12em;
   image-rendering: pixelated;
+  flex: none;
 }
 
-.points-balance span { color: var(--slime); font-weight: 600; }
+.coin-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
 
 .hero, .auth-layout, .desk {
   width: min(1120px, calc(100% - 8vw));
@@ -2251,6 +2255,13 @@ button.dialog-row {
   margin: 0;
 }
 
+.pet-detail .pet-detail-study-time {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--dialog-ink);
+}
+
 .pet-rename-circle {
   display: inline-flex;
   align-items: center;
@@ -3472,6 +3483,10 @@ button.dialog-row {
   color: var(--ink-soft);
 }
 
+.room-cylinder-caption-title {
+  font-weight: 700;
+}
+
 .room-cylinder-caption-title,
 .room-cylinder-caption-subtitle,
 .room-cylinder-caption-detail {
@@ -3484,6 +3499,25 @@ button.dialog-row {
 
 .room-cylinder.is-rest .room-cylinder-caption {
   color: #5a6a78;
+}
+
+/* Orbital / leather walls are dark; cream captions stay readable over them. */
+.living-room[data-wall-skin="orbital"] .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder-caption {
+  color: #fff6e4;
+  text-shadow:
+    0 0 0.28rem rgba(20, 33, 26, 0.85),
+    0 1px 0 rgba(20, 33, 26, 0.55);
+}
+
+.living-room[data-wall-skin="orbital"] .room-cylinder.is-study.is-burning .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder.is-study.is-burning .room-cylinder-caption {
+  color: #ffe0c2;
+}
+
+.living-room[data-wall-skin="orbital"] .room-cylinder.is-rest .room-cylinder-caption,
+.living-room[data-wall-skin="leather"] .room-cylinder.is-rest .room-cylinder-caption {
+  color: #e8eef5;
 }
 
 .room-cylinder-tube {
@@ -3719,13 +3753,52 @@ button.dialog-row {
   .room-cylinder-fire-strip { animation: none; transform: none; }
 }
 
+.living-room-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Same footprint + transform as `.room-pet-wrap`; name floats above the sprite. */
+.room-pet-label-anchor {
+  position: absolute;
+  width: calc(100cqh * 86 / 466);
+  height: calc(100cqh * 70 / 466);
+  transform: translate(-50%, -50%);
+}
+
+.room-pet-label-anchor.is-sitting {
+  /* Feet on the cushion — match `.room-pet-wrap.is-sitting`. */
+  transform: translate(-50%, -100%);
+}
+
+.room-pet-label-anchor .room-pet-label {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, -0.15rem);
+}
+
+.room-pet-label-anchor .crew-room-status {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-50%, 0.2rem);
+}
+
+.room-pet-label-spacer {
+  display: none;
+}
+
 .room-pet-wrap {
   position: absolute;
   /*
     Drawn for a ~466px-tall room (same reference as .room-cylinder).
     Scale with living-room cqh so pets shrink with the 2:1 stage.
+    Fixed height = sprite only so standing-line math matches the wrap center.
   */
   width: calc(100cqh * 86 / 466);
+  height: calc(100cqh * 70 / 466);
   transform: translate(-50%, -50%);
   /* Inline z-index from foot depth; fallback keeps pets above the base room. */
   z-index: 2;
@@ -3819,21 +3892,17 @@ button.dialog-row {
 }
 
 .room-equipped {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 110%);
+  white-space: nowrap;
   background: #c5ef47;
   color: #23392d;
   padding: 0.15em 0.4em;
   border-radius: 999px;
   font-size: calc(100cqh * 10.4 / 466);
   font-weight: 700;
-}
-
-/* Keep the badge off the layout height so seated feet share one cushion line. */
-.room-pet-wrap.is-sitting .room-equipped {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translate(-50%, 110%);
-  white-space: nowrap;
 }
 
 .room-empty {
@@ -5829,6 +5898,16 @@ button.dialog-row {
   background: #2a2a2a;
 }
 
+.room-tool-button:disabled {
+  opacity: 0.38;
+  cursor: default;
+  box-shadow: none;
+}
+
+.room-tool-button:disabled:hover {
+  background: #3d3d3d;
+}
+
 .room-tool-button:focus-visible {
   outline: 3px solid #c5ef47;
   outline-offset: 2px;
@@ -5906,9 +5985,6 @@ button.dialog-row {
   position: absolute;
   left: 0;
   top: 0.15rem;
-  display: flex;
-  align-items: center;
-  gap: 0.28rem;
   margin: 0;
   font-size: 0.85rem;
   color: #596650;
@@ -5917,6 +5993,62 @@ button.dialog-row {
 .decor-coins span {
   color: #23392d;
   font-weight: 600;
+}
+
+.decor-rate {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0.75rem 0 0;
+  color: #596650;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.decor-price-tag {
+  position: absolute;
+  z-index: 2;
+  top: 0.28rem;
+  right: 0.28rem;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.4rem;
+  border: 1.5px solid #23392d;
+  border-radius: 999px;
+  background: #fff9ed;
+  color: #23392d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.decor-tile.is-strip .decor-price-tag {
+  top: 0.2rem;
+  right: 0.25rem;
+  font-size: 0.62rem;
+  padding: 0.08rem 0.28rem;
+}
+
+.decor-price-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-weight: 650;
+  color: #23392d;
+}
+
+.decor-action-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
 }
 
 .decor-close {
