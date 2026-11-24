@@ -226,7 +226,7 @@ test("Social board embeds FarmCrew and Visit goes to the crew room", () => {
   assert.match(screen, /room-back-button/);
   assert.match(screen, /living-room-shell/);
   assert.match(screen, /Studying with you/);
-  assert.match(screen, /Website timer is tracking this session/);
+  assert.doesNotMatch(screen, /Desktop pet is tracking this session|Website timer is tracking this session/);
   assert.match(screen, /room-center/);
   assert.match(screen, /desk-session-actions/);
   assert.match(screen, /DesktopLaunchHelp href=\{launchUrl\}/);
