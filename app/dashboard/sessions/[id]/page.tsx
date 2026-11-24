@@ -39,20 +39,12 @@ export default async function StudyScorePage({
                 <p className="score-points">{score.xp} XP</p>
                 <dl className="session-facts">
                   <div className="session-fact">
-                    <dt>Focus</dt>
+                    <dt>How was the session?</dt>
                     <dd>{score.distracted ? "Distracted" : "Focused"}</dd>
                   </div>
                   <div className="session-fact">
                     <dt>Duration</dt>
                     <dd>{formatDuration(score.durationSeconds)}</dd>
-                  </div>
-                  <div className="session-fact">
-                    <dt>Blocked sites</dt>
-                    <dd>
-                      {score.blockedLabels.length > 0
-                        ? score.blockedLabels.join(", ")
-                        : "None"}
-                    </dd>
                   </div>
                   <div className="session-fact">
                     <dt>Finished</dt>

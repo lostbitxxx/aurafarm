@@ -1,7 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { labelForBlockedHost } from "./blocklist";
 import { touchSocialPresence } from "./actions/friends";
 import { createClient } from "./supabase/server";
 
@@ -21,7 +20,6 @@ export type LoadedStudyScore =
       xp: number;
       distracted: boolean;
       durationSeconds: number;
-      blockedLabels: string[];
       createdAt: string;
     });
 
@@ -41,34 +39,22 @@ export async function loadStudyScore(sessionId: string): Promise<LoadedStudyScor
 
   if (!sessionIdPattern.test(sessionId)) return { displayName, state: "missing" };
 
-  const [sessionResult, blocklistResult] = await Promise.all([
-    supabase
-      .from("study_sessions")
-      .select("status, xp_awarded, blocked_count, duration_seconds, blocked_hosts, ended_at")
-      .eq("id", sessionId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabase.from("blocklist_hosts").select("host, label"),
-  ]);
+  const sessionResult = await supabase
+    .from("study_sessions")
+    .select("status, xp_awarded, blocked_count, duration_seconds, ended_at")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .maybeSingle();
 
   if (!sessionResult.data) return { displayName, state: "missing" };
 
-  const entries = (blocklistResult.data ?? []).map((entry) => ({
-    host: String(entry.host),
-    label: String(entry.label),
-  }));
-
   if (sessionResult.data.status === "submitted") {
-    const hosts = Array.isArray(sessionResult.data.blocked_hosts)
-      ? sessionResult.data.blocked_hosts.map(String)
-      : [];
     return {
       displayName,
       state: "finished",
       xp: Number(sessionResult.data.xp_awarded ?? 0),
       distracted: Number(sessionResult.data.blocked_count) > 0,
       durationSeconds: Number(sessionResult.data.duration_seconds ?? 0),
-      blockedLabels: hosts.map((host) => labelForBlockedHost(host, entries)),
       createdAt: String(sessionResult.data.ended_at ?? ""),
     };
   }
