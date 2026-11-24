@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { equippedPet, type PetCard } from "../lib/pets";
 import {
   buildPetLaunchUrl,
+  openPetLaunch,
   buildStudyHistory,
   closeBlockedMigrationMessage,
   countSessionsInLocalMonth,
@@ -48,6 +49,27 @@ import {
   STUDY_LENGTHS,
   studyTimerMigrationMessage,
 } from "../lib/study";
+
+test("openPetLaunch assigns the session link on the current page", () => {
+  const assigned: string[] = [];
+  const previous = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      location: {
+        assign(url: string) {
+          assigned.push(url);
+        },
+      },
+    },
+  });
+  try {
+    openPetLaunch("aurafarm://session?code=AB12CD34EF");
+    assert.deepEqual(assigned, ["aurafarm://session?code=AB12CD34EF"]);
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: previous });
+  }
+});
 
 test("launch url carries only the session code", () => {
   const url = buildPetLaunchUrl("AB12CD34EF");

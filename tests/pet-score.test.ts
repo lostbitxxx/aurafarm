@@ -214,6 +214,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /closes a blocklist window|Closing blocklist windows is off|desktopHelp/);
   assert.match(desk, /onAskTracker/);
   assert.match(desk, /onConfirmTracker/);
+  assert.match(desk, /openPetLaunch\(launchUrl\)/);
+  assert.match(desk, /openPetLaunch\(launchUrl\);[\s\S]*setStartOpen\(false\)/);
   assert.match(desk, /headTitle=\{shownSession \? "Studying with you" : null\}/);
   assert.match(desk, /Desktop pet is tracking this session\.[\s\S]*Website timer is tracking this session\./);
   assert.match(desk, /headerCenter=\{/);
