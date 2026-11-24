@@ -16,6 +16,9 @@ import {
   ROOM_WALL_HOTSPOTS,
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
+  WORMHOLE_BOUNDS,
+  WORMHOLE_SRC,
+  depthTopFromBounds,
   paintDepthTop,
   petStandingTop,
   roomDepthZ,
@@ -649,8 +652,8 @@ export function LivingRoom({
   headTitle?: string | null;
   headSubtitle?: string | null;
 }) {
-  const roomTitle = headTitle ?? "Your little living room";
-  const roomSubtitle = headSubtitle ?? "Your favorite companions, at home.";
+  const roomTitle = headTitle ?? "Ready for a little focus?";
+  const roomSubtitle = headSubtitle ?? "Pick a length and a tracker, then Farm Aura.";
   const studyingHead = Boolean(headTitle);
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
@@ -698,6 +701,20 @@ export function LivingRoom({
   const rackPadZ = Math.max(1, roomDepthZ(rackDepth) - 1);
   const blackboardZ = roomDepthZ(BLACKBOARD_DEPTH_TOP) + 1;
   const blackboardPadZ = Math.max(1, roomDepthZ(BLACKBOARD_DEPTH_TOP));
+  const wormholeZ = roomDepthZ(depthTopFromBounds(WORMHOLE_BOUNDS));
+  const wormholeShift = offsetTransform(decor, "shelter");
+  const wormholeBox = coverBox(
+    WORMHOLE_BOUNDS,
+    roomSize.width,
+    roomSize.height,
+    decor.offsets.shelter,
+  );
+  const wormholeStyle = {
+    left: wormholeBox.left,
+    top: wormholeBox.top,
+    width: wormholeBox.width,
+    height: wormholeBox.height,
+  };
   const carpetShift = offsetTransform(decor, "carpet");
 
   const reportPetLabelPose = useCallback((petId: string, pose: RoomPetLabelPose | null) => {
@@ -909,6 +926,14 @@ export function LivingRoom({
         ) : null}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          className="living-room-layer is-wormhole"
+          src={WORMHOLE_SRC}
+          alt=""
+          draggable={false}
+          style={{ zIndex: wormholeZ, transform: wormholeShift }}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           className="living-room-layer is-trim"
           src={roomBackgroundSrc("trim", decor.skins.trim, ROOM_TRIM_SRC)}
           alt=""
@@ -1017,6 +1042,28 @@ export function LivingRoom({
               ];
             })
           : null}
+        {!editing ? (
+          <>
+            <span
+              className="room-prop-hotspot-pad"
+              aria-hidden="true"
+              data-prop-hotspot="wormhole"
+              style={{ ...wormholeStyle, zIndex: wormholeZ - 1 }}
+            />
+            <button
+              type="button"
+              className="room-prop-hotspot"
+              aria-label="Pets"
+              data-tutorial="shop"
+              data-tutorial-current={tutorialTarget === "shop" ? "true" : undefined}
+              data-prop-hotspot="wormhole"
+              style={{ ...wormholeStyle, zIndex: wormholeZ + 1 }}
+              onClick={onOpenInventory}
+            >
+              <span className="room-prop-hotspot-label">Pets</span>
+            </button>
+          </>
+        ) : null}
         {editing
           ? decorHandles(decor).map((handle) => {
               const box = coverBox(moverBounds(handle.id), roomSize.width, roomSize.height, decor.offsets[handle.id]);

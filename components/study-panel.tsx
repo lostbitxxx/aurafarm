@@ -185,9 +185,8 @@ export function StudyPanel({
     setCustomMinutes("");
   }
   const [startOpen, setStartOpen] = useState(false);
-  const [trackerChoice, setTrackerChoice] = useState(true);
   const macDesktop = useSyncExternalStore(subscribeMacDesktop, macDesktopSnapshot, macDesktopServerSnapshot);
-  const useDesktopPet = macDesktop === true && trackerChoice;
+  const useDesktopPet = macDesktop === true;
   const [desktopLink, setDesktopLink] = useState("");
   const [hiddenSessionId, setHiddenSessionId] = useState("");
   const [trackedSession, setTrackedSession] = useState(activeSession?.id ?? "");
@@ -514,12 +513,6 @@ export function StudyPanel({
             ) : (
               <div className="below-room desk-session">
                 <div className="session-copy">
-                  <p className="pet-name">
-                    {checkingSession ? "Checking this session" : "Ready for a little focus?"}
-                  </p>
-                  <p className="growth-label">
-                    {checkingSession ? "Fetching the desk." : "Pick a length and a tracker, then Farm Aura."}
-                  </p>
                   {checkingSession ? <SessionRefreshStatus /> : null}
                   {error ? (
                     <p className="form-error" role="alert">
@@ -640,9 +633,6 @@ export function StudyPanel({
                   className="tracker-option-pick"
                   aria-pressed={useDesktopPet}
                   disabled={pending || Boolean(desktopLink) || macDesktop !== true}
-                  onClick={() => {
-                    if (macDesktop === true) setTrackerChoice(true);
-                  }}
                 >
                   <span className="tracker-option-name">Desktop pet</span>
                   <span
@@ -670,32 +660,6 @@ export function StudyPanel({
                     First time aurafarming? Download here!
                   </a>
                 ) : null}
-              </div>
-              <div
-                className={
-                  !useDesktopPet
-                    ? "tracker-option tracker-option-website is-selected"
-                    : "tracker-option tracker-option-website"
-                }
-                aria-hidden={Boolean(desktopLink)}
-              >
-                <button
-                  type="button"
-                  className="tracker-option-pick"
-                  aria-pressed={!useDesktopPet}
-                  disabled={pending || Boolean(desktopLink)}
-                  tabIndex={desktopLink ? -1 : undefined}
-                  onClick={() => setTrackerChoice(false)}
-                >
-                  <span className="tracker-option-name">Website timer</span>
-                  <span className="tracker-choice-note" aria-hidden="true">
-                    {"\u00a0"}
-                  </span>
-                  <TrackerDemo kind="website" />
-                  <span className="tracker-option-copy">
-                    The countdown stays beside your PDF, then the site comes back with the reward.
-                  </span>
-                </button>
               </div>
             </div>
             {error ? (

@@ -17,7 +17,7 @@ test("desk tutorial walks shop, rack props, pets, social, start, then settings r
   );
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((step) => step.target),
-    ["shop", "collection", "pets", "achievements", "song", "social", "start", "settings"],
+    ["shop", "collection", "shop", "achievements", "song", "social", "start", "settings"],
   );
 
   for (const step of DESK_TUTORIAL_STEPS) {
@@ -35,8 +35,13 @@ test("desk tutorial walks shop, rack props, pets, social, start, then settings r
     } else if (step.id === "social") {
       assert.match(step.body, /blackboard/i);
       assert.equal(step.section, "social");
-    } else if (step.id === "shop" || step.id === "pets") {
-      assert.match(step.body, new RegExp(`Click ${step.title}`));
+    } else if (step.id === "shop") {
+      assert.match(step.body, /Click the pet shelter/i);
+      assert.match(step.body, /unlock/i);
+      assert.equal(step.section, "inventory");
+    } else if (step.id === "pets") {
+      assert.match(step.body, /Click the pet shelter/i);
+      assert.equal(step.section, "inventory");
     } else if (step.kind === "dialog") {
       assert.match(step.body, /rack|trophy|gramophone|drawer/i);
     }
@@ -76,6 +81,8 @@ test("tutorial storage resumes an active step and remembers when it is done", ()
     status: "active",
     step: DESK_TUTORIAL_STEPS.length - 1,
   });
+  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[0], "inventory"), true);
+  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[0], "shop"), false);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[2], "inventory"), true);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "social"), true);
   assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "friends"), false);

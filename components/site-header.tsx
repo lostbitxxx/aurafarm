@@ -12,8 +12,6 @@ export function SiteHeader({
   studySeconds,
   coins,
   streakCount,
-  onOpenShop,
-  onOpenInventory,
   onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
@@ -25,8 +23,6 @@ export function SiteHeader({
   studySeconds?: number;
   coins?: number;
   streakCount?: number;
-  onOpenShop?: () => void;
-  onOpenInventory?: () => void;
   onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
@@ -109,34 +105,6 @@ export function SiteHeader({
           <Link href="/dashboard" className="wordmark">
             Aurafarm
           </Link>
-          <div className="topbar-desktop-links">
-            {onOpenShop ? (
-              <button
-                type="button"
-                className="topbar-link"
-                data-tutorial="shop"
-                data-tutorial-current={tutorialCurrent("shop")}
-                onClick={onOpenShop}
-              >
-                Shop
-              </button>
-            ) : (
-              <Link href="/dashboard">Shop</Link>
-            )}
-            {onOpenInventory ? (
-              <button
-                type="button"
-                className="topbar-link"
-                data-tutorial="pets"
-                data-tutorial-current={tutorialCurrent("pets")}
-                onClick={onOpenInventory}
-              >
-                Pets
-              </button>
-            ) : (
-              <Link href="/dashboard">Pets</Link>
-            )}
-          </div>
         </div>
       </div>
       <div className="topbar-user">
@@ -195,24 +163,6 @@ export function SiteHeader({
           ) : null}
         </div>
         <HeaderMenu>
-          {onOpenShop ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenShop}>
-              Shop
-            </button>
-          ) : (
-            <Link href="/dashboard" className="topbar-drawer-link">
-              Shop
-            </Link>
-          )}
-          {onOpenInventory ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenInventory}>
-              Pets
-            </button>
-          ) : (
-            <Link href="/dashboard" className="topbar-drawer-link">
-              Pets
-            </Link>
-          )}
           {coinsLabel != null ? (
             <p className="points-balance coin-balance topbar-drawer-study" aria-label={`Coins ${coinsLabel}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

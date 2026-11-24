@@ -42,9 +42,8 @@ export function CrewStudyStart({
   const [startOpen, setStartOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trackerChoice, setTrackerChoice] = useState(true);
   const macDesktop = useSyncExternalStore(subscribeMacDesktop, macDesktopSnapshot, macDesktopServerSnapshot);
-  const useDesktopPet = macDesktop === true && trackerChoice;
+  const useDesktopPet = macDesktop === true;
   const [chosenSeconds, setChosenSeconds] = useState(() => preferredStudySeconds(preferredSessionMinutes));
   const [customOpen, setCustomOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState("");
@@ -208,9 +207,6 @@ export function CrewStudyStart({
                   className="tracker-option-pick"
                   aria-pressed={useDesktopPet}
                   disabled={pending || Boolean(desktopLink) || macDesktop !== true}
-                  onClick={() => {
-                    if (macDesktop === true) setTrackerChoice(true);
-                  }}
                 >
                   <span className="tracker-option-name">Desktop pet</span>
                   <span
@@ -238,32 +234,6 @@ export function CrewStudyStart({
                     First time aurafarming? Download here!
                   </a>
                 ) : null}
-              </div>
-              <div
-                className={
-                  !useDesktopPet
-                    ? "tracker-option tracker-option-website is-selected"
-                    : "tracker-option tracker-option-website"
-                }
-                aria-hidden={Boolean(desktopLink)}
-              >
-                <button
-                  type="button"
-                  className="tracker-option-pick"
-                  aria-pressed={!useDesktopPet}
-                  disabled={pending || Boolean(desktopLink)}
-                  tabIndex={desktopLink ? -1 : undefined}
-                  onClick={() => setTrackerChoice(false)}
-                >
-                  <span className="tracker-option-name">Website timer</span>
-                  <span className="tracker-choice-note" aria-hidden="true">
-                    {"\u00a0"}
-                  </span>
-                  <TrackerDemo kind="website" />
-                  <span className="tracker-option-copy">
-                    The countdown stays beside your PDF, then the site comes back with the reward.
-                  </span>
-                </button>
               </div>
             </div>
             {error ? (

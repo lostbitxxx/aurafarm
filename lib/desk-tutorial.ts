@@ -3,10 +3,10 @@ export const DESK_TUTORIAL_STEPS = [
     id: "shop",
     target: "shop",
     kind: "dialog",
-    section: "shop",
-    title: "Shop",
-    body: "Click Shop to buy pets and items.",
-    openBody: "Buy pets and items with your study progress here.",
+    section: "inventory",
+    title: "Shelter",
+    body: "Click the pet shelter to open your pets and unlock the next one.",
+    openBody: "Unlock the next pet here, then equip one for the desk.",
   },
   {
     id: "collection",
@@ -19,11 +19,11 @@ export const DESK_TUTORIAL_STEPS = [
   },
   {
     id: "pets",
-    target: "pets",
+    target: "shop",
     kind: "dialog",
     section: "inventory",
     title: "Pets",
-    body: "Click Pets to view, equip, and customize your pets.",
+    body: "Click the pet shelter to view, equip, and customize your pets.",
     openBody: "See your pets, equip one for the desk, and open pet details here.",
   },
   {
