@@ -77,7 +77,7 @@ export default async function StudyScorePage({
 function sessionCopy(score: LoadedStudyScore) {
   if (score.state === "finished") {
     return {
-      title: score.distracted ? "That session still counts." : "That focus is saved.",
+      title: "Session Counted",
       aside: "The experience is on your pet. The desk is ready for the next session.",
       heading: "Experience",
       detail: "",
