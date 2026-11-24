@@ -1097,27 +1097,42 @@ export function LivingRoom({
         <div className="room-tool-rail">
           {editing ? (
             <>
-              <button
-                type="button"
-                className="room-tool-button"
-                aria-label="Undo"
-                disabled={decorHistory.past.length === 0}
-                onClick={onUndoEdit}
-              >
-                <RoomToolIcon kind="undo" />
-              </button>
-              <button
-                type="button"
-                className="room-tool-button"
-                aria-label="Redo"
-                disabled={decorHistory.future.length === 0}
-                onClick={onRedoEdit}
-              >
-                <RoomToolIcon kind="redo" />
-              </button>
-              <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
-                <RoomToolIcon kind="decorate" />
-              </button>
+              <span className="room-tool-slot">
+                <button
+                  type="button"
+                  className="room-tool-button"
+                  aria-label="Undo"
+                  disabled={decorHistory.past.length === 0}
+                  onClick={onUndoEdit}
+                >
+                  <RoomToolIcon kind="undo" />
+                </button>
+                <span className="room-tool-tip" aria-hidden="true">
+                  Undo
+                </span>
+              </span>
+              <span className="room-tool-slot">
+                <button
+                  type="button"
+                  className="room-tool-button"
+                  aria-label="Redo"
+                  disabled={decorHistory.future.length === 0}
+                  onClick={onRedoEdit}
+                >
+                  <RoomToolIcon kind="redo" />
+                </button>
+                <span className="room-tool-tip" aria-hidden="true">
+                  Redo
+                </span>
+              </span>
+              <span className="room-tool-slot">
+                <button type="button" className="room-tool-button" aria-label="Decorate" onClick={() => setDecorOpen(true)}>
+                  <RoomToolIcon kind="decorate" />
+                </button>
+                <span className="room-tool-tip" aria-hidden="true">
+                  Decorate
+                </span>
+              </span>
             </>
           ) : null}
           <button

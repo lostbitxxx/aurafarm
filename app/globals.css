@@ -5859,6 +5859,8 @@ button.dialog-row {
 }
 
 .room-tool-rail {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
@@ -5866,6 +5868,13 @@ button.dialog-row {
   gap: 0.5rem;
   padding-top: 0.45rem;
   pointer-events: none;
+}
+
+.room-tool-slot {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  pointer-events: auto;
 }
 
 .room-tool-button {
@@ -5894,6 +5903,37 @@ button.dialog-row {
   opacity: 0.38;
   cursor: default;
   box-shadow: none;
+  /* Let the slot receive the hover so the tip still appears. */
+  pointer-events: none;
+}
+
+.room-tool-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.32rem);
+  z-index: 2;
+  transform: translate(-50%, 0.18rem);
+  margin: 0;
+  padding: 0.08rem 0.34rem;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room-tool-slot:hover .room-tool-tip,
+.room-tool-slot:focus-within .room-tool-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .room-tool-button:disabled:hover {
@@ -5961,7 +6001,8 @@ button.dialog-row {
 @media (prefers-reduced-motion: reduce) {
   .room-tool-button.is-edit-furniture,
   .room-tool-button.is-edit-furniture .room-tool-label,
-  .room-tool-button.is-edit-furniture .room-tool-label > span {
+  .room-tool-button.is-edit-furniture .room-tool-label > span,
+  .room-tool-tip {
     transition: none;
   }
 }
