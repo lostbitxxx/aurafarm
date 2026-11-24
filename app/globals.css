@@ -5280,6 +5280,21 @@ button.dialog-row {
 
 .customize-mode {
   position: relative;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: center;
+}
+
+.customize-mode-art {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.customize-mode-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .customize-mode-recommended {

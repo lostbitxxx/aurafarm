@@ -9,6 +9,7 @@ import {
   WEEKDAYS,
   WEEKDAY_LABELS,
   defaultWeekdaysForLifestyle,
+  STUDY_MODE_ART,
   modeLabel,
   modeSessionMinutes,
   modeTagline,
@@ -262,12 +263,22 @@ export function CustomizeWizard({
                   className={`customize-mode${activeMode === item ? " is-selected" : ""}`}
                   onClick={() => chooseMode(item)}
                 >
-                  {item === recommended ? (
-                    <span className="customize-mode-recommended">✦Recommended✦</span>
-                  ) : null}
-                  <strong>{modeLabel(item)}</strong>
-                  <span>{modeTagline(item)}</span>
-                  <em>{planForMode(item).sessionMinutes} min blocks</em>
+                  <img
+                    className="customize-mode-art"
+                    src={STUDY_MODE_ART[item]}
+                    alt=""
+                    width={42}
+                    height={42}
+                    draggable={false}
+                  />
+                  <div className="customize-mode-copy">
+                    {item === recommended ? (
+                      <span className="customize-mode-recommended">✦Recommended✦</span>
+                    ) : null}
+                    <strong>{modeLabel(item)}</strong>
+                    <span>{modeTagline(item)}</span>
+                    <em>{planForMode(item).sessionMinutes} min blocks</em>
+                  </div>
                 </button>
               ))}
             </div>

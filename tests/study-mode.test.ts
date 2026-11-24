@@ -13,6 +13,21 @@ import {
   weekdayFromLocalDay,
 } from "../lib/study-mode";
 
+test("study mode cards show assassin, knight, and lord pixel art", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  const modes = readFileSync(new URL("../lib/study-mode.ts", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /STUDY_MODE_ART\[item\]/);
+  assert.match(wizard, /customize-mode-art/);
+  assert.match(css, /\.customize-mode-art[\s\S]*image-rendering:\s*pixelated/);
+  for (const mode of ["assassin", "knight", "lord"]) {
+    const art = readFileSync(new URL(`../public/pet-assets/ui/${mode}.svg`, import.meta.url), "utf8");
+    assert.match(art, /viewBox="0 0 42 42"/);
+    assert.match(art, /shape-rendering="crispEdges"/);
+    assert.match(modes, new RegExp(`/pet-assets/ui/${mode}\\.svg`));
+  }
+});
+
 test("study mode cards keep a fixed recommended label on the suggested mode", () => {
   const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
