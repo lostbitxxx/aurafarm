@@ -128,11 +128,6 @@ export function FarmCrewScreen({ room, downloadUrl = null }: { room: FarmCrewRoo
                 {session ? (
                   <>
                     <h2 className="room-title">Studying with you</h2>
-                    <p className="room-subtitle">
-                      {session.useDesktopPet
-                        ? "Desktop pet is tracking this session."
-                        : "Website timer is tracking this session."}
-                    </p>
                   </>
                 ) : (
                   <>

@@ -217,7 +217,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(desk, /openPetLaunch\(launchUrl\)/);
   assert.match(desk, /openPetLaunch\(launchUrl\);[\s\S]*setStartOpen\(false\)/);
   assert.match(desk, /headTitle=\{shownSession \? "Studying with you" : null\}/);
-  assert.match(desk, /Desktop pet is tracking this session\.[\s\S]*Website timer is tracking this session\./);
+  assert.doesNotMatch(desk, /Desktop pet is tracking this session|Website timer is tracking this session/);
   assert.match(desk, /headerCenter=\{/);
   assert.match(desk, /desk-session-actions/);
   assert.match(

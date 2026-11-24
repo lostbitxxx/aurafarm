@@ -653,8 +653,8 @@ export function LivingRoom({
   headSubtitle?: string | null;
 }) {
   const roomTitle = headTitle ?? "Ready for a little focus?";
-  const roomSubtitle = headSubtitle ?? "Pick a length and a tracker, then Farm Aura.";
   const studyingHead = Boolean(headTitle);
+  const roomSubtitle = studyingHead ? headSubtitle : (headSubtitle ?? "Pick a length and a tracker, then Farm Aura.");
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
@@ -888,7 +888,7 @@ export function LivingRoom({
       <div className={studyingHead ? "room-top is-studying" : "room-top"}>
         <div className="room-head">
           <h2 className="room-title">{roomTitle}</h2>
-          <p className="room-subtitle">{roomSubtitle}</p>
+          {roomSubtitle ? <p className="room-subtitle">{roomSubtitle}</p> : null}
         </div>
         {headerCenter ? <div className="room-center">{headerCenter}</div> : null}
         {headerAside}

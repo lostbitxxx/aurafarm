@@ -476,13 +476,6 @@ export function StudyPanel({
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}
           headTitle={shownSession ? "Studying with you" : null}
-          headSubtitle={
-            shownSession
-              ? shownSession.useDesktopPet
-                ? "Desktop pet is tracking this session."
-                : "Website timer is tracking this session."
-              : null
-          }
           headerCenter={
             shownSession && !checkingSession ? (
               <StudyClock
