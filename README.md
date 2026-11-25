@@ -10,7 +10,7 @@ Signup creates a Supabase user, a `public.profiles` row, and a level 1 Baby Slim
 
 After signup, `/customize` saves a study mode (Assassin, Knight, or Lord) with a session length and monthly and daily goals.
 
-**Desktop pet.** A Mac Electron window the size of the sprite, in [`desktop/`](desktop/). Windows packaging is still waiting. The pet reads the frontmost Safari, Chrome, or Edge address bar itself during a claimed session. It compares that host with `blocklist_hosts` (seeded with Instagram, TikTok, and YouTube; a host matches itself and its subdomains). It reads that front address only: background tabs, page contents, and passwords stay out of reach. When close blocked tabs is on, it closes that front tab after the host has stayed on the blocklist. Stopping the session or quitting the pet stops the check. `/privacy` states the same limits.
+**Desktop pet.** A Mac Electron window the size of the sprite, in [`desktop/`](desktop/). Windows packaging is still waiting. The pet reads the frontmost Safari, Chrome, or Edge address bar itself during a claimed session. It compares that host with `blocklist_hosts` (seeded with Instagram, TikTok, YouTube, and Bilibili; a host matches itself and its subdomains). It reads that front address only: background tabs, page contents, and passwords stay out of reach. When close blocked tabs is on, it closes that front tab after the host has stayed on the blocklist. Stopping the session or quitting the pet stops the check. `/privacy` states the same limits.
 
 The server stores the duration, the experience, and the blocked hostnames for that session. The pet reports the duration and the hosts. The server computes the experience.
 
