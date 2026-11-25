@@ -19,4 +19,15 @@ function parseAurafarmLink(value) {
   return null;
 }
 
-module.exports = { parseAurafarmLink };
+function launchLinksFromArgs(argv) {
+  if (!Array.isArray(argv)) return [];
+  const links = [];
+  for (const arg of argv) {
+    if (typeof arg !== "string") continue;
+    if (arg.startsWith("--aurafarm-link=")) links.push(arg.slice("--aurafarm-link=".length));
+    else if (arg.startsWith("aurafarm://")) links.push(arg);
+  }
+  return links;
+}
+
+module.exports = { launchLinksFromArgs, parseAurafarmLink };

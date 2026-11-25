@@ -43,3 +43,4 @@ godot/.import/
 desktop/build/
 desktop/dist/
 desktop/node_modules/
+desktop/.dev-app/
