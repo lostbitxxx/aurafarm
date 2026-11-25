@@ -24,10 +24,14 @@ test("session secrets and launch codes are hashed as lowercase sha256 hex", () =
 });
 
 test("blocklist hosts match themselves and their subdomains", () => {
-  const blocked = ["instagram.com", "tiktok.com", "youtube.com"];
+  const blocked = ["instagram.com", "tiktok.com", "youtube.com", "bilibili.com"];
   assert.equal(hostMatchesBlocklist("instagram.com", blocked), true);
   assert.equal(hostMatchesBlocklist("WWW.Instagram.com", blocked), true);
   assert.equal(hostMatchesBlocklist("www.instagram.com", blocked), true);
+  assert.equal(hostMatchesBlocklist("www.bilibili.com", blocked), true);
+  assert.equal(hostMatchesBlocklist("live.bilibili.com", blocked), true);
+  assert.equal(hostMatchesBlocklist("notbilibili.com", blocked), false);
+  assert.equal(hostMatchesBlocklist("bilibili.com.evil.com", blocked), false);
   assert.equal(hostMatchesBlocklist("notinstagram.com", blocked), false);
   assert.equal(hostMatchesBlocklist("instagram.com.evil.com", blocked), false);
   assert.equal(hostMatchesBlocklist("https://instagram.com", blocked), false);

@@ -1,6 +1,6 @@
 /** Counts blocklist visits from the one frontmost browser tab. */
 
-const BLOCKED = ["instagram.com", "tiktok.com", "youtube.com"];
+const BLOCKED = ["instagram.com", "tiktok.com", "youtube.com", "bilibili.com"];
 
 function normalizeHost(host) {
   const normalized = String(host ?? "")

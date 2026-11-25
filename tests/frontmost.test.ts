@@ -5,6 +5,7 @@ import { hostMatchesBlocklist } from "../lib/blocklist";
 
 const require = createRequire(import.meta.url);
 const {
+  BLOCKED,
   CLOSE_AFTER_MS,
   createCloseWatch,
   createFrontLog,
@@ -19,6 +20,7 @@ const {
   noteCloseAttempt,
   recordFrontHost,
 } = require("../desktop/frontmost.js") as {
+  BLOCKED: readonly string[];
   CLOSE_AFTER_MS: number;
   createCloseWatch: () => { host: string; since: number; attemptedHost: string; close: boolean };
   nextCloseWatch: (
@@ -97,7 +99,7 @@ const {
   supportedFrontBrowser: (appName: string) => boolean;
 };
 
-const blocked = ["instagram.com", "tiktok.com", "youtube.com"];
+const blocked = ["instagram.com", "tiktok.com", "youtube.com", "bilibili.com"];
 const desk = "localhost";
 
 test("the pet host rule matches the server blocklist", () => {
@@ -114,6 +116,26 @@ test("the pet host rule matches the server blocklist", () => {
   for (const host of samples) {
     assert.equal(petMatchesBlocklist(host, blocked), hostMatchesBlocklist(host, blocked), host);
   }
+});
+
+test("a front bilibili tab counts, including subdomains", () => {
+  assert.ok(BLOCKED.includes("bilibili.com"));
+  const visit = recordFrontHost(
+    createFrontLog(),
+    "https://www.bilibili.com/video/BV1xx",
+    BLOCKED,
+    desk,
+  );
+  assert.equal(visit.blockedCount, 1);
+  assert.deepEqual(visit.blockedHosts, ["www.bilibili.com"]);
+
+  const live = recordFrontHost(visit, "https://live.bilibili.com/1", BLOCKED, desk);
+  assert.equal(live.blockedCount, 2);
+  assert.deepEqual(live.blockedHosts, ["www.bilibili.com", "live.bilibili.com"]);
+
+  const lookalike = recordFrontHost(live, "https://notbilibili.com/", BLOCKED, desk);
+  assert.equal(lookalike.blockedCount, 2);
+  assert.deepEqual(lookalike.blockedHosts, ["www.bilibili.com", "live.bilibili.com"]);
 });
 
 test("a front instagram tab counts once until the host changes away", () => {

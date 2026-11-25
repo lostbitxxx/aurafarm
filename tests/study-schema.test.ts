@@ -38,6 +38,16 @@ test("older pet tables gain a created_at column", () => {
   assert.match(sql, /add column if not exists created_at/);
 });
 
+test("bilibili is a blocklist host", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/0051_block_bilibili.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /insert into public\.blocklist_hosts \(host, label\)/);
+  assert.match(migration, /\('bilibili\.com', 'Bilibili'\)/);
+  assert.match(migration, /on conflict \(host\) do nothing/);
+});
+
 test("close blocked tabs is a profile flag returned by claim", () => {
   const migration = readFileSync(
     new URL("../supabase/migrations/0007_close_blocked.sql", import.meta.url),
