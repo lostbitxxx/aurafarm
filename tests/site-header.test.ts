@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+test("desk header shows the study mode beside Aurafarm", () => {
+  const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(header, /className="wordmark"[\s\S]*Aurafarm[\s\S]*wordmark-mode/);
+  assert.match(header, /STUDY_MODE_ART\[studyMode\]/);
+  assert.match(desk, /studyMode=\{studyMode\}/);
+  assert.match(css, /\.wordmark\s*\{[^}]*display:\s*inline-flex/);
+  assert.match(css, /\.wordmark-mode[\s\S]*image-rendering:\s*pixelated/);
+});
+
 test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");

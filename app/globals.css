@@ -43,11 +43,21 @@ button, input { font: inherit; }
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
   font-family: var(--serif);
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   text-decoration: none;
+}
+
+.wordmark-mode {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  image-rendering: pixelated;
 }
 
 button.wordmark {
@@ -5651,7 +5661,7 @@ button.dialog-row {
   }
 
   .desk-page .wordmark {
-    display: block;
+    display: inline-flex;
     flex: none;
   }
 

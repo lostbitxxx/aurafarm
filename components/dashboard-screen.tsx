@@ -87,7 +87,7 @@ export function DashboardScreen({
   closeBlocked,
   closeBlockedError,
   downloadUrl,
-  studyMode: _studyMode,
+  studyMode,
   preferredSessionMinutes,
   weeklyStudyDays,
   planSessions,
@@ -432,6 +432,7 @@ export function DashboardScreen({
       <SocialPresence />
       <SiteHeader
         displayName={displayName}
+        studyMode={studyMode}
         studySeconds={totalStudySeconds}
         coins={coins}
         streakCount={liveStreakCount}
