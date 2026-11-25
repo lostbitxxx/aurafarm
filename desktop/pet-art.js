@@ -20,6 +20,28 @@ function faceModeForPose(pose) {
   return pose === "blush" ? "blush" : "normal";
 }
 
+/**
+ * Resting desktop pose.
+ * A focused study session (not on a blocked site, not walking off to close one)
+ * uses the same blush face as petting. Walk frames stay put while the pet is moving.
+ * @param {{
+ *   sessionActive?: boolean,
+ *   onDistracted?: boolean,
+ *   closing?: boolean,
+ *   animating?: boolean,
+ *   currentPose?: string,
+ * }} input
+ */
+function restingPetPose(input = {}) {
+  const current = input.currentPose || "idle";
+  if (input.animating) {
+    if (input.closing && (current === "blush" || current === "idle")) return "idle";
+    return current;
+  }
+  if (input.sessionActive && !input.onDistracted && !input.closing) return "blush";
+  return "idle";
+}
+
 function isStudyPose(pose) {
   return pose === "study1" || pose === "study2";
 }
@@ -60,5 +82,5 @@ function clampPetX(x, laneWidth, spriteWidth) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { clampPetX, plainPetPath, plainPetStack };
+  module.exports = { clampPetX, plainPetPath, plainPetStack, restingPetPose };
 }
