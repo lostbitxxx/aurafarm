@@ -182,6 +182,15 @@
       .pet-layer.is-clothes { z-index: 3; }
       .pet-layer.is-face { z-index: 4; }
       .pet-layer.is-hat { z-index: 5; }
+      /* Collection hats are drawn across the face. Lift and shrink them onto the head. */
+      .pet-layer.is-hat.is-head {
+        top: -12%;
+        right: auto;
+        bottom: auto;
+        left: 14%;
+        width: 72%;
+        height: 72%;
+      }
       .pet-layer.is-desk { z-index: 6; }
       .pet-layer.is-pen { z-index: 7; }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */

@@ -21,6 +21,8 @@ const PET_COLORS = new Set([
   "black",
 ]);
 
+const SAMPLE_HATS = new Set(["hat_a", "hat_b"]);
+
 const WORN_HATS = new Set([
   "hat_a",
   "hat_b",
@@ -168,6 +170,12 @@ function wornHatPath(hat) {
     : null;
 }
 
+/** Sample hats are drawn on the body canvas. Collection hats sit mid-canvas, so they are pinned above the face. */
+function hatPlacement(hat) {
+  if (typeof hat !== "string" || !WORN_HATS.has(hat)) return "none";
+  return SAMPLE_HATS.has(hat) ? "overlay" : "head";
+}
+
 function wornClothesPath(clothes, species) {
   return typeof clothes === "string" && WORN_CLOTHES.has(clothes)
     ? `/pet-assets/accessories/worn/${clothes}/${species}.svg`
@@ -189,6 +197,7 @@ function plainPetStack(petType, pose, options = {}) {
     clothes: wornClothesPath(options.clothes, species),
     face: `${base}/face/${faceModeForPose(frame)}.svg`,
     hat: wornHatPath(options.hat),
+    hatPlacement: hatPlacement(options.hat),
     floor: study ? "/pet-assets/props/study/floor.svg" : null,
     chair: study ? "/pet-assets/props/study/chair.svg" : null,
     desk: study ? "/pet-assets/props/study/desk.svg" : null,

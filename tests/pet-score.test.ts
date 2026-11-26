@@ -14,7 +14,7 @@ const { clampPetX, parseWeekdays, plainPetPath, plainPetStack, restingPetPose, s
     petType: string,
     pose: string,
     options?: { color?: string | null; hat?: string | null; clothes?: string | null },
-  ) => { face: string; body: string; clothes: string | null; hat: string | null };
+  ) => { face: string; body: string; clothes: string | null; hat: string | null; hatPlacement: string };
   restingPetPose: (input?: {
     sessionActive?: boolean;
     onDistracted?: boolean;
@@ -544,6 +544,12 @@ test("a focused desktop pet uses the petting love face", () => {
   });
   assert.equal(dressed.body, "/pet-assets/pets/cat/colors/sky/body.svg");
   assert.equal(dressed.hat, "/pet-assets/accessories/worn/hats/hat_a.svg");
+  assert.equal(dressed.hatPlacement, "overlay");
+  assert.equal(
+    plainPetStack("baby_slime", "idle", { hat: "little-gentleman-top-hat" }).hatPlacement,
+    "head",
+  );
+  assert.match(readFileSync(new URL("../desktop/pet.html", import.meta.url), "utf8"), /is-hat\.is-head[\s\S]*top: -12%/);
   assert.equal(dressed.clothes, "/pet-assets/accessories/worn/clothes_a/cat.svg");
   assert.equal(plainPetStack("baby_slime", "idle", { hat: "nope" }).hat, null);
   // 2026-11-26 is Thursday in Hong Kong.

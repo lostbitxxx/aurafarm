@@ -53,6 +53,7 @@ function applyPetSprite() {
   setLayer(layerNodes.clothes, stack.clothes ? base + stack.clothes : null);
   setLayer(layerNodes.face, base + stack.face);
   setLayer(layerNodes.hat, stack.hat ? base + stack.hat : null);
+  if (layerNodes.hat) layerNodes.hat.classList.toggle("is-head", stack.hatPlacement === "head");
   setLayer(layerNodes.desk, stack.desk ? base + stack.desk : null);
   setLayer(layerNodes.pen, stack.pen ? base + stack.pen : null);
   petStack.style.transform = shownFlip ? "scaleX(-1)" : "";
