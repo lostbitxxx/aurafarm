@@ -53,13 +53,6 @@ button, input { font: inherit; }
   text-decoration: none;
 }
 
-.wordmark-mode {
-  width: 1em;
-  height: 1em;
-  flex: none;
-  image-rendering: pixelated;
-}
-
 button.wordmark {
   border: 0;
   background: transparent;
