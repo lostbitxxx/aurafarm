@@ -33,6 +33,8 @@ const {
     pointer: { x: number; y: number },
     area: Area,
     open: DockMode,
+    options?: Record<string, number>,
+    grab?: { grabX?: number; grabY?: number },
   ) => {
     edge: string;
     offset: number;
