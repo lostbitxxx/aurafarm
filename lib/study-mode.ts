@@ -37,7 +37,14 @@ export type StudyPlan = {
   sessionMinutes: number;
   /** Which weekdays the farmer plans to study. */
   studyWeekdays: Weekday[];
+  /** Weekdays marked rest. With studyWeekdays this covers Monday through Sunday. */
+  restWeekdays: Weekday[];
   studyDaysPerWeek: number;
+};
+
+export type WeekSchedule = {
+  studyDays: Weekday[];
+  restDays: Weekday[];
 };
 
 export type BehaviorQuestion = {
@@ -163,6 +170,56 @@ export function normalizeStudyWeekdays(value: unknown): Weekday[] | null {
   return WEEKDAYS.filter((day) => unique.has(day));
 }
 
+/** Rest days may be empty when every weekday is a study day. */
+export function normalizeRestWeekdays(value: unknown): Weekday[] | null {
+  if (!Array.isArray(value)) return null;
+  const unique = new Set<Weekday>();
+  for (const entry of value) {
+    const num = typeof entry === "string" ? Number(entry) : entry;
+    if (!isWeekday(num)) return null;
+    unique.add(num);
+  }
+  return WEEKDAYS.filter((day) => unique.has(day));
+}
+
+/** The weekdays that are not in the study list, in Monday-to-Sunday order. */
+export function restWeekdaysFor(studyWeekdays: readonly Weekday[]): Weekday[] {
+  const study = new Set(studyWeekdays);
+  return WEEKDAYS.filter((day) => !study.has(day));
+}
+
+/** True when the two lists are unique, disjoint, and cover Monday through Sunday. */
+export function weekScheduleMatches(studyDays: readonly Weekday[], restDays: readonly Weekday[]) {
+  if (studyDays.length === 0) return false;
+  if (studyDays.length + restDays.length !== WEEKDAYS.length) return false;
+  const study = new Set(studyDays);
+  const rest = new Set(restDays);
+  if (study.size !== studyDays.length || rest.size !== restDays.length) return false;
+  return WEEKDAYS.every((day) => study.has(day) !== rest.has(day));
+}
+
+/**
+ * Stored study and rest days for one farmer.
+ * A matching pair is kept. Study days win when the pair disagrees, and rest
+ * days can rebuild a study list when study days were not stored.
+ */
+export function resolveWeekSchedule(studyValue: unknown, restValue: unknown): WeekSchedule | null {
+  const studyDays = normalizeStudyWeekdays(studyValue);
+  const restDays = normalizeRestWeekdays(restValue);
+  if (studyDays && restDays && weekScheduleMatches(studyDays, restDays)) {
+    return { studyDays, restDays };
+  }
+  if (studyDays) {
+    return { studyDays, restDays: restWeekdaysFor(studyDays) };
+  }
+  if (restDays && restDays.length < WEEKDAYS.length) {
+    const derivedStudy = restWeekdaysFor(restDays);
+    if (derivedStudy.length === 0) return null;
+    return { studyDays: derivedStudy, restDays };
+  }
+  return null;
+}
+
 export function parseStudyWeekdaysInput(raw: string): Weekday[] | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -232,6 +289,7 @@ export function planForMode(
     mode,
     sessionMinutes: minutes,
     studyWeekdays: days,
+    restWeekdays: restWeekdaysFor(days),
     studyDaysPerWeek: days.length,
   };
 }
@@ -249,6 +307,7 @@ export function adjustPlan(
     mode,
     sessionMinutes: minutes,
     studyWeekdays: days,
+    restWeekdays: restWeekdaysFor(days),
     studyDaysPerWeek: days.length,
   };
 }
@@ -288,6 +347,9 @@ export function parseCustomizationInput(formData: FormData) {
 
 export function customizationMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/weekly_rest_days/i.test(message)) {
+    return "Rest days could not be saved. Run migration 0052 in the Supabase SQL editor, then try again.";
+  }
   if (/permission denied/i.test(message)) {
     return "The study plan could not be saved. Run migration 0022 (and 0044 if needed) in the Supabase SQL editor, then try again.";
   }
@@ -305,8 +367,10 @@ export function describeWeeklyBreakdown(plan: StudyPlan) {
   return {
     sessionMinutes: plan.sessionMinutes,
     studyWeekdays: plan.studyWeekdays,
+    restWeekdays: plan.restWeekdays,
     studyDaysPerWeek: plan.studyDaysPerWeek,
     weeklyMinutes: plan.studyDaysPerWeek * plan.sessionMinutes,
     weekdayLabels: formatStudyWeekdays(plan.studyWeekdays),
+    restLabels: formatStudyWeekdays(plan.restWeekdays),
   };
 }

@@ -5,10 +5,10 @@ import {
   customizationMigrationMessage,
   defaultWeekdaysForLifestyle,
   isStudyMode,
-  normalizeStudyWeekdays,
+  resolveWeekSchedule,
+  restWeekdaysFor,
   parseBehaviorAnswers,
   type BehaviorAnswers,
-  type StudyMode,
   type StudyPlan,
 } from "./study-mode";
 import { touchSocialPresence } from "./actions/friends";
@@ -27,17 +27,25 @@ export async function loadCustomizationGate() {
   if (error || !userId) redirect("/login");
 
   const selectWithWeekly =
+    "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, weekly_study_days, weekly_rest_days, behavior_answers, customization_completed_at";
+  const selectStudyDaysOnly =
     "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, weekly_study_days, behavior_answers, customization_completed_at";
   const selectLegacy =
     "display_name, study_mode, preferred_session_minutes, monthly_session_goal, daily_session_goal, study_days_per_week, behavior_answers, customization_completed_at";
 
   let profileResult = await supabase.from("profiles").select(selectWithWeekly).eq("id", userId).maybeSingle();
   const weeklyColumnMissing = /weekly_study_days/i.test(profileResult.error?.message ?? "");
+  const restColumnMissing =
+    !weeklyColumnMissing && /weekly_rest_days/i.test(profileResult.error?.message ?? "");
+  if (restColumnMissing) {
+    profileResult = await supabase.from("profiles").select(selectStudyDaysOnly).eq("id", userId).maybeSingle();
+  }
   if (weeklyColumnMissing) {
     profileResult = await supabase.from("profiles").select(selectLegacy).eq("id", userId).maybeSingle();
   }
 
-  const profileError = weeklyColumnMissing ? null : (profileResult.error?.message ?? null);
+  const profileError =
+    weeklyColumnMissing || restColumnMissing ? null : (profileResult.error?.message ?? null);
   const migrationError = customizationMigrationMessage(profileError);
   if (migrationError || profileError) {
     return {
@@ -54,17 +62,25 @@ export async function loadCustomizationGate() {
   await touchSocialPresence(true);
   const mode = profile?.study_mode;
   const answers = parseBehaviorAnswers(profile?.behavior_answers);
+  const storedStudy = weeklyColumnMissing
+    ? null
+    : (profile as { weekly_study_days?: unknown } | null)?.weekly_study_days;
+  const storedRest =
+    weeklyColumnMissing || restColumnMissing
+      ? null
+      : (profile as { weekly_rest_days?: unknown } | null)?.weekly_rest_days;
+  const schedule = resolveWeekSchedule(storedStudy, storedRest);
   const weekdays =
-    normalizeStudyWeekdays(
-      weeklyColumnMissing ? null : (profile as { weekly_study_days?: unknown } | null)?.weekly_study_days,
-    ) ??
+    schedule?.studyDays ??
     (answers ? defaultWeekdaysForLifestyle(answers.lifestyle) : defaultWeekdaysForLifestyle("steady"));
+  const restWeekdays = schedule?.restDays ?? restWeekdaysFor(weekdays);
   const plan =
     completed && isStudyMode(mode)
       ? ({
           mode,
           sessionMinutes: Number(profile?.preferred_session_minutes ?? 60),
           studyWeekdays: weekdays,
+          restWeekdays,
           studyDaysPerWeek: weekdays.length,
           completed: true,
           answers,
