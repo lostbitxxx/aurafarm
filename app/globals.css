@@ -5290,27 +5290,69 @@ button.dialog-row {
 
 .customize-mode {
   position: relative;
-  grid-template-columns: 64px minmax(0, 1fr);
-  column-gap: 0.75rem;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+  min-height: 6.25rem;
+  /* Leave a square on the right for full-height mode art. */
+  padding-right: 6.5rem;
 }
 
 .customize-mode-art {
-  width: 64px;
-  height: 64px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: auto;
+  max-width: 42%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: right center;
   image-rendering: pixelated;
+  opacity: 0.35;
+  transform: translateX(45%);
+  transition:
+    opacity 520ms ease,
+    transform 640ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.customize-mode.is-selected .customize-mode-art {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customize-mode-art {
+    transition: none;
+    transform: none;
+  }
+
+  .customize-mode.is-selected .customize-mode-art {
+    transform: none;
+  }
 }
 
 .customize-mode-copy {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
+  max-width: 18rem;
+}
+
+.customize-mode-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.65rem;
   min-width: 0;
 }
 
 .customize-mode-recommended {
-  position: absolute;
-  top: 0.7rem;
-  right: 0.9rem;
+  position: static;
   margin: 0;
   font-size: 0.72rem;
   font-weight: 500;
@@ -5319,6 +5361,7 @@ button.dialog-row {
   letter-spacing: 0.01em;
   color: #8b9284;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .customize-option strong,
@@ -5328,7 +5371,7 @@ button.dialog-row {
 }
 
 .customize-mode strong {
-  padding-right: 6.75rem;
+  padding-right: 0;
 }
 
 .customize-option span,
