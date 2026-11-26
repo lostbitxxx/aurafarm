@@ -289,7 +289,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(panel, /id="dock-chrome"/);
   assert.match(panel, /#shell \{[\s\S]*box-shadow: none/);
   assert.match(panel, /#session-capsule \{[\s\S]*box-shadow: none/);
-  assert.match(panel, /body\.is-open #shell/);
+  assert.match(panel, /body\.is-frame-open #shell/);
   assert.match(main, /setHasShadow\(false\)/);
   assert.match(main, /hasShadow: false/);
   assert.doesNotMatch(panel, /id="timer"|#timer \{/);
