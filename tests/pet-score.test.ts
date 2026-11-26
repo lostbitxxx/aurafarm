@@ -288,7 +288,8 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(script, /panelPetStack\.addEventListener\("pointerdown"/);
   assert.doesNotMatch(panel, /id="dock-chrome"/);
   assert.match(panel, /#shell \{[\s\S]*box-shadow: none/);
-  assert.match(panel, /#session-capsule \{[\s\S]*box-shadow: 2px 3px 0/);
+  assert.match(panel, /#session-capsule \{[\s\S]*box-shadow: none/);
+  assert.match(panel, /body\.is-open #shell/);
   assert.match(main, /setHasShadow\(false\)/);
   assert.match(main, /hasShadow: false/);
   assert.doesNotMatch(panel, /id="timer"|#timer \{/);
