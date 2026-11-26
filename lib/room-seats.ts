@@ -8,17 +8,18 @@ import {
   LOVESEAT_BOUNDS,
   ROOM_FURNITURE,
   SOFA_BOUNDS,
+  WORMHOLE_BOUNDS,
+  depthTopFromBounds,
   paintDepthTop,
   pxToLeftPercent,
   pxToTopPercent,
   roomDepthZ,
-  type RoomFurnitureId,
   type RoomRectPx,
 } from "@/lib/living-room-layout";
 import { isFurniturePlaced, type RoomDecor } from "@/lib/room-decor";
 import type { WanderSpot } from "@/lib/living-room-wander";
 
-export type SeatPieceId = "sofa" | "armchair" | "loveseat";
+export type SeatPieceId = "sofa" | "armchair" | "loveseat" | "shelter";
 
 export type SeatAssignment = {
   pieceId: SeatPieceId;
@@ -27,28 +28,43 @@ export type SeatAssignment = {
 
 export type SeatMap = Record<string, SeatAssignment>;
 
-const SEAT_IDS: readonly SeatPieceId[] = ["sofa", "armchair", "loveseat"];
+const SEAT_IDS: readonly SeatPieceId[] = ["sofa", "armchair", "loveseat", "shelter"];
 
 const CAPACITY: Record<SeatPieceId, Readonly<Record<string, number>>> = {
   sofa: { base: 3, greenhouse: 3, orbital: 3, leather: 3 },
   armchair: { base: 1 },
   loveseat: { base: 2 },
+  shelter: { base: 1 },
 };
 
 const BOUNDS: Record<SeatPieceId, RoomRectPx> = {
   sofa: SOFA_BOUNDS,
   armchair: ARMCHAIR_BOUNDS,
   loveseat: LOVESEAT_BOUNDS,
+  shelter: WORMHOLE_BOUNDS,
 };
 
-/** Where along the cushion the sitter's feet rest, as a fraction of the bounds height. */
-const CUSHION_Y = 0.72;
+/**
+ * Where along the piece the sitter's feet rest, as a fraction of bounds height.
+ * Sofa/chair cushions sit low; the adopt bed nest is mid-bowl.
+ */
+const CUSHION_Y: Record<SeatPieceId, number> = {
+  sofa: 0.72,
+  armchair: 0.72,
+  loveseat: 0.72,
+  shelter: 0.62,
+};
 
-export function isSeatPiece(id: RoomFurnitureId): id is SeatPieceId {
-  return id === "sofa" || id === "armchair" || id === "loveseat";
+export function isSeatPiece(id: string): id is SeatPieceId {
+  return id === "sofa" || id === "armchair" || id === "loveseat" || id === "shelter";
 }
 
 export function seatCapacity(pieceId: SeatPieceId, decor: RoomDecor): number {
+  if (pieceId === "shelter") {
+    // Must-have adopt bed — always placed.
+    const skin = decor.skins.shelter;
+    return CAPACITY.shelter[skin] ?? 0;
+  }
   if (!isFurniturePlaced(decor, pieceId)) return 0;
   const skin = decor.skins[pieceId];
   return CAPACITY[pieceId][skin] ?? 0;
@@ -71,16 +87,20 @@ export function seatAnchor(decor: RoomDecor, assignment: SeatAssignment): Wander
   const bounds = BOUNDS[assignment.pieceId];
   const offset = offsetOf(decor, assignment.pieceId);
   const x = seatXs(capacity)[assignment.seat] ?? 0.5;
+  const cushionY = CUSHION_Y[assignment.pieceId];
   return {
     left: pxToLeftPercent(bounds.x + bounds.width * x) + offset.dx,
-    top: pxToTopPercent(bounds.y + bounds.height * CUSHION_Y) + offset.dy,
+    top: pxToTopPercent(bounds.y + bounds.height * cushionY) + offset.dy,
   };
 }
 
 /** Sitting pet paints just in front of the seat piece (drop-to-sit wins over walk collision). */
 export function seatPaintZ(decor: RoomDecor, pieceId: SeatPieceId) {
-  const piece = ROOM_FURNITURE.find((item) => item.id === pieceId);
   const dy = offsetOf(decor, pieceId).dy;
+  if (pieceId === "shelter") {
+    return roomDepthZ(paintDepthTop(depthTopFromBounds(WORMHOLE_BOUNDS), dy) + 2);
+  }
+  const piece = ROOM_FURNITURE.find((item) => item.id === pieceId);
   return roomDepthZ(paintDepthTop(piece?.depthTop ?? 50, dy) + 2);
 }
 
@@ -175,7 +195,12 @@ export function parseRoomSeats(raw: string | null): SeatMap {
   for (const [petId, value] of Object.entries(parsed)) {
     if (!value || typeof value !== "object") continue;
     const assignment = value as Partial<SeatAssignment>;
-    if (assignment.pieceId !== "sofa" && assignment.pieceId !== "armchair" && assignment.pieceId !== "loveseat") {
+    if (
+      assignment.pieceId !== "sofa" &&
+      assignment.pieceId !== "armchair" &&
+      assignment.pieceId !== "loveseat" &&
+      assignment.pieceId !== "shelter"
+    ) {
       continue;
     }
     if (!Number.isInteger(assignment.seat) || (assignment.seat ?? -1) < 0 || (assignment.seat ?? 0) > 2) continue;

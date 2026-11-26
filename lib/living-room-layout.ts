@@ -234,7 +234,7 @@ export const ROOM_RACK_HOTSPOTS: readonly RoomRackHotspot[] = [
 ];
 
 /** Pixel pet shelter in the bottom-left corner. Walkable; opens My Pets. */
-export const WORMHOLE_BOUNDS: RoomRectPx = { x: 12, y: 220, width: 82, height: 76 };
+export const WORMHOLE_BOUNDS: RoomRectPx = { x: 17, y: 234, width: 73, height: 47 };
 export const WORMHOLE_SRC = "/pet-assets/room/wormhole/base.svg";
 
 /** Blackboard on the wall. */
