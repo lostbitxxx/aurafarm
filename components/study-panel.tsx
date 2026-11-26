@@ -33,7 +33,7 @@ import {
   type StudyScoreCard,
 } from "@/lib/study";
 import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
-import type { RecentStudyDay, StreakCalendarTone } from "@/lib/streak-calendar";
+import { calendarRecentDays, goalMetToday, streakCalendarTone } from "@/lib/streak-calendar";
 import { StudyClock } from "./study-clock";
 import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { LivingRoom } from "./living-room";
@@ -88,8 +88,6 @@ export function StudyPanel({
   onOpenSocial,
   farmerName,
   streakCount = 0,
-  streakTone = "study-pending",
-  recentStudyDays = [],
   onEquipped,
   onColorApplied,
   onHatApplied,
@@ -142,8 +140,6 @@ export function StudyPanel({
   onOpenSocial?: () => void;
   farmerName?: string;
   streakCount?: number;
-  streakTone?: StreakCalendarTone;
-  recentStudyDays?: readonly RecentStudyDay[];
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
@@ -440,6 +436,16 @@ export function StudyPanel({
       ? focusedSeconds(new Date(shownSession.startedAt).getTime(), cylinderNow, shownSession.plannedSeconds)
       : 0;
   const dailyStudiedMinutes = Math.floor((submittedTodaySeconds + liveSessionSeconds) / 60);
+  const calendarDays = calendarRecentDays(
+    planSessions,
+    todayLocal,
+    submittedTodaySeconds + liveSessionSeconds,
+    7,
+  );
+  const calendarTone = streakCalendarTone(
+    isStudyDay,
+    goalMetToday(dailyStudiedMinutes, preferredSessionMinutes),
+  );
   const dailyGoalMinutes =
     showDailyCylinder && preferredSessionMinutes != null && preferredSessionMinutes > 0
       ? preferredSessionMinutes
@@ -487,8 +493,8 @@ export function StudyPanel({
           isStudyDay={isStudyDay}
           farmerName={farmerName}
           streakCount={streakCount}
-          streakTone={streakTone}
-          recentStudyDays={recentStudyDays}
+          streakTone={calendarTone}
+          recentStudyDays={calendarDays}
           headTitle={shownSession ? "Studying with you" : null}
           headerCenter={
             shownSession && !checkingSession ? (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import {
   BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
@@ -123,6 +124,7 @@ function RoomPet({
   onLabelPose,
   tutorialId,
   tutorialCurrentAttr,
+  forceLevel = false,
 }: {
   pet: PetCard;
   paused: boolean;
@@ -136,6 +138,8 @@ function RoomPet({
   onLabelPose?: (petId: string, pose: RoomPetLabelPose | null) => void;
   tutorialId?: string;
   tutorialCurrentAttr?: string;
+  /** Rewards step needs the level line even when Display Lv is off. */
+  forceLevel?: boolean;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
@@ -496,9 +500,9 @@ function RoomPet({
       sitting,
       displayName,
       level: progress.level,
-      showLevel: true,
+      showLevel: forceLevel || !showPetNames,
     });
-  }, [pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
+  }, [pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames, forceLevel]);
 
   useEffect(() => {
     const id = pet.id;
@@ -704,9 +708,10 @@ export function LivingRoom({
   const [petLabelPoses, setPetLabelPoses] = useState<Record<string, RoomPetLabelPose>>({});
   const [decorOpen, setDecorOpen] = useState(false);
   const [calendarMenu, setCalendarMenu] = useState<"closed" | "open" | "closing">("closed");
-  const calendarOpen = calendarMenu !== "closed";
   const calendarId = useId();
   const calendarRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverBox, setPopoverBox] = useState<{ top: number; left: number } | null>(null);
   const calendarLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const calendarCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [liveCoins, setLiveCoins] = useState(coins);
@@ -736,7 +741,7 @@ export function LivingRoom({
 
     function onPointer(event: PointerEvent) {
       const target = event.target as Node;
-      if (calendarRef.current?.contains(target)) return;
+      if (calendarRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
       closeCalendarMenu();
     }
 
@@ -754,6 +759,36 @@ export function LivingRoom({
       if (calendarCloseTimer.current) clearTimeout(calendarCloseTimer.current);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (calendarMenu === "closed") return;
+    function place() {
+      const node = calendarRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const height = popoverRef.current?.offsetHeight ?? 240;
+      const half = Math.max(92, (popoverRef.current?.offsetWidth ?? 220) / 2);
+      const gap = 8;
+      let top = rect.bottom + gap;
+      if (top + height > window.innerHeight - 8 && rect.top - gap - height >= 8) {
+        top = rect.top - gap - height;
+      }
+      const minLeft = 8 + half;
+      const maxLeft = window.innerWidth - 8 - half;
+      const center = rect.left + rect.width / 2;
+      const left = maxLeft < minLeft ? window.innerWidth / 2 : Math.min(maxLeft, Math.max(minLeft, center));
+      setPopoverBox((current) => (current && current.top === top && current.left === left ? current : { top, left }));
+    }
+    place();
+    const follow = window.requestAnimationFrame(place);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.cancelAnimationFrame(follow);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [calendarMenu, recentStudyDays]);
 
   function clearCalendarLeaveTimer() {
     if (calendarLeaveTimer.current) {
@@ -1270,30 +1305,36 @@ export function LivingRoom({
               >
                 <span className="room-prop-hotspot-label">Streak</span>
               </button>
-              {calendarMenu !== "closed" ? (
-                <div
-                  id={calendarId}
-                  className={
-                    calendarMenu === "closing"
-                      ? "streak-calendar-popover room-streak-calendar-popover is-closing"
-                      : "streak-calendar-popover room-streak-calendar-popover"
-                  }
-                  role="dialog"
-                  aria-label="Recent study"
-                  onPointerEnter={onCalendarPointerEnter}
-                >
-                  <p className="streak-calendar-popover-title">Last 7 days</p>
-                  <ul className="streak-calendar-days">
-                    {recentStudyDays.map((row) => (
-                      <li key={row.day}>
-                        <span>{formatStreakDayLabel(row.day)}</span>
-                        <span>{formatDuration(row.seconds)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
             </div>
+            {calendarMenu !== "closed" && popoverBox
+              ? createPortal(
+                  <div
+                    ref={popoverRef}
+                    id={calendarId}
+                    className={
+                      calendarMenu === "closing"
+                        ? "streak-calendar-popover room-streak-calendar-popover is-fixed is-closing"
+                        : "streak-calendar-popover room-streak-calendar-popover is-fixed"
+                    }
+                    style={{ top: popoverBox.top, left: popoverBox.left }}
+                    role="dialog"
+                    aria-label="Recent study"
+                    onPointerEnter={onCalendarPointerEnter}
+                    onPointerLeave={onCalendarPointerLeave}
+                  >
+                    <p className="streak-calendar-popover-title">Last 7 days</p>
+                    <ul className="streak-calendar-days">
+                      {recentStudyDays.map((row) => (
+                        <li key={row.day}>
+                          <span>{formatStreakDayLabel(row.day)}</span>
+                          <span>{formatDuration(row.seconds)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>,
+                  document.body,
+                )
+              : null}
           </>
         ) : null}
         {!editing ? (
@@ -1371,6 +1412,7 @@ export function LivingRoom({
                   onLabelPose={reportPetLabelPose}
                   tutorialId={isSpotlight ? "pet" : undefined}
                   tutorialCurrentAttr={isSpotlight ? tutorialCurrent("pet") : undefined}
+                  forceLevel={isSpotlight && tutorialTargets?.includes("pet-level") === true}
                 />
               );
             })}
@@ -1392,7 +1434,7 @@ export function LivingRoom({
                     data-tutorial-current={isSpotlight ? tutorialCurrent("pet-level") : undefined}
                   >
                     <span className="room-pet-label-line">{pose.displayName}</span>
-                    <span className="room-pet-label-line">Lv.{pose.level}</span>
+                    {pose.showLevel ? <span className="room-pet-label-line">Lv.{pose.level}</span> : null}
                   </span>
                   <span className="room-pet-label-spacer" />
                 </div>

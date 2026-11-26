@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  calendarRecentDays,
   goalMetToday,
   recentStudyDays,
   streakCalendarTone,
@@ -48,6 +49,25 @@ test("recentStudyDays returns newest-first totals", () => {
   assert.equal(days[1]?.seconds, 1200);
   assert.equal(days[2]?.day, "2026-11-24");
   assert.equal(days[2]?.seconds, 0);
+});
+
+test("calendarRecentDays keeps earlier days and replaces today with the live total", () => {
+  const sessions = [
+    {
+      status: "submitted" as const,
+      endedAt: "2026-11-26T04:00:00.000Z",
+      durationSeconds: 600,
+    },
+    {
+      status: "submitted" as const,
+      endedAt: "2026-11-25T04:00:00.000Z",
+      durationSeconds: 1200,
+    },
+  ];
+  const days = calendarRecentDays(sessions, "2026-11-26", 95, 2);
+  assert.equal(days[0]?.day, "2026-11-26");
+  assert.equal(days[0]?.seconds, 95);
+  assert.equal(days[1]?.seconds, 1200);
 });
 
 test("sumPetLevels floors and ignores non-finite values", () => {

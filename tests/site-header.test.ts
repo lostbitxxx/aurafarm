@@ -70,6 +70,7 @@ test("header no longer hosts Social; blackboard owns it", () => {
 test("header shows total pet level; streak calendar lives on the room wall", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const panel = readFileSync(new URL("../components/study-panel.tsx", import.meta.url), "utf8");
   const room = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
   const layout = readFileSync(new URL("../lib/living-room-layout.ts", import.meta.url), "utf8");
   const decor = readFileSync(new URL("../lib/room-decor.ts", import.meta.url), "utf8");
@@ -86,8 +87,12 @@ test("header shows total pet level; streak calendar lives on the room wall", () 
   assert.doesNotMatch(header, /Study </);
   assert.match(desk, /petTotalLevel=/);
   assert.match(desk, /farmerName=\{displayName\}/);
-  assert.match(desk, /streakTone=/);
-  assert.match(desk, /recentStudyDays=/);
+  assert.doesNotMatch(desk, /recentStudyDays\(recordedSessions/);
+  assert.match(panel, /calendarRecentDays\(\s*planSessions/);
+  assert.match(panel, /goalMetToday\(dailyStudiedMinutes/);
+  assert.match(panel, /streakTone=\{calendarTone\}/);
+  assert.match(room, /createPortal/);
+  assert.match(room, /is-fixed/);
   assert.match(room, /data-tutorial="streak-calendar"/);
   assert.match(room, /Let's start AuraFarming/);
   assert.match(room, /room-calendar-art/);

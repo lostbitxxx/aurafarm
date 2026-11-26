@@ -28,22 +28,15 @@ import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSe
 import {
   displayStreakCount,
   farmerLocalDay,
-  focusedSeconds,
   subscribeFarmerLocalDay,
   experienceProgress,
-  studySecondsOnLocalDay,
   type ActiveStudySession,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
 import { isScheduledStudyDay, type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
-import {
-  goalMetToday,
-  recentStudyDays,
-  streakCalendarTone,
-  sumPetLevels,
-} from "@/lib/streak-calendar";
+import { sumPetLevels } from "@/lib/streak-calendar";
 
 function roomStorageKey(userId: string) {
   return `aurafarm.room.${userId}`;
@@ -207,24 +200,6 @@ export function DashboardScreen({
   const petTotalLevel = useMemo(
     () => sumPetLevels(localPets.map((pet) => experienceProgress(pet.xp).level)),
     [localPets],
-  );
-  const recentDays = useMemo(
-    () => recentStudyDays(recordedSessions, todayLocal, 7),
-    [recordedSessions, todayLocal],
-  );
-  const submittedTodaySeconds = studySecondsOnLocalDay(recordedSessions, todayLocal);
-  const liveSessionSeconds =
-    activeSession != null
-      ? focusedSeconds(
-          new Date(activeSession.startedAt).getTime(),
-          Date.now(),
-          activeSession.plannedSeconds,
-        )
-      : 0;
-  const studiedMinutesToday = Math.floor((submittedTodaySeconds + liveSessionSeconds) / 60);
-  const calendarTone = streakCalendarTone(
-    studyDayToday,
-    goalMetToday(studiedMinutesToday, preferredSessionMinutes),
   );
   const petsSignature = pets
     .map(
@@ -518,8 +493,6 @@ export function DashboardScreen({
         onOpenSocial={() => showSection("social")}
         farmerName={displayName}
         streakCount={liveStreakCount}
-        streakTone={calendarTone}
-        recentStudyDays={recentDays}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}

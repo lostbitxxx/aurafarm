@@ -3105,6 +3105,13 @@ button.dialog-row {
   animation: room-streak-popover-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
+/* Portaled so the room's overflow:hidden cannot clip the list on a short stage. */
+.room-streak-calendar-popover.is-fixed {
+  position: fixed;
+  z-index: 35;
+  margin: 0;
+}
+
 @keyframes room-streak-popover-in {
   from {
     opacity: 0;

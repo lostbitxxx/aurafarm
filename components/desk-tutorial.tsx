@@ -126,8 +126,12 @@ export function useDeskTutorial(userId: string, _dialog: string | null) {
   const onMissingTarget = useCallback(() => {
     const index = stepRef.current;
     if (index === null) return;
-    if (DESK_TUTORIAL_STEPS[index]?.id === "start") finish();
-  }, [finish]);
+    if (DESK_TUTORIAL_STEPS[index]?.id === "start") {
+      finish();
+      return;
+    }
+    goTo(index + 1);
+  }, [finish, goTo]);
 
   const step = stepIndex === null ? null : DESK_TUTORIAL_STEPS[stepIndex];
   const targets = step ? [...step.targets] : [];
@@ -149,6 +153,16 @@ export function useDeskTutorial(userId: string, _dialog: string | null) {
     openSection,
     replay,
   };
+}
+
+/** First on-screen match. Skips display:none copies such as the desktop coin balance. */
+function visibleTutorialElement(id: string): HTMLElement | null {
+  const nodes = document.querySelectorAll<HTMLElement>(`[data-tutorial="${CSS.escape(id)}"]`);
+  for (const el of nodes) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width >= 1 && rect.height >= 1) return el;
+  }
+  return null;
 }
 
 function holeFromRect(rect: DOMRect, pad: number): Hole {
@@ -221,17 +235,36 @@ export function DeskTutorial({
   useEffect(() => {
     let frames = 0;
     let frame = 0;
+    let gaveUp = false;
+    let lastSignature = "";
     let observer: ResizeObserver | null = null;
+    let mutations: MutationObserver | null = null;
+
+    function visibleTargets() {
+      return targets
+        .map((id) => visibleTutorialElement(id))
+        .filter((el): el is HTMLElement => el !== null);
+    }
 
     function measure() {
-      const els = targets
-        .map((id) => document.querySelector<HTMLElement>(`[data-tutorial="${id}"]`))
-        .filter((el): el is HTMLElement => Boolean(el));
+      const els = visibleTargets();
+      const signature = [
+        window.innerWidth,
+        window.innerHeight,
+        ...els.map((el) => {
+          const rect = el.getBoundingClientRect();
+          return `${rect.top},${rect.left},${rect.width},${rect.height}`;
+        }),
+      ].join("|");
+      if (els.length > 0 && signature === lastSignature) return;
+      lastSignature = signature;
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
       if (els.length === 0) {
         setHoles([]);
-        frames += 1;
-        if (frames > 12) onMissingTarget();
-        else frame = window.requestAnimationFrame(measure);
+        const cardWidth = Math.min(288, window.innerWidth - 24);
+        setAbove(false);
+        setCardLeft(Math.max(12, window.innerWidth - cardWidth - 24));
+        setCardTop(Math.max(12, (window.innerHeight - 168) / 2));
         return;
       }
       if (scrolled.current !== targetKey) {
@@ -240,13 +273,30 @@ export function DeskTutorial({
       }
       const nextHoles = els.map((el) => holeFromRect(el.getBoundingClientRect(), pad));
       setHoles(nextHoles);
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
 
       const anchor = nextHoles[0];
       if (!anchor) return;
       const cardWidth = Math.min(288, window.innerWidth - 24);
       const estimated = 168;
       const gap = 12;
+      // Welcome covers the whole room, so a card below or above it slides off-screen.
+      // Keep the copy inside the room, centered on the right side.
+      if (isWelcome) {
+        const inset = 18;
+        const minLeft = Math.max(12, anchor.left + 12);
+        const maxLeft = anchor.left + anchor.width - cardWidth - inset;
+        const nextLeft = Math.min(Math.max(maxLeft, minLeft), window.innerWidth - 12 - cardWidth);
+        const minTop = Math.max(12, anchor.top + 12);
+        const maxTop = anchor.top + anchor.height - estimated - 12;
+        const nextTop = Math.min(
+          Math.max(anchor.top + (anchor.height - estimated) / 2, minTop),
+          Math.max(minTop, maxTop),
+        );
+        setAbove(false);
+        setCardTop(Math.max(12, nextTop));
+        setCardLeft(Math.max(12, nextLeft));
+        return;
+      }
       let placeAbove = false;
       let nextTop = anchor.top + anchor.height + gap;
       let nextLeft = anchor.left;
@@ -261,31 +311,46 @@ export function DeskTutorial({
       setCardLeft(nextLeft);
     }
 
-    measure();
-    const els = targets
-      .map((id) => document.querySelector<HTMLElement>(`[data-tutorial="${id}"]`))
-      .filter((el): el is HTMLElement => Boolean(el));
+    function pump() {
+      measure();
+      if (gaveUp || visibleTargets().length > 0) return;
+      frames += 1;
+      if (frames > 12) {
+        gaveUp = true;
+        onMissingTarget();
+        return;
+      }
+      frame = window.requestAnimationFrame(pump);
+    }
+
+    pump();
+    const els = visibleTargets();
     if (els.length > 0 && typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(measure);
       for (const el of els) observer.observe(el);
+    }
+    if (typeof MutationObserver !== "undefined") {
+      mutations = new MutationObserver(measure);
+      mutations.observe(document.body, { childList: true, subtree: true });
     }
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
       window.cancelAnimationFrame(frame);
       observer?.disconnect();
+      mutations?.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [onMissingTarget, pad, targetKey, targets]);
+  }, [isWelcome, onMissingTarget, pad, targetKey, targets]);
 
   const label = progressLabel(stepIndex);
   const progressLabelText = `Step ${stepIndex + 1} of ${DESK_TUTORIAL_STEPS.length}`;
 
-  if (holes.length === 0 || viewport.width < 1) return null;
+  if (viewport.width < 1) return null;
 
-  const primary = holes[0]!;
-  const startBands = isStart ? bandBlockers(primary) : null;
+  const primary = holes[0];
+  const startBands = isStart && primary ? bandBlockers(primary) : null;
 
   return (
     <div className="tutorial-layer">
@@ -359,8 +424,12 @@ export function DeskTutorial({
             <button type="button" className="tutorial-nav is-primary" onClick={onNext}>
               Next
             </button>
-          ) : null}
-          {isReplay ? (
+          ) : (
+            <button type="button" className="tutorial-nav is-primary" onClick={onSkip}>
+              Finish Tutorial
+            </button>
+          )}
+          {isReplay && !isStart ? (
             <button type="button" className="tutorial-skip" onClick={onSkip}>
               Skip tutorial
             </button>

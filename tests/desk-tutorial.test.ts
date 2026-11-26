@@ -65,6 +65,10 @@ test("tutorial UI uses Back Next and Skip on replay only", () => {
   assert.match(ui, />\s*Next\s*</);
   assert.match(ui, /is-primary/);
   assert.match(ui, /Skip tutorial/);
+  assert.match(ui, /Finish Tutorial/);
+  assert.match(ui, /isReplay && !isStart/);
+  assert.match(ui, /visibleTutorialElement/);
+  assert.match(ui, /goTo\(index \+ 1\)/);
   assert.match(ui, /isReplay/);
   assert.match(ui, /replay/);
   assert.match(css, /\.tutorial-nav/);
@@ -108,8 +112,9 @@ test("living room exposes tutorial targets and freezes pets while active", () =>
   assert.match(room, /data-tutorial=\{isSpotlight \? "pet-level" : undefined\}/);
   assert.match(room, /className="room-pet-label"/);
   assert.match(room, /paused=\{tutorialActive\}/);
-  assert.match(room, /showLevel: true/);
-  assert.match(room, /Lv\.\{pose\.level\}/);
+  assert.match(room, /showLevel: forceLevel \|\| !showPetNames/);
+  assert.match(room, /pose\.showLevel \?/);
+  assert.match(room, /forceLevel=\{isSpotlight && tutorialTargets\?\.includes\("pet-level"\)/);
 });
 
 test("header coins carry a tutorial target", () => {

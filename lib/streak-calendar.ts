@@ -48,6 +48,21 @@ export function recentStudyDays(
   return days;
 }
 
+/**
+ * Seven-day history from the full submitted list, with today replaced by the
+ * cylinder's live total (reset filter + in-progress session).
+ */
+export function calendarRecentDays(
+  sessions: Parameters<typeof recentStudyDays>[0],
+  todayLocal: string,
+  todaySeconds: number,
+  count = 7,
+): RecentStudyDay[] {
+  const days = recentStudyDays(sessions, todayLocal, count);
+  const seconds = Number.isFinite(todaySeconds) ? Math.max(0, Math.floor(todaySeconds)) : 0;
+  return days.map((row) => (row.day === todayLocal ? { day: row.day, seconds } : row));
+}
+
 /** Sum pet levels from XP progress maps. */
 export function sumPetLevels(levels: readonly number[]) {
   let total = 0;
