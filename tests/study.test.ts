@@ -153,11 +153,14 @@ test("claiming a desktop session sends the equipped look and weekly plan", () =>
     desktop.indexOf("function beginFrontWatch"),
     desktop.indexOf("function stopFrontWatch"),
   );
+  assert.match(watch, /level: claimLevel\(body\.level\)/);
   assert.match(watch, /petColor: optionalLook\(body\.color\)/);
   assert.match(watch, /petHat: optionalLook\(body\.hat\)/);
   assert.match(watch, /petClothes: optionalLook\(body\.clothes\)/);
   assert.match(watch, /studyDays: claimWeekdays\(body\.weekly_study_days\)/);
   assert.match(watch, /restDays: claimWeekdays\(body\.weekly_rest_days\)/);
+  assert.doesNotMatch(watch, /refreshPet/);
+  assert.match(route, /weekdayEntries/);
   assert.match(desktop, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
   assert.match(desktop, /next\.petColor = optionalLook\(row\.color\)/);
   assert.doesNotMatch(

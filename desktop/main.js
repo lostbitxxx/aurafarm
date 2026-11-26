@@ -369,6 +369,12 @@ function claimWeekdays(value) {
   return parseWeekdays(value);
 }
 
+function claimLevel(value) {
+  const level = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(level)) return null;
+  return Math.max(0, Math.floor(level));
+}
+
 function petAssetRoot() {
   return path.join(__dirname, "..", "public");
 }
@@ -897,7 +903,10 @@ async function refreshPet() {
   }
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) {
-    petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
+    // A launch claim already supplied the sprite. Signing in is not required.
+    if (!study) {
+      petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
+    }
     return;
   }
   await touchPetPresence(true);
@@ -1068,13 +1077,13 @@ function beginFrontWatch(body, browser = "") {
     petLog(
       `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level ?? "?"}`,
     );
-    // Sprite type can update immediately; level waits for refreshPet.
-    state = { ...state, petType: body.pet_type };
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
   state = {
     ...state,
+    petType: typeof body.pet_type === "string" && body.pet_type ? body.pet_type : state.petType,
+    level: claimLevel(body.level) ?? state.level,
     petColor: optionalLook(body.color),
     petHat: optionalLook(body.hat),
     petClothes: optionalLook(body.clothes),
@@ -1086,7 +1095,6 @@ function beginFrontWatch(body, browser = "") {
     `[pet] claim look color=${state.petColor || "-"} hat=${state.petHat || "-"} clothes=${state.petClothes || "-"} study=${state.studyDays.join(",")} rest=${state.restDays.join(",")}`,
   );
   syncSessionProgress(Date.now());
-  void refreshPet();
   setDebug(
     describeCloseDebug({
       session: true,

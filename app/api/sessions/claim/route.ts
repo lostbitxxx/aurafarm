@@ -104,11 +104,23 @@ function firstClaimRow(data: unknown): ClaimRow | null {
     color: optionalLook(record.color),
     hat: optionalLook(record.hat),
     clothes: optionalLook(record.clothes),
-    weekly_study_days: record.weekly_study_days == null ? null : normalizeStudyWeekdays(record.weekly_study_days),
-    weekly_rest_days: record.weekly_rest_days == null ? null : normalizeRestWeekdays(record.weekly_rest_days),
+    weekly_study_days: normalizeStudyWeekdays(weekdayEntries(record.weekly_study_days)),
+    weekly_rest_days: normalizeRestWeekdays(weekdayEntries(record.weekly_rest_days)),
   };
 }
 
 function optionalLook(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+/** PostgREST usually sends integer[] as an array. A text form like "{1,2,5}" still counts. */
+function weekdayEntries(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return value;
+  return trimmed
+    .slice(1, -1)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
