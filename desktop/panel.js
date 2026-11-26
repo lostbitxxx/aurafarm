@@ -82,6 +82,9 @@ function applyPanelPetSprite() {
   setLayer(panelLayerNodes.clothes, stack.clothes ? base + stack.clothes : null);
   setLayer(panelLayerNodes.face, base + stack.face);
   setLayer(panelLayerNodes.hat, stack.hat ? base + stack.hat : null);
+  if (panelLayerNodes.hat) {
+    panelLayerNodes.hat.classList.toggle("is-head", stack.hatPlacement === "head");
+  }
   setLayer(panelLayerNodes.desk, stack.desk ? base + stack.desk : null);
   setLayer(panelLayerNodes.pen, stack.pen ? base + stack.pen : null);
   panelPetStack.style.transform = shownFlip ? "scaleX(-1)" : "";
