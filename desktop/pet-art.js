@@ -97,15 +97,59 @@ function hongKongWeekday(now = new Date()) {
   return HONG_KONG_WEEKDAYS[label] ?? null;
 }
 
+function parseWeekdays(value) {
+  let entries = value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      entries = trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+    } else if (trimmed.startsWith("[")) {
+      try {
+        entries = JSON.parse(trimmed);
+      } catch {
+        return [];
+      }
+    } else {
+      return [];
+    }
+  }
+  if (!Array.isArray(entries)) return [];
+  const days = [];
+  for (const entry of entries) {
+    const day = typeof entry === "number" ? entry : Number(entry);
+    if (!Number.isInteger(day) || day < 1 || day > 7 || days.includes(day)) continue;
+    days.push(day);
+  }
+  return days.sort((left, right) => left - right);
+}
+
+function dayListed(days, weekday) {
+  return days.some((day) => Number(day) === weekday);
+}
+
 /** Study days fill red, rest days fill blue. No plan yet keeps the green rail. */
 function sessionDayKind(state, now = new Date()) {
   const weekday = hongKongWeekday(now);
-  const study = Array.isArray(state?.studyDays) ? state.studyDays : [];
-  const rest = Array.isArray(state?.restDays) ? state.restDays : [];
-  if (weekday && rest.includes(weekday)) return "rest";
-  if (weekday && study.includes(weekday)) return "study";
+  const study = parseWeekdays(state?.studyDays);
+  const rest = parseWeekdays(state?.restDays);
+  if (weekday && dayListed(rest, weekday)) return "rest";
+  if (weekday && dayListed(study, weekday)) return "study";
   if (study.length === 0 && rest.length === 0) return "unset";
   return "rest";
+}
+
+const SESSION_RAIL_COLORS = {
+  study: { liquid: "#c43b2e", track: "#f3c2bc" },
+  rest: { liquid: "#3f78c8", track: "#c5d7ee" },
+  unset: { liquid: "#5fbf4a", track: "transparent" },
+};
+
+function sessionRailColors(kind) {
+  return SESSION_RAIL_COLORS[kind] || SESSION_RAIL_COLORS.unset;
 }
 
 /** @deprecated Prefer plainPetStack — kept for tests that still check a single path. */
@@ -160,5 +204,13 @@ function clampPetX(x, laneWidth, spriteWidth) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { clampPetX, plainPetPath, plainPetStack, restingPetPose, sessionDayKind };
+  module.exports = {
+    clampPetX,
+    parseWeekdays,
+    plainPetPath,
+    plainPetStack,
+    restingPetPose,
+    sessionDayKind,
+    sessionRailColors,
+  };
 }

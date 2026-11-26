@@ -73,6 +73,12 @@
         background: transparent;
         color: var(--shell-ink);
       }
+      body.is-study-day #dock-rail {
+        background: #f3c2bc;
+      }
+      body.is-rest-day #dock-rail {
+        background: #c5d7ee;
+      }
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
         flex-direction: column;
@@ -354,6 +360,13 @@
         image-rendering: pixelated;
         cursor: grab;
       }
+      #panel-pet .pet-layer.is-legs { z-index: 1; }
+      #panel-pet .pet-layer.is-body { z-index: 2; }
+      #panel-pet .pet-layer.is-clothes { z-index: 3; }
+      #panel-pet .pet-layer.is-face { z-index: 4; }
+      #panel-pet .pet-layer.is-hat { z-index: 5; }
+      #panel-pet .pet-layer.is-desk { z-index: 6; }
+      #panel-pet .pet-layer.is-pen { z-index: 7; }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       #panel-pet .pet-layer:not([src]),
       #panel-pet .pet-layer[hidden] {

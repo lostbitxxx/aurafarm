@@ -177,6 +177,13 @@
         outline: none;
         image-rendering: pixelated;
       }
+      .pet-layer.is-legs { z-index: 1; }
+      .pet-layer.is-body { z-index: 2; }
+      .pet-layer.is-clothes { z-index: 3; }
+      .pet-layer.is-face { z-index: 4; }
+      .pet-layer.is-hat { z-index: 5; }
+      .pet-layer.is-desk { z-index: 6; }
+      .pet-layer.is-pen { z-index: 7; }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       .pet-layer:not([src]),
       .pet-layer[hidden] {

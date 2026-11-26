@@ -1,4 +1,5 @@
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, net, protocol, safeStorage, screen, shell, systemPreferences } = require("electron");
+const { pathToFileURL } = require("node:url");
 const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
@@ -21,7 +22,20 @@ const {
 const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName, supportedFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
-const { restingPetPose } = require("./pet-art");
+const { parseWeekdays, restingPetPose } = require("./pet-art");
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "pet-asset",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 const {
   DEFAULTS: DOCK_DEFAULTS,
   nearestEdge,
@@ -272,7 +286,7 @@ function publish() {
   syncChatBubble();
   const payload = {
     ...state,
-    assetOrigin: API_ORIGIN,
+    assetOrigin: petAssetOrigin(),
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
     panelPetVisible: panelOpen && !petAnimating,
   };
@@ -352,14 +366,46 @@ function optionalLook(value) {
 
 /** ISO weekdays from a claim payload. Invalid entries are dropped. */
 function claimWeekdays(value) {
-  if (!Array.isArray(value)) return [];
-  const days = [];
-  for (const entry of value) {
-    const day = typeof entry === "number" ? entry : Number(entry);
-    if (!Number.isInteger(day) || day < 1 || day > 7 || days.includes(day)) continue;
-    days.push(day);
-  }
-  return days.sort((left, right) => left - right);
+  return parseWeekdays(value);
+}
+
+function petAssetRoot() {
+  return path.join(__dirname, "..", "public");
+}
+
+/** Layered sprites live in this repo. The desk origin is only a fallback for a packed app. */
+function petAssetOrigin() {
+  const marker = path.join(petAssetRoot(), "pet-assets", "pets", "cat", "colors", "sage", "body.svg");
+  return fs.existsSync(marker) ? "pet-asset://local" : API_ORIGIN;
+}
+
+function registerPetAssets() {
+  if (petAssetOrigin() !== "pet-asset://local") return;
+  const root = petAssetRoot();
+  protocol.handle("pet-asset", (request) => {
+    let rel = "";
+    try {
+      rel = decodeURIComponent(new URL(request.url).pathname);
+    } catch {
+      return new Response("bad path", { status: 400 });
+    }
+    const file = path.normalize(path.join(root, rel));
+    if (file !== root && !file.startsWith(root + path.sep)) {
+      return new Response("forbidden", { status: 403 });
+    }
+    return net.fetch(pathToFileURL(file).href);
+  });
+}
+
+function loadOverlay(win, file) {
+  const filePath = path.join(__dirname, file);
+  const load = () =>
+    win.loadFile(filePath, {
+      query: { v: String(fs.statSync(filePath).mtimeMs) },
+    });
+  const clearing = win.webContents.session.clearCache();
+  if (clearing && typeof clearing.then === "function") return clearing.then(load);
+  return load();
 }
 
 function applyEquippedPetStats(row) {
@@ -753,7 +799,7 @@ function openPet() {
   hardenOverlayWindow(petWindow);
   // Forward hits so the sprite can opt into drag without blocking the desktop.
   petWindow.setIgnoreMouseEvents(true, { forward: true });
-  petWindow.loadFile(path.join(__dirname, "pet.html"));
+  loadOverlay(petWindow, "pet.html");
   petWindow.on("closed", () => {
     petWindow = null;
     if (!appQuitting) setImmediate(() => openPet());
@@ -796,7 +842,7 @@ function openPanel() {
     },
   });
   hardenOverlayWindow(panelWindow);
-  panelWindow.loadFile(path.join(__dirname, "panel.html"));
+  loadOverlay(panelWindow, "panel.html");
   panelWindow.on("closed", () => {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
@@ -855,6 +901,8 @@ async function refreshPet() {
     return;
   }
   await touchPetPresence(true);
+  const userId = sessionData.session.user?.id ?? "";
+  await loadWeekPlan(userId);
   const refreshSeq = ++statsRefreshSeq;
   const { data, error } = await supabase
     .from("user_pets")
@@ -865,17 +913,38 @@ async function refreshPet() {
   if (error) {
     petLog(`[pet] equipped pet query failed: ${error.message}`);
     setStatus(error.message);
+    publish();
     return;
   }
   if (!data) {
     petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
+    publish();
     return;
   }
   applyEquippedPetStats(data);
   petLog(
-    `[pet] equipped ${state.petType} level ${state.level ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
+    `[pet] equipped ${state.petType} level ${state.level ?? "?"} color=${state.petColor || "-"} hat=${state.petHat || "-"} clothes=${state.petClothes || "-"} study=${state.studyDays.join(",")} rest=${state.restDays.join(",")} for ${userId || "unknown"}`,
   );
   publish();
+}
+
+async function loadWeekPlan(userId) {
+  if (!supabase || !userId) return;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("weekly_study_days, weekly_rest_days")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) {
+    petLog(`[pet] week plan query failed: ${error.message}`);
+    return;
+  }
+  if (!data) return;
+  state = {
+    ...state,
+    studyDays: claimWeekdays(data.weekly_study_days),
+    restDays: claimWeekdays(data.weekly_rest_days),
+  };
 }
 
 async function signIn(email, password) {
@@ -1013,6 +1082,9 @@ function beginFrontWatch(body, browser = "") {
     restDays: claimWeekdays(body.weekly_rest_days),
     finishNote: "",
   };
+  petLog(
+    `[pet] claim look color=${state.petColor || "-"} hat=${state.petHat || "-"} clothes=${state.petClothes || "-"} study=${state.studyDays.join(",")} rest=${state.restDays.join(",")}`,
+  );
   syncSessionProgress(Date.now());
   void refreshPet();
   setDebug(
@@ -1435,6 +1507,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
+    registerPetAssets();
     registerMacProtocol();
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([

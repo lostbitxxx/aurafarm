@@ -97,6 +97,8 @@ test("a study link shows the equipped pet for that session's user", () => {
   );
   assert.match(refresh, /\.eq\("is_desktop_active", true\)/);
   assert.match(refresh, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
+  assert.match(refresh, /loadWeekPlan\(userId\)/);
+  assert.match(refresh, /select\("weekly_study_days, weekly_rest_days"\)/);
   assert.match(refresh, /applyEquippedPetStats\(data\)/);
   assert.match(refresh, /statsRefreshSeq/);
   assert.match(refresh, /\[pet\] equipped /);

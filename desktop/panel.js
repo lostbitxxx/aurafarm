@@ -101,9 +101,16 @@ function applyPanelPet(state) {
 }
 
 function applySessionFill(state) {
-  const kind = sessionDayKind(state);
+  const kind = typeof sessionDayKind === "function" ? sessionDayKind(state) : "unset";
+  const colors =
+    typeof sessionRailColors === "function"
+      ? sessionRailColors(kind)
+      : { liquid: "#5fbf4a", track: "transparent" };
   document.body.classList.toggle("is-study-day", kind === "study");
   document.body.classList.toggle("is-rest-day", kind === "rest");
+  sessionFill.style.background = colors.liquid;
+  const rail = document.getElementById("dock-rail");
+  if (rail) rail.style.background = colors.track;
   const raw = Number(state.sessionProgress);
   const pct =
     Number.isFinite(raw) && raw > 0

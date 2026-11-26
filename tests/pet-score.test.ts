@@ -5,7 +5,9 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { clampPetX, plainPetPath, plainPetStack, restingPetPose, sessionDayKind } = require("../desktop/pet-art.js") as {
+const { clampPetX, parseWeekdays, plainPetPath, plainPetStack, restingPetPose, sessionDayKind, sessionRailColors } = require("../desktop/pet-art.js") as {
+  parseWeekdays: (value: unknown) => number[];
+  sessionRailColors: (kind: string) => { liquid: string; track: string };
   clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
   plainPetPath: (petType: string, pose: string) => string;
   plainPetStack: (
@@ -20,7 +22,7 @@ const { clampPetX, plainPetPath, plainPetStack, restingPetPose, sessionDayKind }
     animating?: boolean;
     currentPose?: string;
   }) => string;
-  sessionDayKind: (state: { studyDays?: number[]; restDays?: number[] }, now?: Date) => string;
+  sessionDayKind: (state: { studyDays?: unknown; restDays?: unknown }, now?: Date) => string;
 };
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../desktop/pet-move.js") as {
   clampPetOrigin: (
@@ -317,7 +319,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(preload, /setPetVisible|set-pet-visible/);
   assert.doesNotMatch(main, /set-pet-visible|setPetVisible|petVisible/);
   assert.match(main, /panelPetVisible: panelOpen && !petAnimating/);
-  assert.match(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
+  assert.match(main, /loadOverlay\(petWindow, "pet\.html"\)/);
+  assert.match(main, /loadOverlay\(panelWindow, "panel\.html"\)/);
+  assert.match(main, /scheme: "pet-asset"/);
   assert.match(main, /overlayLayout/);
   assert.match(main, /snapOverlay/);
   assert.match(main, /petOriginBesidePanel/);
@@ -394,7 +398,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /await walkPetTo\(target\.x, target\.y\)/);
   assert.match(main, /await jumpPet\(\)/);
   assert.match(main, /if \(petAnimating \|\| dockDrag\) return/);
-  assert.match(main, /assetOrigin: API_ORIGIN/);
+  assert.match(main, /assetOrigin: petAssetOrigin\(\)/);
   assert.match(main, /panelOpen\) \{\s*win\.hide\(\)/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
@@ -508,6 +512,10 @@ test("a focused desktop pet uses the petting love face", () => {
   assert.equal(sessionDayKind({ studyDays: [1, 2, 3, 4, 5], restDays: [6, 7] }, thursday), "study");
   assert.equal(sessionDayKind({ studyDays: [1, 3, 5], restDays: [2, 4, 6, 7] }, thursday), "rest");
   assert.equal(sessionDayKind({ studyDays: [], restDays: [] }, thursday), "unset");
+  assert.equal(sessionDayKind({ studyDays: ["1", "2", "3", "4", "5"], restDays: "{6,7}" }, thursday), "study");
+  assert.deepEqual(parseWeekdays("{1,2,3,4,5}"), [1, 2, 3, 4, 5]);
+  assert.equal(sessionRailColors("rest").liquid, "#3f78c8");
+  assert.equal(sessionRailColors("study").track, "#f3c2bc");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(main, /restingPetPose/);
   assert.match(main, /function applyRestingPetPose/);
