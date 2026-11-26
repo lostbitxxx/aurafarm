@@ -314,7 +314,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /petOriginBesidePanel/);
   assert.match(main, /nearestEdge/);
   assert.match(main, /insetBottom/);
-  assert.match(main, /select\("id, pet_type, level, xp"\)/);
+  assert.match(main, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
   assert.match(main, /sessionProgress/);
   assert.match(main, /studyProgress/);
   assert.match(main, /syncSessionProgress/);

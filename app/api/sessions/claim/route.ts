@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseClaimCode } from "@/lib/pet-device";
 import { createSessionSecret, hashSecret } from "@/lib/scoring";
+import { normalizeRestWeekdays, normalizeStudyWeekdays, type Weekday } from "@/lib/study-mode";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -12,6 +13,11 @@ type ClaimRow = {
   close_blocked: boolean;
   planned_seconds: number;
   started_at: string;
+  color: string | null;
+  hat: string | null;
+  clothes: string | null;
+  weekly_study_days: Weekday[] | null;
+  weekly_rest_days: Weekday[] | null;
 };
 
 export async function POST(request: Request) {
@@ -56,6 +62,11 @@ export async function POST(request: Request) {
     close_blocked: row.close_blocked,
     planned_seconds: row.planned_seconds,
     started_at: row.started_at,
+    color: row.color,
+    hat: row.hat,
+    clothes: row.clothes,
+    weekly_study_days: row.weekly_study_days,
+    weekly_rest_days: row.weekly_rest_days,
   });
 }
 
@@ -70,6 +81,11 @@ function firstClaimRow(data: unknown): ClaimRow | null {
     close_blocked?: unknown;
     planned_seconds?: unknown;
     started_at?: unknown;
+    color?: unknown;
+    hat?: unknown;
+    clothes?: unknown;
+    weekly_study_days?: unknown;
+    weekly_rest_days?: unknown;
   };
   if (typeof record.session_id !== "string" || typeof record.pet_type !== "string") return null;
   if (typeof record.level !== "number" || typeof record.planned_seconds !== "number") return null;
@@ -85,5 +101,14 @@ function firstClaimRow(data: unknown): ClaimRow | null {
     close_blocked: record.close_blocked === true,
     planned_seconds: record.planned_seconds,
     started_at: record.started_at,
+    color: optionalLook(record.color),
+    hat: optionalLook(record.hat),
+    clothes: optionalLook(record.clothes),
+    weekly_study_days: record.weekly_study_days == null ? null : normalizeStudyWeekdays(record.weekly_study_days),
+    weekly_rest_days: record.weekly_rest_days == null ? null : normalizeRestWeekdays(record.weekly_rest_days),
   };
+}
+
+function optionalLook(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null;
 }

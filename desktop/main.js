@@ -116,6 +116,11 @@ let statsPetId = null;
 let statsRefreshSeq = 0;
 let state = {
   petType: "baby_slime",
+  petColor: null,
+  petHat: null,
+  petClothes: null,
+  studyDays: [],
+  restDays: [],
   level: null,
   statsPetId: null,
   sessionProgress: 0,
@@ -341,16 +346,36 @@ function dockOptions() {
   };
 }
 
+function optionalLook(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+/** ISO weekdays from a claim payload. Invalid entries are dropped. */
+function claimWeekdays(value) {
+  if (!Array.isArray(value)) return [];
+  const days = [];
+  for (const entry of value) {
+    const day = typeof entry === "number" ? entry : Number(entry);
+    if (!Number.isInteger(day) || day < 1 || day > 7 || days.includes(day)) continue;
+    days.push(day);
+  }
+  return days.sort((left, right) => left - right);
+}
+
 function applyEquippedPetStats(row) {
   const display = petDisplayProgress(row);
   const petType = typeof row?.pet_type === "string" && row.pet_type ? row.pet_type : state.petType;
   statsPetId = display.petId;
-  state = {
+  const next = {
     ...state,
     petType,
     level: display.level,
     statsPetId: display.petId,
   };
+  if (row && Object.prototype.hasOwnProperty.call(row, "color")) next.petColor = optionalLook(row.color);
+  if (row && Object.prototype.hasOwnProperty.call(row, "hat")) next.petHat = optionalLook(row.hat);
+  if (row && Object.prototype.hasOwnProperty.call(row, "clothes")) next.petClothes = optionalLook(row.clothes);
+  state = next;
 }
 
 function setSessionProgress(progress) {
@@ -833,7 +858,7 @@ async function refreshPet() {
   const refreshSeq = ++statsRefreshSeq;
   const { data, error } = await supabase
     .from("user_pets")
-    .select("id, pet_type, level, xp")
+    .select("id, pet_type, level, xp, color, hat, clothes")
     .eq("is_desktop_active", true)
     .maybeSingle();
   if (refreshSeq !== statsRefreshSeq) return;
@@ -979,7 +1004,15 @@ function beginFrontWatch(body, browser = "") {
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
-  state = { ...state, finishNote: "" };
+  state = {
+    ...state,
+    petColor: optionalLook(body.color),
+    petHat: optionalLook(body.hat),
+    petClothes: optionalLook(body.clothes),
+    studyDays: claimWeekdays(body.weekly_study_days),
+    restDays: claimWeekdays(body.weekly_rest_days),
+    finishNote: "",
+  };
   syncSessionProgress(Date.now());
   void refreshPet();
   setDebug(
