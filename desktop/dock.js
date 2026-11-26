@@ -25,6 +25,8 @@ const DEFAULTS = {
   handleSize: 0,
   levelSize: 0,
   chromePad: 3,
+  /** Extra open-window length so the cream outline can sit past the time bar. */
+  framePad: 8,
 };
 
 function isVerticalEdge(edge) {
@@ -83,8 +85,9 @@ function collapsedChromeLength(cfg) {
  * @param {boolean | "closed" | "tall" | "open"} open
  *   closed = strip only;
  *   tall = legacy mid stage (sides match closed; top matches open height);
- *   open = content square (panelSpan) plus progress-bar thickness on the docked edge.
- *   Live open/close animates closed ↔ open in one native setBounds; tall is unused.
+ *   open = content square (panelSpan) plus progress-bar thickness on the docked edge,
+ *   and `framePad` on the long axis so a cream outline can extend past the time bar.
+ *   The OS window jumps closed ↔ open in one setBounds; tall is unused.
  */
 function panelSize(edge, open, area, options = {}) {
   const cfg = resolveConfig(options);
@@ -96,12 +99,13 @@ function panelSize(edge, open, area, options = {}) {
   const stripHeight = Math.min(chrome, maxH);
   const contentSide = Math.min(Math.max(cfg.panelSpan, chrome), maxW, maxH);
   const bar = cfg.barThickness;
+  const pad = mode === "open" ? cfg.framePad : 0;
   if (isVerticalEdge(edge)) {
     if (mode === "open") {
-      // Extra width matches the EXP rail so the cream body stays a content square.
+      // Extra width matches the rail. Extra height is the cream outline past the time bar.
       return {
         width: Math.min(contentSide + bar, maxW),
-        height: contentSide,
+        height: Math.min(contentSide + pad, maxH),
       };
     }
     if (mode === "tall") {
@@ -117,7 +121,7 @@ function panelSize(edge, open, area, options = {}) {
   }
   if (mode === "open") {
     return {
-      width: contentSide,
+      width: Math.min(contentSide + pad, maxW),
       height: Math.min(contentSide + bar, maxH),
     };
   }
@@ -214,7 +218,20 @@ function overlayLayout(edge, offset, open, area, options = {}) {
   const dockEdge = normalizeEdge(edge);
   const size = panelSize(dockEdge, open, area, cfg);
   const clampedOffset = clampDockOffset(dockEdge, offset, size, area, cfg);
-  const origin = panelOriginForDock(dockEdge, clampedOffset, size, area, cfg);
+  let origin = panelOriginForDock(dockEdge, clampedOffset, size, area, cfg);
+  const mode = open === true || open === "open" ? "open" : "closed";
+  if (mode === "open" && cfg.framePad) {
+    // Offset stays the closed time-bar anchor. The open window grows half the pad each way.
+    const half = cfg.framePad / 2;
+    if (isVerticalEdge(dockEdge)) origin = { ...origin, y: origin.y - half };
+    else origin = { ...origin, x: origin.x - half };
+    const maxX = Math.max(area.x + inset, area.x + area.width - inset - size.width);
+    const maxY = Math.max(area.y + inset, area.y + area.height - insetBottom - size.height);
+    origin = {
+      x: clamp(Math.round(origin.x), area.x + inset, maxX),
+      y: clamp(Math.round(origin.y), area.y + inset, maxY),
+    };
+  }
   const panel = { ...origin, ...size };
   const pet = {
     ...petOriginBesidePanel(dockEdge, panel, cfg.petSize, area, cfg),
@@ -256,6 +273,12 @@ function snapOverlay(panelBounds, pointer, area, open, options = {}, grab = {}) 
       x: Math.round(x - grabX),
       y: edge === "top" ? area.y + inset : area.y + area.height - insetBottom - size.height,
     };
+  }
+  // Open windows are shifted by half the frame pad; store the unshifted anchor.
+  if ((open === true || open === "open") && cfg.framePad) {
+    const half = cfg.framePad / 2;
+    if (isVerticalEdge(edge)) guessOrigin = { ...guessOrigin, y: guessOrigin.y + half };
+    else guessOrigin = { ...guessOrigin, x: guessOrigin.x + half };
   }
   const offset = offsetFromPanelOrigin(edge, guessOrigin, area, cfg);
   return overlayLayout(edge, offset, open, area, cfg);

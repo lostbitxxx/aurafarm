@@ -310,6 +310,12 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(panel, /id="panel-arrow"/);
   assert.match(panel, /id="panel-chevron"/);
   assert.match(panel, /body\.edge-right #panel-chevron svg/);
+  assert.doesNotMatch(panel, /row-reverse/);
+  assert.match(panel, /body\.edge-right #shell \{\s*transform: scaleX\(-1\);/);
+  assert.match(
+    panel,
+    /body\.edge-left\.is-bounds-open:not\(\.is-open\) #shell,\s*body\.edge-right\.is-bounds-open:not\(\.is-open\) #shell/,
+  );
   assert.match(panel, /body\.edge-right\.is-open #panel-chevron svg/);
   assert.doesNotMatch(panel, /#panel-pet-stack:hover/);
   assert.match(petScript, /getBoundingClientRect/);
@@ -341,7 +347,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /petDisplayProgress/);
   assert.match(main, /function applyPanelBounds/);
   assert.match(main, /PANEL_SURFACE_MS = 200/);
-  assert.match(main, /PANEL_EXPAND_MS = 240/);
+  assert.match(main, /PANEL_REVEAL_MS = 80/);
+  assert.match(main, /PANEL_OUTLINE_MS = 160/);
+  assert.match(main, /PANEL_EXPAND_MS = 280/);
   assert.doesNotMatch(main, /PANEL_BOUNDS_MS/);
   assert.doesNotMatch(main, /PANEL_STAGE_MS/);
   assert.doesNotMatch(main, /applyPanelBounds\("tall"\)/);
@@ -420,7 +428,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(openPanel, /panelBounds\(panelOpen\)/);
   assert.match(panel, /--shell-cream: #f7f3e8/);
   assert.doesNotMatch(panel, /#10241c/);
-  assert.match(panel, /width: 25px/);
+  assert.match(panel, /width: 31px/);
+  assert.match(panel, /--frame-pad: 8px/);
+  assert.match(panel, /is-bounds-open/);
   assert.match(panel, /#panel-body \{[\s\S]*padding: 0\.55rem;/);
   assert.doesNotMatch(panel, /#panel-body \{[^}]*border-right|#dock-rail \{[^}]*border-right/);
   assert.match(panel, /"Outfit", "Avenir Next", "Segoe UI", sans-serif/);
@@ -433,7 +443,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS\.barLength/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS\.panelSpan/);
   assert.match(main, /edge: "right"/);
-  assert.match(main, /setBounds\(panelBounds\(panelOpen \|\| panelFrameOpen\), false\)/);
+  assert.match(main, /setBounds\(panelBounds\(panelOpen \|\| panelBoundsOpen\), false\)/);
+  assert.match(main, /if \(dock\.edge === "right"\) return currentOverlay\("open"\)/);
+  assert.match(main, /if \(dock\.edge !== "right"\) applyPanelBounds\("open"/);
+  assert.match(script, /function syncHitTarget/);
+  assert.match(main, /panelBoundsOpen/);
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
   assert.match(main, /beginDockDrag|endDockDrag|cancelDockDrag/);
   assert.doesNotMatch(main, /writeSecret\("dock/);

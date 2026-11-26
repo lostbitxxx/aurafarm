@@ -21,6 +21,8 @@
         --cylinder-track: #e8ebe0;
         --shell-ink: #23392d;
         --shell-radius: 10px;
+        --rail: 31px;
+        --frame-pad: 8px;
         margin: 0;
         box-sizing: border-box;
         height: 100%;
@@ -32,7 +34,12 @@
         background: transparent;
         color: var(--shell-ink);
       }
-      /* Closed window: only the rail capsule. Open frame: cream shell clipped, then expands. */
+      /*
+       * Closed: time bar only.
+       * is-bounds-open: window is already the open size; the bar stays put.
+       * is-frame-open: cream outline on that bar, slightly past it (--frame-pad).
+       * is-open: cream extends sideways to full panel width.
+       */
       #shell {
         position: relative;
         display: flex;
@@ -46,28 +53,23 @@
         background: transparent;
         box-shadow: none;
         color: var(--shell-ink);
-        transition: clip-path 240ms cubic-bezier(0.22, 1, 0.36, 1);
-      }
-      body.is-frame-open {
-        padding: 3px;
+        transition: clip-path 280ms cubic-bezier(0.22, 1, 0.36, 1);
       }
       body.is-frame-open #shell {
         border: 1.5px solid var(--shell-border);
         border-radius: var(--shell-radius);
         background: var(--shell-cream);
       }
-      /* Rail strip while the OS window is already open-sized (before/after content open). */
-      body.edge-right.is-frame-open:not(.is-open) #shell {
-        clip-path: inset(0 0 0 calc(100% - 25px));
+      /* Cream column stays on the docked edge until the sideways expand. */
+      body.edge-left.is-bounds-open:not(.is-open) #shell,
+      body.edge-right.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(0 calc(100% - var(--rail)) 0 0);
       }
-      body.edge-left.is-frame-open:not(.is-open) #shell {
-        clip-path: inset(0 calc(100% - 25px) 0 0);
+      body.edge-top.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(0 0 calc(100% - var(--rail)) 0);
       }
-      body.edge-top.is-frame-open:not(.is-open) #shell {
-        clip-path: inset(0 0 calc(100% - 25px) 0);
-      }
-      body.edge-bottom.is-frame-open:not(.is-open) #shell {
-        clip-path: inset(calc(100% - 25px) 0 0 0);
+      body.edge-bottom.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(calc(100% - var(--rail)) 0 0 0);
       }
       body.is-frame-open.is-open #shell {
         clip-path: inset(0);
@@ -81,8 +83,13 @@
       body.edge-right #shell {
         flex-direction: row;
       }
+      /* Same row layout as the left edge, mirrored so the bar stays on the right. */
       body.edge-right #shell {
-        flex-direction: row-reverse;
+        transform: scaleX(-1);
+      }
+      body.edge-right #dock-rail,
+      body.edge-right #panel-body {
+        transform: scaleX(-1);
       }
       body.edge-top #shell,
       body.edge-bottom #shell {
@@ -112,7 +119,7 @@
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
         flex-direction: column;
-        width: 25px;
+        width: 31px;
         max-width: 100%;
         height: 100%;
       }
@@ -120,8 +127,19 @@
       body.edge-bottom #dock-rail {
         flex-direction: row;
         width: 100%;
-        height: 25px;
+        height: 31px;
         max-height: 100%;
+      }
+      /* Open window is --frame-pad taller/longer. Keep the time bar the closed size, centered. */
+      body.is-bounds-open.edge-left #dock-rail,
+      body.is-bounds-open.edge-right #dock-rail {
+        height: calc(100% - var(--frame-pad));
+        align-self: center;
+      }
+      body.is-bounds-open.edge-top #dock-rail,
+      body.is-bounds-open.edge-bottom #dock-rail {
+        width: calc(100% - var(--frame-pad));
+        align-self: center;
       }
       #panel-toggle {
         position: relative;
@@ -214,15 +232,15 @@
       }
       body.is-frame-open.edge-left #session-capsule,
       body.is-frame-open.edge-right #session-capsule {
-        top: 3px;
-        bottom: 3px;
+        top: 0;
+        bottom: 0;
         left: 2px;
         right: 2px;
       }
       body.is-frame-open.edge-top #session-capsule,
       body.is-frame-open.edge-bottom #session-capsule {
-        left: 3px;
-        right: 3px;
+        left: 0;
+        right: 0;
         top: 2px;
         bottom: 2px;
       }

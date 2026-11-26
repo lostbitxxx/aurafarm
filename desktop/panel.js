@@ -28,6 +28,9 @@ const DOCK_DRAG_THRESHOLD_PX = 7;
 const LEAVE_CLOSE_MS = 450;
 
 let dockEdge = "right";
+let mouseIgnored = false;
+/** @type {null | { x: number, y: number }} */
+let lastPointer = null;
 let panelIsOpen = false;
 let dockDragging = false;
 let dockMoved = false;
@@ -44,22 +47,61 @@ function isHorizontalEdge(edge) {
   return edge === "top" || edge === "bottom";
 }
 
+function setHitTestIgnored(ignore) {
+  const next = Boolean(ignore);
+  if (next === mouseIgnored) return;
+  mouseIgnored = next;
+  window.pet.setIgnoreMouse(next);
+}
+
+function railContains(x, y) {
+  const rect = dockRail.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+/** Right dock stays at the open window size, so clicks miss the empty area beside the bar. */
+function syncHitTarget(clientX, clientY) {
+  if (dockEdge !== "right" || panelIsOpen || dockDragging) {
+    setHitTestIgnored(false);
+    return;
+  }
+  const x = Number.isFinite(clientX) ? clientX : lastPointer?.x;
+  const y = Number.isFinite(clientY) ? clientY : lastPointer?.y;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    setHitTestIgnored(true);
+    return;
+  }
+  setHitTestIgnored(!railContains(x, y));
+}
+
+window.addEventListener("pointermove", (event) => {
+  lastPointer = { x: event.clientX, y: event.clientY };
+  syncHitTarget(event.clientX, event.clientY);
+});
+
 function applyDockEdge(edge) {
   // Bottom is not a dock target; fall back to right.
   const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
   dockEdge = next;
   for (const name of EDGE_CLASSES) document.body.classList.toggle(name, name === `edge-${next}`);
-  applyPanelOpen(panelIsOpen, document.body.classList.contains("is-frame-open"));
+  applyPanelOpen(
+    panelIsOpen,
+    document.body.classList.contains("is-frame-open"),
+    document.body.classList.contains("is-bounds-open"),
+  );
 }
 
-function applyPanelOpen(open, frameOpen = open) {
+function applyPanelOpen(open, frameOpen = open, boundsOpen = frameOpen) {
   panelIsOpen = Boolean(open);
   const frame = Boolean(frameOpen) || panelIsOpen;
+  const bounds = Boolean(boundsOpen) || panelIsOpen;
   document.body.classList.toggle("is-open", panelIsOpen);
   document.body.classList.toggle("is-frame-open", frame);
+  document.body.classList.toggle("is-bounds-open", bounds);
   toggle.setAttribute("aria-expanded", panelIsOpen ? "true" : "false");
   toggle.setAttribute("aria-label", panelIsOpen ? "Close Aurafarm" : "Open Aurafarm");
   if (!panelIsOpen) clearLeaveClose();
+  syncHitTarget();
 }
 
 function setLayer(node, src) {
@@ -286,6 +328,7 @@ window.pet.onState((state) => {
     applyPanelOpen(
       typeof state.panelOpen === "boolean" ? state.panelOpen : panelIsOpen,
       typeof state.panelFrameOpen === "boolean" ? state.panelFrameOpen : state.panelOpen,
+      typeof state.panelBoundsOpen === "boolean" ? state.panelBoundsOpen : state.panelFrameOpen,
     );
   }
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;

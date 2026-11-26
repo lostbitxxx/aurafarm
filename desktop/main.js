@@ -86,7 +86,9 @@ const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
 let panelWindow = null;
 let panelOpen = false;
-/** OS window already at open size while CSS expands/collapses the cream shell. */
+/** OS window is already the open size (one instant setBounds, no native morph). */
+let panelBoundsOpen = false;
+/** Cream outline is showing. Sideways expand is `panelOpen`. */
 let panelFrameOpen = false;
 let petWindow = null;
 let petAnimating = false;
@@ -125,6 +127,7 @@ let state = {
   status: "Let's study together!",
   panelOpen: false,
   panelFrameOpen: false,
+  panelBoundsOpen: true,
   panelPetVisible: false,
   petPose: "idle",
   petFlip: false,
@@ -401,20 +404,28 @@ function prefersReducedMotion() {
 
 function syncPanelOpenState() {
   const frameOpen = Boolean(panelFrameOpen || panelOpen);
-  if (state.panelOpen === panelOpen && state.panelFrameOpen === frameOpen) {
+  // Right dock keeps the open window, so the clip stays on and x never jumps.
+  const boundsOpen = Boolean(panelBoundsOpen || panelOpen || dock.edge === "right");
+  if (
+    state.panelOpen === panelOpen &&
+    state.panelFrameOpen === frameOpen &&
+    state.panelBoundsOpen === boundsOpen
+  ) {
     publish();
     return;
   }
-  state = { ...state, panelOpen, panelFrameOpen: frameOpen };
+  state = { ...state, panelOpen, panelFrameOpen: frameOpen, panelBoundsOpen: boundsOpen };
   publish();
 }
 
 /** Content fade in/out — keep in sync with `#panel-body` opacity transition. */
 const PANEL_SURFACE_MS = 200;
-/** CSS shell expand/collapse — keep in sync with `#shell` clip-path transition. */
-const PANEL_EXPAND_MS = 240;
-/** One frame so the clipped open frame paints before the expand class flips. */
-const PANEL_EXPAND_FRAME_MS = 20;
+/** Window is already open-sized before the cream outline appears. */
+const PANEL_REVEAL_MS = 80;
+/** Hold cream outline on the time bar before sideways expand. */
+const PANEL_OUTLINE_MS = 160;
+/** CSS sideways expand/collapse — keep in sync with `#shell` clip-path transition. */
+const PANEL_EXPAND_MS = 280;
 
 /**
  * Set the OS window to open or closed bounds in one shot (no native morph).
@@ -448,6 +459,9 @@ function currentOverlay(open = panelOpen, point) {
 }
 
 function panelBounds(open) {
+  // Left and top grow from a fixed window origin. The right edge would have to move x
+  // when the width changes, and macOS sometimes paints that resize from the top-left.
+  if (dock.edge === "right") return currentOverlay("open").panel;
   return currentOverlay(open).panel;
 }
 
@@ -456,18 +470,25 @@ function placePanel() {
   if (!win || win.isDestroyed()) return;
   // Native + CSS shadows stacked a ghost frame around the transparent pad.
   win.setHasShadow(false);
-  win.setBounds(panelBounds(panelOpen || panelFrameOpen), false);
+  win.setBounds(panelBounds(panelOpen || panelBoundsOpen), false);
 }
 
 function setDockEdgeState(edge) {
-  if (state.dockEdge === edge) return;
+  if (edge === "right") panelBoundsOpen = true;
+  else if (!panelOpen) panelBoundsOpen = false;
+  if (state.dockEdge === edge) {
+    syncPanelOpenState();
+    return;
+  }
   state = { ...state, dockEdge: edge };
-  publish();
+  syncPanelOpenState();
 }
 
 function setPanelOpen(open) {
   const next = Boolean(open);
-  if (next === panelOpen && !dockDrag) {
+  const boundsSettled = dock.edge === "right" ? panelBoundsOpen : next === panelBoundsOpen;
+  const settled = next === panelOpen && next === panelFrameOpen && boundsSettled;
+  if (settled && !dockDrag) {
     placePanel();
     placePet();
     syncPanelOpenState();
@@ -476,15 +497,23 @@ function setPanelOpen(open) {
   const seq = ++panelToggleSeq;
   const reduced = prefersReducedMotion();
   if (next) {
-    // Instant open-sized window, then CSS expands the cream shell from the rail.
+    // 1) Instant open-sized window  2) cream outline on the time bar  3) extend sideways.
     void (async () => {
-      applyPanelBounds("open", { movePet: false });
-      panelFrameOpen = true;
+      if (dock.edge !== "right") applyPanelBounds("open", { movePet: false });
+      panelBoundsOpen = true;
+      panelFrameOpen = false;
       panelOpen = false;
       placePet();
       syncPanelOpenState();
       if (!reduced) {
-        await waitMs(PANEL_EXPAND_FRAME_MS);
+        await waitMs(PANEL_REVEAL_MS);
+        if (seq !== panelToggleSeq) return;
+      }
+      panelFrameOpen = true;
+      placePet();
+      syncPanelOpenState();
+      if (!reduced) {
+        await waitMs(PANEL_OUTLINE_MS);
         if (seq !== panelToggleSeq) return;
       }
       panelOpen = true;
@@ -493,9 +522,10 @@ function setPanelOpen(open) {
     })();
     return;
   }
-  // CSS collapses to the rail, then one closed setBounds.
+  // 1) Collapse cream sideways to the time bar  2) thin window  3) drop cream outline.
   panelOpen = false;
   panelFrameOpen = true;
+  panelBoundsOpen = true;
   placePet();
   syncPanelOpenState();
   void (async () => {
@@ -503,7 +533,18 @@ function setPanelOpen(open) {
       await waitMs(Math.max(PANEL_SURFACE_MS, PANEL_EXPAND_MS));
       if (seq !== panelToggleSeq) return;
     }
-    applyPanelBounds("closed", { movePet: false });
+    if (dock.edge !== "right") {
+      applyPanelBounds("closed", { movePet: false });
+      panelBoundsOpen = false;
+    } else {
+      panelBoundsOpen = true;
+    }
+    placePet();
+    syncPanelOpenState();
+    if (!reduced) {
+      await waitMs(PANEL_OUTLINE_MS);
+      if (seq !== panelToggleSeq) return;
+    }
     panelFrameOpen = false;
     placePet();
     syncPanelOpenState();
@@ -580,7 +621,7 @@ function endDockDrag(screenX, screenY) {
   dockDrag = null;
   const area = dockWorkArea({ x: screenX, y: screenY });
   // Point A = release cursor; snap to nearest side with along-edge place from A.
-  const snapped = snapOverlay(
+  let snapped = snapOverlay(
     floating,
     { x: screenX, y: screenY },
     area,
@@ -588,6 +629,9 @@ function endDockDrag(screenX, screenY) {
     dockOptions(),
     grab,
   );
+  if (snapped.edge === "right") {
+    snapped = overlayLayout(snapped.edge, snapped.offset, "open", area, dockOptions());
+  }
   dock = { edge: snapped.edge, offset: snapped.offset };
   setDockEdgeState(snapped.edge);
   // Native animated bounds slides the bar to the docked edge.
@@ -1284,10 +1328,11 @@ ipcMain.on("quit-app", () => {
 ipcMain.on("set-panel-open", (_event, open) => {
   setPanelOpen(open);
 });
-ipcMain.on("pet-ignore-mouse", (_event, ignore) => {
-  if (!petWindow || petWindow.isDestroyed()) return;
-  if (ignore) petWindow.setIgnoreMouseEvents(true, { forward: true });
-  else petWindow.setIgnoreMouseEvents(false);
+ipcMain.on("pet-ignore-mouse", (event, ignore) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed()) return;
+  if (ignore) win.setIgnoreMouseEvents(true, { forward: true });
+  else win.setIgnoreMouseEvents(false);
 });
 ipcMain.on("dock-drag-start", (_event, point) => {
   beginDockDrag(Number(point?.x), Number(point?.y));
@@ -1372,7 +1417,7 @@ if (!gotLock) {
     screen.on("display-metrics-changed", () => {
       if (dockDrag) cancelDockDrag();
       const area = dockWorkArea();
-      const layout = overlayLayout(dock.edge, dock.offset, panelOpen, area, dockOptions());
+      const layout = overlayLayout(dock.edge, dock.offset, panelOpen || panelBoundsOpen, area, dockOptions());
       dock = { edge: layout.edge, offset: layout.offset };
       setDockEdgeState(layout.edge);
       placePanel();
@@ -1384,7 +1429,7 @@ if (!gotLock) {
       console.log(
         `[pet] display bounds=${JSON.stringify(display.bounds)} workArea=${JSON.stringify(area)} scale=${display.scaleFactor}`,
       );
-      const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, false, area, dockOptions());
+      const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, "open", area, dockOptions());
       dock = { edge: "right", offset: bottomRight.offset };
       state = { ...state, dockEdge: "right" };
       console.log(`[pet] dock panel=${JSON.stringify(bottomRight.panel)} pet=${JSON.stringify(bottomRight.pet)}`);
