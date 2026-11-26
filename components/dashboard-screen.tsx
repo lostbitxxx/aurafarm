@@ -432,7 +432,6 @@ export function DashboardScreen({
       <SocialPresence />
       <SiteHeader
         displayName={displayName}
-        studyMode={studyMode}
         studySeconds={totalStudySeconds}
         coins={coins}
         streakCount={liveStreakCount}

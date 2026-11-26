@@ -5,12 +5,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { COIN_ICON_SRC, streakPillLabel } from "@/lib/pet-assets";
 import { formatDuration } from "@/lib/study";
-import { STUDY_MODE_ART, modeLabel, type StudyMode } from "@/lib/study-mode";
 import { HeaderMenu } from "./header-menu";
 
 export function SiteHeader({
   displayName,
-  studyMode = null,
   studySeconds,
   coins,
   streakCount,
@@ -22,7 +20,6 @@ export function SiteHeader({
   tutorialTarget = null,
 }: {
   displayName: string;
-  studyMode?: StudyMode | null;
   studySeconds?: number;
   coins?: number;
   streakCount?: number;
@@ -107,17 +104,6 @@ export function SiteHeader({
         <div className="topbar-brand">
           <Link href="/dashboard" className="wordmark">
             Aurafarm
-            {studyMode ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                className="wordmark-mode"
-                src={STUDY_MODE_ART[studyMode]}
-                alt={modeLabel(studyMode)}
-                width={42}
-                height={42}
-                draggable={false}
-              />
-            ) : null}
           </Link>
         </div>
       </div>
