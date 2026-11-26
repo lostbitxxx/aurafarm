@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import {
   BEHAVIOR_QUESTIONS,
   SESSION_MINUTE_COPY,
@@ -25,6 +31,37 @@ const initialState: CustomizeFormState = { error: "", saved: false };
 
 const emptyAnswers: Partial<BehaviorAnswers> = {};
 const FADE_MS = 220;
+
+const CUSTOMIZE_STEPS = [
+  { id: 0, number: 1, label: "Behavior" },
+  { id: 1, number: 2, label: "Study mode" },
+  { id: 2, number: 3, label: "Goals" },
+] as const;
+
+function onRadioGroupKeyDown(
+  event: ReactKeyboardEvent<HTMLDivElement>,
+  options: readonly string[],
+  selected: string | undefined,
+  onSelect: (value: string) => void,
+) {
+  const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
+  if (!keys.includes(event.key) || options.length === 0) return;
+  event.preventDefault();
+  const currentIndex = selected ? options.indexOf(selected) : -1;
+  let nextIndex = currentIndex;
+  if (event.key === "Home") nextIndex = 0;
+  else if (event.key === "End") nextIndex = options.length - 1;
+  else if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+    nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % options.length;
+  } else {
+    nextIndex = currentIndex < 0 ? options.length - 1 : (currentIndex - 1 + options.length) % options.length;
+  }
+  const next = options[nextIndex];
+  if (!next) return;
+  onSelect(next);
+  const target = event.currentTarget.querySelector<HTMLElement>(`[data-radio-value="${next}"]`);
+  target?.focus();
+}
 
 export function CustomizeWizard({
   displayName,
@@ -159,16 +196,10 @@ export function CustomizeWizard({
     <section className={embedded ? "customize-embed" : "customize-card"}>
       {embedded ? null : <p className="eyebrow customize-eyebrow">Welcome, {displayName}</p>}
       <ol className="customize-steps" aria-label="Customization steps">
-        {(
-          [
-            { id: 0, label: "Behavior" },
-            { id: 1, label: "Study mode" },
-            { id: 2, label: "Goals" },
-          ] as const
-        ).map((item) => {
+        {CUSTOMIZE_STEPS.map((item) => {
           const unlocked = item.id === 0 || questionsDone;
           const className =
-            step === item.id ? "is-active" : unlocked && step > item.id ? "is-done" : "";
+            step === item.id ? "is-active" : unlocked && step > item.id ? "is-done" : "is-upcoming";
           return (
             <li key={item.id}>
               <button
@@ -178,7 +209,10 @@ export function CustomizeWizard({
                 aria-current={step === item.id ? "step" : undefined}
                 onClick={() => goToStep(item.id)}
               >
-                {item.label}
+                <span className="customize-step-index" aria-hidden="true">
+                  {item.number}
+                </span>
+                <span className="customize-step-label">{item.label}</span>
               </button>
             </li>
           );
@@ -207,33 +241,58 @@ export function CustomizeWizard({
 
         {step === 0 ? (
           <div className="customize-panel">
-            {BEHAVIOR_QUESTIONS.map((question) => (
-              <fieldset key={question.id} className="customize-question">
-                <legend>{question.prompt}</legend>
-                <p>{question.hint}</p>
-                <div className="customize-options">
-                  {question.options.map((option) => {
-                    const selected = answers[question.id] === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`customize-option${selected ? " is-selected" : ""}`}
-                        onClick={() =>
-                          chooseAnswer(
-                            question.id,
-                            option.value as BehaviorAnswers[typeof question.id],
-                          )
-                        }
-                      >
-                        <strong>{option.label}</strong>
-                        <span>{option.detail}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            ))}
+            {BEHAVIOR_QUESTIONS.map((question) => {
+              const optionValues = question.options.map((option) => option.value);
+              const selectedValue = answers[question.id];
+              return (
+                <fieldset key={question.id} className="customize-question">
+                  <legend id={`customize-${question.id}-legend`}>{question.prompt}</legend>
+                  <p>{question.hint}</p>
+                  <div
+                    className="customize-options"
+                    role="radiogroup"
+                    aria-labelledby={`customize-${question.id}-legend`}
+                    onKeyDown={(event) =>
+                      onRadioGroupKeyDown(event, optionValues, selectedValue, (value) =>
+                        chooseAnswer(
+                          question.id,
+                          value as BehaviorAnswers[typeof question.id],
+                        ),
+                      )
+                    }
+                  >
+                    {question.options.map((option, optionIndex) => {
+                      const selected = selectedValue === option.value;
+                      const tabStop =
+                        selected || (selectedValue === undefined && optionIndex === 0);
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          tabIndex={tabStop ? 0 : -1}
+                          data-radio-value={option.value}
+                          className={`customize-option${selected ? " is-selected" : ""}`}
+                          onClick={() =>
+                            chooseAnswer(
+                              question.id,
+                              option.value as BehaviorAnswers[typeof question.id],
+                            )
+                          }
+                        >
+                          <span className="customize-option-radio" aria-hidden="true" />
+                          <span className="customize-option-copy">
+                            <strong className="customize-option-label">{option.label}</strong>
+                            <span className="customize-option-detail">{option.detail}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              );
+            })}
             <div className="customize-actions">
               <button
                 type="button"
@@ -337,8 +396,20 @@ export function CustomizeWizard({
             </fieldset>
 
             <fieldset className="customize-question">
-              <legend>Daily minutes</legend>
-              <div className="customize-options session-minute-options">
+              <legend id="customize-session-minutes-legend">Daily goal</legend>
+              <div
+                className="customize-options session-minute-options"
+                role="radiogroup"
+                aria-labelledby="customize-session-minutes-legend"
+                onKeyDown={(event) =>
+                  onRadioGroupKeyDown(
+                    event,
+                    SESSION_MINUTE_OPTIONS.map(String),
+                    String(sessionMinutes),
+                    (value) => setSessionMinutes(Number(value)),
+                  )
+                }
+              >
                 {SESSION_MINUTE_OPTIONS.map((minutes) => {
                   const selected = sessionMinutes === minutes;
                   const recommended = minutes === modeSessionMinutes(activeMode);
@@ -346,11 +417,22 @@ export function CustomizeWizard({
                     <button
                       key={minutes}
                       type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={selected ? 0 : -1}
+                      data-radio-value={minutes}
                       className={`customize-option${selected ? " is-selected" : ""}`}
                       onClick={() => setSessionMinutes(minutes)}
                     >
-                      <strong>{minutes} min</strong>
-                      <span>{recommended ? "✦Recommended✦" : SESSION_MINUTE_COPY[minutes]}</span>
+                      <span className="customize-option-radio" aria-hidden="true" />
+                      <span className="customize-option-copy">
+                        <strong className="customize-option-label">{minutes} min</strong>
+                        {recommended ? (
+                          <span className="customize-option-recommended">✦Recommended✦</span>
+                        ) : (
+                          <span className="customize-option-detail">{SESSION_MINUTE_COPY[minutes]}</span>
+                        )}
+                      </span>
                     </button>
                   );
                 })}
@@ -377,7 +459,13 @@ export function CustomizeWizard({
                 Back
               </button>
               <button className="button" type="submit" disabled={pending || fading}>
-                {pending ? "Saving…" : embedded || initialPlan ? "Save plan" : "Farm aura"}
+                {pending ? (
+                  "Saving…"
+                ) : embedded || initialPlan ? (
+                  "Save plan"
+                ) : (
+                  <span className="customize-farm-aura">FARM AURA</span>
+                )}
               </button>
             </div>
           </form>

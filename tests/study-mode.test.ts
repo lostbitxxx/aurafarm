@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   adjustPlan,
+  BEHAVIOR_QUESTIONS,
   customizationMigrationMessage,
   defaultWeekdaysForLifestyle,
   isScheduledStudyDay,
@@ -46,9 +47,10 @@ test("study mode cards keep a fixed recommended label on the suggested mode", ()
   assert.match(wizard, />✦Recommended✦</);
   assert.doesNotMatch(wizard, /activeMode === recommended[\s\S]*customize-mode-recommended/);
   assert.match(css, /\.customize-mode-title/);
-  assert.match(css, /\.customize-mode-recommended/);
+  assert.match(css, /\.customize-mode \.customize-mode-recommended/);
   assert.match(css, /\.customize-mode-recommended[\s\S]*position:\s*static/);
   assert.match(css, /\.customize-mode-recommended[\s\S]*font-style:\s*italic/);
+  assert.match(css, /\.customize-mode-recommended[\s\S]*color:\s*#4a5c32/);
   assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,160}transform:\s*rotate/);
   assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,120}border/);
   assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,120}background:\s*(?!none)/);
@@ -84,7 +86,7 @@ test("behavior answers recommend assassin for short focus and frequent distracti
 test("lifestyle presets pick Mon/Wed/Fri, weekdays, or every day", () => {
   assert.deepEqual(defaultWeekdaysForLifestyle("few"), [1, 3, 5]);
   assert.deepEqual(defaultWeekdaysForLifestyle("steady"), [1, 2, 3, 4, 5]);
-  assert.deepEqual(defaultWeekdaysForLifestyle("daily"), [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(defaultWeekdaysForLifestyle("daily"), [1, 2, 3, 4, 5, 6]);
 });
 
 test("each study mode seeds its own daily minutes and lifestyle weekdays", () => {
@@ -101,8 +103,8 @@ test("each study mode seeds its own daily minutes and lifestyle weekdays", () =>
   assert.equal(knight.studyDaysPerWeek, 3);
 
   assert.equal(lord.sessionMinutes, 90);
-  assert.deepEqual(lord.studyWeekdays, [1, 2, 3, 4, 5, 6, 7]);
-  assert.equal(lord.studyDaysPerWeek, 7);
+  assert.deepEqual(lord.studyWeekdays, [1, 2, 3, 4, 5, 6]);
+  assert.equal(lord.studyDaysPerWeek, 6);
 });
 
 test("editing daily minutes and weekdays keeps the mode block length options", () => {
@@ -161,6 +163,58 @@ test("goals step uses weekday toggles instead of a monthly session field", () =>
   assert.doesNotMatch(wizard, /session-minute-custom/);
   assert.doesNotMatch(wizard, /name="monthlySessions"/);
   assert.doesNotMatch(wizard, /Set this month’s goal/);
+});
+
+test("customize wizard options use radiogroup semantics and visible radio markers", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /role="radiogroup"/);
+  assert.match(wizard, /role="radio"/);
+  assert.match(wizard, /aria-checked=\{selected\}/);
+  assert.match(wizard, /customize-option-radio/);
+  assert.match(wizard, /onRadioGroupKeyDown/);
+  assert.match(wizard, /data-radio-value/);
+  assert.match(css, /\.customize-option-radio/);
+  assert.match(css, /\.customize-option\.is-selected \.customize-option-radio/);
+});
+
+test("customize wizard steps are numbered Behavior, Study mode, Goals", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /customize-step-index/);
+  assert.match(wizard, /customize-step-label/);
+  assert.match(wizard, /number:\s*1,\s*label:\s*"Behavior"/);
+  assert.match(wizard, /number:\s*2,\s*label:\s*"Study mode"/);
+  assert.match(wizard, /number:\s*3,\s*label:\s*"Goals"/);
+  assert.match(wizard, /aria-current=\{step === item\.id \? "step" : undefined\}/);
+  assert.match(css, /\.customize-steps li:not\(:last-child\)::after/);
+  assert.match(css, /\.customize-steps button\.is-active \.customize-step-index/);
+  assert.match(css, /\.customize-steps button\.is-done/);
+  assert.match(css, /\.customize-steps button\.is-upcoming/);
+});
+
+test("behavior questions Q1 and Q2 use the customize-wizard copy tables", () => {
+  const attention = BEHAVIOR_QUESTIONS.find((question) => question.id === "attention");
+  const lifestyle = BEHAVIOR_QUESTIONS.find((question) => question.id === "lifestyle");
+  const distraction = BEHAVIOR_QUESTIONS.find((question) => question.id === "distraction");
+  assert.ok(attention);
+  assert.ok(lifestyle);
+  assert.ok(distraction);
+
+  assert.equal(attention.hint, "Think about a typical day, not your best day.");
+  assert.equal(attention.options[0]?.detail, "Short sessions with frequent breaks.");
+  assert.equal(attention.options[1]?.label, "30–60 minutes");
+  assert.equal(attention.options[1]?.detail, "A moderate session before a break.");
+  assert.equal(attention.options[2]?.label, "Over 60 minutes");
+  assert.equal(attention.options[2]?.detail, "Longer sessions with fewer interruptions.");
+
+  assert.equal(lifestyle.hint, "Count the days you can usually make time for.");
+  assert.equal(lifestyle.options[0]?.detail, "A few dedicated study days each week.");
+  assert.equal(lifestyle.options[1]?.detail, "A consistent routine on most weekdays.");
+  assert.equal(lifestyle.options[2]?.detail, "Study on most days of the week.");
+
+  assert.equal(distraction.hint, "This shapes how strict your study mode should feel.");
+  assert.equal(distraction.options[0]?.detail, "Distracted pretty easily.");
 });
 
 test("saving a study plan needs weekly_study_days from migration 0044", () => {

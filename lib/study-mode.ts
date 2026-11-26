@@ -51,21 +51,21 @@ export const BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
   {
     id: "attention",
     prompt: "How long can you usually focus before you want to switch?",
-    hint: "Your honest attention span — not your ideal one.",
+    hint: "Think about a typical day, not your best day.",
     options: [
-      { value: "short", label: "Under 30 minutes", detail: "Quick bursts fit you best." },
-      { value: "medium", label: "About 30 to 60 minutes", detail: "A normal study block." },
-      { value: "long", label: "Over an hour", detail: "You can settle into deep work." },
+      { value: "short", label: "Under 30 minutes", detail: "Short sessions with frequent breaks." },
+      { value: "medium", label: "30–60 minutes", detail: "A moderate session before a break." },
+      { value: "long", label: "Over 60 minutes", detail: "Longer sessions with fewer interruptions." },
     ],
   },
   {
     id: "lifestyle",
     prompt: "How many days a week can you realistically study?",
-    hint: "Count only days you can protect, not hope for.",
+    hint: "Count the days you can usually make time for.",
     options: [
-      { value: "few", label: "2–3 days", detail: "Sparse but intentional." },
-      { value: "steady", label: "4–5 days", detail: "A steady school week." },
-      { value: "daily", label: "6–7 days", detail: "Almost every day." },
+      { value: "few", label: "2–3 days", detail: "A few dedicated study days each week." },
+      { value: "steady", label: "4–5 days", detail: "A consistent routine on most weekdays." },
+      { value: "daily", label: "6–7 days", detail: "Study on most days of the week." },
     ],
   },
   {
@@ -111,7 +111,8 @@ const MODE_META: Record<
 export const LIFESTYLE_WEEKDAYS: Record<BehaviorAnswers["lifestyle"], readonly Weekday[]> = {
   few: [1, 3, 5],
   steady: [1, 2, 3, 4, 5],
-  daily: [1, 2, 3, 4, 5, 6, 7],
+  // Leave Sunday off by default so Goals clearly shows rest days are toggleable.
+  daily: [1, 2, 3, 4, 5, 6],
 };
 
 export function isStudyMode(value: unknown): value is StudyMode {

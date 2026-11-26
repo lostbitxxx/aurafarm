@@ -5221,57 +5221,112 @@ button.dialog-row {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
   margin: 1.2rem 0 0;
   padding: 0;
 }
 
 .customize-steps li {
+  display: flex;
+  align-items: center;
   margin: 0;
   padding: 0;
 }
 
+.customize-steps li:not(:last-child)::after {
+  content: "→";
+  margin-left: 0.55rem;
+  color: var(--ink-soft);
+  opacity: 0.45;
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
 .customize-steps button {
-  padding: 0.35rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.1rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   font: inherit;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--ink-soft);
   cursor: pointer;
 }
 
+.customize-step-index {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  color: var(--ink-soft);
+  background: #fff;
+}
+
+.customize-step-label {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
 .customize-steps button.is-active {
-  background: var(--slime);
   color: var(--ink);
-  box-shadow: none;
   font-weight: 600;
+  background: transparent !important;
+}
+
+.customize-steps button.is-active .customize-step-index {
+  background: var(--slime);
+  box-shadow: none;
+  color: var(--ink);
 }
 
 .customize-steps button.is-done {
+  color: var(--ink);
+  background: transparent !important;
+}
+
+.customize-steps button.is-done .customize-step-index {
+  background: rgba(20, 33, 26, 0.08);
+  box-shadow: inset 0 0 0 1.5px transparent;
   color: var(--ok);
 }
 
+.customize-steps button.is-upcoming {
+  color: var(--ink-soft);
+  opacity: 0.55;
+  background: transparent !important;
+}
+
 .customize-steps button:hover:not(:disabled) {
-  background: rgba(20, 33, 26, 0.06);
+  color: var(--ink);
+  background: transparent !important;
 }
 
 .customize-steps button.is-active:hover:not(:disabled) {
-  background: var(--slime);
+  color: var(--ink);
+  background: transparent !important;
 }
 
 .customize-steps button:disabled {
-  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .customize-steps button:focus-visible {
   outline: 3px solid var(--amber);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 .customize-panel { display: grid; gap: 1.1rem; margin-top: 1.2rem; }
@@ -5290,6 +5345,11 @@ button.dialog-row {
 
 .customize-question p { margin: 0.35rem 0 0.7rem; }
 
+.customize-question legend + .customize-options,
+.customize-question legend + .weekday-strip {
+  margin-top: 0.85rem;
+}
+
 .customize-options,
 .customize-modes {
   display: grid;
@@ -5306,8 +5366,90 @@ button.dialog-row {
   padding: 0.9rem 1rem;
   background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 2px 0 rgba(20, 33, 26, 0.12);
   cursor: pointer;
+  transform: translateY(0);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 160ms ease;
+}
+
+.customize-option:hover,
+.customize-mode:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.customize-option:active,
+.customize-mode:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 0 0 rgba(20, 33, 26, 0);
+}
+
+.customize-option {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.75rem;
+  row-gap: 0;
+}
+
+.customize-option-radio {
+  margin-top: 0.35rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--ink-soft);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.customize-option.is-selected .customize-option-radio {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  background:
+    radial-gradient(circle at center, var(--ink) 0 38%, transparent 40%),
+    var(--slime);
+}
+
+.customize-option-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.customize-option-label,
+.customize-option-detail {
+  display: block;
+  width: 100%;
+}
+
+.customize-option-label {
+  color: var(--ink);
+}
+
+.customize-option-detail {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.customize-option .customize-option-recommended {
+  display: block;
+  width: 100%;
+  font-family: var(--serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: #4a5c32;
 }
 
 .customize-mode {
@@ -5373,20 +5515,21 @@ button.dialog-row {
   min-width: 0;
 }
 
-.customize-mode-recommended {
+.customize-mode .customize-mode-recommended {
   position: static;
   margin: 0;
-  font-size: 0.72rem;
-  font-weight: 500;
+  font-family: var(--serif);
+  font-size: 0.88rem;
+  font-weight: 600;
   font-style: italic;
   line-height: 1.2;
-  letter-spacing: 0.01em;
-  color: #8b9284;
+  letter-spacing: 0.02em;
+  color: #4a5c32;
   pointer-events: none;
   white-space: nowrap;
 }
 
-.customize-option strong,
+.customize-option-label,
 .customize-mode strong {
   font-family: var(--serif);
   font-size: 1.15rem;
@@ -5396,7 +5539,6 @@ button.dialog-row {
   padding-right: 0;
 }
 
-.customize-option span,
 .customize-mode span,
 .customize-mode em {
   color: var(--ink-soft);
@@ -5406,14 +5548,55 @@ button.dialog-row {
 
 .customize-option.is-selected,
 .customize-mode.is-selected {
-  box-shadow: inset 0 0 0 2px var(--slime-deep);
+  box-shadow:
+    inset 0 0 0 2px var(--slime-deep),
+    0 2px 0 rgba(20, 33, 26, 0.1);
   background: rgba(198, 239, 74, 0.18);
+}
+
+.customize-option.is-selected:active,
+.customize-mode.is-selected:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 2px var(--slime-deep),
+    0 0 0 rgba(20, 33, 26, 0);
+}
+
+.customize-option:focus-visible,
+.customize-mode:focus-visible,
+.weekday-day:focus-visible {
+  outline: 3px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customize-option,
+  .customize-mode {
+    transition: background 160ms ease;
+  }
+
+  .customize-option:active,
+  .customize-mode:active,
+  .customize-option.is-selected:active,
+  .customize-mode.is-selected:active {
+    transform: none;
+  }
 }
 
 .customize-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+}
+
+.customize-farm-aura {
+  font-family: var(--serif);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 .customize-card .button-ghost {
@@ -5450,9 +5633,27 @@ button.dialog-row {
   border: 0;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 2px 0 rgba(20, 33, 26, 0.12);
   color: inherit;
   cursor: pointer;
+  transform: translateY(0);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 160ms ease;
+}
+
+.weekday-day:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.weekday-day:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 0 0 rgba(20, 33, 26, 0);
 }
 
 .weekday-day strong {
@@ -5467,8 +5668,28 @@ button.dialog-row {
 }
 
 .weekday-day.is-selected {
-  box-shadow: inset 0 0 0 2px var(--slime-deep);
+  box-shadow:
+    inset 0 0 0 2px var(--slime-deep),
+    0 2px 0 rgba(20, 33, 26, 0.1);
   background: rgba(198, 239, 74, 0.18);
+}
+
+.weekday-day.is-selected:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 2px var(--slime-deep),
+    0 0 0 rgba(20, 33, 26, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekday-day {
+    transition: background 160ms ease;
+  }
+
+  .weekday-day:active,
+  .weekday-day.is-selected:active {
+    transform: none;
+  }
 }
 
 .session-minute-options {
