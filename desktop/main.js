@@ -86,6 +86,8 @@ const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
 let panelWindow = null;
 let panelOpen = false;
+/** OS window already at open size while CSS expands/collapses the cream shell. */
+let panelFrameOpen = false;
 let petWindow = null;
 let petAnimating = false;
 /** True while the pet is walking to close a distracted tab. */
@@ -122,6 +124,7 @@ let state = {
   sessionClock: "",
   status: "Let's study together!",
   panelOpen: false,
+  panelFrameOpen: false,
   panelPetVisible: false,
   petPose: "idle",
   petFlip: false,
@@ -397,28 +400,30 @@ function prefersReducedMotion() {
 }
 
 function syncPanelOpenState() {
-  if (state.panelOpen === panelOpen) {
+  const frameOpen = Boolean(panelFrameOpen || panelOpen);
+  if (state.panelOpen === panelOpen && state.panelFrameOpen === frameOpen) {
     publish();
     return;
   }
-  state = { ...state, panelOpen };
+  state = { ...state, panelOpen, panelFrameOpen: frameOpen };
   publish();
 }
 
 /** Content fade in/out — keep in sync with `#panel-body` opacity transition. */
 const PANEL_SURFACE_MS = 200;
-/** Native macOS `setBounds(..., true)` window morph duration. */
-const PANEL_BOUNDS_MS = 280;
+/** CSS shell expand/collapse — keep in sync with `#shell` clip-path transition. */
+const PANEL_EXPAND_MS = 240;
+/** One frame so the clipped open frame paints before the expand class flips. */
+const PANEL_EXPAND_FRAME_MS = 20;
 
 /**
- * Resize the cream shell. Prefer native animated bounds on macOS; skip pet moves mid-morph
- * so the sprite does not jump to the destination before the window finishes expanding.
+ * Set the OS window to open or closed bounds in one shot (no native morph).
+ * Visual widen/collapse is CSS inside the already-sized transparent window.
  */
-function applyPanelBounds(mode, { animate = false, movePet = true } = {}) {
+function applyPanelBounds(mode, { movePet = true } = {}) {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  const useAnimate = Boolean(animate) && !prefersReducedMotion();
-  win.setBounds(panelBounds(mode), useAnimate);
+  win.setBounds(panelBounds(mode), false);
   if (movePet) placePet();
 }
 
@@ -451,7 +456,7 @@ function placePanel() {
   if (!win || win.isDestroyed()) return;
   // Native + CSS shadows stacked a ghost frame around the transparent pad.
   win.setHasShadow(false);
-  win.setBounds(panelBounds(panelOpen), true);
+  win.setBounds(panelBounds(panelOpen || panelFrameOpen), false);
 }
 
 function setDockEdgeState(edge) {
@@ -471,11 +476,15 @@ function setPanelOpen(open) {
   const seq = ++panelToggleSeq;
   const reduced = prefersReducedMotion();
   if (next) {
-    // One smooth widen/grow (sides widen; top grows down). Fade content after the shell settles.
+    // Instant open-sized window, then CSS expands the cream shell from the rail.
     void (async () => {
-      applyPanelBounds("open", { animate: !reduced, movePet: false });
+      applyPanelBounds("open", { movePet: false });
+      panelFrameOpen = true;
+      panelOpen = false;
+      placePet();
+      syncPanelOpenState();
       if (!reduced) {
-        await waitMs(PANEL_BOUNDS_MS);
+        await waitMs(PANEL_EXPAND_FRAME_MS);
         if (seq !== panelToggleSeq) return;
       }
       panelOpen = true;
@@ -484,21 +493,20 @@ function setPanelOpen(open) {
     })();
     return;
   }
-  // Fade content out, then smoothly collapse the shell; pet returns beside the rail.
+  // CSS collapses to the rail, then one closed setBounds.
   panelOpen = false;
+  panelFrameOpen = true;
   placePet();
   syncPanelOpenState();
   void (async () => {
     if (!reduced) {
-      await waitMs(PANEL_SURFACE_MS);
+      await waitMs(Math.max(PANEL_SURFACE_MS, PANEL_EXPAND_MS));
       if (seq !== panelToggleSeq) return;
     }
-    applyPanelBounds("closed", { animate: !reduced, movePet: false });
-    if (!reduced) {
-      await waitMs(PANEL_BOUNDS_MS);
-      if (seq !== panelToggleSeq) return;
-    }
+    applyPanelBounds("closed", { movePet: false });
+    panelFrameOpen = false;
     placePet();
+    syncPanelOpenState();
   })();
 }
 

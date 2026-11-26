@@ -32,7 +32,7 @@
         background: transparent;
         color: var(--shell-ink);
       }
-      /* Closed: only the rail capsule shows. Open: cream shell wraps the panel body. */
+      /* Closed window: only the rail capsule. Open frame: cream shell clipped, then expands. */
       #shell {
         position: relative;
         display: flex;
@@ -46,14 +46,36 @@
         background: transparent;
         box-shadow: none;
         color: var(--shell-ink);
+        transition: clip-path 240ms cubic-bezier(0.22, 1, 0.36, 1);
       }
-      body.is-open {
+      body.is-frame-open {
         padding: 3px;
       }
-      body.is-open #shell {
+      body.is-frame-open #shell {
         border: 1.5px solid var(--shell-border);
         border-radius: var(--shell-radius);
         background: var(--shell-cream);
+      }
+      /* Rail strip while the OS window is already open-sized (before/after content open). */
+      body.edge-right.is-frame-open:not(.is-open) #shell {
+        clip-path: inset(0 0 0 calc(100% - 25px));
+      }
+      body.edge-left.is-frame-open:not(.is-open) #shell {
+        clip-path: inset(0 calc(100% - 25px) 0 0);
+      }
+      body.edge-top.is-frame-open:not(.is-open) #shell {
+        clip-path: inset(0 0 calc(100% - 25px) 0);
+      }
+      body.edge-bottom.is-frame-open:not(.is-open) #shell {
+        clip-path: inset(calc(100% - 25px) 0 0 0);
+      }
+      body.is-frame-open.is-open #shell {
+        clip-path: inset(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #shell {
+          transition: none;
+        }
       }
       body.edge-left #shell,
       body.edge-right #shell {
@@ -190,15 +212,15 @@
         box-shadow: none;
         pointer-events: none;
       }
-      body.is-open.edge-left #session-capsule,
-      body.is-open.edge-right #session-capsule {
+      body.is-frame-open.edge-left #session-capsule,
+      body.is-frame-open.edge-right #session-capsule {
         top: 3px;
         bottom: 3px;
         left: 2px;
         right: 2px;
       }
-      body.is-open.edge-top #session-capsule,
-      body.is-open.edge-bottom #session-capsule {
+      body.is-frame-open.edge-top #session-capsule,
+      body.is-frame-open.edge-bottom #session-capsule {
         left: 3px;
         right: 3px;
         top: 2px;

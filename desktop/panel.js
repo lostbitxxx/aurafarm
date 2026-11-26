@@ -49,12 +49,14 @@ function applyDockEdge(edge) {
   const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
   dockEdge = next;
   for (const name of EDGE_CLASSES) document.body.classList.toggle(name, name === `edge-${next}`);
-  applyPanelOpen(panelIsOpen);
+  applyPanelOpen(panelIsOpen, document.body.classList.contains("is-frame-open"));
 }
 
-function applyPanelOpen(open) {
+function applyPanelOpen(open, frameOpen = open) {
   panelIsOpen = Boolean(open);
+  const frame = Boolean(frameOpen) || panelIsOpen;
   document.body.classList.toggle("is-open", panelIsOpen);
+  document.body.classList.toggle("is-frame-open", frame);
   toggle.setAttribute("aria-expanded", panelIsOpen ? "true" : "false");
   toggle.setAttribute("aria-label", panelIsOpen ? "Close Aurafarm" : "Open Aurafarm");
   if (!panelIsOpen) clearLeaveClose();
@@ -280,7 +282,12 @@ applyDockEdge("right");
 
 window.pet.onState((state) => {
   if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
-  if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
+  if (typeof state.panelOpen === "boolean" || typeof state.panelFrameOpen === "boolean") {
+    applyPanelOpen(
+      typeof state.panelOpen === "boolean" ? state.panelOpen : panelIsOpen,
+      typeof state.panelFrameOpen === "boolean" ? state.panelFrameOpen : state.panelOpen,
+    );
+  }
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;
