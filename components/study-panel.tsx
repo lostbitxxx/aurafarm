@@ -33,6 +33,7 @@ import {
   type StudyScoreCard,
 } from "@/lib/study";
 import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
+import type { RecentStudyDay, StreakCalendarTone } from "@/lib/streak-calendar";
 import { StudyClock } from "./study-clock";
 import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { LivingRoom } from "./living-room";
@@ -85,6 +86,10 @@ export function StudyPanel({
   onOpenAchievements,
   onOpenCollection,
   onOpenSocial,
+  farmerName,
+  streakCount = 0,
+  streakTone = "study-pending",
+  recentStudyDays = [],
   onEquipped,
   onColorApplied,
   onHatApplied,
@@ -92,8 +97,8 @@ export function StudyPanel({
   onPetRenamed,
   onShowPetNamesChange,
   deskRefreshing = false,
-  tutorialCurrent = false,
-  tutorialTarget = null,
+  tutorialActive = false,
+  tutorialTargets = null,
   onTutorialStart,
   onRegisterDevFinish,
 }: {
@@ -135,6 +140,10 @@ export function StudyPanel({
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
   onOpenSocial?: () => void;
+  farmerName?: string;
+  streakCount?: number;
+  streakTone?: StreakCalendarTone;
+  recentStudyDays?: readonly RecentStudyDay[];
   onEquipped?: (petId: string) => void;
   onColorApplied: (petId: string, colorId: string) => void;
   onHatApplied: (petId: string, hatId: string | null) => void;
@@ -142,8 +151,8 @@ export function StudyPanel({
   onPetRenamed?: (petId: string, name: string) => void;
   onShowPetNamesChange?: (enabled: boolean) => void;
   deskRefreshing?: boolean;
-  tutorialCurrent?: boolean;
-  tutorialTarget?: string | null;
+  tutorialActive?: boolean;
+  tutorialTargets?: readonly string[] | null;
   onTutorialStart?: () => boolean;
   onRegisterDevFinish?: (api: DevFinishApi | null) => void;
 }) {
@@ -471,10 +480,15 @@ export function StudyPanel({
           onOpenAchievements={onOpenAchievements}
           onOpenCollection={onOpenCollection}
           onOpenSocial={onOpenSocial}
-          tutorialTarget={tutorialTarget}
+          tutorialActive={tutorialActive}
+          tutorialTargets={tutorialTargets}
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}
           dailyGoalMinutes={dailyGoalMinutes}
           isStudyDay={isStudyDay}
+          farmerName={farmerName}
+          streakCount={streakCount}
+          streakTone={streakTone}
+          recentStudyDays={recentStudyDays}
           headTitle={shownSession ? "Studying with you" : null}
           headerCenter={
             shownSession && !checkingSession ? (
@@ -520,7 +534,7 @@ export function StudyPanel({
                     type="button"
                     className="button button-start"
                     data-tutorial="start"
-                    data-tutorial-current={tutorialCurrent ? "true" : undefined}
+                    data-tutorial-current={tutorialTargets?.includes("start") ? "true" : undefined}
                     disabled={pending}
                     onClick={() => {
                       if (onTutorialStart?.()) return;

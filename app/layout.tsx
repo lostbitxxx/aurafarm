@@ -4,6 +4,7 @@ import "@fontsource/fraunces/latin-700.css";
 import "@fontsource/outfit/latin-400.css";
 import "@fontsource/outfit/latin-500.css";
 import "@fontsource/outfit/latin-600.css";
+import "@fontsource/bungee/latin-400.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

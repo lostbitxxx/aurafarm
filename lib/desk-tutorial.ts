@@ -1,71 +1,51 @@
 export const DESK_TUTORIAL_STEPS = [
   {
-    id: "shop",
-    target: "shop",
-    kind: "dialog",
-    section: "inventory",
-    title: "Shelter",
-    body: "Click the pet shelter to open your pets and unlock the next one.",
-    openBody: "Unlock the next pet here, then equip one for the desk.",
+    id: "welcome",
+    title: "Welcome",
+    body: "Welcome to Aurafarm! This is your little living room, shared with your pets.",
+    targets: ["living-room"],
   },
   {
-    id: "collection",
-    target: "collection",
-    kind: "dialog",
-    section: "collection",
-    title: "Collection",
-    body: "Click the clothes drawer on the rack to open your Collection.",
-    openBody: "Browse and wear colors, hats, and clothes you unlock here.",
+    id: "pet",
+    title: "Pet status",
+    body: "Tap your pet to check its status and level — this is your desk buddy.",
+    targets: ["pet"],
   },
   {
-    id: "pets",
-    target: "shop",
-    kind: "dialog",
-    section: "inventory",
-    title: "Pets",
-    body: "Click the pet shelter to view, equip, and customize your pets.",
-    openBody: "See your pets, equip one for the desk, and open pet details here.",
+    id: "rewards",
+    title: "Study rewards",
+    body: "Study to earn XP for your pets and coins for the room.",
+    targets: ["coins", "pet-level"],
   },
   {
-    id: "achievements",
-    target: "achievements",
-    kind: "dialog",
-    section: "achievements",
-    title: "Achievements",
-    body: "Click the trophy on the rack to see your Achievements.",
-    openBody: "Track milestones and badges you've earned here.",
+    id: "daily",
+    title: "Daily goal",
+    body: "Hit your daily goal on the cylinder — the calendar keeps your streak.",
+    targets: ["daily-goal", "streak-calendar"],
   },
   {
-    id: "song",
-    target: "song",
-    kind: "dialog",
-    section: "song",
-    title: "Song",
-    body: "Click the gramophone on the rack to play Song.",
-    openBody: "Play unlocked study songs and control volume here.",
+    id: "adopt",
+    title: "Adopt pets",
+    body: "Level up to unlock more pets, then adopt and manage them here.",
+    targets: ["shop"],
   },
   {
-    id: "social",
-    target: "social",
-    kind: "dialog",
-    section: "social",
-    title: "Blackboard",
-    body: "Click the blackboard to open friends, crews, and the leaderboard.",
-    openBody: "Manage friends, farm crews, and the leaderboard here.",
+    id: "customize",
+    title: "Customize",
+    body: "Tap Edit Furniture to rearrange the room, then shop for new looks.",
+    targets: ["edit-furniture"],
+  },
+  {
+    id: "explore",
+    title: "Explore",
+    body: "There’s more to discover — rack, blackboard, and more as you progress.",
+    targets: ["rack", "social"],
   },
   {
     id: "start",
-    target: "start",
-    kind: "start",
-    title: "Start studying",
-    body: "Click Start studying to begin a focus session.",
-  },
-  {
-    id: "replay",
-    target: "settings",
-    kind: "settings",
-    title: "Replay later",
-    body: "Click Settings anytime, then choose Replay tutorial to see this guide again.",
+    title: "Let’s start studying!",
+    body: "Click Start studying to begin when you’re ready.",
+    targets: ["start"],
   },
 ] as const;
 
@@ -80,11 +60,6 @@ export function progressLabel(stepIndex: number, total = DESK_TUTORIAL_STEPS.len
 
 export function tutorialStorageKey(userId: string) {
   return `aurafarm.tutorial.${userId}`;
-}
-
-export function sectionMatchesStep(step: DeskTutorialStep, section: string) {
-  if (step.kind === "dialog") return step.section === section;
-  return false;
 }
 
 export function parseTutorialRecord(raw: string | null): TutorialRecord | null {

@@ -451,8 +451,10 @@ test("daily streak migration advances on full finish with a streak XP boost", ()
   assert.doesNotMatch(hkTouch, /current_date/);
 
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
-  assert.match(header, /streakPillLabel/);
+  assert.doesNotMatch(header, /streakPillLabel/);
+  assert.doesNotMatch(header, /streak-pill/);
   assert.doesNotMatch(header, /Streak coming soon/);
+  assert.match(header, /Total pet level:/);
 });
 
 test("the desk title is the equipped pet rather than the first row", () => {

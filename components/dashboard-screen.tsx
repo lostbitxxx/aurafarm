@@ -28,14 +28,22 @@ import { parseSeenRewards, readSeenSnapshot, readServerSeenSnapshot, subscribeSe
 import {
   displayStreakCount,
   farmerLocalDay,
+  focusedSeconds,
   subscribeFarmerLocalDay,
   experienceProgress,
+  studySecondsOnLocalDay,
   type ActiveStudySession,
   type RecordedStudySession,
   type StudyScoreCard,
 } from "@/lib/study";
 import { isScheduledStudyDay, type BehaviorAnswers, type StudyMode, type Weekday } from "@/lib/study-mode";
 import { DESK_REFRESH_CHANNEL, DESK_REFRESH_TYPE } from "@/lib/desk-refresh";
+import {
+  goalMetToday,
+  recentStudyDays,
+  streakCalendarTone,
+  sumPetLevels,
+} from "@/lib/streak-calendar";
 
 function roomStorageKey(userId: string) {
   return `aurafarm.room.${userId}`;
@@ -63,7 +71,7 @@ function writeRoomPlacement(userId: string, ids: Set<string>) {
 export function DashboardScreen({
   userId,
   displayName,
-  totalStudySeconds,
+  totalStudySeconds: _totalStudySeconds,
   coins: initialCoins = 0,
   streakCount,
   streakLocalDate,
@@ -196,6 +204,28 @@ export function DashboardScreen({
   const studyDayToday = isScheduledStudyDay(weeklyStudyDays, todayLocal);
   const liveStreakCount = displayStreakCount(streakCount, streakLocalDate, todayLocal);
   const streakQualifiedToday = streakLocalDate === todayLocal && liveStreakCount > 0;
+  const petTotalLevel = useMemo(
+    () => sumPetLevels(localPets.map((pet) => experienceProgress(pet.xp).level)),
+    [localPets],
+  );
+  const recentDays = useMemo(
+    () => recentStudyDays(recordedSessions, todayLocal, 7),
+    [recordedSessions, todayLocal],
+  );
+  const submittedTodaySeconds = studySecondsOnLocalDay(recordedSessions, todayLocal);
+  const liveSessionSeconds =
+    activeSession != null
+      ? focusedSeconds(
+          new Date(activeSession.startedAt).getTime(),
+          Date.now(),
+          activeSession.plannedSeconds,
+        )
+      : 0;
+  const studiedMinutesToday = Math.floor((submittedTodaySeconds + liveSessionSeconds) / 60);
+  const calendarTone = streakCalendarTone(
+    studyDayToday,
+    goalMetToday(studiedMinutesToday, preferredSessionMinutes),
+  );
   const petsSignature = pets
     .map(
       (pet) =>
@@ -431,10 +461,8 @@ export function DashboardScreen({
     <div className="desk-page dashboard-desk">
       <SocialPresence />
       <SiteHeader
-        displayName={displayName}
-        studySeconds={totalStudySeconds}
+        petTotalLevel={petTotalLevel}
         coins={coins}
-        streakCount={liveStreakCount}
         onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
@@ -442,8 +470,7 @@ export function DashboardScreen({
           setDialog(null);
           tour.replay();
         }}
-        onTutorialSettings={tour.onSettings}
-        tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
+        tutorialTargets={tour.active ? tour.targets : null}
       />
       <DeskSong
         userId={userId}
@@ -489,14 +516,18 @@ export function DashboardScreen({
         onOpenAchievements={() => showSection("achievements")}
         onOpenCollection={() => showSection("collection")}
         onOpenSocial={() => showSection("social")}
+        farmerName={displayName}
+        streakCount={liveStreakCount}
+        streakTone={calendarTone}
+        recentStudyDays={recentDays}
         onEquipped={onEquipped}
         onColorApplied={onColorApplied}
         onHatApplied={onHatApplied}
         onClothesApplied={onClothesApplied}
         onPetRenamed={onPetRenamed}
         onShowPetNamesChange={setShowPetNames}
-        tutorialCurrent={tour.step?.target === "start" && !tour.covered}
-        tutorialTarget={tour.covered ? null : (tour.step?.target ?? null)}
+        tutorialActive={tour.active}
+        tutorialTargets={tour.active ? tour.targets : null}
         onTutorialStart={tour.onStart}
         onRegisterDevFinish={onRegisterDevFinish}
       />
@@ -619,10 +650,11 @@ export function DashboardScreen({
           stepIndex={tour.stepIndex}
           title={tour.title}
           body={tour.body}
-          ringTarget={tour.ringTarget}
-          holeTarget={tour.holeTarget}
-          includeMenu={tour.includeMenu}
+          targets={tour.targets}
+          isReplay={tour.isReplay}
           onSkip={tour.onSkip}
+          onBack={tour.onBack}
+          onNext={tour.onNext}
           onScrim={tour.onScrim}
           onMissingTarget={tour.onMissingTarget}
         />

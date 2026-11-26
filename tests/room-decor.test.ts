@@ -201,6 +201,13 @@ test("blackboard stays in the wall band and floor pieces keep their feet on the 
   const dropped = clampMoverOffset("blackboard", board, 0, 80);
   assert.ok(boardTop0 + dropped.dy + boardHeight <= floorSeam + 0.001);
 
+  const calendar = moverBounds("calendar");
+  assert.equal(calendar.height, board.height);
+  const calendarHeight = pxToTopPercent(calendar.height);
+  const calendarTop0 = pxToTopPercent(calendar.y);
+  const droppedCalendar = clampMoverOffset("calendar", calendar, 0, 80);
+  assert.ok(calendarTop0 + droppedCalendar.dy + calendarHeight <= floorSeam + 0.001);
+
   const sofa = moverBounds("sofa");
   const sofaHeight = pxToTopPercent(sofa.height);
   const sofaTop0 = pxToTopPercent(sofa.y);

@@ -14,6 +14,7 @@ import {
   ROOM_VIEW_HEIGHT,
   ROOM_VIEW_WIDTH,
   SOFA_BOUNDS,
+  STREAK_CALENDAR_BOUNDS,
   WORMHOLE_BOUNDS,
   pxToLeftPercent,
   pxToTopPercent,
@@ -50,6 +51,7 @@ export type RoomDecorCategoryId =
   | "carpet"
   | "lamp"
   | "board"
+  | "calendar"
   | "music"
   | "trophy"
   | "shelf"
@@ -196,6 +198,17 @@ export const ROOM_DECOR_CATEGORIES: readonly RoomDecorCategory[] = [
     skins: [{ id: "base", name: "Blackboard", description: "Opens Social. It stays on the wall." }],
   },
   {
+    id: "calendar",
+    label: "Calendar",
+    folder: "calendar",
+    optional: false,
+    mover: "calendar",
+    crop: STREAK_CALENDAR_BOUNDS,
+    /** Hidden until alternate calendar skins exist. */
+    sidebar: false,
+    skins: [{ id: "base", name: "Streak calendar", description: "Shows your study streak. It stays on the wall." }],
+  },
+  {
     id: "music",
     label: "Music",
     folder: "music",
@@ -311,6 +324,7 @@ const PIECE_CATEGORY: Partial<Record<RoomFurnitureId, RoomDecorCategoryId>> = {
   lamp: "lamp",
   plant: "plant",
   blackboard: "board",
+  calendar: "calendar",
 };
 
 const MOVER_IDS: readonly DecorMoverId[] = [
@@ -321,6 +335,7 @@ const MOVER_IDS: readonly DecorMoverId[] = [
   "loveseat",
   "plant",
   "blackboard",
+  "calendar",
   "storage-rack",
   "bookshelf",
   "shelter",
@@ -465,6 +480,7 @@ function zeroOffsets(): Record<DecorMoverId, RoomDecorOffset> {
     loveseat: { dx: 0, dy: 0 },
     plant: { dx: 0, dy: 0 },
     blackboard: { dx: 0, dy: 0 },
+    calendar: { dx: 0, dy: 0 },
     "storage-rack": { dx: 0, dy: 0 },
     bookshelf: { dx: 0, dy: 0 },
     shelter: { dx: 0, dy: 0 },
@@ -539,7 +555,7 @@ export function clampRoomOffset(bounds: RoomRectPx, dx: number, dy: number): Roo
 
 /**
  * In-frame clamp plus wall/floor bands:
- * - blackboard: whole piece stays in the wall band (bottom ≤ visual floor seam).
+ * - blackboard / calendar: whole piece stays in the wall band (bottom ≤ visual floor seam).
  * - carpet: whole piece stays strictly in the floor area (top ≥ visual floor seam).
  * - other furniture: feet/bottom stay on/below the lowered floor placement line; top may lean onto the wall.
  */
@@ -555,7 +571,7 @@ export function clampMoverOffset(
   let top = top0 + framed.dy;
   const wallFloorSeam = roomFloorSeamTopPercent();
   const floorPlacement = roomFloorPlacementTopPercent();
-  if (id === "blackboard") {
+  if (id === "blackboard" || id === "calendar") {
     const maxTop = wallFloorSeam - height;
     const minTop = WALL_CEILING_MARGIN_PCT;
     top = Math.min(maxTop, Math.max(minTop, top));

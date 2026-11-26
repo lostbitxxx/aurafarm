@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
 import {
   BLACKBOARD_DEPTH_TOP,
   ROOM_CARPET_SRC,
@@ -16,6 +16,8 @@ import {
   ROOM_WALL_HOTSPOTS,
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
+  CALENDAR_DEPTH_TOP,
+  STREAK_CALENDAR_BOUNDS,
   WORMHOLE_BOUNDS,
   WORMHOLE_SRC,
   depthTopFromBounds,
@@ -69,6 +71,7 @@ import {
   type WanderSpot,
 } from "@/lib/living-room-wander";
 import { PIXEL_HEART_SRC } from "@/lib/pet-assets";
+import type { RecentStudyDay, StreakCalendarTone } from "@/lib/streak-calendar";
 import {
   dropOnSeat,
   liftSeat,
@@ -81,12 +84,22 @@ import {
   type SeatMap,
 } from "@/lib/room-seats";
 import { petDisplayName, type PetCard } from "@/lib/pets";
-import { experienceProgress } from "@/lib/study";
+import { experienceProgress, formatDuration } from "@/lib/study";
 import { DailyProgressCylinder } from "./daily-progress-cylinder";
 import { RoomDecorateDialog } from "./room-decorate-dialog";
 import { PixelPetArt, usePetting, useWalkPose } from "./pixel-pet";
 
 type Mode = "idle" | "walking" | "petting" | "dragging";
+
+function formatStreakDayLabel(day: string) {
+  const year = Number(day.slice(0, 4));
+  const month = Number(day.slice(5, 7));
+  const dayOfMonth = Number(day.slice(8, 10));
+  if (!year || !month || !dayOfMonth) return day;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(
+    new Date(Date.UTC(year, month - 1, dayOfMonth)),
+  );
+}
 
 export type RoomPetLabelPose = {
   left: number;
@@ -108,6 +121,8 @@ function RoomPet({
   onTrySit,
   onLiftSeat,
   onLabelPose,
+  tutorialId,
+  tutorialCurrentAttr,
 }: {
   pet: PetCard;
   paused: boolean;
@@ -119,6 +134,8 @@ function RoomPet({
   onTrySit: (spot: WanderSpot) => WanderSpot | null;
   onLiftSeat: () => void;
   onLabelPose?: (petId: string, pose: RoomPetLabelPose | null) => void;
+  tutorialId?: string;
+  tutorialCurrentAttr?: string;
 }) {
   const displayName = petDisplayName(pet);
   const progress = experienceProgress(pet.xp);
@@ -479,7 +496,7 @@ function RoomPet({
       sitting,
       displayName,
       level: progress.level,
-      showLevel: !showPetNames,
+      showLevel: true,
     });
   }, [pet.id, position.left, position.top, sitting, displayName, progress.level, showPetNames]);
 
@@ -505,6 +522,8 @@ function RoomPet({
               : roomDepthZ(petStandingTop(position.top, sitting ? "feet" : "floor")),
       }}
       data-mode={sitting ? "sitting" : mode}
+      data-tutorial={tutorialId}
+      data-tutorial-current={tutorialCurrentAttr}
     >
       <button
         type="button"
@@ -618,10 +637,15 @@ export function LivingRoom({
   onOpenAchievements,
   onOpenCollection,
   onOpenSocial,
-  tutorialTarget = null,
+  tutorialActive = false,
+  tutorialTargets = null,
   dailyStudiedMinutes = null,
   dailyGoalMinutes = null,
   isStudyDay = true,
+  streakCount = 0,
+  streakTone = "study-pending",
+  recentStudyDays = [],
+  farmerName,
   headerAside = null,
   headerCenter = null,
   headTitle = null,
@@ -641,10 +665,16 @@ export function LivingRoom({
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
   onOpenSocial?: () => void;
-  tutorialTarget?: string | null;
+  tutorialActive?: boolean;
+  tutorialTargets?: readonly string[] | null;
   dailyStudiedMinutes?: number | null;
   dailyGoalMinutes?: number | null;
   isStudyDay?: boolean;
+  streakCount?: number;
+  streakTone?: StreakCalendarTone;
+  recentStudyDays?: readonly RecentStudyDay[];
+  /** Farmer display name for the idle room greeting. */
+  farmerName?: string;
   headerAside?: ReactNode;
   /** Centered header slot (study countdown while a session is active). */
   headerCenter?: ReactNode;
@@ -652,15 +682,30 @@ export function LivingRoom({
   headTitle?: string | null;
   headSubtitle?: string | null;
 }) {
-  const roomTitle = headTitle ?? "Ready for a little focus?";
+  const welcomeName = farmerName?.trim() || "farmer";
+  const roomTitle =
+    headTitle ?? `Welcome, ${welcomeName}! Let's start AuraFarming`;
   const studyingHead = Boolean(headTitle);
-  const roomSubtitle = studyingHead ? headSubtitle : (headSubtitle ?? "Pick a length and a tracker, then Farm Aura.");
+  const roomSubtitle = studyingHead ? headSubtitle : null;
   const placed = useMemo(() => pets.filter((pet) => placedIds.has(pet.id)), [pets, placedIds]);
+  const spotlightPetId = useMemo(() => {
+    const equipped = placed.find((pet) => pet.is_desktop_active);
+    return equipped?.id ?? placed[0]?.id ?? null;
+  }, [placed]);
+  const tutorialCurrent = (target: string) =>
+    tutorialTargets?.includes(target) ? "true" : undefined;
+  const streakSafe =
+    typeof streakCount === "number" && Number.isFinite(streakCount)
+      ? Math.max(0, Math.floor(streakCount))
+      : 0;
   const [savedDecor, setSavedDecor] = useState<RoomDecor>(() => defaultRoomDecor());
   const [draftDecor, setDraftDecor] = useState<RoomDecor | null>(null);
   const [decorHistory, setDecorHistory] = useState<DecorHistory>(() => emptyDecorHistory());
   const [petLabelPoses, setPetLabelPoses] = useState<Record<string, RoomPetLabelPose>>({});
   const [decorOpen, setDecorOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarId = useId();
+  const calendarRef = useRef<HTMLDivElement>(null);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
   const [ownedSkinKeys, setOwnedSkinKeys] = useState(() =>
@@ -677,6 +722,28 @@ export function LivingRoom({
   useEffect(() => {
     setLiveCoins(coins);
   }, [coins]);
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setCalendarOpen(false);
+    }
+
+    function onPointer(event: PointerEvent) {
+      const target = event.target as Node;
+      if (calendarRef.current?.contains(target)) return;
+      setCalendarOpen(false);
+    }
+
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [calendarOpen]);
 
   if (ownedRoomSkinSignature !== ownedSkinSnap) {
     setOwnedSkinSnap(ownedRoomSkinSignature);
@@ -703,6 +770,22 @@ export function LivingRoom({
   const blackboardArtZ = roomDepthZ(BLACKBOARD_DEPTH_TOP);
   const blackboardPadZ = Math.max(0, blackboardArtZ - 1);
   const blackboardZ = blackboardArtZ + 1;
+  const calendarArtZ = roomDepthZ(CALENDAR_DEPTH_TOP);
+  const calendarPadZ = Math.max(0, calendarArtZ - 1);
+  // Above wall furniture sheets so the streak digit stays visible on the calendar face.
+  const calendarZ = ROOM_LABEL_Z;
+  const calendarBox = coverBox(
+    STREAK_CALENDAR_BOUNDS,
+    roomSize.width,
+    roomSize.height,
+    decor.offsets.calendar,
+  );
+  const calendarStyle = {
+    left: calendarBox.left,
+    top: calendarBox.top,
+    width: calendarBox.width,
+    height: calendarBox.height,
+  };
   const wormholeZ = roomDepthZ(depthTopFromBounds(WORMHOLE_BOUNDS));
   const wormholeShift = offsetTransform(decor, "shelter");
   const wormholeBox = coverBox(
@@ -901,6 +984,8 @@ export function LivingRoom({
           ref={roomRef}
           className={editing ? "living-room is-editing" : "living-room"}
           data-wall-skin={decor.skins.wall}
+          data-tutorial="living-room"
+          data-tutorial-current={tutorialCurrent("living-room")}
         >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -941,8 +1026,10 @@ export function LivingRoom({
           alt=""
           draggable={false}
         />
-        {ROOM_FURNITURE.map((item) =>
-          isFurniturePlaced(decor, item.id) ? (
+        {ROOM_FURNITURE.map((item) => {
+          // Calendar is a tight asset positioned via coverBox (same box as hit/handle).
+          if (item.id === "calendar") return null;
+          return isFurniturePlaced(decor, item.id) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={item.id}
@@ -959,9 +1046,52 @@ export function LivingRoom({
                 transform: offsetTransform(decor, item.id),
               }}
             />
-          ) : null,
-        )}
+          ) : null;
+        })}
+        {isFurniturePlaced(decor, "calendar") ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            className="room-calendar-art"
+            src={roomFurnitureSrc(
+              ROOM_FURNITURE.find((item) => item.id === "calendar")!,
+              decor,
+            )}
+            alt=""
+            draggable={false}
+            data-furniture="calendar"
+            data-streak-tone={streakTone}
+            style={{ ...calendarStyle, zIndex: calendarArtZ }}
+          />
+        ) : null}
         {/* Prop hotspots: glow under furniture art, hit target + label on top. */}
+        {!editing
+          ? (() => {
+              const rackPiece = ROOM_FURNITURE.find((item) => item.id === "storage-rack");
+              if (!rackPiece || !isFurniturePlaced(decor, "storage-rack")) return null;
+              const box = coverBox(
+                rackPiece.bounds,
+                roomSize.width,
+                roomSize.height,
+                decor.offsets["storage-rack"],
+              );
+              return (
+                <span
+                  className="room-prop-hotspot-pad"
+                  aria-hidden="true"
+                  data-tutorial="rack"
+                  data-tutorial-current={tutorialCurrent("rack")}
+                  style={{
+                    left: box.left,
+                    top: box.top,
+                    width: box.width,
+                    height: box.height,
+                    zIndex: rackPadZ,
+                    pointerEvents: "none",
+                  }}
+                />
+              );
+            })()
+          : null}
         {editing
           ? null
           : ROOM_RACK_HOTSPOTS.flatMap((spot) => {
@@ -994,7 +1124,7 @@ export function LivingRoom({
                   className="room-prop-hotspot"
                   aria-label={spot.label}
                   data-tutorial={spot.id}
-                  data-tutorial-current={tutorialTarget === spot.id ? "true" : undefined}
+                  data-tutorial-current={tutorialCurrent(spot.id)}
                   data-prop-hotspot={spot.id}
                   data-rack-hotspot={spot.id}
                   style={{ ...boxStyle, zIndex: rackZ }}
@@ -1033,7 +1163,7 @@ export function LivingRoom({
                   className="room-prop-hotspot"
                   aria-label={spot.label}
                   data-tutorial={spot.tutorialTarget}
-                  data-tutorial-current={tutorialTarget === spot.tutorialTarget ? "true" : undefined}
+                  data-tutorial-current={tutorialCurrent(spot.tutorialTarget)}
                   data-prop-hotspot={spot.id}
                   data-wall-hotspot={spot.id}
                   style={{ ...boxStyle, zIndex: blackboardZ }}
@@ -1044,6 +1174,57 @@ export function LivingRoom({
               ];
             })
           : null}
+        {!editing && isFurniturePlaced(decor, "calendar") ? (
+          <>
+            <span
+              className="room-prop-hotspot-pad"
+              aria-hidden="true"
+              data-prop-hotspot="calendar"
+              style={{ ...calendarStyle, zIndex: calendarPadZ }}
+            />
+            <div
+              ref={calendarRef}
+              className={calendarOpen ? "room-streak-calendar is-open" : "room-streak-calendar"}
+              style={{ ...calendarStyle, zIndex: calendarZ }}
+            >
+              <span className="streak-calendar-count" aria-hidden="true">
+                {streakSafe}
+              </span>
+              <button
+                type="button"
+                className="room-prop-hotspot room-streak-calendar-hit"
+                aria-expanded={calendarOpen}
+                aria-controls={calendarId}
+                aria-label={`Streak ${streakSafe} days. Show last 7 days.`}
+                data-tutorial="streak-calendar"
+                data-tutorial-current={tutorialCurrent("streak-calendar")}
+                data-prop-hotspot="calendar"
+                data-furniture="calendar"
+                onClick={() => setCalendarOpen((value) => !value)}
+              >
+                <span className="room-prop-hotspot-label">Streak</span>
+              </button>
+              {calendarOpen ? (
+                <div
+                  id={calendarId}
+                  className="streak-calendar-popover room-streak-calendar-popover"
+                  role="dialog"
+                  aria-label="Recent study"
+                >
+                  <p className="streak-calendar-popover-title">Last 7 days</p>
+                  <ul className="streak-calendar-days">
+                    {recentStudyDays.map((row) => (
+                      <li key={row.day}>
+                        <span>{formatStreakDayLabel(row.day)}</span>
+                        <span>{formatDuration(row.seconds)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : null}
         {!editing ? (
           <>
             <span
@@ -1057,7 +1238,7 @@ export function LivingRoom({
               className="room-prop-hotspot"
               aria-label="Pets"
               data-tutorial="shop"
-              data-tutorial-current={tutorialTarget === "shop" ? "true" : undefined}
+              data-tutorial-current={tutorialCurrent("shop")}
               data-prop-hotspot="wormhole"
               style={{ ...wormholeStyle, zIndex: wormholeZ + 1 }}
               onClick={onOpenInventory}
@@ -1087,7 +1268,11 @@ export function LivingRoom({
             })
           : null}
         {!editing && showCylinder ? (
-          <div className="room-side-dock">
+          <div
+            className="room-side-dock"
+            data-tutorial="daily-goal"
+            data-tutorial-current={tutorialCurrent("daily-goal")}
+          >
             <DailyProgressCylinder
               studiedMinutes={dailyStudiedMinutes ?? 0}
               goalMinutes={dailyGoalMinutes ?? 0}
@@ -1099,11 +1284,12 @@ export function LivingRoom({
           <div className="living-room-pets">
             {placed.map((pet) => {
               const assignment = seats[pet.id];
+              const isSpotlight = pet.id === spotlightPetId;
               return (
                 <RoomPet
                   key={pet.id}
                   pet={pet}
-                  paused={false}
+                  paused={tutorialActive}
                   showPetNames={showPetNames}
                   onOpen={onOpenPet}
                   obstaclesRef={obstaclesRef}
@@ -1112,6 +1298,8 @@ export function LivingRoom({
                   onTrySit={(spot) => trySit(pet.id, spot)}
                   onLiftSeat={() => liftPet(pet.id)}
                   onLabelPose={reportPetLabelPose}
+                  tutorialId={isSpotlight ? "pet" : undefined}
+                  tutorialCurrentAttr={isSpotlight ? tutorialCurrent("pet") : undefined}
                 />
               );
             })}
@@ -1119,19 +1307,26 @@ export function LivingRoom({
         )}
         {editing ? null : (
           <div className="living-room-labels" style={{ zIndex: ROOM_LABEL_Z }} aria-hidden="true">
-            {Object.entries(petLabelPoses).map(([petId, pose]) => (
-              <div
-                key={petId}
-                className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
-                style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
-              >
-                <span className="room-pet-label">
-                  <span className="room-pet-label-line">{pose.displayName}</span>
-                  {pose.showLevel ? <span className="room-pet-label-line">Lv.{pose.level}</span> : null}
-                </span>
-                <span className="room-pet-label-spacer" />
-              </div>
-            ))}
+            {Object.entries(petLabelPoses).map(([petId, pose]) => {
+              const isSpotlight = petId === spotlightPetId;
+              return (
+                <div
+                  key={petId}
+                  className={pose.sitting ? "room-pet-label-anchor is-sitting" : "room-pet-label-anchor"}
+                  style={{ left: `${pose.left}%`, top: `${pose.top}%` }}
+                >
+                  <span
+                    className="room-pet-label"
+                    data-tutorial={isSpotlight ? "pet-level" : undefined}
+                    data-tutorial-current={isSpotlight ? tutorialCurrent("pet-level") : undefined}
+                  >
+                    <span className="room-pet-label-line">{pose.displayName}</span>
+                    <span className="room-pet-label-line">Lv.{pose.level}</span>
+                  </span>
+                  <span className="room-pet-label-spacer" />
+                </div>
+              );
+            })}
           </div>
         )}
         {!editing && placementReady && placed.length === 0 ? (
@@ -1191,7 +1386,14 @@ export function LivingRoom({
                 </button>
               </div>
           ) : (
-            <button type="button" className="room-tool-button is-edit-furniture" aria-label="Edit Furniture" onClick={beginEdit}>
+            <button
+              type="button"
+              className="room-tool-button is-edit-furniture"
+              aria-label="Edit Furniture"
+              data-tutorial="edit-furniture"
+              data-tutorial-current={tutorialCurrent("edit-furniture")}
+              onClick={beginEdit}
+            >
               <RoomToolIcon kind="edit" />
               <span className="room-tool-label">
                 <span>Edit Furniture</span>

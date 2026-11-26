@@ -109,8 +109,8 @@ test("pet detail spends a rename coupon and settings default to showing names", 
   assert.match(inventory, /inventory-pet-name/);
   assert.match(inventory, /Level \{pet\.level\}/);
   assert.match(room, /room-pet-label-line/);
-  assert.match(room, /showLevel: !showPetNames/);
-  assert.match(room, /pose\.showLevel/);
+  assert.match(room, /showLevel: true/);
+  assert.match(room, /Lv\.\{pose\.level\}/);
   assert.match(room, /Lv\.\{pose\.level\}/);
   assert.match(settings, /Display Lv/);
   assert.match(settings, /updateShowPetNames/);

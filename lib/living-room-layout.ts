@@ -33,7 +33,8 @@ export type RoomFurnitureId =
   | "lamp"
   | "plant"
   | "storage-rack"
-  | "blackboard";
+  | "blackboard"
+  | "calendar";
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
@@ -128,6 +129,13 @@ const PLANT_BOUNDS: RoomRectPx = { x: 509, y: 139, width: 35, height: 82 };
 const STORAGE_RACK_BOUNDS: RoomRectPx = { x: 292, y: 78, width: 130, height: 65 };
 /** On the wall above and slightly left of the storage rack. */
 const BLACKBOARD_BOUNDS: RoomRectPx = { x: 248, y: 22, width: 100, height: 48 };
+/**
+ * Streak calendar on the wall just left of the blackboard — same height (48px).
+ * Width keeps the calendar art aspect (88∶96).
+ */
+export const STREAK_CALENDAR_BOUNDS: RoomRectPx = { x: 198, y: 22, width: 44, height: 48 };
+/** Wall calendar: always behind pets and floor furniture (no walk collision). */
+export const CALENDAR_DEPTH_TOP = 0;
 
 /** @deprecated Sofa walk block is the shared lower-half base; sit is a separate drop. */
 export const LOVESEAT_BLOCK_FROM = FURNITURE_BLOCK_FROM;
@@ -186,6 +194,21 @@ function blackboardPiece(): RoomFurniturePiece {
     src: "/pet-assets/room/board/base.svg",
     bounds: BLACKBOARD_BOUNDS,
     depthTop: BLACKBOARD_DEPTH_TOP,
+    block: {
+      minLeft: 0,
+      maxLeft: 0,
+      minTop: 0,
+      maxTop: 0,
+    },
+  };
+}
+
+function calendarPiece(): RoomFurniturePiece {
+  return {
+    id: "calendar",
+    src: "/pet-assets/room/calendar/base.svg",
+    bounds: STREAK_CALENDAR_BOUNDS,
+    depthTop: CALENDAR_DEPTH_TOP,
     block: {
       minLeft: 0,
       maxLeft: 0,
@@ -254,13 +277,14 @@ export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   piece("lamp", "/pet-assets/room/lamp/base.svg", LAMP_BOUNDS),
   storageRackPiece(),
   blackboardPiece(),
+  calendarPiece(),
   bookshelfPiece(),
   piece("plant", "/pet-assets/room/plant/base.svg", PLANT_BOUNDS),
   piece("armchair", "/pet-assets/room/armchair/base.svg", ARMCHAIR_BOUNDS),
   piece("loveseat", "/pet-assets/room/loveseat/base.svg", LOVESEAT_BOUNDS),
 ];
 
-/** Walk obstacles — skip zero-size wall props (blackboard). */
+/** Walk obstacles — skip zero-size wall props (blackboard, calendar). */
 export function furnitureWalkObstacles(pieces: readonly RoomFurniturePiece[] = ROOM_FURNITURE): RoomObstacle[] {
   return pieces
     .map((item) => item.block)
