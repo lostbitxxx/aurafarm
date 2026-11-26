@@ -9,7 +9,8 @@ test("desk header shows Aurafarm without a study mode icon", () => {
   assert.match(header, /className="wordmark"[\s\S]*Aurafarm/);
   assert.doesNotMatch(header, /wordmark-mode/);
   assert.doesNotMatch(header, /STUDY_MODE_ART/);
-  assert.doesNotMatch(desk, /studyMode=\{studyMode\}/);
+  assert.doesNotMatch(header, /studyMode=\{studyMode\}/);
+  assert.match(desk, /studyMode=\{studyMode\}/);
   assert.match(css, /\.wordmark\s*\{[^}]*display:\s*inline-flex/);
   assert.doesNotMatch(css, /\.wordmark-mode/);
 });
@@ -32,7 +33,7 @@ test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
   assert.match(css, /\.topbar-settings-list[\s\S]*right:\s*0/);
 });
 
-test("Settings lists Edit plan, Download, Privacy, Replay tutorial, Dev tools, then Sign out", () => {
+test("Settings lists Download, Privacy, Replay tutorial, Dev tools, then Sign out", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const settingsBlock = header.slice(
     header.indexOf("const settingsItems"),
@@ -47,8 +48,8 @@ test("Settings lists Edit plan, Download, Privacy, Replay tutorial, Dev tools, t
   const devTools = settingsBlock.indexOf("Dev tools");
   const signOut = settingsBlock.indexOf("Sign out");
 
-  assert.ok(editPlan >= 0);
-  assert.ok(download > editPlan);
+  assert.equal(editPlan, -1);
+  assert.ok(download >= 0);
   assert.ok(privacy > download);
   assert.ok(replay > privacy);
   assert.equal(social, -1);
@@ -56,6 +57,7 @@ test("Settings lists Edit plan, Download, Privacy, Replay tutorial, Dev tools, t
   assert.ok(signOut > devTools);
   assert.match(header, /data-tutorial="settings"/);
   assert.match(header, /onReplayTutorial/);
+  assert.doesNotMatch(header, /onOpenEditPlan/);
 });
 
 test("header no longer hosts Social; blackboard owns it", () => {
@@ -101,4 +103,28 @@ test("header shows total pet level; streak calendar lives on the room wall", () 
   assert.match(decor, /mover: "calendar"/);
   assert.match(calendarSvg, /viewBox="0 0 44 48"/);
   assert.match(layout, /x: 198, y: 22, width: 44, height: 48/);
+});
+
+test("edit plan lives on the wall as a square framed painting", () => {
+  const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  const desk = readFileSync(new URL("../components/dashboard-screen.tsx", import.meta.url), "utf8");
+  const room = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  const layout = readFileSync(new URL("../lib/living-room-layout.ts", import.meta.url), "utf8");
+  const decor = readFileSync(new URL("../lib/room-decor.ts", import.meta.url), "utf8");
+  const planSvg = readFileSync(new URL("../public/pet-assets/room/plan/base.svg", import.meta.url), "utf8");
+
+  assert.doesNotMatch(header, /onOpenEditPlan|Edit plan/);
+  assert.match(desk, /onOpenEditPlan=\{studyPlan \? \(\) => showSection\("edit-plan"\) : undefined\}/);
+  assert.match(desk, /studyMode=\{studyMode\}/);
+  assert.match(room, /onOpenEditPlan/);
+  assert.match(room, /room-plan-painting/);
+  assert.match(room, /room-plan-glass/);
+  assert.match(room, /room-plan-frame/);
+  assert.match(room, /data-prop-hotspot="plan"/);
+  assert.match(room, /aria-label="Edit plan"/);
+  assert.match(layout, /PLAN_PAINTING_BOUNDS/);
+  assert.match(layout, /id: "plan"/);
+  assert.match(layout, /x: 156, y: 22, width: 36, height: 36/);
+  assert.match(decor, /mover: "plan"/);
+  assert.match(planSvg, /viewBox="0 0 48 48"/);
 });

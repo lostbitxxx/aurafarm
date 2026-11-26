@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" shape-rendering="crispEdges">
+  <!-- Single wood-color frame; mode icon overlays the center. -->
+  <rect width="48" height="48" fill="#8a6239"/>
+  <rect x="3" y="3" width="42" height="42" fill="#f3ead7"/>
+</svg>

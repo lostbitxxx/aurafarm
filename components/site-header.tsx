@@ -9,7 +9,6 @@ import { HeaderMenu } from "./header-menu";
 export function SiteHeader({
   petTotalLevel,
   coins,
-  onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
   onReplayTutorial,
@@ -17,7 +16,6 @@ export function SiteHeader({
 }: {
   petTotalLevel?: number;
   coins?: number;
-  onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
   onReplayTutorial?: () => void;
@@ -63,11 +61,6 @@ export function SiteHeader({
 
   const settingsItems = (
     <>
-      {onOpenEditPlan ? (
-        <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenEditPlan)}>
-          Edit plan
-        </button>
-      ) : null}
       {onOpenDownload ? (
         <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenDownload)}>
           Download desktop pet
@@ -169,11 +162,6 @@ export function SiteHeader({
             <p className="points-balance topbar-drawer-study" aria-label={`Total pet level ${petLvLabel}`}>
               Total pet level: <span>{petLvLabel}</span>
             </p>
-          ) : null}
-          {onOpenEditPlan ? (
-            <button type="button" className="topbar-drawer-link" onClick={onOpenEditPlan}>
-              Edit plan
-            </button>
           ) : null}
           {onOpenDownload ? (
             <button type="button" className="topbar-drawer-link" onClick={onOpenDownload}>

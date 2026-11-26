@@ -18,6 +18,8 @@ import {
   ROOM_WALL_SRC,
   STORAGE_RACK_DEPTH_TOP,
   CALENDAR_DEPTH_TOP,
+  PLAN_PAINTING_BOUNDS,
+  PLAN_PAINTING_DEPTH_TOP,
   STREAK_CALENDAR_BOUNDS,
   WORMHOLE_BOUNDS,
   WORMHOLE_SRC,
@@ -72,6 +74,7 @@ import {
   type WanderSpot,
 } from "@/lib/living-room-wander";
 import { PIXEL_HEART_SRC } from "@/lib/pet-assets";
+import { STUDY_MODE_ART, type StudyMode } from "@/lib/study-mode";
 import type { RecentStudyDay, StreakCalendarTone } from "@/lib/streak-calendar";
 import {
   dropOnSeat,
@@ -641,6 +644,8 @@ export function LivingRoom({
   onOpenAchievements,
   onOpenCollection,
   onOpenSocial,
+  onOpenEditPlan,
+  studyMode = null,
   tutorialActive = false,
   tutorialTargets = null,
   dailyStudiedMinutes = null,
@@ -669,6 +674,8 @@ export function LivingRoom({
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
   onOpenSocial?: () => void;
+  onOpenEditPlan?: () => void;
+  studyMode?: StudyMode | null;
   tutorialActive?: boolean;
   tutorialTargets?: readonly string[] | null;
   dailyStudiedMinutes?: number | null;
@@ -864,6 +871,10 @@ export function LivingRoom({
   const calendarPadZ = Math.max(0, calendarArtZ - 1);
   // Above wall furniture sheets so the streak digit stays visible on the calendar face.
   const calendarZ = ROOM_LABEL_Z;
+  const planArtZ = roomDepthZ(PLAN_PAINTING_DEPTH_TOP);
+  const planPadZ = Math.max(0, planArtZ - 1);
+  const planZ = ROOM_LABEL_Z;
+  const planModeSrc = STUDY_MODE_ART[studyMode ?? "knight"];
   const calendarBox = coverBox(
     STREAK_CALENDAR_BOUNDS,
     roomSize.width,
@@ -875,6 +886,18 @@ export function LivingRoom({
     top: calendarBox.top,
     width: calendarBox.width,
     height: calendarBox.height,
+  };
+  const planBox = coverBox(
+    PLAN_PAINTING_BOUNDS,
+    roomSize.width,
+    roomSize.height,
+    decor.offsets.plan,
+  );
+  const planStyle = {
+    left: planBox.left,
+    top: planBox.top,
+    width: planBox.width,
+    height: planBox.height,
   };
   const wormholeZ = roomDepthZ(depthTopFromBounds(WORMHOLE_BOUNDS));
   const wormholeShift = offsetTransform(decor, "shelter");
@@ -1117,8 +1140,8 @@ export function LivingRoom({
           draggable={false}
         />
         {ROOM_FURNITURE.map((item) => {
-          // Calendar is a tight asset positioned via coverBox (same box as hit/handle).
-          if (item.id === "calendar") return null;
+          // Calendar and plan painting are tight assets positioned via coverBox.
+          if (item.id === "calendar" || item.id === "plan") return null;
           return isFurniturePlaced(decor, item.id) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -1152,6 +1175,36 @@ export function LivingRoom({
             data-streak-tone={streakTone}
             style={{ ...calendarStyle, zIndex: calendarArtZ }}
           />
+        ) : null}
+        {isFurniturePlaced(decor, "plan") ? (
+          <div className="room-plan-painting" style={{ ...planStyle, zIndex: planArtZ }} data-furniture="plan">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="room-plan-art"
+              src={roomFurnitureSrc(
+                ROOM_FURNITURE.find((item) => item.id === "plan")!,
+                decor,
+              )}
+              alt=""
+              draggable={false}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="room-plan-mode" src={planModeSrc} alt="" draggable={false} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="room-plan-glass"
+              src="/pet-assets/room/plan/glass.png"
+              alt=""
+              draggable={false}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="room-plan-frame"
+              src="/pet-assets/room/plan/frame.svg"
+              alt=""
+              draggable={false}
+            />
+          </div>
         ) : null}
         {/* Prop hotspots: glow under furniture art, hit target + label on top. */}
         {!editing
@@ -1264,6 +1317,27 @@ export function LivingRoom({
               ];
             })
           : null}
+        {!editing && onOpenEditPlan && isFurniturePlaced(decor, "plan") ? (
+          <>
+            <span
+              className="room-prop-hotspot-pad"
+              aria-hidden="true"
+              data-prop-hotspot="plan"
+              style={{ ...planStyle, zIndex: planPadZ }}
+            />
+            <button
+              type="button"
+              className="room-prop-hotspot"
+              aria-label="Edit plan"
+              data-prop-hotspot="plan"
+              data-furniture="plan"
+              style={{ ...planStyle, zIndex: planZ }}
+              onClick={onOpenEditPlan}
+            >
+              <span className="room-prop-hotspot-label">Edit plan</span>
+            </button>
+          </>
+        ) : null}
         {!editing && isFurniturePlaced(decor, "calendar") ? (
           <>
             <span

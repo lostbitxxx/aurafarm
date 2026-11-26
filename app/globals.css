@@ -3007,6 +3007,55 @@ button.dialog-row {
   background: #efecdf;
 }
 
+.room-plan-painting {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.room-plan-art,
+.room-plan-frame,
+.room-plan-glass {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  object-fit: fill;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.room-plan-art {
+  object-fit: contain;
+}
+
+.room-plan-mode {
+  position: absolute;
+  left: 8%;
+  top: 8%;
+  width: 84%;
+  height: 84%;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.room-plan-glass {
+  opacity: 0.5;
+}
+
+.room-prop-hotspot-pad[data-prop-hotspot="plan"]::before {
+  width: 108%;
+  height: 108%;
+  aspect-ratio: 1;
+  border-radius: 0.45rem;
+}
+
 .room-calendar-art {
   position: absolute;
   margin: 0;
