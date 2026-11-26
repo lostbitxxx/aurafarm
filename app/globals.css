@@ -3040,6 +3040,10 @@ button.dialog-row {
   overflow: visible;
 }
 
+.room-streak-calendar.is-open {
+  pointer-events: auto;
+}
+
 .room-streak-calendar-hit {
   position: absolute;
   inset: 0;
@@ -3089,6 +3093,28 @@ button.dialog-row {
 
 .room-streak-calendar-popover {
   top: calc(100% + 0.35rem);
+  left: 50%;
+  right: auto;
+  transform-origin: top center;
+  animation: room-streak-popover-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes room-streak-popover-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.35rem) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-streak-calendar-popover {
+    animation: none;
+    transform: translateX(-50%);
+  }
 }
 
 .streak-calendar-popover-title {

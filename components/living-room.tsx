@@ -706,6 +706,7 @@ export function LivingRoom({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const calendarId = useId();
   const calendarRef = useRef<HTMLDivElement>(null);
+  const calendarLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
   const [ownedSkinKeys, setOwnedSkinKeys] = useState(() =>
@@ -744,6 +745,31 @@ export function LivingRoom({
       document.removeEventListener("pointerdown", onPointer);
     };
   }, [calendarOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (calendarLeaveTimer.current) clearTimeout(calendarLeaveTimer.current);
+    };
+  }, []);
+
+  function clearCalendarLeaveTimer() {
+    if (calendarLeaveTimer.current) {
+      clearTimeout(calendarLeaveTimer.current);
+      calendarLeaveTimer.current = null;
+    }
+  }
+
+  function onCalendarPointerEnter() {
+    clearCalendarLeaveTimer();
+  }
+
+  function onCalendarPointerLeave() {
+    clearCalendarLeaveTimer();
+    calendarLeaveTimer.current = setTimeout(() => {
+      calendarLeaveTimer.current = null;
+      setCalendarOpen(false);
+    }, 160);
+  }
 
   if (ownedRoomSkinSignature !== ownedSkinSnap) {
     setOwnedSkinSnap(ownedRoomSkinSignature);
@@ -1186,6 +1212,8 @@ export function LivingRoom({
               ref={calendarRef}
               className={calendarOpen ? "room-streak-calendar is-open" : "room-streak-calendar"}
               style={{ ...calendarStyle, zIndex: calendarZ }}
+              onPointerEnter={onCalendarPointerEnter}
+              onPointerLeave={onCalendarPointerLeave}
             >
               <span className="streak-calendar-count" aria-hidden="true">
                 {streakSafe}
@@ -1210,6 +1238,7 @@ export function LivingRoom({
                   className="streak-calendar-popover room-streak-calendar-popover"
                   role="dialog"
                   aria-label="Recent study"
+                  onPointerEnter={onCalendarPointerEnter}
                 >
                   <p className="streak-calendar-popover-title">Last 7 days</p>
                   <ul className="streak-calendar-days">
