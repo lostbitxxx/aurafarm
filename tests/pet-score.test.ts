@@ -5,10 +5,16 @@ import { test } from "node:test";
 import { parseScoreRequest } from "../lib/scoring";
 
 const require = createRequire(import.meta.url);
-const { clampPetX, plainPetPath, plainPetStack, restingPetPose } = require("../desktop/pet-art.js") as {
+const { clampPetX, parseWeekdays, plainPetPath, plainPetStack, restingPetPose, sessionDayKind, sessionRailColors } = require("../desktop/pet-art.js") as {
+  parseWeekdays: (value: unknown) => number[];
+  sessionRailColors: (kind: string) => { liquid: string; track: string };
   clampPetX: (x: number, laneWidth: number, spriteWidth: number) => number;
   plainPetPath: (petType: string, pose: string) => string;
-  plainPetStack: (petType: string, pose: string) => { face: string };
+  plainPetStack: (
+    petType: string,
+    pose: string,
+    options?: { color?: string | null; hat?: string | null; clothes?: string | null },
+  ) => { face: string; body: string; clothes: string | null; hat: string | null };
   restingPetPose: (input?: {
     sessionActive?: boolean;
     onDistracted?: boolean;
@@ -16,6 +22,7 @@ const { clampPetX, plainPetPath, plainPetStack, restingPetPose } = require("../d
     animating?: boolean;
     currentPose?: string;
   }) => string;
+  sessionDayKind: (state: { studyDays?: unknown; restDays?: unknown }, now?: Date) => string;
 };
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../desktop/pet-move.js") as {
   clampPetOrigin: (
@@ -266,6 +273,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /#session-capsule[\s\S]*border-radius: 999px/);
   assert.match(panel, /--session-green: #5fbf4a/);
   assert.match(panel, /--cylinder-wall: #fffcf7/);
+  assert.match(panel, /--session-study: #c43b2e/);
+  assert.match(panel, /--session-rest: #3f78c8/);
+  assert.match(panel, /body\.is-study-day #session-fill/);
+  assert.match(panel, /body\.is-rest-day #session-fill/);
+  assert.match(panel, /body\.is-study-day #session-capsule/);
   assert.doesNotMatch(panel, /--fill-purple|--track-sage|repeating-linear-gradient/);
   assert.match(panel, /id="shell"[\s\S]*id="dock-rail"[\s\S]*id="panel-toggle"[\s\S]*id="session-capsule"[\s\S]*id="session-fill"[\s\S]*id="panel-body"/);
   assert.match(panel, /body\.edge-left[\s\S]*body\.edge-right[\s\S]*body\.edge-top[\s\S]*body\.edge-bottom/);
@@ -332,14 +344,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /panelPetVisible: panelOpen/);
   assert.doesNotMatch(main, /panelPetVisible: panelOpen && !petAnimating/);
   assert.match(main, /function destroyPetWindow/);
-  assert.doesNotMatch(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
-  assert.match(main, /loadFile\(path\.join\(__dirname, "panel\.html"\)\)/);
+  assert.doesNotMatch(main, /loadOverlay\(petWindow, "pet\.html"\)/);
+  assert.match(main, /loadOverlay\(panelWindow, "panel\.html"\)/);
+  assert.match(main, /scheme: "pet-asset"/);
   assert.match(main, /overlayLayout/);
   assert.match(main, /snapOverlay/);
   assert.match(main, /petOriginBesidePanel/);
   assert.match(main, /nearestEdge/);
   assert.match(main, /insetBottom/);
-  assert.match(main, /select\("id, pet_type, level, xp"\)/);
+  assert.match(main, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
   assert.match(main, /sessionProgress/);
   assert.match(main, /studyProgress/);
   assert.match(main, /syncSessionProgress/);
@@ -387,7 +400,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petPage, /\.pet-layer:not\(\[src\]\),[\s\S]*display: none/);
   assert.match(panel, /#panel-pet \.pet-layer:not\(\[src\]\),[\s\S]*display: none/);
   assert.match(panel, /data-layer="legs"[\s\S]*hidden/);
-  assert.match(petScript, /plainPetStack\(shownPet, shownPose\)/);
+  assert.match(petScript, /plainPetStack\(shownPet, shownPose,/);
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(petScript, /chatBubbleScope/);
   assert.match(main, /chatBubbleCopy/);
@@ -414,7 +427,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /function closeFrontTab/);
   assert.match(main, /return closeFrontWindow\(appName\)/);
   assert.doesNotMatch(main, /await walkPetTo\(target\.x, target\.y\)/);
-  assert.match(main, /assetOrigin: API_ORIGIN/);
+  assert.match(main, /assetOrigin: petAssetOrigin\(\)/);
   assert.doesNotMatch(main, /if \(petAnimating \|\| dockDrag\) return/);
   assert.doesNotMatch(main, /panelOpen\) \{\s*win\.hide\(\)/);
   assert.match(script, /window\.pet\.setOpen\(/);
@@ -524,6 +537,24 @@ test("a focused desktop pet uses the petting love face", () => {
     plainPetStack("baby_slime", "idle").face,
     "/pet-assets/pets/cat/colors/sage/face/normal.svg",
   );
+  const dressed = plainPetStack("baby_slime", "idle", {
+    color: "sky",
+    hat: "hat_a",
+    clothes: "clothes_a",
+  });
+  assert.equal(dressed.body, "/pet-assets/pets/cat/colors/sky/body.svg");
+  assert.equal(dressed.hat, "/pet-assets/accessories/worn/hats/hat_a.svg");
+  assert.equal(dressed.clothes, "/pet-assets/accessories/worn/clothes_a/cat.svg");
+  assert.equal(plainPetStack("baby_slime", "idle", { hat: "nope" }).hat, null);
+  // 2026-11-26 is Thursday in Hong Kong.
+  const thursday = new Date("2026-11-26T04:00:00.000Z");
+  assert.equal(sessionDayKind({ studyDays: [1, 2, 3, 4, 5], restDays: [6, 7] }, thursday), "study");
+  assert.equal(sessionDayKind({ studyDays: [1, 3, 5], restDays: [2, 4, 6, 7] }, thursday), "rest");
+  assert.equal(sessionDayKind({ studyDays: [], restDays: [] }, thursday), "unset");
+  assert.equal(sessionDayKind({ studyDays: ["1", "2", "3", "4", "5"], restDays: "{6,7}" }, thursday), "study");
+  assert.deepEqual(parseWeekdays("{1,2,3,4,5}"), [1, 2, 3, 4, 5]);
+  assert.equal(sessionRailColors("rest").liquid, "#3f78c8");
+  assert.equal(sessionRailColors("study").track, "#f3c2bc");
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(main, /restingPetPose/);
   assert.match(main, /function applyRestingPetPose/);

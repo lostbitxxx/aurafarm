@@ -438,7 +438,6 @@ export function DashboardScreen({
       <SiteHeader
         petTotalLevel={petTotalLevel}
         coins={coins}
-        onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
         onOpenDownload={() => setDialog("download")}
         onOpenDevTools={() => setDialog("dev-tools")}
         onReplayTutorial={() => {
@@ -491,6 +490,8 @@ export function DashboardScreen({
         onOpenAchievements={() => showSection("achievements")}
         onOpenCollection={() => showSection("collection")}
         onOpenSocial={() => showSection("social")}
+        onOpenEditPlan={studyPlan ? () => showSection("edit-plan") : undefined}
+        studyMode={studyMode}
         farmerName={displayName}
         streakCount={liveStreakCount}
         onEquipped={onEquipped}

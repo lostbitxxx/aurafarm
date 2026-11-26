@@ -16,6 +16,8 @@
         --shell-cream: #f7f3e8;
         --shell-border: #9daa90;
         --session-green: #5fbf4a;
+        --session-study: #c43b2e;
+        --session-rest: #3f78c8;
         --cylinder-wall: #fffcf7;
         --cylinder-edge: #c5ceb5;
         --cylinder-track: #e8ebe0;
@@ -115,6 +117,12 @@
       }
       #dock-rail.is-dragging {
         cursor: grabbing;
+      }
+      body.is-study-day #dock-rail {
+        background: #f3c2bc;
+      }
+      body.is-rest-day #dock-rail {
+        background: #c5d7ee;
       }
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
@@ -217,7 +225,7 @@
           transition: none;
         }
       }
-      /* One capsule = the rail bar (fill + tick lines). */
+      /* One capsule = the rail bar (fill + tick lines). Study days tint it red, rest days blue. */
       #session-capsule {
         position: absolute;
         inset: 0;
@@ -244,6 +252,12 @@
         top: 2px;
         bottom: 2px;
       }
+      body.is-study-day #session-capsule {
+        background: #f3c2bc;
+      }
+      body.is-rest-day #session-capsule {
+        background: #c5d7ee;
+      }
       #session-fill {
         position: absolute;
         left: 0;
@@ -253,7 +267,13 @@
         background: var(--session-green);
         border-radius: 0 0 999px 999px;
         pointer-events: none;
-        transition: height 0.85s linear, width 0.85s linear;
+        transition: height 0.85s linear, width 0.85s linear, background-color 0.35s linear;
+      }
+      body.is-study-day #session-fill {
+        background: var(--session-study);
+      }
+      body.is-rest-day #session-fill {
+        background: var(--session-rest);
       }
       body.edge-top #session-fill,
       body.edge-bottom #session-fill {
@@ -493,6 +513,13 @@
         pointer-events: none;
         cursor: inherit;
       }
+      #panel-pet .pet-layer.is-legs { z-index: 1; }
+      #panel-pet .pet-layer.is-body { z-index: 2; }
+      #panel-pet .pet-layer.is-clothes { z-index: 3; }
+      #panel-pet .pet-layer.is-face { z-index: 4; }
+      #panel-pet .pet-layer.is-hat { z-index: 5; }
+      #panel-pet .pet-layer.is-desk { z-index: 6; }
+      #panel-pet .pet-layer.is-pen { z-index: 7; }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       #panel-pet .pet-layer:not([src]),
       #panel-pet .pet-layer[hidden] {
@@ -613,7 +640,9 @@
                 <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
                 <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" hidden />
                 <img class="pet-layer is-body" data-layer="body" alt="" draggable="false" hidden />
+                <img class="pet-layer is-clothes" data-layer="clothes" alt="" draggable="false" hidden />
                 <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" hidden />
+                <img class="pet-layer is-hat" data-layer="hat" alt="" draggable="false" hidden />
               </span>
               <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
               <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />

@@ -11,8 +11,25 @@ import {
   parseCustomizationInput,
   planForMode,
   recommendStudyMode,
+  resolveWeekSchedule,
+  restWeekdaysFor,
+  weekPlanForProfile,
   weekdayFromLocalDay,
 } from "../lib/study-mode";
+
+test("a claim week plan uses saved days, then the lifestyle answer", () => {
+  assert.deepEqual(
+    weekPlanForProfile({ weekly_study_days: [1, 2, 3, 4, 5], weekly_rest_days: [6, 7] }),
+    { studyDays: [1, 2, 3, 4, 5], restDays: [6, 7] },
+  );
+  assert.deepEqual(
+    weekPlanForProfile({
+      behavior_answers: { attention: "short", lifestyle: "few", distraction: "often" },
+    }),
+    { studyDays: [1, 3, 5], restDays: [2, 4, 6, 7] },
+  );
+  assert.deepEqual(weekPlanForProfile(null), { studyDays: [], restDays: [] });
+});
 
 test("study mode cards show assassin, knight, and lord pixel art", () => {
   const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
@@ -96,14 +113,17 @@ test("each study mode seeds its own daily minutes and lifestyle weekdays", () =>
 
   assert.equal(assassin.sessionMinutes, 30);
   assert.deepEqual(assassin.studyWeekdays, [1, 2, 3, 4, 5]);
+  assert.deepEqual(assassin.restWeekdays, [6, 7]);
   assert.equal(assassin.studyDaysPerWeek, 5);
 
   assert.equal(knight.sessionMinutes, 60);
   assert.deepEqual(knight.studyWeekdays, [1, 3, 5]);
+  assert.deepEqual(knight.restWeekdays, [2, 4, 6, 7]);
   assert.equal(knight.studyDaysPerWeek, 3);
 
   assert.equal(lord.sessionMinutes, 90);
   assert.deepEqual(lord.studyWeekdays, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(lord.restWeekdays, [7]);
   assert.equal(lord.studyDaysPerWeek, 6);
 });
 
@@ -111,7 +131,34 @@ test("editing daily minutes and weekdays keeps the mode block length options", (
   const plan = adjustPlan("knight", 90, [1, 2, 3, 4, 5, 6]);
   assert.equal(plan.sessionMinutes, 90);
   assert.deepEqual(plan.studyWeekdays, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(plan.restWeekdays, [7]);
   assert.equal(plan.studyDaysPerWeek, 6);
+});
+
+test("study days and rest days partition the week for one farmer", () => {
+  assert.deepEqual(restWeekdaysFor([1, 3, 5]), [2, 4, 6, 7]);
+  assert.deepEqual(restWeekdaysFor([1, 2, 3, 4, 5, 6, 7]), []);
+
+  assert.deepEqual(resolveWeekSchedule([1, 3, 5], [2, 4, 6, 7]), {
+    studyDays: [1, 3, 5],
+    restDays: [2, 4, 6, 7],
+  });
+  assert.deepEqual(resolveWeekSchedule([1, 2, 3, 4, 5, 6, 7], []), {
+    studyDays: [1, 2, 3, 4, 5, 6, 7],
+    restDays: [],
+  });
+  // A mismatched rest list is rebuilt from the stored study days.
+  assert.deepEqual(resolveWeekSchedule([1, 2, 3, 4, 5], [7]), {
+    studyDays: [1, 2, 3, 4, 5],
+    restDays: [6, 7],
+  });
+  // Rest days alone can rebuild the study list.
+  assert.deepEqual(resolveWeekSchedule(null, [6, 7]), {
+    studyDays: [1, 2, 3, 4, 5],
+    restDays: [6, 7],
+  });
+  assert.equal(resolveWeekSchedule(null, null), null);
+  assert.equal(resolveWeekSchedule([], [1, 2, 3, 4, 5, 6, 7]), null);
 });
 
 test("customization form data is validated before save", () => {
@@ -129,6 +176,7 @@ test("customization form data is validated before save", () => {
   assert.equal(parsed.plan.mode, "knight");
   assert.equal(parsed.plan.sessionMinutes, 60);
   assert.deepEqual(parsed.plan.studyWeekdays, [1, 2, 3, 4, 5]);
+  assert.deepEqual(parsed.plan.restWeekdays, [6, 7]);
   assert.equal(parsed.answers.lifestyle, "steady");
 
   assert.equal(parseBehaviorAnswers({ attention: "nope" }), null);
@@ -252,4 +300,28 @@ test("saving a study plan needs weekly_study_days from migration 0044", () => {
   );
   assert.ok(missingColumn);
   assert.match(missingColumn, /0044/);
+});
+
+test("saving a study plan stores rest days from migration 0052", () => {
+  const rest = readFileSync(
+    new URL("../supabase/migrations/0052_weekly_rest_days.sql", import.meta.url),
+    "utf8",
+  );
+  const action = readFileSync(new URL("../lib/actions/customize.ts", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
+  assert.match(rest, /weekly_rest_days integer\[\]/);
+  assert.match(rest, /function public\.weekly_study_rest_partition/);
+  assert.match(rest, /profiles_weekly_rest_days_check/);
+  assert.match(rest, /grant update \(\s*weekly_rest_days\s*\) on table public\.profiles to authenticated/);
+  assert.match(action, /weekly_rest_days: parsed\.plan\.restWeekdays/);
+  assert.match(dashboard, /weekly_rest_days/);
+  assert.match(dashboard, /resolveWeekSchedule/);
+  const missingRest = customizationMigrationMessage(
+    'column "weekly_rest_days" of relation "profiles" does not exist',
+  );
+  assert.ok(missingRest);
+  assert.match(missingRest, /0052/);
+  const denied = customizationMigrationMessage("permission denied for column study_mode");
+  assert.ok(denied);
+  assert.match(denied, /0022/);
 });

@@ -75,6 +75,21 @@ test("sumPetLevels floors and ignores non-finite values", () => {
   assert.equal(sumPetLevels([]), 0);
 });
 
+test("an unfinished study day tints the streak calendar red instead of grey", () => {
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const pending = css.slice(
+    css.indexOf('[data-streak-tone="study-pending"]'),
+    css.indexOf('[data-streak-tone="study-done"]'),
+  );
+  const rest = css.slice(
+    css.indexOf('[data-streak-tone="rest-pending"]'),
+    css.indexOf('[data-streak-tone="rest-done"]'),
+  );
+  assert.doesNotMatch(pending, /grayscale\(1\)/);
+  assert.match(pending, /hue-rotate\(-18deg\)/);
+  assert.match(rest, /hue-rotate\(170deg\)/);
+});
+
 test("streak calendar svg asset exists and is transparent-backed", () => {
   const path = new URL("../public/pet-assets/ui/streak-calendar.svg", import.meta.url);
   assert.equal(existsSync(path), true);

@@ -493,6 +493,9 @@ const SESSION_XP_MIGRATION = "Run migration 0012 before starting a study session
 
 export function studyTimerMigrationMessage(message: string | null) {
   if (!message) return null;
+  if (/weekly_rest_days/i.test(message)) {
+    return "Run migration 0052 in the Supabase SQL editor before saving rest days.";
+  }
   if (/weekly_study_days/i.test(message)) {
     return "Run migration 0044 in the Supabase SQL editor before using weekly study days.";
   }

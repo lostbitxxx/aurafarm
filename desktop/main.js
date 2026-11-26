@@ -1,4 +1,5 @@
-const { app, BrowserWindow, Menu, ipcMain, safeStorage, screen, shell, systemPreferences } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, net, protocol, safeStorage, screen, shell, systemPreferences } = require("electron");
+const { pathToFileURL } = require("node:url");
 const { createClient } = require("@supabase/supabase-js");
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
@@ -21,7 +22,20 @@ const {
 const { browserAppName, closeFrontWindow, readFrontAppName, readFrontBrowser, readFrontWindowBounds, readScoreBrowser, scoreBrowserName, supportedFrontBrowser } = require("./front-browser");
 const { readPetConfig } = require("./config");
 const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("./pet-move");
-const { restingPetPose } = require("./pet-art");
+const { parseWeekdays, restingPetPose } = require("./pet-art");
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "pet-asset",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 const {
   DEFAULTS: DOCK_DEFAULTS,
   nearestEdge,
@@ -120,6 +134,11 @@ let statsPetId = null;
 let statsRefreshSeq = 0;
 let state = {
   petType: "baby_slime",
+  petColor: null,
+  petHat: null,
+  petClothes: null,
+  studyDays: [],
+  restDays: [],
   level: null,
   statsPetId: null,
   sessionProgress: 0,
@@ -274,7 +293,7 @@ function publish() {
   syncChatBubble();
   const payload = {
     ...state,
-    assetOrigin: API_ORIGIN,
+    assetOrigin: petAssetOrigin(),
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
     panelPetVisible: panelOpen,
   };
@@ -348,16 +367,74 @@ function dockOptions() {
   };
 }
 
+function optionalLook(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+/** ISO weekdays from a claim payload. Invalid entries are dropped. */
+function claimWeekdays(value) {
+  return parseWeekdays(value);
+}
+
+function claimLevel(value) {
+  const level = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(level)) return null;
+  return Math.max(0, Math.floor(level));
+}
+
+function petAssetRoot() {
+  return path.join(__dirname, "..", "public");
+}
+
+/** Layered sprites live in this repo. The desk origin is only a fallback for a packed app. */
+function petAssetOrigin() {
+  const marker = path.join(petAssetRoot(), "pet-assets", "pets", "cat", "colors", "sage", "body.svg");
+  return fs.existsSync(marker) ? "pet-asset://local" : API_ORIGIN;
+}
+
+function registerPetAssets() {
+  if (petAssetOrigin() !== "pet-asset://local") return;
+  const root = petAssetRoot();
+  protocol.handle("pet-asset", (request) => {
+    let rel = "";
+    try {
+      rel = decodeURIComponent(new URL(request.url).pathname);
+    } catch {
+      return new Response("bad path", { status: 400 });
+    }
+    const file = path.normalize(path.join(root, rel));
+    if (file !== root && !file.startsWith(root + path.sep)) {
+      return new Response("forbidden", { status: 403 });
+    }
+    return net.fetch(pathToFileURL(file).href);
+  });
+}
+
+function loadOverlay(win, file) {
+  const filePath = path.join(__dirname, file);
+  const load = () =>
+    win.loadFile(filePath, {
+      query: { v: String(fs.statSync(filePath).mtimeMs) },
+    });
+  const clearing = win.webContents.session.clearCache();
+  if (clearing && typeof clearing.then === "function") return clearing.then(load);
+  return load();
+}
+
 function applyEquippedPetStats(row) {
   const display = petDisplayProgress(row);
   const petType = typeof row?.pet_type === "string" && row.pet_type ? row.pet_type : state.petType;
   statsPetId = display.petId;
-  state = {
+  const next = {
     ...state,
     petType,
     level: display.level,
     statsPetId: display.petId,
   };
+  if (row && Object.prototype.hasOwnProperty.call(row, "color")) next.petColor = optionalLook(row.color);
+  if (row && Object.prototype.hasOwnProperty.call(row, "hat")) next.petHat = optionalLook(row.hat);
+  if (row && Object.prototype.hasOwnProperty.call(row, "clothes")) next.petClothes = optionalLook(row.clothes);
+  state = next;
 }
 
 function setSessionProgress(progress) {
@@ -661,56 +738,6 @@ function setPetPose(pose, flip) {
   publish();
 }
 
-async function walkPetTo(x, y) {
-  const win = petWindow;
-  if (!win || win.isDestroyed()) return;
-  const from = win.getBounds();
-  const faceLeft = x < from.x - 1;
-  const steps = 16;
-  for (let i = 1; i <= steps; i += 1) {
-    if (!petWindow || petWindow.isDestroyed()) return;
-    const t = 1 - Math.pow(1 - i / steps, 2);
-    petWindow.setPosition(
-      Math.round(from.x + (x - from.x) * t),
-      Math.round(from.y + (y - from.y) * t),
-    );
-    setPetPose(i % 4 < 2 ? "walk1" : "walk2", faceLeft);
-    await waitMs(40);
-  }
-  if (petWindow && !petWindow.isDestroyed()) petWindow.setPosition(Math.round(x), Math.round(y));
-}
-
-async function jumpPet() {
-  const win = petWindow;
-  if (!win || win.isDestroyed()) return;
-  const start = win.getBounds();
-  setPetPose("idle", state.petFlip);
-  for (const dy of [0, -14, -28, -36, -22, -6, 0, -10, -18, -8, 0]) {
-    if (!petWindow || petWindow.isDestroyed()) return;
-    petWindow.setPosition(start.x, start.y + dy);
-    await waitMs(32);
-  }
-}
-
-async function returnPetHome() {
-  if (!petWindow || petWindow.isDestroyed()) return;
-  const home = petWindowRect(petBounds());
-  await walkPetTo(home.x, home.y);
-  setPetPose("idle", false);
-}
-
-async function finishPetApproach() {
-  try {
-    await returnPetHome();
-  } finally {
-    petClosing = false;
-    petAnimating = false;
-    setPetPose("idle", false);
-    placePet();
-    publish();
-  }
-}
-
 async function closeFrontTab(appName, host) {
   // No floating pet walk — close the distracted tab directly.
   void host;
@@ -767,15 +794,15 @@ function openPanel() {
     },
   });
   hardenOverlayWindow(panelWindow);
-  panelWindow.loadFile(path.join(__dirname, "panel.html"));
+  loadOverlay(panelWindow, "panel.html");
   panelWindow.on("closed", () => {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
   });
+  panelWindow.webContents.once("did-finish-load", publish);
   panelWindow.webContents.once("did-finish-load", () => {
     hardenOverlayWindow(panelWindow);
     if (panelWindow && !panelWindow.isDestroyed()) panelWindow.show();
-    publish();
   });
 }
 
@@ -822,31 +849,57 @@ async function refreshPet() {
   }
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) {
-    petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
+    // A launch claim already supplied the sprite. Signing in is not required.
+    if (!study) {
+      petLog("[pet] no signed-in pet session, so the equipped row is not read. The character stays baby_slime until a launch code is claimed.");
+    }
     return;
   }
   await touchPetPresence(true);
+  const userId = sessionData.session.user?.id ?? "";
+  await loadWeekPlan(userId);
   const refreshSeq = ++statsRefreshSeq;
   const { data, error } = await supabase
     .from("user_pets")
-    .select("id, pet_type, level, xp")
+    .select("id, pet_type, level, xp, color, hat, clothes")
     .eq("is_desktop_active", true)
     .maybeSingle();
   if (refreshSeq !== statsRefreshSeq) return;
   if (error) {
     petLog(`[pet] equipped pet query failed: ${error.message}`);
     setStatus(error.message);
+    publish();
     return;
   }
   if (!data) {
     petLog("[pet] signed in, but no user_pets row has is_desktop_active = true.");
+    publish();
     return;
   }
   applyEquippedPetStats(data);
   petLog(
-    `[pet] equipped ${state.petType} level ${state.level ?? "?"} for ${sessionData.session.user?.id ?? "unknown"}`,
+    `[pet] equipped ${state.petType} level ${state.level ?? "?"} color=${state.petColor || "-"} hat=${state.petHat || "-"} clothes=${state.petClothes || "-"} study=${state.studyDays.join(",")} rest=${state.restDays.join(",")} for ${userId || "unknown"}`,
   );
   publish();
+}
+
+async function loadWeekPlan(userId) {
+  if (!supabase || !userId) return;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("weekly_study_days, weekly_rest_days")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) {
+    petLog(`[pet] week plan query failed: ${error.message}`);
+    return;
+  }
+  if (!data) return;
+  state = {
+    ...state,
+    studyDays: claimWeekdays(data.weekly_study_days),
+    restDays: claimWeekdays(data.weekly_rest_days),
+  };
 }
 
 async function signIn(email, password) {
@@ -964,14 +1017,24 @@ function beginFrontWatch(body, browser = "") {
     petLog(
       `[pet] claim equipped ${body.pet_type} level ${typeof body.level === "number" ? body.level : state.level ?? "?"}`,
     );
-    // Sprite type can update immediately; level waits for refreshPet.
-    state = { ...state, petType: body.pet_type };
   } else {
     petLog("[pet] claim returned no pet_type, so the character stays as it is.");
   }
-  state = { ...state, finishNote: "" };
+  state = {
+    ...state,
+    petType: typeof body.pet_type === "string" && body.pet_type ? body.pet_type : state.petType,
+    level: claimLevel(body.level) ?? state.level,
+    petColor: optionalLook(body.color),
+    petHat: optionalLook(body.hat),
+    petClothes: optionalLook(body.clothes),
+    studyDays: claimWeekdays(body.weekly_study_days),
+    restDays: claimWeekdays(body.weekly_rest_days),
+    finishNote: "",
+  };
+  petLog(
+    `[pet] claim look color=${state.petColor || "-"} hat=${state.petHat || "-"} clothes=${state.petClothes || "-"} study=${state.studyDays.join(",")} rest=${state.restDays.join(",")}`,
+  );
   syncSessionProgress(Date.now());
-  void refreshPet();
   setDebug(
     describeCloseDebug({
       session: true,
@@ -1393,6 +1456,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
+    registerPetAssets();
     registerMacProtocol();
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([
