@@ -45,7 +45,7 @@ const {
 } = require("./dock");
 const { petDisplayProgress } = require("./xp");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
-const { remainingStudyMs, studyProgress } = require("./study-clock");
+const { formatSessionClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 const { chatBubbleCopy, chatBubbleLines, pickChatLineIndex } = require("./chat-bubble");
@@ -100,6 +100,10 @@ const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
 let panelWindow = null;
 let panelOpen = false;
+/** OS window is already the open size (one instant setBounds, no native morph). */
+let panelBoundsOpen = false;
+/** Cream outline is showing. Sideways expand is `panelOpen`. */
+let panelFrameOpen = false;
 let petWindow = null;
 let petAnimating = false;
 /** True while the pet is walking to close a distracted tab. */
@@ -138,8 +142,11 @@ let state = {
   level: null,
   statsPetId: null,
   sessionProgress: 0,
+  sessionClock: "",
   status: "Let's study together!",
   panelOpen: false,
+  panelFrameOpen: false,
+  panelBoundsOpen: true,
   panelPetVisible: false,
   petPose: "idle",
   petFlip: false,
@@ -251,7 +258,7 @@ function syncChatBubble(options = {}) {
     ...chatBubbleInput(),
     lineIndex: chatLineIndex,
   });
-  const panelPetVisible = panelOpen && !petAnimating;
+  const panelPetVisible = panelOpen;
   if (
     state.chatBubble === copy.text &&
     state.chatBubbleScope === copy.scope &&
@@ -288,7 +295,7 @@ function publish() {
     ...state,
     assetOrigin: petAssetOrigin(),
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
-    panelPetVisible: panelOpen && !petAnimating,
+    panelPetVisible: panelOpen,
   };
   for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
@@ -447,6 +454,19 @@ function syncSessionProgress(now = Date.now()) {
   return setSessionProgress(progress);
 }
 
+function syncSessionClock(now = Date.now()) {
+  if (!study) {
+    if (!state.sessionClock) return false;
+    state = { ...state, sessionClock: "" };
+    return true;
+  }
+  const remaining = remainingStudyMs(study, now);
+  const next = remaining === null ? "" : formatSessionClock(remaining);
+  if (state.sessionClock === next) return false;
+  state = { ...state, sessionClock: next };
+  return true;
+}
+
 function prefersReducedMotion() {
   try {
     if (typeof systemPreferences.getAnimationSettings === "function") {
@@ -460,28 +480,38 @@ function prefersReducedMotion() {
 }
 
 function syncPanelOpenState() {
-  if (state.panelOpen === panelOpen) {
+  const frameOpen = Boolean(panelFrameOpen || panelOpen);
+  // Right dock keeps the open window, so the clip stays on and x never jumps.
+  const boundsOpen = Boolean(panelBoundsOpen || panelOpen || dock.edge === "right");
+  if (
+    state.panelOpen === panelOpen &&
+    state.panelFrameOpen === frameOpen &&
+    state.panelBoundsOpen === boundsOpen
+  ) {
     publish();
     return;
   }
-  state = { ...state, panelOpen };
+  state = { ...state, panelOpen, panelFrameOpen: frameOpen, panelBoundsOpen: boundsOpen };
   publish();
 }
 
 /** Content fade in/out — keep in sync with `#panel-body` opacity transition. */
 const PANEL_SURFACE_MS = 200;
-/** Native macOS `setBounds(..., true)` window morph duration. */
-const PANEL_BOUNDS_MS = 280;
+/** Window is already open-sized before the cream outline appears. */
+const PANEL_REVEAL_MS = 80;
+/** Hold cream outline on the time bar before sideways expand. */
+const PANEL_OUTLINE_MS = 160;
+/** CSS sideways expand/collapse — keep in sync with `#shell` clip-path transition. */
+const PANEL_EXPAND_MS = 280;
 
 /**
- * Resize the cream shell. Prefer native animated bounds on macOS; skip pet moves mid-morph
- * so the sprite does not jump to the destination before the window finishes expanding.
+ * Set the OS window to open or closed bounds in one shot (no native morph).
+ * Visual widen/collapse is CSS inside the already-sized transparent window.
  */
-function applyPanelBounds(mode, { animate = false, movePet = true } = {}) {
+function applyPanelBounds(mode, { movePet = true } = {}) {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  const useAnimate = Boolean(animate) && !prefersReducedMotion();
-  win.setBounds(panelBounds(mode), useAnimate);
+  win.setBounds(panelBounds(mode), false);
   if (movePet) placePet();
 }
 
@@ -506,6 +536,9 @@ function currentOverlay(open = panelOpen, point) {
 }
 
 function panelBounds(open) {
+  // Left and top grow from a fixed window origin. The right edge would have to move x
+  // when the width changes, and macOS sometimes paints that resize from the top-left.
+  if (dock.edge === "right") return currentOverlay("open").panel;
   return currentOverlay(open).panel;
 }
 
@@ -514,18 +547,25 @@ function placePanel() {
   if (!win || win.isDestroyed()) return;
   // Native + CSS shadows stacked a ghost frame around the transparent pad.
   win.setHasShadow(false);
-  win.setBounds(panelBounds(panelOpen), true);
+  win.setBounds(panelBounds(panelOpen || panelBoundsOpen), false);
 }
 
 function setDockEdgeState(edge) {
-  if (state.dockEdge === edge) return;
+  if (edge === "right") panelBoundsOpen = true;
+  else if (!panelOpen) panelBoundsOpen = false;
+  if (state.dockEdge === edge) {
+    syncPanelOpenState();
+    return;
+  }
   state = { ...state, dockEdge: edge };
-  publish();
+  syncPanelOpenState();
 }
 
 function setPanelOpen(open) {
   const next = Boolean(open);
-  if (next === panelOpen && !dockDrag) {
+  const boundsSettled = dock.edge === "right" ? panelBoundsOpen : next === panelBoundsOpen;
+  const settled = next === panelOpen && next === panelFrameOpen && boundsSettled;
+  if (settled && !dockDrag) {
     placePanel();
     placePet();
     syncPanelOpenState();
@@ -534,11 +574,23 @@ function setPanelOpen(open) {
   const seq = ++panelToggleSeq;
   const reduced = prefersReducedMotion();
   if (next) {
-    // One smooth widen/grow (sides widen; top grows down). Fade content after the shell settles.
+    // 1) Instant open-sized window  2) cream outline on the time bar  3) extend sideways.
     void (async () => {
-      applyPanelBounds("open", { animate: !reduced, movePet: false });
+      if (dock.edge !== "right") applyPanelBounds("open", { movePet: false });
+      panelBoundsOpen = true;
+      panelFrameOpen = false;
+      panelOpen = false;
+      placePet();
+      syncPanelOpenState();
       if (!reduced) {
-        await waitMs(PANEL_BOUNDS_MS);
+        await waitMs(PANEL_REVEAL_MS);
+        if (seq !== panelToggleSeq) return;
+      }
+      panelFrameOpen = true;
+      placePet();
+      syncPanelOpenState();
+      if (!reduced) {
+        await waitMs(PANEL_OUTLINE_MS);
         if (seq !== panelToggleSeq) return;
       }
       panelOpen = true;
@@ -547,21 +599,32 @@ function setPanelOpen(open) {
     })();
     return;
   }
-  // Fade content out, then smoothly collapse the shell; pet returns beside the rail.
+  // 1) Collapse cream sideways to the time bar  2) thin window  3) drop cream outline.
   panelOpen = false;
+  panelFrameOpen = true;
+  panelBoundsOpen = true;
   placePet();
   syncPanelOpenState();
   void (async () => {
     if (!reduced) {
-      await waitMs(PANEL_SURFACE_MS);
+      await waitMs(Math.max(PANEL_SURFACE_MS, PANEL_EXPAND_MS));
       if (seq !== panelToggleSeq) return;
     }
-    applyPanelBounds("closed", { animate: !reduced, movePet: false });
-    if (!reduced) {
-      await waitMs(PANEL_BOUNDS_MS);
-      if (seq !== panelToggleSeq) return;
+    if (dock.edge !== "right") {
+      applyPanelBounds("closed", { movePet: false });
+      panelBoundsOpen = false;
+    } else {
+      panelBoundsOpen = true;
     }
     placePet();
+    syncPanelOpenState();
+    if (!reduced) {
+      await waitMs(PANEL_OUTLINE_MS);
+      if (seq !== panelToggleSeq) return;
+    }
+    panelFrameOpen = false;
+    placePet();
+    syncPanelOpenState();
   })();
 }
 
@@ -569,30 +632,19 @@ function petBounds() {
   return currentOverlay(panelOpen).pet;
 }
 
-function placePet() {
-  if (petAnimating || dockDrag) return;
+function destroyPetWindow() {
   const win = petWindow;
-  if (!win || win.isDestroyed()) return;
-  // Open bar hosts the pet inside the cream shell; keep the external window for closed / walk-away.
-  if (panelOpen) {
-    win.hide();
+  if (!win || win.isDestroyed()) {
+    petWindow = null;
     return;
   }
-  if (panelWindow && !panelWindow.isDestroyed()) {
-    const panelRect = panelWindow.getBounds();
-    const area = dockWorkArea({
-      x: panelRect.x + panelRect.width / 2,
-      y: panelRect.y + panelRect.height / 2,
-    });
-    const origin = petOriginBesidePanel(dock.edge, panelRect, PET_SIZE, area, dockOptions());
-    win.setBounds(petWindowRect(origin), false);
-    hardenOverlayWindow(win);
-    win.showInactive();
-    return;
-  }
-  win.setBounds(petWindowRect(petBounds()), true);
-  hardenOverlayWindow(win);
-  win.showInactive();
+  petWindow = null;
+  win.destroy();
+}
+
+function placePet() {
+  // No floating overlay pet; studying sprite stays inside the open panel only.
+  destroyPetWindow();
 }
 
 function placeOverlayFloating(panelRect, pointer) {
@@ -607,13 +659,6 @@ function placeOverlayFloating(panelRect, pointer) {
       false,
     );
   }
-  if (!petWindow || petWindow.isDestroyed() || petAnimating || panelOpen) return;
-  const cx = Number.isFinite(pointer?.x) ? pointer.x : panelRect.x + panelRect.width / 2;
-  const cy = Number.isFinite(pointer?.y) ? pointer.y : panelRect.y + panelRect.height / 2;
-  const area = dockWorkArea({ x: cx, y: cy });
-  const edge = nearestEdge(cx, cy, area);
-  const origin = petOriginBesidePanel(edge, panelRect, PET_SIZE, area, dockOptions());
-  petWindow.setBounds(petWindowRect(origin), false);
 }
 
 function beginDockDrag(screenX, screenY) {
@@ -643,6 +688,7 @@ function endDockDrag(screenX, screenY) {
     cancelDockDrag();
     return;
   }
+  const grab = { grabX: dockDrag.grabX, grabY: dockDrag.grabY };
   const floating = {
     x: Math.round(screenX - dockDrag.grabX),
     y: Math.round(screenY - dockDrag.grabY),
@@ -651,10 +697,26 @@ function endDockDrag(screenX, screenY) {
   };
   dockDrag = null;
   const area = dockWorkArea({ x: screenX, y: screenY });
-  const snapped = snapOverlay(floating, { x: screenX, y: screenY }, area, panelOpen, dockOptions());
+  // Point A = release cursor; snap to nearest side with along-edge place from A.
+  let snapped = snapOverlay(
+    floating,
+    { x: screenX, y: screenY },
+    area,
+    panelOpen,
+    dockOptions(),
+    grab,
+  );
+  if (snapped.edge === "right") {
+    snapped = overlayLayout(snapped.edge, snapped.offset, "open", area, dockOptions());
+  }
   dock = { edge: snapped.edge, offset: snapped.offset };
   setDockEdgeState(snapped.edge);
-  placePanel();
+  // Native animated bounds slides the bar to the docked edge.
+  const win = panelWindow;
+  if (win && !win.isDestroyed()) {
+    win.setHasShadow(false);
+    win.setBounds(snapped.panel, !prefersReducedMotion());
+  }
   placePet();
 }
 
@@ -676,97 +738,12 @@ function setPetPose(pose, flip) {
   publish();
 }
 
-async function walkPetTo(x, y) {
-  const win = petWindow;
-  if (!win || win.isDestroyed()) return;
-  const from = win.getBounds();
-  const faceLeft = x < from.x - 1;
-  const steps = 16;
-  for (let i = 1; i <= steps; i += 1) {
-    if (!petWindow || petWindow.isDestroyed()) return;
-    const t = 1 - Math.pow(1 - i / steps, 2);
-    petWindow.setPosition(
-      Math.round(from.x + (x - from.x) * t),
-      Math.round(from.y + (y - from.y) * t),
-    );
-    setPetPose(i % 4 < 2 ? "walk1" : "walk2", faceLeft);
-    await waitMs(40);
-  }
-  if (petWindow && !petWindow.isDestroyed()) petWindow.setPosition(Math.round(x), Math.round(y));
-}
-
-async function jumpPet() {
-  const win = petWindow;
-  if (!win || win.isDestroyed()) return;
-  const start = win.getBounds();
-  setPetPose("idle", state.petFlip);
-  for (const dy of [0, -14, -28, -36, -22, -6, 0, -10, -18, -8, 0]) {
-    if (!petWindow || petWindow.isDestroyed()) return;
-    petWindow.setPosition(start.x, start.y + dy);
-    await waitMs(32);
-  }
-}
-
-async function returnPetHome() {
-  if (!petWindow || petWindow.isDestroyed()) return;
-  const home = petWindowRect(petBounds());
-  await walkPetTo(home.x, home.y);
-  setPetPose("idle", false);
-}
-
-async function finishPetApproach() {
-  try {
-    await returnPetHome();
-  } finally {
-    petClosing = false;
-    petAnimating = false;
-    setPetPose("idle", false);
-    placePet();
-    publish();
-  }
-}
-
 async function closeFrontTab(appName, host) {
-  let animated = false;
-  if (petWindow && !petWindow.isDestroyed()) {
-    const bounds = await readFrontWindowBounds(appName);
-    const parsed = bounds.ok ? parseWindowBounds(bounds.value) : null;
-    if (parsed) {
-      petClosing = true;
-      petAnimating = true;
-      animated = true;
-      publish();
-      try {
-        // Leave the open bar and appear at the dock home before walking to the tab strip.
-        const home = petWindowRect(petBounds());
-        petWindow.setBounds(home, false);
-        hardenOverlayWindow(petWindow);
-        petWindow.showInactive();
-        const origin = petOriginForTabStrip(parsed, PET_SIZE);
-        const display = screen.getDisplayNearestPoint({
-          x: origin.x + PET_SIZE / 2,
-          y: origin.y + PET_SIZE / 2,
-        });
-        const aim = clampPetOrigin(origin, PET_SIZE, display.bounds);
-        const target = petWindowRect(aim);
-        await walkPetTo(target.x, target.y);
-        await jumpPet();
-      } catch {
-        await finishPetApproach();
-        return { ok: false, error: "", skipped: true };
-      }
-    }
-  }
-  if (animated) {
-    const still = await readFrontBrowser();
-    if (hostnameFromUrl(still.url || "") !== host) {
-      await finishPetApproach();
-      return { ok: false, error: "", skipped: true };
-    }
-  }
-  const result = await closeFrontWindow(appName);
-  if (animated) await finishPetApproach();
-  return result;
+  // No floating pet walk — close the distracted tab directly.
+  void host;
+  petClosing = false;
+  petAnimating = false;
+  return closeFrontWindow(appName);
 }
 
 function hardenOverlayWindow(win) {
@@ -778,39 +755,8 @@ function hardenOverlayWindow(win) {
 }
 
 function openPet() {
-  if (petWindow && !petWindow.isDestroyed()) {
-    placePet();
-    return;
-  }
-  const bounds = petWindowRect(petBounds());
-  petWindow = new BrowserWindow({
-    ...bounds,
-    show: !panelOpen,
-    frame: false,
-    transparent: true,
-    movable: false,
-    resizable: false,
-    focusable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    hasShadow: false,
-    backgroundColor: "#00000000",
-    title: "Aurafarm pet",
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  hardenOverlayWindow(petWindow);
-  // Forward hits so the sprite can opt into drag without blocking the desktop.
-  petWindow.setIgnoreMouseEvents(true, { forward: true });
-  loadOverlay(petWindow, "pet.html");
-  petWindow.on("closed", () => {
-    petWindow = null;
-    if (!appQuitting) setImmediate(() => openPet());
-  });
-  petWindow.webContents.once("did-finish-load", publish);
+  // Floating overlay pet removed; panel hosts the studying sprite when open.
+  destroyPetWindow();
 }
 
 function focusPanel() {
@@ -853,10 +799,10 @@ function openPanel() {
     panelWindow = null;
     if (!appQuitting) setImmediate(() => openPanel());
   });
+  panelWindow.webContents.once("did-finish-load", publish);
   panelWindow.webContents.once("did-finish-load", () => {
     hardenOverlayWindow(panelWindow);
     if (panelWindow && !panelWindow.isDestroyed()) panelWindow.show();
-    publish();
   });
 }
 
@@ -1022,19 +968,13 @@ async function cancelStudy() {
 function tickStudyClock() {
   if (!study || finishing) return;
   const now = Date.now();
-  const remaining = remainingStudyMs(study, now);
   const progressChanged = syncSessionProgress(now);
+  const clockChanged = syncSessionClock(now);
   const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, now) : "";
   const statusChanged = Boolean(countdown && state.status !== countdown);
   if (statusChanged) state = { ...state, status: countdown };
-  if (progressChanged || statusChanged) publish();
+  if (progressChanged || clockChanged || statusChanged) publish();
   advanceChatLine();
-  // Countdown UI lives on the desk site; the pet only auto-finishes when time is up.
-  if (remaining !== null && remaining <= 0) {
-    setSessionProgress(1);
-    publish();
-    void finishSession();
-  }
 }
 
 function startStudyClock() {
@@ -1122,7 +1062,7 @@ function stopFrontWatch() {
   chatLineIndex = 0;
   chatLineTick = 0;
   chatLineScenario = "";
-  state = { ...state, chatBubble: "", chatBubbleScope: "none", sessionProgress: 0 };
+  state = { ...state, chatBubble: "", chatBubbleScope: "none", sessionProgress: 0, sessionClock: "" };
   const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));
   if (state.debug === debugBefore) publish();
@@ -1451,10 +1391,11 @@ ipcMain.on("quit-app", () => {
 ipcMain.on("set-panel-open", (_event, open) => {
   setPanelOpen(open);
 });
-ipcMain.on("pet-ignore-mouse", (_event, ignore) => {
-  if (!petWindow || petWindow.isDestroyed()) return;
-  if (ignore) petWindow.setIgnoreMouseEvents(true, { forward: true });
-  else petWindow.setIgnoreMouseEvents(false);
+ipcMain.on("pet-ignore-mouse", (event, ignore) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed()) return;
+  if (ignore) win.setIgnoreMouseEvents(true, { forward: true });
+  else win.setIgnoreMouseEvents(false);
 });
 ipcMain.on("dock-drag-start", (_event, point) => {
   beginDockDrag(Number(point?.x), Number(point?.y));
@@ -1540,7 +1481,7 @@ if (!gotLock) {
     screen.on("display-metrics-changed", () => {
       if (dockDrag) cancelDockDrag();
       const area = dockWorkArea();
-      const layout = overlayLayout(dock.edge, dock.offset, panelOpen, area, dockOptions());
+      const layout = overlayLayout(dock.edge, dock.offset, panelOpen || panelBoundsOpen, area, dockOptions());
       dock = { edge: layout.edge, offset: layout.offset };
       setDockEdgeState(layout.edge);
       placePanel();
@@ -1552,13 +1493,12 @@ if (!gotLock) {
       console.log(
         `[pet] display bounds=${JSON.stringify(display.bounds)} workArea=${JSON.stringify(area)} scale=${display.scaleFactor}`,
       );
-      const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, false, area, dockOptions());
+      const bottomRight = overlayLayout("right", Number.MAX_SAFE_INTEGER, "open", area, dockOptions());
       dock = { edge: "right", offset: bottomRight.offset };
       state = { ...state, dockEdge: "right" };
       console.log(`[pet] dock panel=${JSON.stringify(bottomRight.panel)} pet=${JSON.stringify(bottomRight.pet)}`);
     }
     openPanel();
-    openPet();
     void noteFrontApp();
     setInterval(() => {
       void noteFrontApp();

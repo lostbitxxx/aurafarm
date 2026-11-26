@@ -25,7 +25,15 @@ function formatStudyClock(remainingMs) {
   return `${minutes}:${ss}`;
 }
 
+/** Countdown while time remains; "+m:ss" once the planned session is over. */
+function formatSessionClock(remainingMs) {
+  if (!Number.isFinite(remainingMs)) return "";
+  if (remainingMs > 0) return formatStudyClock(remainingMs);
+  return `+${formatStudyClock(Math.abs(remainingMs))}`;
+}
+
 module.exports = {
+  formatSessionClock,
   formatStudyClock,
   remainingStudyMs,
   studyProgress,

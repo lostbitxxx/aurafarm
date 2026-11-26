@@ -3,8 +3,10 @@ const update = document.getElementById("update");
 const updateLabel = document.getElementById("update-label");
 const finishButton = document.getElementById("finish");
 const note = document.getElementById("note");
+const dockRail = document.getElementById("dock-rail");
 const toggle = document.getElementById("panel-toggle");
 const sessionFill = document.getElementById("session-fill");
+const sessionClock = document.getElementById("session-clock");
 const panelPet = document.getElementById("panel-pet");
 const panelPetChat = document.getElementById("panel-pet-chat");
 const panelPetStack = document.getElementById("panel-pet-stack");
@@ -22,11 +24,22 @@ const panelLayerNodes = {
 };
 
 const EDGE_CLASSES = ["edge-left", "edge-right", "edge-top", "edge-bottom"];
+/** Screen px before a rail press counts as a drag instead of a click. */
+const DOCK_DRAG_THRESHOLD_PX = 7;
+/** Delay before leaving the open panel auto-collapses it. */
+const LEAVE_CLOSE_MS = 450;
+
 let dockEdge = "right";
+let mouseIgnored = false;
+/** @type {null | { x: number, y: number }} */
+let lastPointer = null;
 let panelIsOpen = false;
 let dockDragging = false;
 let dockMoved = false;
 let activePointerId = null;
+/** @type {null | { x: number, y: number }} */
+let pendingDragOrigin = null;
+let leaveCloseTimer = null;
 let assetOrigin = "";
 let shownPet = "baby_slime";
 let shownPose = "idle";
@@ -39,19 +52,61 @@ function isHorizontalEdge(edge) {
   return edge === "top" || edge === "bottom";
 }
 
+function setHitTestIgnored(ignore) {
+  const next = Boolean(ignore);
+  if (next === mouseIgnored) return;
+  mouseIgnored = next;
+  window.pet.setIgnoreMouse(next);
+}
+
+function railContains(x, y) {
+  const rect = dockRail.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+/** Right dock stays at the open window size, so clicks miss the empty area beside the bar. */
+function syncHitTarget(clientX, clientY) {
+  if (dockEdge !== "right" || panelIsOpen || dockDragging) {
+    setHitTestIgnored(false);
+    return;
+  }
+  const x = Number.isFinite(clientX) ? clientX : lastPointer?.x;
+  const y = Number.isFinite(clientY) ? clientY : lastPointer?.y;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    setHitTestIgnored(true);
+    return;
+  }
+  setHitTestIgnored(!railContains(x, y));
+}
+
+window.addEventListener("pointermove", (event) => {
+  lastPointer = { x: event.clientX, y: event.clientY };
+  syncHitTarget(event.clientX, event.clientY);
+});
+
 function applyDockEdge(edge) {
   // Bottom is not a dock target; fall back to right.
   const next = edge === "left" || edge === "right" || edge === "top" ? edge : "right";
   dockEdge = next;
   for (const name of EDGE_CLASSES) document.body.classList.toggle(name, name === `edge-${next}`);
-  applyPanelOpen(panelIsOpen);
+  applyPanelOpen(
+    panelIsOpen,
+    document.body.classList.contains("is-frame-open"),
+    document.body.classList.contains("is-bounds-open"),
+  );
 }
 
-function applyPanelOpen(open) {
+function applyPanelOpen(open, frameOpen = open, boundsOpen = frameOpen) {
   panelIsOpen = Boolean(open);
+  const frame = Boolean(frameOpen) || panelIsOpen;
+  const bounds = Boolean(boundsOpen) || panelIsOpen;
   document.body.classList.toggle("is-open", panelIsOpen);
+  document.body.classList.toggle("is-frame-open", frame);
+  document.body.classList.toggle("is-bounds-open", bounds);
   toggle.setAttribute("aria-expanded", panelIsOpen ? "true" : "false");
   toggle.setAttribute("aria-label", panelIsOpen ? "Close Aurafarm" : "Open Aurafarm");
+  if (!panelIsOpen) clearLeaveClose();
+  syncHitTarget();
 }
 
 function setLayer(node, src) {
@@ -136,80 +191,120 @@ function applySessionFill(state) {
   }
 }
 
+function applySessionClock(state) {
+  if (!sessionClock) return;
+  const text = typeof state.sessionClock === "string" ? state.sessionClock.trim() : "";
+  sessionClock.textContent = text;
+  sessionClock.hidden = !text;
+}
+
 function screenPoint(event) {
   return { x: event.screenX, y: event.screenY };
+}
+
+function clearLeaveClose() {
+  if (!leaveCloseTimer) return;
+  clearTimeout(leaveCloseTimer);
+  leaveCloseTimer = null;
+}
+
+function armLeaveClose() {
+  clearLeaveClose();
+  if (!panelIsOpen || dockDragging || pendingDragOrigin) return;
+  leaveCloseTimer = setTimeout(() => {
+    leaveCloseTimer = null;
+    if (!panelIsOpen || dockDragging) return;
+    window.pet.setOpen(false);
+  }, LEAVE_CLOSE_MS);
 }
 
 function clearDockDrag() {
   const pointerId = activePointerId;
   activePointerId = null;
+  pendingDragOrigin = null;
   dockDragging = false;
   dockMoved = false;
-  panelPetStack.classList.remove("is-dragging");
-  if (pointerId !== null && panelPetStack.hasPointerCapture?.(pointerId)) {
+  dockRail.classList.remove("is-dragging");
+  if (pointerId !== null && toggle.hasPointerCapture?.(pointerId)) {
     try {
-      panelPetStack.releasePointerCapture(pointerId);
+      toggle.releasePointerCapture(pointerId);
     } catch {
       // Capture may already be cleared.
     }
   }
 }
 
-toggle.addEventListener("click", () => {
-  if (dockDragging || dockMoved) return;
+function togglePanelOpen() {
   window.pet.setOpen(toggle.getAttribute("aria-expanded") !== "true");
-});
+}
 
-// Only the pet moves the dock; the EXP rail stays open/close.
-panelPetStack.addEventListener("pointerdown", (event) => {
+// Slim rail only: click toggles; movement past threshold starts a dock drag.
+toggle.addEventListener("pointerdown", (event) => {
   if (event.button !== 0) return;
-  event.stopPropagation();
-  dockDragging = true;
+  clearLeaveClose();
+  pendingDragOrigin = screenPoint(event);
+  dockDragging = false;
   dockMoved = false;
   activePointerId = event.pointerId;
-  panelPetStack.classList.add("is-dragging");
-  panelPetStack.setPointerCapture?.(event.pointerId);
-  const point = screenPoint(event);
-  window.pet.dockDragStart(point.x, point.y);
+  toggle.setPointerCapture?.(event.pointerId);
 });
 
-panelPetStack.addEventListener("pointermove", (event) => {
-  if (!dockDragging || event.pointerId !== activePointerId) return;
-  dockMoved = true;
+toggle.addEventListener("pointermove", (event) => {
+  if (activePointerId !== event.pointerId || !pendingDragOrigin) return;
   const point = screenPoint(event);
+  const dist = Math.hypot(point.x - pendingDragOrigin.x, point.y - pendingDragOrigin.y);
+  if (!dockMoved && dist < DOCK_DRAG_THRESHOLD_PX) return;
+  if (!dockDragging) {
+    dockDragging = true;
+    dockMoved = true;
+    dockRail.classList.add("is-dragging");
+    window.pet.dockDragStart(pendingDragOrigin.x, pendingDragOrigin.y);
+  }
   window.pet.dockDragMove(point.x, point.y);
 });
 
-function finishDockPointer(event, cancelled) {
-  if (!dockDragging || (activePointerId !== null && event.pointerId !== activePointerId)) return;
+function finishRailPointer(event, cancelled) {
+  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  if (!pendingDragOrigin && !dockDragging) return;
   const point = screenPoint(event);
-  if (cancelled) window.pet.dockDragCancel();
-  else window.pet.dockDragEnd(point.x, point.y);
+  if (dockDragging) {
+    if (cancelled) window.pet.dockDragCancel();
+    else window.pet.dockDragEnd(point.x, point.y);
+    clearDockDrag();
+    return;
+  }
+  // Under-threshold press = click toggle open/close.
   clearDockDrag();
+  if (!cancelled) togglePanelOpen();
 }
 
-panelPetStack.addEventListener("pointerup", (event) => {
-  finishDockPointer(event, false);
+toggle.addEventListener("pointerup", (event) => {
+  finishRailPointer(event, false);
 });
 
-panelPetStack.addEventListener("pointercancel", (event) => {
-  finishDockPointer(event, true);
+toggle.addEventListener("pointercancel", (event) => {
+  finishRailPointer(event, true);
 });
 
-panelPetStack.addEventListener("lostpointercapture", (event) => {
-  if (!dockDragging) return;
+toggle.addEventListener("lostpointercapture", (event) => {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
-  window.pet.dockDragCancel();
-  activePointerId = null;
-  dockDragging = false;
-  dockMoved = false;
-  panelPetStack.classList.remove("is-dragging");
+  if (!pendingDragOrigin && !dockDragging) return;
+  if (dockDragging) window.pet.dockDragCancel();
+  clearDockDrag();
 });
 
 window.addEventListener("blur", () => {
-  if (!dockDragging) return;
-  window.pet.dockDragCancel();
+  if (dockDragging) window.pet.dockDragCancel();
   clearDockDrag();
+  clearLeaveClose();
+});
+
+document.addEventListener("mouseleave", () => {
+  if (panelIsOpen) armLeaveClose();
+});
+
+document.addEventListener("mouseenter", () => {
+  clearLeaveClose();
 });
 
 document.getElementById("update-button").addEventListener("click", () => {
@@ -253,7 +348,13 @@ applyDockEdge("right");
 
 window.pet.onState((state) => {
   if (typeof state.dockEdge === "string") applyDockEdge(state.dockEdge);
-  if (typeof state.panelOpen === "boolean") applyPanelOpen(state.panelOpen);
+  if (typeof state.panelOpen === "boolean" || typeof state.panelFrameOpen === "boolean") {
+    applyPanelOpen(
+      typeof state.panelOpen === "boolean" ? state.panelOpen : panelIsOpen,
+      typeof state.panelFrameOpen === "boolean" ? state.panelFrameOpen : state.panelOpen,
+      typeof state.panelBoundsOpen === "boolean" ? state.panelBoundsOpen : state.panelFrameOpen,
+    );
+  }
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;
@@ -262,6 +363,7 @@ window.pet.onState((state) => {
   shownClothes = typeof state.petClothes === "string" ? state.petClothes : null;
   if (typeof state.petFlip === "boolean") shownFlip = state.petFlip;
   applySessionFill(state);
+  applySessionClock(state);
   applyPanelPet(state);
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;

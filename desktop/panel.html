@@ -18,20 +18,30 @@
         --session-green: #5fbf4a;
         --session-study: #c43b2e;
         --session-rest: #3f78c8;
+        --cylinder-wall: #fffcf7;
+        --cylinder-edge: #c5ceb5;
+        --cylinder-track: #e8ebe0;
         --shell-ink: #23392d;
         --shell-radius: 10px;
+        --rail: 31px;
+        --frame-pad: 8px;
         margin: 0;
         box-sizing: border-box;
         height: 100%;
         overflow: hidden;
-        padding: 3px;
+        padding: 0;
         font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         font-size: 1rem;
         line-height: 1.35;
         background: transparent;
         color: var(--shell-ink);
       }
-      /* One cream surface: the bar extends; no separate left card. */
+      /*
+       * Closed: time bar only.
+       * is-bounds-open: window is already the open size; the bar stays put.
+       * is-frame-open: cream outline on that bar, slightly past it (--frame-pad).
+       * is-open: cream extends sideways to full panel width.
+       */
       #shell {
         position: relative;
         display: flex;
@@ -40,19 +50,48 @@
         height: 100%;
         overflow: hidden;
         margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        color: var(--shell-ink);
+        transition: clip-path 280ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      body.is-frame-open #shell {
         border: 1.5px solid var(--shell-border);
         border-radius: var(--shell-radius);
         background: var(--shell-cream);
-        /* No offset shadow — it read as a second bar stacked behind the rail. */
-        box-shadow: none;
-        color: var(--shell-ink);
+      }
+      /* Cream column stays on the docked edge until the sideways expand. */
+      body.edge-left.is-bounds-open:not(.is-open) #shell,
+      body.edge-right.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(0 calc(100% - var(--rail)) 0 0);
+      }
+      body.edge-top.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(0 0 calc(100% - var(--rail)) 0);
+      }
+      body.edge-bottom.is-bounds-open:not(.is-open) #shell {
+        clip-path: inset(calc(100% - var(--rail)) 0 0 0);
+      }
+      body.is-frame-open.is-open #shell {
+        clip-path: inset(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #shell {
+          transition: none;
+        }
       }
       body.edge-left #shell,
       body.edge-right #shell {
         flex-direction: row;
       }
+      /* Same row layout as the left edge, mirrored so the bar stays on the right. */
       body.edge-right #shell {
-        flex-direction: row-reverse;
+        transform: scaleX(-1);
+      }
+      body.edge-right #dock-rail,
+      body.edge-right #panel-body {
+        transform: scaleX(-1);
       }
       body.edge-top #shell,
       body.edge-bottom #shell {
@@ -72,6 +111,12 @@
         padding: 0;
         background: transparent;
         color: var(--shell-ink);
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+      }
+      #dock-rail.is-dragging {
+        cursor: grabbing;
       }
       body.is-study-day #dock-rail {
         background: #f3c2bc;
@@ -82,7 +127,7 @@
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
         flex-direction: column;
-        width: 25px;
+        width: 31px;
         max-width: 100%;
         height: 100%;
       }
@@ -90,8 +135,19 @@
       body.edge-bottom #dock-rail {
         flex-direction: row;
         width: 100%;
-        height: 25px;
+        height: 31px;
         max-height: 100%;
+      }
+      /* Open window is --frame-pad taller/longer. Keep the time bar the closed size, centered. */
+      body.is-bounds-open.edge-left #dock-rail,
+      body.is-bounds-open.edge-right #dock-rail {
+        height: calc(100% - var(--frame-pad));
+        align-self: center;
+      }
+      body.is-bounds-open.edge-top #dock-rail,
+      body.is-bounds-open.edge-bottom #dock-rail {
+        width: calc(100% - var(--frame-pad));
+        align-self: center;
       }
       #panel-toggle {
         position: relative;
@@ -104,7 +160,11 @@
         border: 0;
         overflow: hidden;
         background: transparent;
+        cursor: inherit;
+      }
+      #panel-body button {
         cursor: pointer;
+        touch-action: manipulation;
       }
       body.edge-left #panel-toggle,
       body.edge-right #panel-toggle {
@@ -165,7 +225,39 @@
           transition: none;
         }
       }
-      /* Study time fill grows from the bottom (left on top dock). Red on a study day, blue on a rest day. */
+      /* One capsule = the rail bar (fill + tick lines). Study days tint it red, rest days blue. */
+      #session-capsule {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        border: 2px solid var(--cylinder-edge);
+        border-radius: 999px;
+        background: var(--cylinder-wall);
+        box-shadow: none;
+        pointer-events: none;
+      }
+      body.is-frame-open.edge-left #session-capsule,
+      body.is-frame-open.edge-right #session-capsule {
+        top: 0;
+        bottom: 0;
+        left: 2px;
+        right: 2px;
+      }
+      body.is-frame-open.edge-top #session-capsule,
+      body.is-frame-open.edge-bottom #session-capsule {
+        left: 0;
+        right: 0;
+        top: 2px;
+        bottom: 2px;
+      }
+      body.is-study-day #session-capsule {
+        background: #f3c2bc;
+      }
+      body.is-rest-day #session-capsule {
+        background: #c5d7ee;
+      }
       #session-fill {
         position: absolute;
         left: 0;
@@ -173,7 +265,7 @@
         bottom: 0;
         height: 0%;
         background: var(--session-green);
-        border-radius: 0;
+        border-radius: 0 0 999px 999px;
         pointer-events: none;
         transition: height 0.85s linear, width 0.85s linear, background-color 0.35s linear;
       }
@@ -190,6 +282,62 @@
         right: auto;
         width: 0%;
         height: auto;
+        border-radius: 999px 0 0 999px;
+      }
+      #session-ticks {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+      #session-ticks span {
+        position: absolute;
+        background: rgba(35, 57, 45, 0.22);
+      }
+      /* Four ticks at 1/6, 2/6, 4/6, 5/6 — skip center so the chevron stays clear. */
+      body.edge-left #session-ticks span,
+      body.edge-right #session-ticks span {
+        left: 15%;
+        right: 15%;
+        height: 1px;
+      }
+      body.edge-left #session-ticks span:nth-child(1),
+      body.edge-right #session-ticks span:nth-child(1) {
+        bottom: calc(100% / 6);
+      }
+      body.edge-left #session-ticks span:nth-child(2),
+      body.edge-right #session-ticks span:nth-child(2) {
+        bottom: calc(200% / 6);
+      }
+      body.edge-left #session-ticks span:nth-child(3),
+      body.edge-right #session-ticks span:nth-child(3) {
+        bottom: calc(400% / 6);
+      }
+      body.edge-left #session-ticks span:nth-child(4),
+      body.edge-right #session-ticks span:nth-child(4) {
+        bottom: calc(500% / 6);
+      }
+      body.edge-top #session-ticks span,
+      body.edge-bottom #session-ticks span {
+        top: 15%;
+        bottom: 15%;
+        width: 1px;
+      }
+      body.edge-top #session-ticks span:nth-child(1),
+      body.edge-bottom #session-ticks span:nth-child(1) {
+        left: calc(100% / 6);
+      }
+      body.edge-top #session-ticks span:nth-child(2),
+      body.edge-bottom #session-ticks span:nth-child(2) {
+        left: calc(200% / 6);
+      }
+      body.edge-top #session-ticks span:nth-child(3),
+      body.edge-bottom #session-ticks span:nth-child(3) {
+        left: calc(400% / 6);
+      }
+      body.edge-top #session-ticks span:nth-child(4),
+      body.edge-bottom #session-ticks span:nth-child(4) {
+        left: calc(500% / 6);
       }
       @media (prefers-reduced-motion: reduce) {
         #session-fill {
@@ -237,10 +385,24 @@
         position: relative;
         flex: 1 1 auto;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 0.2rem;
         min-height: 0;
         padding: 0.15rem 0 0.35rem;
+      }
+      #session-clock {
+        margin: 0;
+        color: var(--shell-ink);
+        font: 700 0.95rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        letter-spacing: 0.02em;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      #session-clock:empty,
+      #session-clock[hidden] {
+        display: none;
       }
       #panel-pet {
         display: none;
@@ -329,18 +491,8 @@
         height: 90px;
         margin-inline: auto;
         flex: none;
-        pointer-events: auto;
-        cursor: grab;
-      }
-      #panel-pet-stack:hover,
-      #panel-pet-stack .pet-figure,
-      #panel-pet-stack .pet-layer {
-        cursor: grab;
-      }
-      #panel-pet-stack.is-dragging,
-      #panel-pet-stack.is-dragging .pet-figure,
-      #panel-pet-stack.is-dragging .pet-layer {
-        cursor: grabbing;
+        pointer-events: none;
+        cursor: inherit;
       }
       #panel-pet-stack.is-study .pet-figure {
         inset: 8% 17% 28% 17%;
@@ -358,7 +510,8 @@
         border: 0;
         outline: none;
         image-rendering: pixelated;
-        cursor: grab;
+        pointer-events: none;
+        cursor: inherit;
       }
       #panel-pet .pet-layer.is-legs { z-index: 1; }
       #panel-pet .pet-layer.is-body { z-index: 2; }
@@ -460,7 +613,15 @@
     <div id="shell">
       <div id="dock-rail">
         <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
-          <span id="session-fill" aria-hidden="true"></span>
+          <span id="session-capsule" aria-hidden="true">
+            <span id="session-fill"></span>
+            <span id="session-ticks">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </span>
           <span id="panel-chevron" aria-hidden="true">
             <svg viewBox="0 0 12 12" focusable="false">
               <path
@@ -477,6 +638,7 @@
       </div>
       <div id="panel-body">
         <div id="panel-stage">
+          <p id="session-clock" hidden></p>
           <div id="panel-pet" aria-hidden="true">
             <p id="panel-pet-chat" class="pet-chat"></p>
             <div id="panel-pet-stack">
