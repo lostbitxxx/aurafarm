@@ -13,17 +13,41 @@ import {
   weekdayFromLocalDay,
 } from "../lib/study-mode";
 
+test("study mode cards show assassin, knight, and lord pixel art", () => {
+  const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
+  const modes = readFileSync(new URL("../lib/study-mode.ts", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /STUDY_MODE_ART\[item\]/);
+  assert.match(wizard, /customize-mode-art/);
+  assert.match(wizard, /customize-mode-copy[\s\S]*customize-mode-art/);
+  assert.match(css, /\.customize-mode-art[\s\S]*image-rendering:\s*pixelated/);
+  assert.match(css, /\.customize-mode-art[\s\S]*opacity:\s*0\.35/);
+  assert.match(css, /\.customize-mode\.is-selected \.customize-mode-art[\s\S]*opacity:\s*1/);
+  assert.match(css, /\.customize-mode-art[\s\S]*position:\s*absolute/);
+  assert.match(css, /\.customize-mode-art[\s\S]*right:\s*0/);
+  assert.match(css, /\.customize-mode-art[\s\S]*height:\s*100%/);
+  for (const mode of ["assassin", "knight", "lord"]) {
+    const art = readFileSync(new URL(`../public/pet-assets/ui/${mode}.svg`, import.meta.url), "utf8");
+    assert.match(art, /viewBox="0 0 128 128"/);
+    assert.match(art, /shape-rendering="crispEdges"/);
+    assert.match(art, /data:image\/png;base64,/);
+    assert.match(modes, new RegExp(`/pet-assets/ui/${mode}\\.svg`));
+  }
+});
+
 test("study mode cards keep a fixed recommended label on the suggested mode", () => {
   const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(wizard, /recommendStudyMode/);
   assert.match(wizard, /Suggested for you/);
   assert.match(wizard, /item === recommended/);
+  assert.match(wizard, /customize-mode-title/);
   assert.match(wizard, /customize-mode-recommended/);
   assert.match(wizard, />✦Recommended✦</);
   assert.doesNotMatch(wizard, /activeMode === recommended[\s\S]*customize-mode-recommended/);
+  assert.match(css, /\.customize-mode-title/);
   assert.match(css, /\.customize-mode-recommended/);
-  assert.match(css, /position:\s*absolute/);
+  assert.match(css, /\.customize-mode-recommended[\s\S]*position:\s*static/);
   assert.match(css, /\.customize-mode-recommended[\s\S]*font-style:\s*italic/);
   assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,160}transform:\s*rotate/);
   assert.doesNotMatch(css, /\.customize-mode-recommended[\s\S]{0,120}border/);

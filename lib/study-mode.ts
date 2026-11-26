@@ -80,6 +80,12 @@ export const BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
   },
 ];
 
+export const STUDY_MODE_ART: Record<StudyMode, string> = {
+  assassin: "/pet-assets/ui/assassin.svg",
+  knight: "/pet-assets/ui/knight.svg",
+  lord: "/pet-assets/ui/lord.svg",
+};
+
 const MODE_META: Record<
   StudyMode,
   { name: string; tagline: string; sessionMinutes: number }
