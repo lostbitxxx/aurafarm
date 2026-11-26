@@ -703,10 +703,12 @@ export function LivingRoom({
   const [decorHistory, setDecorHistory] = useState<DecorHistory>(() => emptyDecorHistory());
   const [petLabelPoses, setPetLabelPoses] = useState<Record<string, RoomPetLabelPose>>({});
   const [decorOpen, setDecorOpen] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMenu, setCalendarMenu] = useState<"closed" | "open" | "closing">("closed");
+  const calendarOpen = calendarMenu !== "closed";
   const calendarId = useId();
   const calendarRef = useRef<HTMLDivElement>(null);
   const calendarLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const calendarCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [liveCoins, setLiveCoins] = useState(coins);
   const ownedRoomSkinSignature = ownedRoomSkins.map((row) => `${row.categoryId}:${row.skinId}`).join("|");
   const [ownedSkinKeys, setOwnedSkinKeys] = useState(() =>
@@ -725,17 +727,17 @@ export function LivingRoom({
   }, [coins]);
 
   useEffect(() => {
-    if (!calendarOpen) return;
+    if (calendarMenu !== "open") return;
 
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      setCalendarOpen(false);
+      closeCalendarMenu();
     }
 
     function onPointer(event: PointerEvent) {
       const target = event.target as Node;
       if (calendarRef.current?.contains(target)) return;
-      setCalendarOpen(false);
+      closeCalendarMenu();
     }
 
     document.addEventListener("keydown", onKey);
@@ -744,11 +746,12 @@ export function LivingRoom({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
     };
-  }, [calendarOpen]);
+  }, [calendarMenu]);
 
   useEffect(() => {
     return () => {
       if (calendarLeaveTimer.current) clearTimeout(calendarLeaveTimer.current);
+      if (calendarCloseTimer.current) clearTimeout(calendarCloseTimer.current);
     };
   }, []);
 
@@ -759,6 +762,32 @@ export function LivingRoom({
     }
   }
 
+  function openCalendarMenu() {
+    clearCalendarLeaveTimer();
+    if (calendarCloseTimer.current) {
+      clearTimeout(calendarCloseTimer.current);
+      calendarCloseTimer.current = null;
+    }
+    setCalendarMenu("open");
+  }
+
+  function closeCalendarMenu() {
+    clearCalendarLeaveTimer();
+    setCalendarMenu((current) => {
+      if (current !== "open") return current;
+      if (calendarCloseTimer.current) clearTimeout(calendarCloseTimer.current);
+      const reduceMotion =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (reduceMotion) return "closed";
+      calendarCloseTimer.current = setTimeout(() => {
+        calendarCloseTimer.current = null;
+        setCalendarMenu("closed");
+      }, 200);
+      return "closing";
+    });
+  }
+
   function onCalendarPointerEnter() {
     clearCalendarLeaveTimer();
   }
@@ -767,7 +796,7 @@ export function LivingRoom({
     clearCalendarLeaveTimer();
     calendarLeaveTimer.current = setTimeout(() => {
       calendarLeaveTimer.current = null;
-      setCalendarOpen(false);
+      closeCalendarMenu();
     }, 160);
   }
 
@@ -1210,7 +1239,13 @@ export function LivingRoom({
             />
             <div
               ref={calendarRef}
-              className={calendarOpen ? "room-streak-calendar is-open" : "room-streak-calendar"}
+              className={
+                calendarMenu === "open"
+                  ? "room-streak-calendar is-open"
+                  : calendarMenu === "closing"
+                    ? "room-streak-calendar is-closing"
+                    : "room-streak-calendar"
+              }
               style={{ ...calendarStyle, zIndex: calendarZ }}
               onPointerEnter={onCalendarPointerEnter}
               onPointerLeave={onCalendarPointerLeave}
@@ -1221,21 +1256,28 @@ export function LivingRoom({
               <button
                 type="button"
                 className="room-prop-hotspot room-streak-calendar-hit"
-                aria-expanded={calendarOpen}
+                aria-expanded={calendarMenu === "open"}
                 aria-controls={calendarId}
                 aria-label={`Streak ${streakSafe} days. Show last 7 days.`}
                 data-tutorial="streak-calendar"
                 data-tutorial-current={tutorialCurrent("streak-calendar")}
                 data-prop-hotspot="calendar"
                 data-furniture="calendar"
-                onClick={() => setCalendarOpen((value) => !value)}
+                onClick={() => {
+                  if (calendarMenu === "open") closeCalendarMenu();
+                  else openCalendarMenu();
+                }}
               >
                 <span className="room-prop-hotspot-label">Streak</span>
               </button>
-              {calendarOpen ? (
+              {calendarMenu !== "closed" ? (
                 <div
                   id={calendarId}
-                  className="streak-calendar-popover room-streak-calendar-popover"
+                  className={
+                    calendarMenu === "closing"
+                      ? "streak-calendar-popover room-streak-calendar-popover is-closing"
+                      : "streak-calendar-popover room-streak-calendar-popover"
+                  }
                   role="dialog"
                   aria-label="Recent study"
                   onPointerEnter={onCalendarPointerEnter}
