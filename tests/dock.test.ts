@@ -105,12 +105,15 @@ test("overlayLayout keeps the docked group inside the inset work area", () => {
   assert.equal(normalized.edge, "right");
 });
 
-test("snapOverlay preserves along-edge place and chooses the nearest edge", () => {
+test("snapOverlay picks the nearest edge from pointer A and offsets along that edge", () => {
   const floating = { x: 900, y: 400, width: 24, height: 261 };
-  const toLeft = snapOverlay(floating, { x: 130, y: 420 }, area, false);
+  const pointer = { x: 130, y: 420 };
+  const grab = { grabX: 12, grabY: 80 };
+  const toLeft = snapOverlay(floating, pointer, area, false, {}, grab);
   assert.equal(toLeft.edge, "left");
   assert.equal(toLeft.panel.x, area.x + 8);
-  assert.ok(Math.abs(toLeft.panel.y - floating.y) < 40 || toLeft.offset >= 0);
+  // Along-edge place comes from A.y - grabY, then corner-clamped.
+  assert.equal(toLeft.panel.y, pointer.y - grab.grabY);
 
   const nearBottom = snapOverlay(floating, { x: 1400, y: 920 }, area, false);
   assert.equal(nearBottom.edge, "right");

@@ -231,24 +231,29 @@ function overlayLayout(edge, offset, open, area, options = {}) {
 }
 
 /**
- * Snap a free-floating panel rect to the nearest edge, keeping along-edge place.
+ * Snap to the nearest of left/right/top from pointer A.
+ * Along-edge place comes from A (minus optional grab offset), then corner-clamped.
+ * @param {{ grabX?: number, grabY?: number }} [grab]
  */
-function snapOverlay(panelBounds, pointer, area, open, options = {}) {
+function snapOverlay(panelBounds, pointer, area, open, options = {}, grab = {}) {
   const cfg = resolveConfig(options);
   const { inset, insetBottom } = edgeInsets(cfg);
   const x = Number.isFinite(pointer?.x) ? pointer.x : panelBounds.x + panelBounds.width / 2;
   const y = Number.isFinite(pointer?.y) ? pointer.y : panelBounds.y + panelBounds.height / 2;
   const edge = nearestEdge(x, y, area);
   const size = panelSize(edge, open, area, cfg);
+  const grabX = Number.isFinite(grab?.grabX) ? grab.grabX : size.width / 2;
+  const grabY = Number.isFinite(grab?.grabY) ? grab.grabY : size.height / 2;
   let guessOrigin;
   if (isVerticalEdge(edge)) {
     guessOrigin = {
       x: edge === "left" ? area.x + inset : area.x + area.width - inset - size.width,
-      y: Math.round(panelBounds.y),
+      // Point A maps along the side; grabY keeps the held spot under the cursor.
+      y: Math.round(y - grabY),
     };
   } else {
     guessOrigin = {
-      x: Math.round(panelBounds.x),
+      x: Math.round(x - grabX),
       y: edge === "top" ? area.y + inset : area.y + area.height - insetBottom - size.height,
     };
   }

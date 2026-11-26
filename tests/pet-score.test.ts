@@ -29,7 +29,8 @@ const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../
     petSize: number,
   ) => { x: number; y: number };
 };
-const { formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
+const { formatSessionClock, formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
+  formatSessionClock: (remainingMs: number) => string;
   formatStudyClock: (remainingMs: number) => string;
   remainingStudyMs: (
     study: { plannedSeconds?: number; startedAtMs?: number },
@@ -167,7 +168,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(script, /panelPetVisible/);
   assert.match(preload, /finish: \(\) => ipcRenderer\.send\("finish-session"\)/);
   assert.match(main, /function focusPanel\(\)/);
-  assert.match(main, /if \(remaining !== null && remaining <= 0\) \{\s*setSessionProgress\(1\);\s*publish\(\);\s*void finishSession\(\);/);
+  assert.match(main, /formatSessionClock/);
+  assert.match(main, /syncSessionClock/);
+  assert.doesNotMatch(main, /remaining <= 0\) \{\s*setSessionProgress\(1\);\s*publish\(\);\s*void finishSession\(\);/);
   assert.doesNotMatch(main, /sprite\.html|finish\.html/);
   assert.match(main, /openPanel\(\)/);
   assert.doesNotMatch(panel, /type="email"|type="password"|id="sign-in"/);
@@ -253,15 +256,22 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(desk, /Cancel session/);
   assert.doesNotMatch(panel, /id="dock-handle"/);
   assert.match(panel, /id="panel-toggle"/);
+  assert.match(panel, /id="session-capsule"/);
+  assert.doesNotMatch(panel, /id="session-track"/);
   assert.match(panel, /id="session-fill"/);
+  assert.match(panel, /id="session-ticks"/);
+  assert.match(panel, /id="session-clock"/);
   assert.doesNotMatch(panel, /id="exp-track"|id="exp-fill"|id="exp-level"/);
   assert.match(panel, /#session-fill[\s\S]*bottom: 0;/);
+  assert.match(panel, /#session-capsule[\s\S]*border-radius: 999px/);
   assert.match(panel, /--session-green: #5fbf4a/);
+  assert.match(panel, /--cylinder-wall: #fffcf7/);
   assert.doesNotMatch(panel, /--fill-purple|--track-sage|repeating-linear-gradient/);
-  assert.match(panel, /id="shell"[\s\S]*id="dock-rail"[\s\S]*id="panel-toggle"[\s\S]*id="session-fill"[\s\S]*id="panel-body"/);
+  assert.match(panel, /id="shell"[\s\S]*id="dock-rail"[\s\S]*id="panel-toggle"[\s\S]*id="session-capsule"[\s\S]*id="session-fill"[\s\S]*id="panel-body"/);
   assert.match(panel, /body\.edge-left[\s\S]*body\.edge-right[\s\S]*body\.edge-top[\s\S]*body\.edge-bottom/);
-  assert.match(panel, /#panel-pet-stack \{[^}]*cursor: grab/);
+  assert.match(panel, /#dock-rail \{[\s\S]*cursor: grab/);
   assert.doesNotMatch(panel, /#shell \{[^}]*cursor: grab/);
+  assert.match(panel, /#panel-pet-stack \{[^}]*pointer-events: none/);
   assert.match(panel, /--shell-radius: 10px/);
   assert.match(panel, /border-radius: var\(--shell-radius\)/);
   assert.match(panel, /\.pet-chat::after/);
@@ -269,16 +279,21 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /width: 90px/);
   assert.match(panel, /height: 90px/);
   assert.match(panel, /#panel-action-row \{[\s\S]*grid-template-columns: minmax\(0, 1\.85fr\) minmax\(3\.25rem, 0\.85fr\)/);
-  assert.match(script, /panelPetStack\.addEventListener\("pointerdown"/);
+  assert.match(script, /toggle\.addEventListener\("pointerdown"/);
+  assert.match(script, /DOCK_DRAG_THRESHOLD_PX/);
+  assert.match(script, /LEAVE_CLOSE_MS/);
+  assert.match(script, /replayChatBubble/);
+  assert.match(script, /applySessionClock/);
   assert.doesNotMatch(script, /shell\.addEventListener\("pointerdown"/);
+  assert.doesNotMatch(script, /panelPetStack\.addEventListener\("pointerdown"/);
   assert.doesNotMatch(panel, /id="dock-chrome"/);
   assert.match(panel, /#shell \{[\s\S]*box-shadow: none/);
-  assert.doesNotMatch(panel, /box-shadow: 2px 3px 0/);
+  assert.match(panel, /#session-capsule \{[\s\S]*box-shadow: 2px 3px 0/);
   assert.match(main, /setHasShadow\(false\)/);
   assert.match(main, /hasShadow: false/);
   assert.doesNotMatch(panel, /id="timer"|#timer \{/);
   assert.doesNotMatch(script, /remainingLabel/);
-  assert.match(main, /Countdown UI lives on the desk site/);
+  assert.doesNotMatch(main, /Countdown UI lives on the desk site/);
   assert.match(script, /applySessionFill/);
   assert.match(script, /sessionProgress/);
   assert.doesNotMatch(script, /applyExpBar|xpIntoLevel|petStatsReady/);
@@ -295,7 +310,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /id="panel-chevron"/);
   assert.match(panel, /body\.edge-right #panel-chevron svg/);
   assert.match(panel, /body\.edge-right\.is-open #panel-chevron svg/);
-  assert.match(panel, /#panel-pet-stack:hover/);
+  assert.doesNotMatch(panel, /#panel-pet-stack:hover/);
   assert.match(petScript, /getBoundingClientRect/);
   assert.match(petScript, /syncPetMouseTarget/);
   assert.doesNotMatch(petScript, /setHoverCursor/);
@@ -307,8 +322,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(script, /setPetVisible|petVisible|applyPetVisible/);
   assert.doesNotMatch(preload, /setPetVisible|set-pet-visible/);
   assert.doesNotMatch(main, /set-pet-visible|setPetVisible|petVisible/);
-  assert.match(main, /panelPetVisible: panelOpen && !petAnimating/);
-  assert.match(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
+  assert.match(main, /panelPetVisible: panelOpen/);
+  assert.doesNotMatch(main, /panelPetVisible: panelOpen && !petAnimating/);
+  assert.match(main, /function destroyPetWindow/);
+  assert.doesNotMatch(main, /loadFile\(path\.join\(__dirname, "pet\.html"\)\)/);
+  assert.match(main, /loadFile\(path\.join\(__dirname, "panel\.html"\)\)/);
   assert.match(main, /overlayLayout/);
   assert.match(main, /snapOverlay/);
   assert.match(main, /petOriginBesidePanel/);
@@ -341,8 +359,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(preload, /setIgnoreMouse:/);
   assert.match(petScript, /dockDragStart/);
   assert.match(petScript, /setIgnoreMouse/);
-  assert.match(main, /focusable: false/);
-  assert.match(main, /skipTaskbar: true/);
+  assert.doesNotMatch(main, /focusable: false/);
+  assert.doesNotMatch(main, /skipTaskbar: true/);
+  assert.match(main, /function openPet\(\) \{[\s\S]*destroyPetWindow\(\)/);
   assert.match(main, /placePet\(\)/);
   assert.match(petPage, /id="pet-sprite"/);
   assert.match(petPage, /id="pet-chat"/);
@@ -380,13 +399,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(chat, /Lock in bro >:\(/);
   assert.match(chat, /auramaxxing\.\.\./);
   assert.match(main, /function closeFrontTab/);
-  assert.match(main, /readFrontWindowBounds/);
-  assert.match(main, /petOriginForTabStrip/);
-  assert.match(main, /await walkPetTo\(target\.x, target\.y\)/);
-  assert.match(main, /await jumpPet\(\)/);
-  assert.match(main, /if \(petAnimating \|\| dockDrag\) return/);
+  assert.match(main, /return closeFrontWindow\(appName\)/);
+  assert.doesNotMatch(main, /await walkPetTo\(target\.x, target\.y\)/);
   assert.match(main, /assetOrigin: API_ORIGIN/);
-  assert.match(main, /panelOpen\) \{\s*win\.hide\(\)/);
+  assert.doesNotMatch(main, /if \(petAnimating \|\| dockDrag\) return/);
+  assert.doesNotMatch(main, /panelOpen\) \{\s*win\.hide\(\)/);
   assert.match(script, /window\.pet\.setOpen\(/);
   assert.match(script, /Close Aurafarm/);
   assert.match(script, /state\.panelOpen/);
@@ -403,7 +420,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.doesNotMatch(panel, /#panel-body \{[^}]*border-right|#dock-rail \{[^}]*border-right/);
   assert.match(panel, /"Outfit", "Avenir Next", "Segoe UI", sans-serif/);
   assert.match(panel, /font-size: 13px/);
-  assert.doesNotMatch(panel, /#shell \{[\s\S]*border-radius: 999px/);
+  assert.doesNotMatch(panel, /#shell \{[^}]*border-radius: 999px/);
   assert.match(panel, /background: #c5ef47/);
   assert.match(panel, /background: #f5f0e2/);
   assert.match(main, /PANEL_COLLAPSED_WIDTH = DOCK_DEFAULTS\.barThickness/);
@@ -438,6 +455,9 @@ test("the study clock shows the planned time that is left", () => {
   assert.equal(formatStudyClock(90.2 * 1000), "1:31");
   assert.equal(formatStudyClock((3 * 3600 + 5 * 60) * 1000), "3:05:00");
   assert.equal(formatStudyClock(0), "0:00");
+  assert.equal(formatSessionClock(90.2 * 1000), "1:31");
+  assert.equal(formatSessionClock(0), "+0:00");
+  assert.equal(formatSessionClock(-65_000), "+1:05");
   assert.equal(remainingStudyMs({ startedAtMs: 1_000 }, 1_000), null);
   assert.equal(
     remainingStudyMs({ plannedSeconds: 120, startedAtMs: 1_700_000_000_000 }, 1_700_000_030_000),
