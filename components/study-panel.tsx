@@ -34,6 +34,7 @@ import {
 } from "@/lib/study";
 import { macDesktopServerSnapshot, macDesktopSnapshot, subscribeMacDesktop } from "@/lib/mac-desktop";
 import { calendarRecentDays, goalMetToday, streakCalendarTone } from "@/lib/streak-calendar";
+import type { StudyMode } from "@/lib/study-mode";
 import { StudyClock } from "./study-clock";
 import { DesktopLaunchHelp } from "./desktop-launch-help";
 import { LivingRoom } from "./living-room";
@@ -86,6 +87,8 @@ export function StudyPanel({
   onOpenAchievements,
   onOpenCollection,
   onOpenSocial,
+  onOpenEditPlan,
+  studyMode = null,
   farmerName,
   streakCount = 0,
   onEquipped,
@@ -138,6 +141,8 @@ export function StudyPanel({
   onOpenAchievements?: () => void;
   onOpenCollection?: () => void;
   onOpenSocial?: () => void;
+  onOpenEditPlan?: () => void;
+  studyMode?: StudyMode | null;
   farmerName?: string;
   streakCount?: number;
   onEquipped?: (petId: string) => void;
@@ -486,6 +491,8 @@ export function StudyPanel({
           onOpenAchievements={onOpenAchievements}
           onOpenCollection={onOpenCollection}
           onOpenSocial={onOpenSocial}
+          onOpenEditPlan={onOpenEditPlan}
+          studyMode={studyMode}
           tutorialActive={tutorialActive}
           tutorialTargets={tutorialTargets}
           dailyStudiedMinutes={dailyGoalMinutes != null ? dailyStudiedMinutes : null}

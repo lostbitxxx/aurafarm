@@ -162,7 +162,7 @@ test("resolveWanderSpot ejects a pet whose standing line is in the sofa base", (
 
 test("furniture no-walk zones are the lower half of each piece", () => {
   assert.equal(FURNITURE_BLOCK_FROM, 0.5);
-  const wallProps = new Set(["blackboard", "calendar"]);
+  const wallProps = new Set(["blackboard", "calendar", "plan"]);
   for (const item of ROOM_FURNITURE) {
     if (wallProps.has(item.id)) continue;
     assert.deepEqual(item.block, footprintObstacle(item.bounds, FURNITURE_BLOCK_FROM), item.id);
@@ -170,7 +170,7 @@ test("furniture no-walk zones are the lower half of each piece", () => {
   assert.ok(ROOM_OBSTACLES.length === ROOM_FURNITURE.filter((item) => !wallProps.has(item.id)).length);
   assert.deepEqual(
     [...ROOM_FURNITURE.map((item) => item.id)].sort(),
-    ["armchair", "blackboard", "bookshelf", "calendar", "lamp", "loveseat", "plant", "sofa", "storage-rack"],
+    ["armchair", "blackboard", "bookshelf", "calendar", "lamp", "loveseat", "plan", "plant", "sofa", "storage-rack"],
   );
   assert.ok(ROOM_FURNITURE.every((item) => !item.src.includes("carpet")));
   assert.match(ROOM_CARPET_SRC, /\/carpet\/base\.svg$/);

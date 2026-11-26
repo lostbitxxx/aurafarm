@@ -34,7 +34,8 @@ export type RoomFurnitureId =
   | "plant"
   | "storage-rack"
   | "blackboard"
-  | "calendar";
+  | "calendar"
+  | "plan";
 
 export type RoomFurniturePiece = {
   id: RoomFurnitureId;
@@ -136,6 +137,12 @@ const BLACKBOARD_BOUNDS: RoomRectPx = { x: 248, y: 22, width: 100, height: 48 };
 export const STREAK_CALENDAR_BOUNDS: RoomRectPx = { x: 198, y: 22, width: 44, height: 48 };
 /** Wall calendar: always behind pets and floor furniture (no walk collision). */
 export const CALENDAR_DEPTH_TOP = 0;
+/**
+ * Edit-plan painting on the wall just left of the streak calendar — smaller square than the calendar.
+ */
+export const PLAN_PAINTING_BOUNDS: RoomRectPx = { x: 156, y: 22, width: 36, height: 36 };
+/** Wall plan painting: always behind pets and floor furniture (no walk collision). */
+export const PLAN_PAINTING_DEPTH_TOP = 0;
 
 /** @deprecated Sofa walk block is the shared lower-half base; sit is a separate drop. */
 export const LOVESEAT_BLOCK_FROM = FURNITURE_BLOCK_FROM;
@@ -218,6 +225,21 @@ function calendarPiece(): RoomFurniturePiece {
   };
 }
 
+function planPiece(): RoomFurniturePiece {
+  return {
+    id: "plan",
+    src: "/pet-assets/room/plan/base.svg",
+    bounds: PLAN_PAINTING_BOUNDS,
+    depthTop: PLAN_PAINTING_DEPTH_TOP,
+    block: {
+      minLeft: 0,
+      maxLeft: 0,
+      minTop: 0,
+      maxTop: 0,
+    },
+  };
+}
+
 function hotspotBox(bounds: RoomRectPx): RoomObstacle {
   return {
     minLeft: pxToLeftPercent(bounds.x),
@@ -278,13 +300,14 @@ export const ROOM_FURNITURE: readonly RoomFurniturePiece[] = [
   storageRackPiece(),
   blackboardPiece(),
   calendarPiece(),
+  planPiece(),
   bookshelfPiece(),
   piece("plant", "/pet-assets/room/plant/base.svg", PLANT_BOUNDS),
   piece("armchair", "/pet-assets/room/armchair/base.svg", ARMCHAIR_BOUNDS),
   piece("loveseat", "/pet-assets/room/loveseat/base.svg", LOVESEAT_BOUNDS),
 ];
 
-/** Walk obstacles — skip zero-size wall props (blackboard, calendar). */
+/** Walk obstacles — skip zero-size wall props (blackboard, calendar, plan). */
 export function furnitureWalkObstacles(pieces: readonly RoomFurniturePiece[] = ROOM_FURNITURE): RoomObstacle[] {
   return pieces
     .map((item) => item.block)
