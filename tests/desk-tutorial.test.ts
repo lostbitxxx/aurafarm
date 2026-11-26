@@ -5,47 +5,46 @@ import {
   DESK_TUTORIAL_STEPS,
   parseTutorialRecord,
   progressLabel,
-  sectionMatchesStep,
   serializeTutorialRecord,
   tutorialStorageKey,
 } from "../lib/desk-tutorial";
 
-test("desk tutorial walks shop, rack props, pets, social, start, then settings replay tip", () => {
+test("desk tutorial walks welcome through explore then start studying", () => {
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((step) => step.id),
-    ["shop", "collection", "pets", "achievements", "song", "social", "start", "replay"],
+    ["welcome", "pet", "rewards", "daily", "adopt", "customize", "explore", "start"],
   );
   assert.deepEqual(
-    DESK_TUTORIAL_STEPS.map((step) => step.target),
-    ["shop", "collection", "shop", "achievements", "song", "social", "start", "settings"],
+    DESK_TUTORIAL_STEPS.map((step) => [...step.targets]),
+    [
+      ["living-room"],
+      ["pet"],
+      ["coins", "pet-level"],
+      ["daily-goal", "streak-calendar"],
+      ["shop"],
+      ["edit-furniture"],
+      ["rack", "social"],
+      ["start"],
+    ],
   );
 
   for (const step of DESK_TUTORIAL_STEPS) {
-    assert.match(step.body, /Click /);
-    if (step.kind === "dialog") {
-      assert.ok("openBody" in step);
-      assert.match(step.openBody, /\S/);
-      assert.doesNotMatch(step.openBody, /Click the X/i);
-    }
-    if (step.kind === "start") {
-      assert.match(step.body, /Start studying/i);
-    } else if (step.kind === "settings") {
-      assert.match(step.body, /Settings/i);
-      assert.match(step.body, /Replay tutorial/i);
-    } else if (step.id === "social") {
-      assert.match(step.body, /blackboard/i);
-      assert.equal(step.section, "social");
-    } else if (step.id === "shop") {
-      assert.match(step.body, /Click the pet shelter/i);
-      assert.match(step.body, /unlock/i);
-      assert.equal(step.section, "inventory");
-    } else if (step.id === "pets") {
-      assert.match(step.body, /Click the pet shelter/i);
-      assert.equal(step.section, "inventory");
-    } else if (step.kind === "dialog") {
-      assert.match(step.body, /rack|trophy|gramophone|drawer/i);
-    }
+    assert.match(step.title, /\S/);
+    assert.match(step.body, /\S/);
+    assert.ok(step.targets.length >= 1);
   }
+
+  assert.match(DESK_TUTORIAL_STEPS[0].body, /living room/i);
+  assert.match(DESK_TUTORIAL_STEPS[1].body, /desk buddy/i);
+  assert.match(DESK_TUTORIAL_STEPS[2].body, /XP/i);
+  assert.match(DESK_TUTORIAL_STEPS[2].body, /coins/i);
+  assert.match(DESK_TUTORIAL_STEPS[3].body, /daily goal/i);
+  assert.match(DESK_TUTORIAL_STEPS[3].body, /calendar/i);
+  assert.match(DESK_TUTORIAL_STEPS[3].body, /streak/i);
+  assert.match(DESK_TUTORIAL_STEPS[4].body, /adopt/i);
+  assert.match(DESK_TUTORIAL_STEPS[5].body, /Edit Furniture/i);
+  assert.match(DESK_TUTORIAL_STEPS[6].body, /blackboard/i);
+  assert.match(DESK_TUTORIAL_STEPS[7].body, /Start studying/i);
 
   assert.deepEqual(
     DESK_TUTORIAL_STEPS.map((_, index) => progressLabel(index)),
@@ -53,19 +52,29 @@ test("desk tutorial walks shop, rack props, pets, social, start, then settings r
   );
 });
 
-test("tutorial UI uses cursor guidance and keeps skip only", () => {
+test("tutorial UI uses Back Next and Skip on replay only", () => {
   const ui = readFileSync(new URL("../components/desk-tutorial.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(ui, /\/tutorial\/cursor\.svg/);
-  assert.match(ui, /tutorial-cursor/);
+  assert.doesNotMatch(ui, /tutorial-cursor/);
+  assert.doesNotMatch(ui, /\/tutorial\/cursor\.svg/);
+  assert.match(ui, /tutorial-nav/);
+  assert.match(ui, /tutorial-scrim-svg/);
+  assert.match(ui, /tutorial-block/);
+  assert.match(ui, /maskId/);
+  assert.match(ui, />\s*Back\s*</);
+  assert.match(ui, />\s*Next\s*</);
+  assert.match(ui, /is-primary/);
   assert.match(ui, /Skip tutorial/);
-  assert.doesNotMatch(ui, /tutorial-next/);
-  assert.doesNotMatch(ui, /tutorial-prev/);
-  assert.doesNotMatch(ui, />\s*Next\s*</);
-  assert.doesNotMatch(ui, />\s*Prev\s*</);
+  assert.match(ui, /Finish Tutorial/);
+  assert.match(ui, /isReplay && !isStart/);
+  assert.match(ui, /visibleTutorialElement/);
+  assert.match(ui, /goTo\(index \+ 1\)/);
+  assert.match(ui, /isReplay/);
   assert.match(ui, /replay/);
-  assert.match(ui, /onSettings/);
-  assert.match(css, /\.tutorial-cursor/);
+  assert.match(css, /\.tutorial-nav/);
+  assert.match(css, /\.tutorial-nav\.is-primary/);
+  assert.match(css, /\.tutorial-block/);
+  assert.match(css, /background: var\(--slime\)/);
 });
 
 test("tutorial storage resumes an active step and remembers when it is done", () => {
@@ -81,13 +90,6 @@ test("tutorial storage resumes an active step and remembers when it is done", ()
     status: "active",
     step: DESK_TUTORIAL_STEPS.length - 1,
   });
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[0], "inventory"), true);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[0], "shop"), false);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[2], "inventory"), true);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "social"), true);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[5], "friends"), false);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[6], "shop"), false);
-  assert.equal(sectionMatchesStep(DESK_TUTORIAL_STEPS[7], "shop"), false);
 });
 
 test("the first customization save opens the desk tutorial", () => {
@@ -99,4 +101,23 @@ test("the first customization save opens the desk tutorial", () => {
   assert.ok(embeddedAt < tutorialAt);
   assert.match(source, /customization_completed_at/);
   assert.match(source, /firstCompletion/);
+});
+
+test("living room exposes tutorial targets and freezes pets while active", () => {
+  const room = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  assert.match(room, /data-tutorial="living-room"/);
+  assert.match(room, /data-tutorial="rack"/);
+  assert.match(room, /data-tutorial="daily-goal"/);
+  assert.match(room, /data-tutorial="edit-furniture"/);
+  assert.match(room, /data-tutorial=\{isSpotlight \? "pet-level" : undefined\}/);
+  assert.match(room, /className="room-pet-label"/);
+  assert.match(room, /paused=\{tutorialActive\}/);
+  assert.match(room, /showLevel: forceLevel \|\| !showPetNames/);
+  assert.match(room, /pose\.showLevel \?/);
+  assert.match(room, /forceLevel=\{isSpotlight && tutorialTargets\?\.includes\("pet-level"\)/);
+});
+
+test("header coins carry a tutorial target", () => {
+  const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
+  assert.match(header, /data-tutorial="coins"/);
 });

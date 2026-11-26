@@ -3,37 +3,33 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { signOut } from "@/lib/actions/auth";
-import { COIN_ICON_SRC, streakPillLabel } from "@/lib/pet-assets";
-import { formatDuration } from "@/lib/study";
+import { COIN_ICON_SRC } from "@/lib/pet-assets";
 import { HeaderMenu } from "./header-menu";
 
 export function SiteHeader({
-  displayName,
-  studySeconds,
+  petTotalLevel,
   coins,
-  streakCount,
   onOpenEditPlan,
   onOpenDownload,
   onOpenDevTools,
   onReplayTutorial,
-  onTutorialSettings,
-  tutorialTarget = null,
+  tutorialTargets = null,
 }: {
-  displayName: string;
-  studySeconds?: number;
+  petTotalLevel?: number;
   coins?: number;
-  streakCount?: number;
   onOpenEditPlan?: () => void;
   onOpenDownload?: () => void;
   onOpenDevTools?: () => void;
   onReplayTutorial?: () => void;
-  onTutorialSettings?: () => void;
-  tutorialTarget?: string | null;
+  tutorialTargets?: readonly string[] | null;
 }) {
-  const streakLabel = streakPillLabel(streakCount);
-  const tutorialCurrent = (target: string) => (tutorialTarget === target ? "true" : undefined);
-  const studyLabel = typeof studySeconds === "number" ? formatDuration(studySeconds) : null;
+  const tutorialCurrent = (target: string) =>
+    tutorialTargets?.includes(target) ? "true" : undefined;
   const coinsLabel = typeof coins === "number" ? String(Math.max(0, Math.trunc(coins))) : null;
+  const petLvLabel =
+    typeof petTotalLevel === "number" && Number.isFinite(petTotalLevel)
+      ? String(Math.max(0, Math.floor(petTotalLevel)))
+      : null;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsId = useId();
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -108,24 +104,23 @@ export function SiteHeader({
         </div>
       </div>
       <div className="topbar-user">
-        <span className="streak-pill" title={streakLabel}>
-          <span aria-hidden="true">🔥</span> {streakLabel}
-        </span>
         {coinsLabel != null ? (
-          <span className="points-balance coin-balance topbar-desktop" aria-label={`Coins ${coinsLabel}`}>
+          <span
+            className="points-balance coin-balance topbar-desktop"
+            aria-label={`Coins ${coinsLabel}`}
+            data-tutorial="coins"
+            data-tutorial-current={tutorialCurrent("coins")}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="coin-icon" src={COIN_ICON_SRC} alt="" draggable={false} />
             <span>{coinsLabel}</span>
           </span>
         ) : null}
-        {studyLabel ? (
-          <span className="points-balance topbar-desktop">
-            Study <span>{studyLabel}</span>
+        {petLvLabel != null ? (
+          <span className="points-balance topbar-desktop" aria-label={`Total pet level ${petLvLabel}`}>
+            Total pet level: <span>{petLvLabel}</span>
           </span>
         ) : null}
-        <span className="topbar-name" title={displayName}>
-          {displayName}
-        </span>
         <div
           ref={settingsRef}
           className={settingsOpen ? "topbar-settings is-open" : "topbar-settings"}
@@ -138,13 +133,8 @@ export function SiteHeader({
             aria-controls={settingsId}
             aria-label={settingsOpen ? "Close settings" : "Open settings"}
             data-tutorial="settings"
-            data-tutorial-current={tutorialCurrent("settings")}
             onClick={() => {
-              setSettingsOpen((value) => {
-                const next = !value;
-                if (next) onTutorialSettings?.();
-                return next;
-              });
+              setSettingsOpen((value) => !value);
             }}
           >
             <span className="topbar-settings-gear" aria-hidden="true">
@@ -164,15 +154,20 @@ export function SiteHeader({
         </div>
         <HeaderMenu>
           {coinsLabel != null ? (
-            <p className="points-balance coin-balance topbar-drawer-study" aria-label={`Coins ${coinsLabel}`}>
+            <p
+              className="points-balance coin-balance topbar-drawer-study"
+              aria-label={`Coins ${coinsLabel}`}
+              data-tutorial="coins"
+              data-tutorial-current={tutorialCurrent("coins")}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="coin-icon" src={COIN_ICON_SRC} alt="" draggable={false} />
               <span>{coinsLabel}</span>
             </p>
           ) : null}
-          {studyLabel ? (
-            <p className="points-balance topbar-drawer-study">
-              Study <span>{studyLabel}</span>
+          {petLvLabel != null ? (
+            <p className="points-balance topbar-drawer-study" aria-label={`Total pet level ${petLvLabel}`}>
+              Total pet level: <span>{petLvLabel}</span>
             </p>
           ) : null}
           {onOpenEditPlan ? (

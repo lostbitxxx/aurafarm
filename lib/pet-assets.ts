@@ -321,3 +321,6 @@ export const PIXEL_HEART_SRC = "/pet-assets/ui/pixel-heart.svg";
 
 /** Pixel coin for dashboard balance and Decorations prices. */
 export const COIN_ICON_SRC = "/pet-assets/ui/coin.svg";
+
+/** Pixel calendar for the living-room streak wall prop. */
+export const STREAK_CALENDAR_SRC = "/pet-assets/ui/streak-calendar.svg";

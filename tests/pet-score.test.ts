@@ -234,9 +234,10 @@ test("the sign-in panel can quit the pet", () => {
   );
   assert.doesNotMatch(desk, /Started <time|chosen<\/p>/);
   const living = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
-  assert.match(living, /headTitle \?\? "Ready for a little focus\?"/);
-  assert.match(living, /headSubtitle \?\? "Pick a length and a tracker, then Farm Aura\."/);
+  assert.match(living, /Let's start AuraFarming/);
+  assert.match(living, /farmerName/);
   assert.doesNotMatch(living, /Your little living room/);
+  assert.doesNotMatch(living, /Ready for a little focus\?/);
   assert.doesNotMatch(desk, /Ready for a little focus\?/);
   assert.match(living, /studyingHead \? "room-top is-studying" : "room-top"/);
   assert.match(living, /headerCenter \? <div className="room-center">\{headerCenter\}<\/div>/);
