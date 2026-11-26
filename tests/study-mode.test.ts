@@ -13,8 +13,23 @@ import {
   recommendStudyMode,
   resolveWeekSchedule,
   restWeekdaysFor,
+  weekPlanForProfile,
   weekdayFromLocalDay,
 } from "../lib/study-mode";
+
+test("a claim week plan uses saved days, then the lifestyle answer", () => {
+  assert.deepEqual(
+    weekPlanForProfile({ weekly_study_days: [1, 2, 3, 4, 5], weekly_rest_days: [6, 7] }),
+    { studyDays: [1, 2, 3, 4, 5], restDays: [6, 7] },
+  );
+  assert.deepEqual(
+    weekPlanForProfile({
+      behavior_answers: { attention: "short", lifestyle: "few", distraction: "often" },
+    }),
+    { studyDays: [1, 3, 5], restDays: [2, 4, 6, 7] },
+  );
+  assert.deepEqual(weekPlanForProfile(null), { studyDays: [], restDays: [] });
+});
 
 test("study mode cards show assassin, knight, and lord pixel art", () => {
   const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");

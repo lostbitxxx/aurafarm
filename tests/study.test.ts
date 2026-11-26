@@ -143,10 +143,14 @@ test("claiming a desktop session sends the equipped look and weekly plan", () =>
 
   const route = readFileSync(new URL("../app/api/sessions/claim/route.ts", import.meta.url), "utf8");
   for (const key of ["color", "hat", "clothes", "weekly_study_days", "weekly_rest_days"]) {
-    assert.match(route, new RegExp(`${key}: row\\.${key}`));
+    assert.match(route, new RegExp(`${key}: equipped\\?\\.${key} \\?\\? row\\.${key}`));
   }
   assert.match(route, /normalizeStudyWeekdays/);
   assert.match(route, /normalizeRestWeekdays/);
+  assert.match(route, /createAdminClient/);
+  assert.match(route, /readEquippedLook/);
+  assert.match(route, /\.eq\("is_desktop_active", true\)/);
+  assert.match(route, /weekPlanForProfile/);
 
   const desktop = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   const watch = desktop.slice(

@@ -312,6 +312,33 @@ export function adjustPlan(
   };
 }
 
+/**
+ * The week the desk shows: saved study and rest days, otherwise the lifestyle
+ * answer, otherwise a steady week when a study mode is already saved.
+ */
+export function weekPlanForProfile(profile: {
+  weekly_study_days?: unknown;
+  weekly_rest_days?: unknown;
+  behavior_answers?: unknown;
+  study_mode?: unknown;
+  preferred_session_minutes?: unknown;
+} | null): { studyDays: Weekday[]; restDays: Weekday[] } {
+  if (!profile) return { studyDays: [], restDays: [] };
+  const schedule = resolveWeekSchedule(profile.weekly_study_days, profile.weekly_rest_days);
+  const answers = parseBehaviorAnswers(profile.behavior_answers);
+  const preferred = Number(profile.preferred_session_minutes ?? 0) || null;
+  const studyMode = isStudyMode(profile.study_mode) ? profile.study_mode : null;
+  const studyDays =
+    schedule?.studyDays ??
+    (answers
+      ? defaultWeekdaysForLifestyle(answers.lifestyle)
+      : studyMode && preferred
+        ? defaultWeekdaysForLifestyle("steady")
+        : []);
+  const restDays = schedule?.restDays ?? (studyDays.length > 0 ? restWeekdaysFor(studyDays) : []);
+  return { studyDays, restDays };
+}
+
 export function parseBehaviorAnswers(value: unknown): BehaviorAnswers | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;

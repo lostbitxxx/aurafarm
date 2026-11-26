@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { parseClaimCode } from "@/lib/pet-device";
 import { createSessionSecret, hashSecret } from "@/lib/scoring";
-import { normalizeRestWeekdays, normalizeStudyWeekdays, type Weekday } from "@/lib/study-mode";
+import { normalizeRestWeekdays, normalizeStudyWeekdays, weekPlanForProfile, type Weekday } from "@/lib/study-mode";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -53,21 +54,97 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Claim rejected." }, { status: 403 });
   }
 
+  const equipped = await readEquippedLook(row.session_id);
+
   return NextResponse.json({
     session_id: row.session_id,
     token,
     blocklist: row.blocklist,
-    pet_type: row.pet_type,
-    level: row.level,
+    pet_type: equipped?.pet_type ?? row.pet_type,
+    level: equipped?.level ?? row.level,
     close_blocked: row.close_blocked,
     planned_seconds: row.planned_seconds,
     started_at: row.started_at,
-    color: row.color,
-    hat: row.hat,
-    clothes: row.clothes,
-    weekly_study_days: row.weekly_study_days,
-    weekly_rest_days: row.weekly_rest_days,
+    color: equipped?.color ?? row.color,
+    hat: equipped?.hat ?? row.hat,
+    clothes: equipped?.clothes ?? row.clothes,
+    weekly_study_days: equipped?.weekly_study_days ?? row.weekly_study_days,
+    weekly_rest_days: equipped?.weekly_rest_days ?? row.weekly_rest_days,
   });
+}
+
+/**
+ * The claim function may still be the older one, which returns the pet type and
+ * level but not the outfit. The session row identifies the farmer, and the
+ * service client can read that equipped pet without a desktop sign-in.
+ */
+async function readEquippedLook(sessionId: string): Promise<{
+  pet_type: string | null;
+  level: number | null;
+  color: string | null;
+  hat: string | null;
+  clothes: string | null;
+  weekly_study_days: Weekday[] | null;
+  weekly_rest_days: Weekday[] | null;
+} | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+
+  const session = await admin
+    .from("study_sessions")
+    .select("user_id")
+    .eq("id", sessionId)
+    .maybeSingle();
+  const userId = typeof session.data?.user_id === "string" ? session.data.user_id : null;
+  if (session.error || !userId) return null;
+
+  const pet = await admin
+    .from("user_pets")
+    .select("pet_type, level, color, hat, clothes")
+    .eq("user_id", userId)
+    .eq("is_desktop_active", true)
+    .maybeSingle();
+  if (pet.error || !pet.data) return null;
+
+  const profile = await readClaimProfile(admin, userId);
+  const plan = weekPlanForProfile(profile);
+  const level = Number(pet.data.level);
+
+  return {
+    pet_type: typeof pet.data.pet_type === "string" ? pet.data.pet_type : null,
+    level: Number.isFinite(level) ? Math.floor(level) : null,
+    color: optionalLook(pet.data.color),
+    hat: optionalLook(pet.data.hat),
+    clothes: optionalLook(pet.data.clothes),
+    weekly_study_days: plan.studyDays.length > 0 ? plan.studyDays : null,
+    weekly_rest_days: plan.studyDays.length > 0 ? plan.restDays : null,
+  };
+}
+
+async function readClaimProfile(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+) {
+  const full = await admin
+    .from("profiles")
+    .select("weekly_study_days, weekly_rest_days, behavior_answers, study_mode, preferred_session_minutes")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!full.error) return full.data;
+
+  const noRest = await admin
+    .from("profiles")
+    .select("weekly_study_days, behavior_answers, study_mode, preferred_session_minutes")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!noRest.error) return noRest.data;
+
+  const bare = await admin
+    .from("profiles")
+    .select("behavior_answers, study_mode, preferred_session_minutes")
+    .eq("id", userId)
+    .maybeSingle();
+  return bare.error ? null : bare.data;
 }
 
 function firstClaimRow(data: unknown): ClaimRow | null {
