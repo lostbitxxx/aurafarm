@@ -96,7 +96,9 @@ test("a study link shows the equipped pet for that session's user", () => {
     desktop.indexOf("async function signIn"),
   );
   assert.match(refresh, /\.eq\("is_desktop_active", true\)/);
-  assert.match(refresh, /select\("id, pet_type, level, xp"\)/);
+  assert.match(refresh, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
+  assert.match(refresh, /loadWeekPlan\(userId\)/);
+  assert.match(refresh, /select\("weekly_study_days, weekly_rest_days"\)/);
   assert.match(refresh, /applyEquippedPetStats\(data\)/);
   assert.match(refresh, /statsRefreshSeq/);
   assert.match(refresh, /\[pet\] equipped /);
@@ -117,6 +119,58 @@ test("a study link shows the equipped pet for that session's user", () => {
   assert.match(desktop, /did-finish-load", publish/);
   assert.match(desktop, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
   assert.doesNotMatch(desktop, /SUPABASE_SECRET_KEY|SERVICE_ROLE/);
+});
+
+test("claiming a desktop session sends the equipped look and weekly plan", () => {
+  const sql = readFileSync(
+    new URL("../supabase/migrations/0053_claim_pet_look.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /drop function if exists public\.claim_study_session\(text, text\)/);
+  assert.match(sql, /pet_type text/);
+  assert.match(sql, /color text/);
+  assert.match(sql, /hat text/);
+  assert.match(sql, /clothes text/);
+  assert.match(sql, /weekly_study_days integer\[\]/);
+  assert.match(sql, /weekly_rest_days integer\[\]/);
+  assert.match(sql, /user_pets\.color/);
+  assert.match(sql, /user_pets\.hat/);
+  assert.match(sql, /user_pets\.clothes/);
+  assert.match(sql, /profiles\.weekly_study_days/);
+  assert.match(sql, /profiles\.weekly_rest_days/);
+  assert.match(sql, /pet_type := coalesce\(equipped_type, 'baby_slime'\)/);
+  assert.match(sql, /grant execute on function public\.claim_study_session\(text, text\) to anon/);
+
+  const route = readFileSync(new URL("../app/api/sessions/claim/route.ts", import.meta.url), "utf8");
+  for (const key of ["color", "hat", "clothes", "weekly_study_days", "weekly_rest_days"]) {
+    assert.match(route, new RegExp(`${key}: equipped\\?\\.${key} \\?\\? row\\.${key}`));
+  }
+  assert.match(route, /normalizeStudyWeekdays/);
+  assert.match(route, /normalizeRestWeekdays/);
+  assert.match(route, /createAdminClient/);
+  assert.match(route, /readEquippedLook/);
+  assert.match(route, /\.eq\("is_desktop_active", true\)/);
+  assert.match(route, /weekPlanForProfile/);
+
+  const desktop = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
+  const watch = desktop.slice(
+    desktop.indexOf("function beginFrontWatch"),
+    desktop.indexOf("function stopFrontWatch"),
+  );
+  assert.match(watch, /level: claimLevel\(body\.level\)/);
+  assert.match(watch, /petColor: optionalLook\(body\.color\)/);
+  assert.match(watch, /petHat: optionalLook\(body\.hat\)/);
+  assert.match(watch, /petClothes: optionalLook\(body\.clothes\)/);
+  assert.match(watch, /studyDays: claimWeekdays\(body\.weekly_study_days\)/);
+  assert.match(watch, /restDays: claimWeekdays\(body\.weekly_rest_days\)/);
+  assert.doesNotMatch(watch, /refreshPet/);
+  assert.match(route, /weekdayEntries/);
+  assert.match(desktop, /select\("id, pet_type, level, xp, color, hat, clothes"\)/);
+  assert.match(desktop, /next\.petColor = optionalLook\(row\.color\)/);
+  assert.doesNotMatch(
+    desktop.slice(desktop.indexOf("function applyEquippedPetStats"), desktop.indexOf("function setSessionProgress")),
+    /studyDays|restDays/,
+  );
 });
 
 test("a missing close_blocked column tells the farmer to run migration 0007", () => {

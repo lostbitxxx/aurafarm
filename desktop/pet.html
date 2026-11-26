@@ -177,6 +177,13 @@
         outline: none;
         image-rendering: pixelated;
       }
+      .pet-layer.is-legs { z-index: 1; }
+      .pet-layer.is-body { z-index: 2; }
+      .pet-layer.is-clothes { z-index: 3; }
+      .pet-layer.is-face { z-index: 4; }
+      .pet-layer.is-hat { z-index: 5; }
+      .pet-layer.is-desk { z-index: 6; }
+      .pet-layer.is-pen { z-index: 7; }
       /* Empty <img> without src draws a Chromium broken-image frame; keep layers hidden until set. */
       .pet-layer:not([src]),
       .pet-layer[hidden] {
@@ -193,8 +200,10 @@
         <span class="pet-figure">
           <img class="pet-layer is-shadow" data-layer="shadow" alt="" draggable="false" hidden />
           <img class="pet-layer is-legs" data-layer="legs" alt="" draggable="false" hidden />
-          <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" hidden />
-          <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" hidden />
+                <img id="pet-sprite" class="pet-layer is-body" data-layer="body" alt="" draggable="false" hidden />
+                <img class="pet-layer is-clothes" data-layer="clothes" alt="" draggable="false" hidden />
+                <img class="pet-layer is-face" data-layer="face" alt="" draggable="false" hidden />
+                <img class="pet-layer is-hat" data-layer="hat" alt="" draggable="false" hidden />
         </span>
         <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
         <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />

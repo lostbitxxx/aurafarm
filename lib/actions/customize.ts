@@ -56,6 +56,7 @@ export async function saveCustomization(
       daily_session_goal: 1,
       study_days_per_week: parsed.plan.studyDaysPerWeek,
       weekly_study_days: parsed.plan.studyWeekdays,
+      weekly_rest_days: parsed.plan.restWeekdays,
       behavior_answers: parsed.answers,
       customization_completed_at: new Date().toISOString(),
     })

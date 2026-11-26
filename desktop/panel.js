@@ -14,7 +14,9 @@ const panelLayerNodes = {
   shadow: panelPetStack.querySelector('[data-layer="shadow"]'),
   legs: panelPetStack.querySelector('[data-layer="legs"]'),
   body: panelPetStack.querySelector('[data-layer="body"]'),
+  clothes: panelPetStack.querySelector('[data-layer="clothes"]'),
   face: panelPetStack.querySelector('[data-layer="face"]'),
+  hat: panelPetStack.querySelector('[data-layer="hat"]'),
   desk: panelPetStack.querySelector('[data-layer="desk"]'),
   pen: panelPetStack.querySelector('[data-layer="pen"]'),
 };
@@ -28,6 +30,9 @@ let activePointerId = null;
 let assetOrigin = "";
 let shownPet = "baby_slime";
 let shownPose = "idle";
+let shownColor = null;
+let shownHat = null;
+let shownClothes = null;
 let shownFlip = false;
 
 function isHorizontalEdge(edge) {
@@ -63,14 +68,20 @@ function setLayer(node, src) {
 function applyPanelPetSprite() {
   const base = String(assetOrigin || "").replace(/\/$/, "");
   if (!base || typeof plainPetStack !== "function") return;
-  const stack = plainPetStack(shownPet, shownPose);
+  const stack = plainPetStack(shownPet, shownPose, {
+    color: shownColor,
+    hat: shownHat,
+    clothes: shownClothes,
+  });
   panelPetStack.classList.toggle("is-study", stack.stage === "study");
   setLayer(panelLayerNodes.floor, stack.floor ? base + stack.floor : null);
   setLayer(panelLayerNodes.chair, stack.chair ? base + stack.chair : null);
   setLayer(panelLayerNodes.shadow, stack.shadow ? base + stack.shadow : null);
   setLayer(panelLayerNodes.legs, base + stack.legs);
   setLayer(panelLayerNodes.body, base + stack.body);
+  setLayer(panelLayerNodes.clothes, stack.clothes ? base + stack.clothes : null);
   setLayer(panelLayerNodes.face, base + stack.face);
+  setLayer(panelLayerNodes.hat, stack.hat ? base + stack.hat : null);
   setLayer(panelLayerNodes.desk, stack.desk ? base + stack.desk : null);
   setLayer(panelLayerNodes.pen, stack.pen ? base + stack.pen : null);
   panelPetStack.style.transform = shownFlip ? "scaleX(-1)" : "";
@@ -90,6 +101,16 @@ function applyPanelPet(state) {
 }
 
 function applySessionFill(state) {
+  const kind = typeof sessionDayKind === "function" ? sessionDayKind(state) : "unset";
+  const colors =
+    typeof sessionRailColors === "function"
+      ? sessionRailColors(kind)
+      : { liquid: "#5fbf4a", track: "transparent" };
+  document.body.classList.toggle("is-study-day", kind === "study");
+  document.body.classList.toggle("is-rest-day", kind === "rest");
+  sessionFill.style.background = colors.liquid;
+  const rail = document.getElementById("dock-rail");
+  if (rail) rail.style.background = colors.track;
   const raw = Number(state.sessionProgress);
   const pct =
     Number.isFinite(raw) && raw > 0
@@ -233,6 +254,9 @@ window.pet.onState((state) => {
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;
+  shownColor = typeof state.petColor === "string" ? state.petColor : null;
+  shownHat = typeof state.petHat === "string" ? state.petHat : null;
+  shownClothes = typeof state.petClothes === "string" ? state.petClothes : null;
   if (typeof state.petFlip === "boolean") shownFlip = state.petFlip;
   applySessionFill(state);
   applyPanelPet(state);

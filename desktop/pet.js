@@ -6,7 +6,9 @@ const layerNodes = {
   shadow: petStack.querySelector('[data-layer="shadow"]'),
   legs: petStack.querySelector('[data-layer="legs"]'),
   body: petStack.querySelector('[data-layer="body"]'),
+  clothes: petStack.querySelector('[data-layer="clothes"]'),
   face: petStack.querySelector('[data-layer="face"]'),
+  hat: petStack.querySelector('[data-layer="hat"]'),
   desk: petStack.querySelector('[data-layer="desk"]'),
   pen: petStack.querySelector('[data-layer="pen"]'),
 };
@@ -14,6 +16,9 @@ const layerNodes = {
 let assetOrigin = "";
 let shownPet = "baby_slime";
 let shownPose = "idle";
+let shownColor = null;
+let shownHat = null;
+let shownClothes = null;
 let shownFlip = false;
 let dockDragging = false;
 let activePointerId = null;
@@ -34,14 +39,20 @@ function setLayer(node, src) {
 function applyPetSprite() {
   const base = String(assetOrigin || "").replace(/\/$/, "");
   if (!base) return;
-  const stack = plainPetStack(shownPet, shownPose);
+  const stack = plainPetStack(shownPet, shownPose, {
+    color: shownColor,
+    hat: shownHat,
+    clothes: shownClothes,
+  });
   petStack.classList.toggle("is-study", stack.stage === "study");
   setLayer(layerNodes.floor, stack.floor ? base + stack.floor : null);
   setLayer(layerNodes.chair, stack.chair ? base + stack.chair : null);
   setLayer(layerNodes.shadow, stack.shadow ? base + stack.shadow : null);
   setLayer(layerNodes.legs, base + stack.legs);
   setLayer(layerNodes.body, base + stack.body);
+  setLayer(layerNodes.clothes, stack.clothes ? base + stack.clothes : null);
   setLayer(layerNodes.face, base + stack.face);
+  setLayer(layerNodes.hat, stack.hat ? base + stack.hat : null);
   setLayer(layerNodes.desk, stack.desk ? base + stack.desk : null);
   setLayer(layerNodes.pen, stack.pen ? base + stack.pen : null);
   petStack.style.transform = shownFlip ? "scaleX(-1)" : "";
@@ -169,6 +180,9 @@ window.pet.onState((state) => {
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;
+  shownColor = typeof state.petColor === "string" ? state.petColor : null;
+  shownHat = typeof state.petHat === "string" ? state.petHat : null;
+  shownClothes = typeof state.petClothes === "string" ? state.petClothes : null;
   if (typeof state.petFlip === "boolean") shownFlip = state.petFlip;
   applyPetSprite();
   applyChatBubble(state);
