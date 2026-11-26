@@ -433,7 +433,7 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS\.barLength/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS\.panelSpan/);
   assert.match(main, /edge: "right"/);
-  assert.match(main, /setBounds\(panelBounds\(panelOpen\), true\)/);
+  assert.match(main, /setBounds\(panelBounds\(panelOpen \|\| panelFrameOpen\), false\)/);
   assert.match(main, /ipcMain\.on\("set-panel-open"/);
   assert.match(main, /beginDockDrag|endDockDrag|cancelDockDrag/);
   assert.doesNotMatch(main, /writeSecret\("dock/);
