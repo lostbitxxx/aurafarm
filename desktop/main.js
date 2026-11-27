@@ -109,9 +109,14 @@ const FLIGHT_BOOM_HOLD_MS = 1550;
 const FLIGHT_RETURN_MS = 520;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
+/** After claim, keep the panel open this long then collapse to the closed strip. */
+const SESSION_INTRO_COLLAPSE_MS = 3000;
 
 let panelWindow = null;
 let panelOpen = false;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let sessionIntroCollapseTimer = null;
+let sessionIntroActive = false;
 /** OS window is already the open size (one instant setBounds, no native morph). */
 let panelBoundsOpen = false;
 /** Cream outline is showing. Sideways expand is `panelOpen`. */
@@ -182,6 +187,7 @@ let state = {
   flightAngle: 0,
   flightScaleX: 1,
   flightBoom: false,
+  sessionIntroActive: false,
 };
 const pendingLinks = [];
 let acceptLaunchLinks = false;
@@ -365,6 +371,7 @@ function publish() {
   const flying = state.flightActive === true;
   const payload = {
     ...state,
+    sessionIntroActive,
     assetOrigin: petAssetOrigin(),
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
     panelPetVisible: panelOpen && !flying,
@@ -373,6 +380,37 @@ function publish() {
   for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
   }
+}
+
+function setSessionIntroActive(active) {
+  const next = Boolean(active);
+  if (sessionIntroActive === next && state.sessionIntroActive === next) return;
+  sessionIntroActive = next;
+  state = { ...state, sessionIntroActive: next };
+  publish();
+}
+
+function clearSessionIntroCollapseTimer() {
+  if (!sessionIntroCollapseTimer) return;
+  clearTimeout(sessionIntroCollapseTimer);
+  sessionIntroCollapseTimer = null;
+}
+
+/** Cancel the session-start auto-collapse (rail click / keep-open / session end). */
+function cancelSessionIntroCollapse() {
+  clearSessionIntroCollapseTimer();
+  setSessionIntroActive(false);
+}
+
+/** Open for a few seconds after claim, then collapse to the closed strip. */
+function armSessionIntroCollapse() {
+  clearSessionIntroCollapseTimer();
+  setSessionIntroActive(true);
+  sessionIntroCollapseTimer = setTimeout(() => {
+    sessionIntroCollapseTimer = null;
+    setSessionIntroActive(false);
+    setPanelOpen(false);
+  }, SESSION_INTRO_COLLAPSE_MS);
 }
 
 /**
@@ -1455,6 +1493,7 @@ function beginFrontWatch(body, browser = "") {
   );
   publishWatch();
   focusPanel();
+  armSessionIntroCollapse();
   frontTimer = setInterval(() => {
     void pollFront();
   }, FRONT_POLL_MS);
@@ -1465,6 +1504,7 @@ function beginFrontWatch(body, browser = "") {
 function stopFrontWatch() {
   if (frontTimer) clearInterval(frontTimer);
   frontTimer = null;
+  cancelSessionIntroCollapse();
   stopStudyClock();
   frontPoll = null;
   study = null;
@@ -1825,11 +1865,18 @@ ipcMain.on("finish-session", () => {
 ipcMain.on("open-update", () => {
   if (typeof state.updateUrl === "string" && state.updateUrl) void shell.openExternal(state.updateUrl);
 });
+ipcMain.on("open-desk", () => {
+  if (API_ORIGIN) void shell.openExternal(API_ORIGIN);
+});
 ipcMain.on("quit-app", () => {
   void quitApp();
 });
 ipcMain.on("set-panel-open", (_event, open) => {
+  cancelSessionIntroCollapse();
   setPanelOpen(open);
+});
+ipcMain.on("cancel-session-intro-collapse", () => {
+  cancelSessionIntroCollapse();
 });
 ipcMain.on("pet-ignore-mouse", (event, ignore) => {
   const win = BrowserWindow.fromWebContents(event.sender);
