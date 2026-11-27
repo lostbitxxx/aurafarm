@@ -43,6 +43,8 @@ let dockEdge = "right";
 let mouseIgnored = false;
 /** When true, leaving the panel does not auto-collapse it. */
 let keepOpenPinned = false;
+/** Session-start intro: leave-close stays off until the 3s auto-collapse finishes or cancels. */
+let sessionIntroActive = false;
 /** @type {null | { x: number, y: number }} */
 let lastPointer = null;
 let panelIsOpen = false;
@@ -209,8 +211,6 @@ function applySessionFill(state) {
   document.body.classList.toggle("is-rest-day", kind === "rest");
   const distracted = state.distractionPhase === "mad" || state.distractionPhase === "warn";
   sessionFill.style.background = distracted ? "#8a8f86" : colors.liquid;
-  const rail = document.getElementById("dock-rail");
-  if (rail) rail.style.background = colors.track;
   const raw = Number(state.sessionProgress);
   const pct =
     Number.isFinite(raw) && raw > 0
@@ -252,10 +252,10 @@ function clearLeaveClose() {
 
 function armLeaveClose() {
   clearLeaveClose();
-  if (!panelIsOpen || keepOpenPinned || dockDragging || pendingDragOrigin) return;
+  if (!panelIsOpen || keepOpenPinned || dockDragging || pendingDragOrigin || sessionIntroActive) return;
   leaveCloseTimer = setTimeout(() => {
     leaveCloseTimer = null;
-    if (!panelIsOpen || keepOpenPinned || dockDragging) return;
+    if (!panelIsOpen || keepOpenPinned || dockDragging || sessionIntroActive) return;
     window.pet.setOpen(false);
   }, LEAVE_CLOSE_MS);
 }
@@ -266,6 +266,10 @@ function setKeepOpenPinned(pinned) {
   if (!button) return;
   button.setAttribute("aria-checked", keepOpenPinned ? "true" : "false");
   if (keepOpenPinned) clearLeaveClose();
+}
+
+function cancelSessionIntroCollapse() {
+  window.pet.cancelSessionIntroCollapse?.();
 }
 
 function clearDockDrag() {
@@ -285,6 +289,7 @@ function clearDockDrag() {
 }
 
 function togglePanelOpen() {
+  cancelSessionIntroCollapse();
   window.pet.setOpen(toggle.getAttribute("aria-expanded") !== "true");
 }
 
@@ -362,7 +367,12 @@ document.getElementById("update-button").addEventListener("click", () => {
 });
 
 document.getElementById("keep-open")?.addEventListener("click", () => {
+  cancelSessionIntroCollapse();
   setKeepOpenPinned(!keepOpenPinned);
+});
+
+document.getElementById("open-web")?.addEventListener("click", () => {
+  window.pet.openDesk?.();
 });
 
 document.getElementById("quit").addEventListener("click", () => {
@@ -409,6 +419,7 @@ window.pet.onState((state) => {
       typeof state.panelBoundsOpen === "boolean" ? state.panelBoundsOpen : state.panelFrameOpen,
     );
   }
+  if (typeof state.sessionIntroActive === "boolean") sessionIntroActive = state.sessionIntroActive;
   if (typeof state.assetOrigin === "string") assetOrigin = state.assetOrigin;
   if (state.petType) shownPet = state.petType;
   if (state.petPose) shownPose = state.petPose;
@@ -422,6 +433,7 @@ window.pet.onState((state) => {
   if (state.status) status.textContent = state.status;
   finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish session :)";
+  document.body.classList.toggle("has-session", Boolean(state.finishLabel));
   note.textContent = state.finishNote || "";
   if (state.updateUrl) {
     update.hidden = false;

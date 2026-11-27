@@ -155,8 +155,8 @@ function sessionDayKind(state, now = new Date()) {
 }
 
 const SESSION_RAIL_COLORS = {
-  study: { liquid: "#c43b2e", track: "#f3c2bc" },
-  rest: { liquid: "#3f78c8", track: "#c5d7ee" },
+  study: { liquid: "#d15f52", track: "transparent" },
+  rest: { liquid: "#7ec8e0", track: "transparent" },
   unset: { liquid: "#5fbf4a", track: "transparent" },
 };
 

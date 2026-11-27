@@ -16,13 +16,14 @@
         --shell-cream: #f7f3e8;
         --shell-border: #9daa90;
         --session-green: #5fbf4a;
-        --session-study: #c43b2e;
-        --session-rest: #3f78c8;
+        --session-study: #d15f52;
+        --session-rest: #7ec8e0;
         --cylinder-wall: #fffcf7;
         --cylinder-edge: #c5ceb5;
         --cylinder-track: #e8ebe0;
         --shell-ink: #23392d;
         --shell-radius: 10px;
+        --capsule-radius: 999px;
         --rail: 31px;
         --frame-pad: 8px;
         --peek: 112px;
@@ -132,12 +133,6 @@
       #dock-rail.is-dragging {
         cursor: grabbing;
       }
-      body.is-study-day #dock-rail {
-        background: #f3c2bc;
-      }
-      body.is-rest-day #dock-rail {
-        background: #c5d7ee;
-      }
       body.edge-left #dock-rail,
       body.edge-right #dock-rail {
         flex-direction: column;
@@ -239,7 +234,7 @@
           transition: none;
         }
       }
-      /* One capsule = the rail bar (fill + tick lines). Study days tint it red, rest days blue. */
+      /* Outer cream capsule on the rail; liquid lives in a slimmer invisible inner tube. */
       #session-capsule {
         position: absolute;
         inset: 0;
@@ -247,7 +242,7 @@
         box-sizing: border-box;
         overflow: hidden;
         border: 2px solid var(--cylinder-edge);
-        border-radius: 999px;
+        border-radius: var(--capsule-radius);
         background: var(--cylinder-wall);
         box-shadow: none;
         pointer-events: none;
@@ -266,11 +261,29 @@
         top: 2px;
         bottom: 2px;
       }
-      body.is-study-day #session-capsule {
-        background: #f3c2bc;
+      #session-tube {
+        position: absolute;
+        z-index: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        border: 0;
+        border-radius: calc(var(--capsule-radius) - 2px);
+        background: transparent;
+        pointer-events: none;
       }
-      body.is-rest-day #session-capsule {
-        background: #c5d7ee;
+      body.edge-left #session-tube,
+      body.edge-right #session-tube {
+        top: 6px;
+        bottom: 6px;
+        left: 7px;
+        right: 7px;
+      }
+      body.edge-top #session-tube,
+      body.edge-bottom #session-tube {
+        left: 6px;
+        right: 6px;
+        top: 7px;
+        bottom: 7px;
       }
       #session-fill {
         position: absolute;
@@ -279,7 +292,7 @@
         bottom: 0;
         height: 0%;
         background: var(--session-green);
-        border-radius: 0 0 999px 999px;
+        border-radius: 0 0 calc(var(--capsule-radius) - 2px) calc(var(--capsule-radius) - 2px);
         pointer-events: none;
         transition: height 0.85s linear, width 0.85s linear, background-color 0.35s linear;
       }
@@ -520,7 +533,7 @@
         right: auto;
         width: 0%;
         height: auto;
-        border-radius: 999px 0 0 999px;
+        border-radius: calc(var(--capsule-radius) - 2px) 0 0 calc(var(--capsule-radius) - 2px);
       }
       #session-ticks {
         position: absolute;
@@ -528,54 +541,55 @@
         z-index: 1;
         pointer-events: none;
       }
+      /* Four short ticks at 1/6, 2/6, 4/6, 5/6 — skip center so the chevron stays clear. */
       #session-ticks span {
         position: absolute;
-        background: rgba(35, 57, 45, 0.22);
+        border-radius: 999px;
+        background: var(--cylinder-wall);
       }
-      /* Four ticks at 1/6, 2/6, 4/6, 5/6 — skip center so the chevron stays clear. */
       body.edge-left #session-ticks span,
       body.edge-right #session-ticks span {
-        left: 15%;
-        right: 15%;
-        height: 1px;
+        left: 22%;
+        right: 22%;
+        height: 1.5px;
       }
       body.edge-left #session-ticks span:nth-child(1),
       body.edge-right #session-ticks span:nth-child(1) {
-        bottom: calc(100% / 6);
+        bottom: calc(100% / 6 - 0.75px);
       }
       body.edge-left #session-ticks span:nth-child(2),
       body.edge-right #session-ticks span:nth-child(2) {
-        bottom: calc(200% / 6);
+        bottom: calc(200% / 6 - 0.75px);
       }
       body.edge-left #session-ticks span:nth-child(3),
       body.edge-right #session-ticks span:nth-child(3) {
-        bottom: calc(400% / 6);
+        bottom: calc(400% / 6 - 0.75px);
       }
       body.edge-left #session-ticks span:nth-child(4),
       body.edge-right #session-ticks span:nth-child(4) {
-        bottom: calc(500% / 6);
+        bottom: calc(500% / 6 - 0.75px);
       }
       body.edge-top #session-ticks span,
       body.edge-bottom #session-ticks span {
-        top: 15%;
-        bottom: 15%;
-        width: 1px;
+        top: 22%;
+        bottom: 22%;
+        width: 1.5px;
       }
       body.edge-top #session-ticks span:nth-child(1),
       body.edge-bottom #session-ticks span:nth-child(1) {
-        left: calc(100% / 6);
+        left: calc(100% / 6 - 0.75px);
       }
       body.edge-top #session-ticks span:nth-child(2),
       body.edge-bottom #session-ticks span:nth-child(2) {
-        left: calc(200% / 6);
+        left: calc(200% / 6 - 0.75px);
       }
       body.edge-top #session-ticks span:nth-child(3),
       body.edge-bottom #session-ticks span:nth-child(3) {
-        left: calc(400% / 6);
+        left: calc(400% / 6 - 0.75px);
       }
       body.edge-top #session-ticks span:nth-child(4),
       body.edge-bottom #session-ticks span:nth-child(4) {
-        left: calc(500% / 6);
+        left: calc(500% / 6 - 0.75px);
       }
       @media (prefers-reduced-motion: reduce) {
         #session-fill {
@@ -864,6 +878,58 @@
         width: 100%;
         min-width: 0;
       }
+      /* No active session: globe sits under the keep-open toggle to avoid Quit misclicks. */
+      #open-web-hint {
+        position: absolute;
+        top: 1.85rem;
+        right: 0.4rem;
+        z-index: 5;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.28rem;
+        pointer-events: none;
+      }
+      body.is-open:not(.has-session) #open-web-hint {
+        display: inline-flex;
+      }
+      #open-web-arrow {
+        font: 700 1.05rem/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        color: #8a9380;
+        animation: open-web-arrow-bob 1.1s ease-in-out infinite;
+      }
+      @keyframes open-web-arrow-bob {
+        0%,
+        100% {
+          transform: translateY(2px);
+        }
+        50% {
+          transform: translateY(-1px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #open-web-arrow {
+          animation: none;
+        }
+      }
+      #panel-body #open-web {
+        display: grid;
+        place-items: center;
+        width: 1.55rem;
+        height: 1.55rem;
+        margin: 0;
+        padding: 0;
+        border-radius: 6px;
+        border: 1px solid #9daa90;
+        background: #fffdf6;
+        color: #23392d;
+        font: 600 0.85rem/1 "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+        cursor: pointer;
+        pointer-events: auto;
+      }
+      #panel-body #open-web:hover {
+        filter: brightness(0.97);
+      }
       p {
         margin: 0;
       }
@@ -935,12 +1001,14 @@
       <div id="dock-rail">
         <button id="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-body" aria-label="Open Aurafarm">
           <span id="session-capsule" aria-hidden="true">
-            <span id="session-fill"></span>
-            <span id="session-ticks">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
+            <span id="session-tube">
+              <span id="session-fill"></span>
+              <span id="session-ticks">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
             </span>
             <span id="session-marks" aria-hidden="true">
               <span>×</span>
@@ -984,6 +1052,12 @@
           <span id="keep-open-label">toggle</span>
           <span id="keep-open-track" aria-hidden="true"><span id="keep-open-thumb"></span></span>
         </button>
+        <div id="open-web-hint">
+          <button id="open-web" type="button" title="Open Aurafarm on the web" aria-label="Open Aurafarm on the web">
+            🌐︎
+          </button>
+          <span id="open-web-arrow" aria-hidden="true">↑</span>
+        </div>
         <div id="panel-stage">
           <p id="session-clock" hidden></p>
           <div id="panel-pet" aria-hidden="true">
