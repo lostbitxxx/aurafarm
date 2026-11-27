@@ -14,7 +14,20 @@ const { clampPetX, parseWeekdays, plainPetPath, plainPetStack, restingPetPose, s
     petType: string,
     pose: string,
     options?: { color?: string | null; hat?: string | null; clothes?: string | null },
-  ) => { face: string; body: string; clothes: string | null; hat: string | null; hatPlacement: string };
+  ) => {
+    stage: "study" | "pet";
+    shadow: string | null;
+    legs: string;
+    body: string;
+    clothes: string | null;
+    face: string;
+    hat: string | null;
+    hatPlacement: string;
+    floor: string | null;
+    chair: string | null;
+    desk: string | null;
+    pen: string | null;
+  };
   restingPetPose: (input?: {
     sessionActive?: boolean;
     onDistracted?: boolean;
