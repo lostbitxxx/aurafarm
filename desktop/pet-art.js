@@ -60,16 +60,19 @@ function legModeForPose(pose) {
 }
 
 function faceModeForPose(pose) {
+  if (pose === "struggle") return "struggle";
   return pose === "blush" ? "blush" : "normal";
 }
 
 /**
  * Resting desktop pose.
  * A focused study session (not on a blocked site, not walking off to close one)
- * uses the same blush face as petting. Walk frames stay put while the pet is moving.
+ * sits at the study desk (study1 / study2). Walk frames stay put while the pet is moving.
+ * Distracted → idle (pen stops). Mad phase → struggle face.
  * @param {{
  *   sessionActive?: boolean,
  *   onDistracted?: boolean,
+ *   mad?: boolean,
  *   closing?: boolean,
  *   animating?: boolean,
  *   currentPose?: string,
@@ -78,10 +81,17 @@ function faceModeForPose(pose) {
 function restingPetPose(input = {}) {
   const current = input.currentPose || "idle";
   if (input.animating) {
-    if (input.closing && (current === "blush" || current === "idle")) return "idle";
+    if (input.closing && (current === "blush" || current === "idle" || current === "struggle" || isStudyPose(current))) {
+      return "idle";
+    }
     return current;
   }
-  if (input.sessionActive && !input.onDistracted && !input.closing) return "blush";
+  if (input.onDistracted) {
+    return input.mad ? "struggle" : "idle";
+  }
+  if (input.sessionActive && !input.closing) {
+    return isStudyPose(current) ? current : "study1";
+  }
   return "idle";
 }
 

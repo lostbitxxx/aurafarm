@@ -18,6 +18,7 @@ const { clampPetX, parseWeekdays, plainPetPath, plainPetStack, restingPetPose, s
   restingPetPose: (input?: {
     sessionActive?: boolean;
     onDistracted?: boolean;
+    mad?: boolean;
     closing?: boolean;
     animating?: boolean;
     currentPose?: string;
@@ -177,6 +178,9 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /function focusPanel\(\)/);
   assert.match(main, /formatSessionClock/);
   assert.match(main, /syncSessionClock/);
+  assert.match(main, /function studyClockNow/);
+  assert.match(main, /noteDistractionPause\(onDistractedHost\)/);
+  assert.match(petPage, /body\.is-flight #pet-stack \{[\s\S]*left: 50%/);
   assert.doesNotMatch(main, /remaining <= 0\) \{\s*setSessionProgress\(1\);\s*publish\(\);\s*void finishSession\(\);/);
   assert.doesNotMatch(main, /sprite\.html|finish\.html/);
   assert.match(main, /openPanel\(\)/);
@@ -385,8 +389,11 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(preload, /setIgnoreMouse:/);
   assert.match(petScript, /dockDragStart/);
   assert.match(petScript, /setIgnoreMouse/);
-  assert.doesNotMatch(main, /focusable: false/);
-  assert.doesNotMatch(main, /skipTaskbar: true/);
+  // Close-flight floater is click-through; the dock panel stays focusable.
+  assert.match(main, /function openFlightPet[\s\S]*focusable: false[\s\S]*skipTaskbar: true/);
+  const openPanelFn = main.slice(main.indexOf("function openPanel"), main.indexOf("async function restoreSession"));
+  assert.doesNotMatch(openPanelFn, /focusable: false/);
+  assert.doesNotMatch(openPanelFn, /skipTaskbar: true/);
   assert.match(main, /function openPet\(\) \{[\s\S]*destroyPetWindow\(\)/);
   assert.match(main, /placePet\(\)/);
   assert.match(petPage, /id="pet-sprite"/);
@@ -404,9 +411,16 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(petScript, /scaleX\(-1\)/);
   assert.match(petScript, /chatBubbleScope/);
   assert.match(main, /chatBubbleCopy/);
-  assert.match(main, /pickChatLineIndex/);
+  assert.match(main, /takeShuffledLine/);
   assert.match(main, /CHAT_LINE_TICKS = 3/);
-  assert.match(panel, /#panel-pet-stack \{[^}]*position: absolute/);
+  assert.match(main, /CHAT_SHOW_TICKS = 5/);
+  assert.match(main, /CHAT_SILENCE_TICKS = 60/);
+  assert.match(panel, /#panel-pet-stack \{[^}]*position: relative/);
+  assert.match(panel, /id="keep-open"/);
+  assert.match(panel, /id="keep-open-label">toggle</);
+  assert.match(panel, /role="switch"/);
+  assert.match(panel, /#session-clock \{[\s\S]*font: 700 1\.55rem/);
+  assert.match(script, /keepOpenPinned/);
   assert.match(petPage, /#pet-stack \{[^}]*position: absolute/);
   assert.match(main, /PET_CHAT_PAD = 64/);
   assert.match(main, /PET_CHAT_WIDTH = 168/);
@@ -422,11 +436,21 @@ test("the sign-in panel can quit the pet", () => {
   const chat = readFileSync(new URL("../desktop/chat-bubble.js", import.meta.url), "utf8");
   assert.match(chat, /Start a study session on our web!/);
   assert.match(chat, /That's enough!!!/);
-  assert.match(chat, /Lock in bro >:\(/);
-  assert.match(chat, /auramaxxing\.\.\./);
+  assert.match(chat, /Let's get back to it, human!/);
+  assert.match(chat, /FBI! Open the door!/);
+  assert.match(chat, /Auramaxxing\.\.\./);
+  assert.match(chat, /Okay, back on track!/);
   assert.match(main, /function closeFrontTab/);
   assert.match(main, /return closeFrontWindow\(appName\)/);
   assert.doesNotMatch(main, /await walkPetTo\(target\.x, target\.y\)/);
+  assert.match(main, /flightActive/);
+  assert.match(main, /openFlightPet/);
+  assert.match(main, /flightBoom/);
+  assert.match(main, /FLIGHT_BOOM_CLOSE_MS/);
+  assert.match(petPage, /id="pet-boom"/);
+  assert.match(petPage, /body\.is-boom #pet-boom/);
+  assert.match(petScript, /applyFlightFx/);
+  assert.match(petScript, /pet-assets\/fx\/boom\.gif/);
   assert.match(main, /assetOrigin: petAssetOrigin\(\)/);
   assert.doesNotMatch(main, /if \(petAnimating \|\| dockDrag\) return/);
   assert.doesNotMatch(main, /panelOpen\) \{\s*win\.hide\(\)/);
@@ -456,7 +480,21 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /PANEL_COLLAPSED_HEIGHT = DOCK_DEFAULTS\.barLength/);
   assert.match(main, /PANEL_EXPANDED_WIDTH = DOCK_DEFAULTS\.panelSpan/);
   assert.match(main, /edge: "right"/);
-  assert.match(main, /setBounds\(panelBounds\(panelOpen \|\| panelBoundsOpen\), false\)/);
+  assert.match(main, /setBounds\(panelBoundsForDisplay\(panelOpen \|\| panelBoundsOpen\), false\)/);
+  assert.match(main, /PEEK_PAD = 112/);
+  assert.match(main, /function panelBoundsForDisplay/);
+  assert.match(main, /distractionPhase/);
+  assert.match(main, /panelPeeking/);
+  assert.match(panel, /id="rail-peek"/);
+  assert.match(panel, /id="session-marks"/);
+  assert.match(panel, /is-peeking/);
+  assert.match(panel, /--peek: 112px/);
+  assert.match(panel, /left: calc\(var\(--rail\) - 26px\)/);
+  assert.match(panel, /body\.edge-left #rail-peek-stack[\s\S]*rotate\(45deg\)/);
+  assert.match(panel, /body\.edge-right #rail-peek-stack[\s\S]*scaleX\(-1\) rotate\(-45deg\)/);
+  assert.match(panel, /body\.edge-right #dock-rail,\s*body\.edge-right #panel-body \{/);
+  assert.match(panel, /body\.edge-top #rail-peek \{[\s\S]*top: var\(--rail\)/);
+  assert.match(panel, /width: 8\.25rem/);
   assert.match(main, /if \(dock\.edge === "right"\) return currentOverlay\("open"\)/);
   assert.match(main, /if \(dock\.edge !== "right"\) applyPanelBounds\("open"/);
   assert.match(script, /function syncHitTarget/);
@@ -475,7 +513,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(script, /getElementById\("quit"\)/);
   assert.match(script, /window\.pet\.quit\(\)/);
   assert.match(preload, /quit: \(\) => ipcRenderer\.send\("quit-app"\)/);
-  assert.match(main, /ipcMain\.on\("quit-app", \(\) => \{\s*app\.quit\(\);\s*\}\)/);
+  assert.match(main, /async function quitApp/);
+  assert.match(main, /async function endSessionIfNeeded/);
+  assert.match(main, /ipcMain\.on\("quit-app", \(\) => \{\s*void quitApp\(\);\s*\}\)/);
+  assert.match(main, /before-quit[\s\S]*await endSessionIfNeeded\(\)/);
 });
 
 test("a commented vercel origin falls back to the local desk", () => {
@@ -515,20 +556,28 @@ test("the pet aims beside the traffic lights on the tab strip", () => {
   );
 });
 
-test("a focused desktop pet uses the petting love face", () => {
-  assert.equal(restingPetPose({ sessionActive: true }), "blush");
-  assert.equal(restingPetPose({ sessionActive: true, onDistracted: false }), "blush");
+test("a focused desktop pet studies at the desk", () => {
+  assert.equal(restingPetPose({ sessionActive: true }), "study1");
+  assert.equal(restingPetPose({ sessionActive: true, onDistracted: false }), "study1");
+  assert.equal(restingPetPose({ sessionActive: true, currentPose: "study2" }), "study2");
   assert.equal(restingPetPose({ sessionActive: true, onDistracted: true }), "idle");
+  assert.equal(restingPetPose({ sessionActive: true, onDistracted: true, mad: true }), "struggle");
   assert.equal(restingPetPose({ sessionActive: false, onDistracted: false }), "idle");
   assert.equal(restingPetPose({ sessionActive: true, closing: true }), "idle");
   assert.equal(
-    restingPetPose({ sessionActive: true, animating: true, closing: true, currentPose: "blush" }),
+    restingPetPose({ sessionActive: true, animating: true, closing: true, currentPose: "study1" }),
     "idle",
   );
   assert.equal(
     restingPetPose({ sessionActive: true, onDistracted: true, animating: true, currentPose: "walk2" }),
     "walk2",
   );
+  const studying = plainPetStack("baby_slime", "study1");
+  assert.equal(studying.stage, "study");
+  assert.equal(studying.chair, "/pet-assets/props/study/chair.svg");
+  assert.equal(studying.desk, "/pet-assets/props/study/desk.svg");
+  assert.equal(studying.pen, "/pet-assets/props/study/pen-1.svg");
+  assert.equal(plainPetStack("baby_slime", "study2").pen, "/pet-assets/props/study/pen-2.svg");
   assert.equal(
     plainPetStack("baby_slime", "blush").face,
     "/pet-assets/pets/cat/colors/sage/face/blush.svg",
@@ -564,6 +613,7 @@ test("a focused desktop pet uses the petting love face", () => {
   const main = readFileSync(new URL("../desktop/main.js", import.meta.url), "utf8");
   assert.match(main, /restingPetPose/);
   assert.match(main, /function applyRestingPetPose/);
+  assert.match(main, /study2" \? "study1" : "study2"/);
 });
 
 test("a plain pet uses the default species sprite", () => {

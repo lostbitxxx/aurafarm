@@ -6,36 +6,39 @@ const require = createRequire(import.meta.url);
 const {
   CHAT_NO_SESSION,
   CHAT_CLOSING,
-  CHAT_DISTRACTED,
+  CHAT_NUDGE,
+  CHAT_MAD,
   CHAT_FOCUSED,
-  CHAT_FOCUSED_GOOD,
   CHAT_RECOVERED,
   chatSiteName,
   chatBubbleCopy,
   pickChatLineIndex,
+  takeShuffledLine,
 } = require("../desktop/chat-bubble.js") as {
   CHAT_NO_SESSION: string;
   CHAT_CLOSING: string;
-  CHAT_DISTRACTED: string;
-  CHAT_FOCUSED: string;
-  CHAT_FOCUSED_GOOD: string;
-  CHAT_RECOVERED: string;
+  CHAT_NUDGE: string[];
+  CHAT_MAD: string[];
+  CHAT_FOCUSED: string[];
+  CHAT_RECOVERED: string[];
   chatSiteName: (host?: string) => string;
   chatBubbleCopy: (input?: {
     sessionActive?: boolean;
     closing?: boolean;
     onDistracted?: boolean;
+    distractionPhase?: "none" | "warn" | "mad";
     everDistracted?: boolean;
     panelOpen?: boolean;
     host?: string;
     lineIndex?: number;
-  }) => { text: string; scope: "none" | "pet" | "panel" };
+  }) => { text: string; scope: "none" | "pet" | "panel" | "peek" };
   pickChatLineIndex: (count: number, random?: () => number) => number;
+  takeShuffledLine: (bag: number[], count: number, previous?: number, random?: () => number) => number;
 };
 
 test("no study session prompts starting on the web", () => {
   assert.deepEqual(chatBubbleCopy({}), { text: CHAT_NO_SESSION, scope: "pet" });
-  assert.deepEqual(chatBubbleCopy({ panelOpen: true, onDistracted: true }), {
+  assert.deepEqual(chatBubbleCopy({ panelOpen: true, onDistracted: true, distractionPhase: "warn" }), {
     text: CHAT_NO_SESSION,
     scope: "pet",
   });
@@ -49,6 +52,7 @@ test("closing beats distraction and open-bar idle lines", () => {
       sessionActive: true,
       closing: true,
       onDistracted: true,
+      distractionPhase: "mad",
       everDistracted: true,
       panelOpen: true,
     }),
@@ -56,56 +60,78 @@ test("closing beats distraction and open-bar idle lines", () => {
   );
 });
 
-test("live distraction shows Lock in on the pet for open or closed bar", () => {
+test("grace phase before peek keeps chat empty while distracted", () => {
   assert.deepEqual(
-    chatBubbleCopy({ sessionActive: true, onDistracted: true, panelOpen: false }),
-    { text: CHAT_DISTRACTED, scope: "pet" },
-  );
-  assert.deepEqual(
-    chatBubbleCopy({ sessionActive: true, onDistracted: true, panelOpen: true }),
-    { text: CHAT_DISTRACTED, scope: "pet" },
+    chatBubbleCopy({ sessionActive: true, onDistracted: true, distractionPhase: "none", panelOpen: false }),
+    { text: "", scope: "none" },
   );
 });
 
-test("live distraction also asks why you are on that site", () => {
-  assert.equal(chatSiteName("www.youtube.com"), "youtube");
+test("nudge lines show on closed-bar peek after grace", () => {
+  assert.equal(CHAT_NUDGE[0], "Let's get back to it, human!");
+  assert.deepEqual(
+    chatBubbleCopy({ sessionActive: true, onDistracted: true, distractionPhase: "warn", panelOpen: false }),
+    { text: CHAT_NUDGE[0], scope: "peek" },
+  );
   assert.deepEqual(
     chatBubbleCopy({
       sessionActive: true,
       onDistracted: true,
-      host: "www.YouTube.com",
+      distractionPhase: "warn",
+      panelOpen: false,
       lineIndex: 1,
     }),
-    { text: "Why are you on youtube?", scope: "pet" },
+    { text: CHAT_NUDGE[1], scope: "peek" },
+  );
+});
+
+test("nudge lines show on the open-bar panel pet", () => {
+  assert.deepEqual(
+    chatBubbleCopy({ sessionActive: true, onDistracted: true, distractionPhase: "warn", panelOpen: true }),
+    { text: CHAT_NUDGE[0], scope: "panel" },
+  );
+});
+
+test("mad lines replace nudge in the last seconds", () => {
+  assert.equal(CHAT_MAD[0], "FBI! Open the door!");
+  assert.deepEqual(
+    chatBubbleCopy({ sessionActive: true, onDistracted: true, distractionPhase: "mad", panelOpen: false }),
+    { text: CHAT_MAD[0], scope: "peek" },
   );
   assert.deepEqual(
-    chatBubbleCopy({ sessionActive: true, onDistracted: true, lineIndex: 1 }),
-    { text: "this ain't the assignment", scope: "pet" },
+    chatBubbleCopy({
+      sessionActive: true,
+      onDistracted: true,
+      distractionPhase: "mad",
+      panelOpen: true,
+      lineIndex: 4,
+    }),
+    { text: CHAT_MAD[4], scope: "panel" },
   );
-  assert.deepEqual(
-    ["get off that lol", "we said lock in", "nahhh not this tab"].map((text, offset) =>
-      chatBubbleCopy({ sessionActive: true, onDistracted: true, host: "youtube.com", lineIndex: offset + 3 }),
-    ),
-    ["get off that lol", "we said lock in", "nahhh not this tab"].map((text) => ({ text, scope: "pet" })),
-  );
+});
+
+test("site name helper still strips www and .com", () => {
+  assert.equal(chatSiteName("www.youtube.com"), "youtube");
 });
 
 test("open-bar idle lines stay panel-only", () => {
   assert.deepEqual(chatBubbleCopy({ sessionActive: true, panelOpen: false }), { text: "", scope: "none" });
   assert.deepEqual(
     chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: false }),
-    { text: CHAT_FOCUSED, scope: "panel" },
+    { text: CHAT_FOCUSED[0], scope: "panel" },
   );
-  assert.equal(CHAT_FOCUSED_GOOD, "You are doing so good!");
+  assert.deepEqual(CHAT_FOCUSED, [
+    "Auramaxxing...",
+    "I'm studying with you...",
+    "This looks hard...",
+    "I can do this...",
+    "Unstoppable...",
+  ]);
   assert.deepEqual(
-    chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: false, lineIndex: 1 }),
-    { text: CHAT_FOCUSED_GOOD, scope: "panel" },
-  );
-  assert.deepEqual(
-    ["locked in fr", "okayyy keep going", "don't fumble it"].map((text, offset) =>
-      chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: false, lineIndex: offset + 2 }),
+    CHAT_FOCUSED.map((text, index) =>
+      chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: false, lineIndex: index }),
     ),
-    ["locked in fr", "okayyy keep going", "don't fumble it"].map((text) => ({ text, scope: "panel" })),
+    CHAT_FOCUSED.map((text) => ({ text, scope: "panel" })),
   );
   assert.deepEqual(
     chatBubbleCopy({ sessionActive: true, panelOpen: false, everDistracted: false, lineIndex: 1 }),
@@ -113,17 +139,20 @@ test("open-bar idle lines stay panel-only", () => {
   );
   assert.deepEqual(
     chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: true }),
-    { text: CHAT_RECOVERED, scope: "panel" },
+    { text: CHAT_RECOVERED[0], scope: "panel" },
   );
+  assert.deepEqual(CHAT_RECOVERED, [
+    "Okay, back on track!",
+    "Welcome back!",
+    "Keep the flow going",
+    "Let's keep on farming!",
+    "You ready?",
+  ]);
   assert.deepEqual(
-    ["okay we're back", "redemption arc", "slip happened. we move", "alright lock back in"].map(
-      (text, offset) =>
-        chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: true, lineIndex: offset + 1 }),
+    CHAT_RECOVERED.map((text, index) =>
+      chatBubbleCopy({ sessionActive: true, panelOpen: true, everDistracted: true, lineIndex: index }),
     ),
-    ["okay we're back", "redemption arc", "slip happened. we move", "alright lock back in"].map((text) => ({
-      text,
-      scope: "panel",
-    })),
+    CHAT_RECOVERED.map((text) => ({ text, scope: "panel" })),
   );
 });
 
@@ -133,15 +162,36 @@ test("reopening the bar can start on any open-bar line", () => {
   assert.equal(pickChatLineIndex(1, () => 0.5), 0);
 });
 
+test("a line set is shuffled without repeating until every line has shown", () => {
+  const bag: number[] = [];
+  const seen: number[] = [];
+  const count = CHAT_FOCUSED.length + CHAT_RECOVERED.length;
+  for (let i = 0; i < count * 2; i += 1) {
+    seen.push(takeShuffledLine(bag, count, seen.at(-1) ?? -1, () => 0));
+  }
+  assert.equal(new Set(seen.slice(0, 10)).size, 10);
+  assert.equal(new Set(seen.slice(10)).size, 10);
+  assert.notEqual(seen[10], seen[9]);
+});
+
 test("a new chat line expands out instead of swapping in place", () => {
-  const { replayChatBubble } = require("../desktop/chat-motion.js") as {
-    replayChatBubble: (node: {
-      textContent: string;
-      chatSeq?: number;
-      offsetWidth: number;
-      classList: { contains: (name: string) => boolean; add: (name: string) => void; remove: (name: string) => void };
-    }, text: string, show: boolean) => void;
+  const { formatChatHtml, replayChatBubble } = require("../desktop/chat-motion.js") as {
+    formatChatHtml: (text: string) => string;
+    replayChatBubble: (
+      node: {
+        textContent: string;
+        innerHTML: string;
+        dataset?: { chatText?: string };
+        chatSeq?: number;
+        offsetWidth: number;
+        classList: { contains: (name: string) => boolean; add: (name: string) => void; remove: (name: string) => void };
+      },
+      text: string,
+      show: boolean,
+    ) => void;
   };
+  assert.equal(formatChatHtml("*touch*"), "<strong>*touch*</strong>");
+  assert.equal(formatChatHtml("*nudge* Focus!"), "<strong>*nudge*</strong> Focus!");
   const frames: Array<() => void> = [];
   const previous = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = ((fn: () => void) => {
@@ -150,7 +200,9 @@ test("a new chat line expands out instead of swapping in place", () => {
   }) as typeof requestAnimationFrame;
   const names = new Set(["is-on"]);
   const node = {
-    textContent: "auramaxxing...",
+    textContent: "Auramaxxing...",
+    innerHTML: "Auramaxxing...",
+    dataset: { chatText: "Auramaxxing..." },
     offsetWidth: 40,
     classList: {
       contains: (name: string) => names.has(name),
@@ -163,10 +215,11 @@ test("a new chat line expands out instead of swapping in place", () => {
     },
   };
   try {
-    replayChatBubble(node, "auramaxxing...", true);
+    replayChatBubble(node, "Auramaxxing...", true);
     assert.equal(frames.length, 0);
-    replayChatBubble(node, "locked in fr", true);
-    assert.equal(node.textContent, "locked in fr");
+    replayChatBubble(node, "I'm studying with you...", true);
+    assert.equal(node.dataset.chatText, "I'm studying with you...");
+    assert.equal(node.innerHTML, "I'm studying with you...");
     assert.equal(node.classList.contains("is-on"), false);
     assert.equal(node.classList.contains("is-instant"), true);
     frames.shift()?.();
