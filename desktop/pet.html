@@ -150,12 +150,46 @@
       }
       #pet-stack {
         position: absolute;
-        bottom: 0;
+        left: 50%;
+        top: 50%;
+        bottom: auto;
         display: block;
         flex: none;
         width: 70px;
         height: 70px;
+        margin: -35px 0 0 -35px;
         pointer-events: auto;
+        transform-origin: 50% 50%;
+      }
+      #pet-boom {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 20;
+        display: none;
+        width: 142px;
+        height: 200px;
+        margin: -100px 0 0 -71px;
+        pointer-events: none;
+        background: transparent;
+        image-rendering: pixelated;
+      }
+      /*
+       * Flight window is centered on the pet. Edge rules pin the sprite to the rail
+       * (left: 0 plus the -35px margin clips the left half). Keep it centered here.
+       */
+      body.is-flight #pet-stack {
+        left: 50%;
+        right: auto;
+        top: 50%;
+        bottom: auto;
+        margin: -35px 0 0 -35px;
+      }
+      body.is-flight #pet-chat {
+        display: none;
+      }
+      body.is-boom #pet-boom {
+        display: block;
       }
       #pet-stack.is-dragging {
         cursor: grabbing;
@@ -217,6 +251,7 @@
         <img class="pet-layer is-desk" data-layer="desk" alt="" draggable="false" hidden />
         <img class="pet-layer is-pen" data-layer="pen" alt="" draggable="false" hidden />
       </div>
+      <img id="pet-boom" alt="" draggable="false" />
     </div>
     <script src="pet-art.js"></script>
     <script src="chat-motion.js"></script>

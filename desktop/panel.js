@@ -10,6 +10,9 @@ const sessionClock = document.getElementById("session-clock");
 const panelPet = document.getElementById("panel-pet");
 const panelPetChat = document.getElementById("panel-pet-chat");
 const panelPetStack = document.getElementById("panel-pet-stack");
+const railPeek = document.getElementById("rail-peek");
+const railPeekChat = document.getElementById("rail-peek-chat");
+const railPeekStack = document.getElementById("rail-peek-stack");
 const panelLayerNodes = {
   floor: panelPetStack.querySelector('[data-layer="floor"]'),
   chair: panelPetStack.querySelector('[data-layer="chair"]'),
@@ -22,6 +25,13 @@ const panelLayerNodes = {
   desk: panelPetStack.querySelector('[data-layer="desk"]'),
   pen: panelPetStack.querySelector('[data-layer="pen"]'),
 };
+const peekLayerNodes = {
+  legs: railPeekStack?.querySelector('[data-peek-layer="legs"]'),
+  body: railPeekStack?.querySelector('[data-peek-layer="body"]'),
+  clothes: railPeekStack?.querySelector('[data-peek-layer="clothes"]'),
+  face: railPeekStack?.querySelector('[data-peek-layer="face"]'),
+  hat: railPeekStack?.querySelector('[data-peek-layer="hat"]'),
+};
 
 const EDGE_CLASSES = ["edge-left", "edge-right", "edge-top", "edge-bottom"];
 /** Screen px before a rail press counts as a drag instead of a click. */
@@ -31,6 +41,8 @@ const LEAVE_CLOSE_MS = 450;
 
 let dockEdge = "right";
 let mouseIgnored = false;
+/** When true, leaving the panel does not auto-collapse it. */
+let keepOpenPinned = false;
 /** @type {null | { x: number, y: number }} */
 let lastPointer = null;
 let panelIsOpen = false;
@@ -145,16 +157,45 @@ function applyPanelPetSprite() {
   panelPetStack.style.transform = shownFlip ? "scaleX(-1)" : "";
 }
 
+function applyPeekPetSprite() {
+  const base = String(assetOrigin || "").replace(/\/$/, "");
+  if (!base || typeof plainPetStack !== "function" || !railPeekStack) return;
+  const stack = plainPetStack(shownPet, shownPose, {
+    color: shownColor,
+    hat: shownHat,
+    clothes: shownClothes,
+  });
+  setLayer(peekLayerNodes.legs, base + stack.legs);
+  setLayer(peekLayerNodes.body, base + stack.body);
+  setLayer(peekLayerNodes.clothes, stack.clothes ? base + stack.clothes : null);
+  setLayer(peekLayerNodes.face, base + stack.face);
+  setLayer(peekLayerNodes.hat, stack.hat ? base + stack.hat : null);
+  if (peekLayerNodes.hat) {
+    peekLayerNodes.hat.classList.toggle("is-head", stack.hatPlacement === "head");
+  }
+}
+
 function applyPanelPet(state) {
   const show = state.panelPetVisible === true;
+  const peeking = state.panelPeeking === true;
+  const phase = state.distractionPhase === "mad" || state.distractionPhase === "warn" ? state.distractionPhase : "none";
+  const distracted = phase !== "none";
+  document.body.classList.toggle("is-peeking", peeking);
+  document.body.classList.toggle("is-distracted", distracted);
   panelPet.classList.toggle("is-visible", show);
+  const text = typeof state.chatBubble === "string" ? state.chatBubble : "";
+  const scope = state.chatBubbleScope;
+  if (peeking) {
+    applyPeekPetSprite();
+    replayChatBubble(railPeekChat, text, Boolean(text) && scope === "peek");
+  } else if (railPeekChat) {
+    replayChatBubble(railPeekChat, "", false);
+  }
   if (!show) {
     replayChatBubble(panelPetChat, "", false);
     return;
   }
   applyPanelPetSprite();
-  const text = typeof state.chatBubble === "string" ? state.chatBubble : "";
-  const scope = state.chatBubbleScope;
   replayChatBubble(panelPetChat, text, Boolean(text) && (scope === "pet" || scope === "panel"));
 }
 
@@ -166,7 +207,8 @@ function applySessionFill(state) {
       : { liquid: "#5fbf4a", track: "transparent" };
   document.body.classList.toggle("is-study-day", kind === "study");
   document.body.classList.toggle("is-rest-day", kind === "rest");
-  sessionFill.style.background = colors.liquid;
+  const distracted = state.distractionPhase === "mad" || state.distractionPhase === "warn";
+  sessionFill.style.background = distracted ? "#8a8f86" : colors.liquid;
   const rail = document.getElementById("dock-rail");
   if (rail) rail.style.background = colors.track;
   const raw = Number(state.sessionProgress);
@@ -210,12 +252,20 @@ function clearLeaveClose() {
 
 function armLeaveClose() {
   clearLeaveClose();
-  if (!panelIsOpen || dockDragging || pendingDragOrigin) return;
+  if (!panelIsOpen || keepOpenPinned || dockDragging || pendingDragOrigin) return;
   leaveCloseTimer = setTimeout(() => {
     leaveCloseTimer = null;
-    if (!panelIsOpen || dockDragging) return;
+    if (!panelIsOpen || keepOpenPinned || dockDragging) return;
     window.pet.setOpen(false);
   }, LEAVE_CLOSE_MS);
+}
+
+function setKeepOpenPinned(pinned) {
+  keepOpenPinned = Boolean(pinned);
+  const button = document.getElementById("keep-open");
+  if (!button) return;
+  button.setAttribute("aria-checked", keepOpenPinned ? "true" : "false");
+  if (keepOpenPinned) clearLeaveClose();
 }
 
 function clearDockDrag() {
@@ -309,6 +359,10 @@ document.addEventListener("mouseenter", () => {
 
 document.getElementById("update-button").addEventListener("click", () => {
   window.pet.openUpdate();
+});
+
+document.getElementById("keep-open")?.addEventListener("click", () => {
+  setKeepOpenPinned(!keepOpenPinned);
 });
 
 document.getElementById("quit").addEventListener("click", () => {

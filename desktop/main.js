@@ -14,6 +14,7 @@ const {
   describeFrontRead,
   closeCountdownStatus,
   deskHostFromOrigin,
+  distractionPhase,
   nextCloseWatch,
   nextFrontLog,
   noteCloseAttempt,
@@ -48,7 +49,7 @@ const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin }
 const { formatSessionClock, remainingStudyMs, studyProgress } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
-const { chatBubbleCopy, chatBubbleLines, pickChatLineIndex } = require("./chat-bubble");
+const { CHAT_CLOSING, chatBubbleCopy, chatBubbleLines, takeShuffledLine } = require("./chat-bubble");
 
 loadPublicEnv(path.join(__dirname, "..", ".env.local"));
 
@@ -95,6 +96,17 @@ const PET_SIZE = DOCK_DEFAULTS.petSize;
 const PET_CHAT_PAD = 64;
 /** Pet window width so multi-line chat fits; sprite stays on the rail side. */
 const PET_CHAT_WIDTH = 168;
+/** Closed-bar peek: extra window depth so the tilted head can stick past the rail. */
+const PEEK_PAD = 112;
+/** Floating close-flight window, native size of the boom GIF (142×200). */
+const FLIGHT_W = 142;
+const FLIGHT_H = 200;
+const FLIGHT_AIM_MS = 180;
+const FLIGHT_ROCKET_MS = 480;
+const FLIGHT_BOOM_CLOSE_MS = 150;
+/** One play of boom.gif (17×100ms) after the close delay. */
+const FLIGHT_BOOM_HOLD_MS = 1550;
+const FLIGHT_RETURN_MS = 520;
 const DOCK_INSET = DOCK_DEFAULTS.inset;
 const DOCK_INSET_BOTTOM = DOCK_DEFAULTS.insetBottom;
 
@@ -106,15 +118,26 @@ let panelBoundsOpen = false;
 let panelFrameOpen = false;
 let petWindow = null;
 let petAnimating = false;
-/** True while the pet is walking to close a distracted tab. */
+/** True while the pet is rocket-closing a distracted tab. */
 let petClosing = false;
 /** Last known “on blocklist host” for chat copy between polls. */
 let onDistractedHost = false;
+/** Study clock and bar fill pause while a blocked site is front. */
+let distractionPausedMs = 0;
+let distractionPauseStart = 0;
 /** Rotates multi-line chat while the same scenario stays up. */
 let chatLineIndex = 0;
 let chatLineTick = 0;
 let chatLineScenario = "";
+/** Remaining line indexes for this set. Empties before any line repeats. */
+let chatLineBag = [];
+/** Distraction / peek / closing: advance every N seconds. */
 const CHAT_LINE_TICKS = 3;
+/** Open-bar idle: show a line, then silence, then a new random line. */
+const CHAT_SHOW_TICKS = 5;
+const CHAT_SILENCE_TICKS = 60;
+/** @type {"show" | "silence"} */
+let chatIdlePhase = "show";
 let finishing = false;
 let study = null;
 let lastBrowserApp = "";
@@ -148,11 +171,17 @@ let state = {
   panelFrameOpen: false,
   panelBoundsOpen: true,
   panelPetVisible: false,
+  panelPeeking: false,
+  distractionPhase: "none",
   petPose: "idle",
   petFlip: false,
   dockEdge: "right",
   chatBubble: "",
   chatBubbleScope: "none",
+  flightActive: false,
+  flightAngle: 0,
+  flightScaleX: 1,
+  flightBoom: false,
 };
 const pendingLinks = [];
 let acceptLaunchLinks = false;
@@ -220,12 +249,18 @@ function everDistractedThisSession() {
   return Array.isArray(study.distractedHosts) && study.distractedHosts.length > 0;
 }
 
+function currentDistractionPhase() {
+  if (!onDistractedHost || !study?.closeWatch) return "none";
+  return distractionPhase(study.closeWatch, Date.now());
+}
+
 function chatScenarioKey() {
   const host = onDistractedHost ? String(study?.closeWatch?.host || "") : "";
   return [
     Boolean(study?.token),
     petClosing,
     onDistractedHost,
+    currentDistractionPhase(),
     everDistractedThisSession(),
     panelOpen,
     host,
@@ -237,48 +272,83 @@ function chatBubbleInput() {
     sessionActive: Boolean(study?.token),
     closing: petClosing,
     onDistracted: onDistractedHost,
+    distractionPhase: currentDistractionPhase(),
     everDistracted: everDistractedThisSession(),
     panelOpen,
     host: onDistractedHost ? study?.closeWatch?.host || "" : "",
   };
 }
 
+function nextChatLine(count, fresh = false) {
+  if (fresh) chatLineBag = [];
+  const next = takeShuffledLine(chatLineBag, count, fresh ? -1 : chatLineIndex);
+  chatLineIndex = next;
+  return next;
+}
+
+function isOpenBarIdleChat(preview) {
+  return (
+    preview.scope === "panel" &&
+    !onDistractedHost &&
+    !petClosing &&
+    Boolean(study?.token) &&
+    panelOpen
+  );
+}
+
 function syncChatBubble(options = {}) {
   if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
+  noteDistractionPause(onDistractedHost);
+  const phase = currentDistractionPhase();
+  const peeking = Boolean(onDistractedHost && phase !== "none" && !panelOpen);
   const scenario = chatScenarioKey();
+  const preview = chatBubbleLines(chatBubbleInput());
   if (scenario !== chatLineScenario) {
-    const wasOpen = chatLineScenario.split("|")[4] === "true";
     chatLineScenario = scenario;
     chatLineTick = 0;
-    const preview = chatBubbleLines(chatBubbleInput());
-    const openingBarLines = panelOpen && !wasOpen && preview.scope === "panel";
-    chatLineIndex = openingBarLines ? pickChatLineIndex(preview.lines.length) : 0;
+    chatIdlePhase = "show";
+    nextChatLine(preview.lines.length, true);
   }
   const copy = chatBubbleCopy({
     ...chatBubbleInput(),
     lineIndex: chatLineIndex,
   });
-  const panelPetVisible = panelOpen;
+  const silentIdle = isOpenBarIdleChat(preview) && chatIdlePhase === "silence";
+  const text = silentIdle ? "" : copy.text;
+  const scope = copy.scope;
+  const flying = state.flightActive === true;
+  const panelPetVisible = panelOpen && !flying;
+  const nextPeeking = peeking && !flying;
+  const nextScope = flying ? "none" : scope;
+  const nextText = flying ? "" : text;
   if (
-    state.chatBubble === copy.text &&
-    state.chatBubbleScope === copy.scope &&
-    state.panelPetVisible === panelPetVisible
+    state.chatBubble === nextText &&
+    state.chatBubbleScope === nextScope &&
+    state.panelPetVisible === panelPetVisible &&
+    state.panelPeeking === nextPeeking &&
+    state.distractionPhase === phase
   ) {
     return false;
   }
   state = {
     ...state,
-    chatBubble: copy.text,
-    chatBubbleScope: copy.scope,
+    chatBubble: nextText,
+    chatBubbleScope: nextScope,
     panelPetVisible,
+    panelPeeking: nextPeeking,
+    distractionPhase: phase,
   };
   return true;
 }
 
 function applyRestingPetPose() {
+  // Close-flight owns the face (struggle → idle under boom); don't fight it.
+  if (state.flightActive) return;
+  const phase = currentDistractionPhase();
   const pose = restingPetPose({
     sessionActive: Boolean(study?.token),
     onDistracted: onDistractedHost,
+    mad: phase === "mad",
     closing: petClosing,
     animating: petAnimating,
     currentPose: state.petPose,
@@ -291,11 +361,14 @@ function publish() {
   applyRestingPetPose();
   petLog(`[pet] showing ${state.petType || "baby_slime"} level ${state.level}`);
   syncChatBubble();
+  syncPeekBounds();
+  const flying = state.flightActive === true;
   const payload = {
     ...state,
     assetOrigin: petAssetOrigin(),
     finishLabel: study?.token ? finishLabel(study.log.blockedCount) : "",
-    panelPetVisible: panelOpen,
+    panelPetVisible: panelOpen && !flying,
+    panelPeeking: Boolean(state.panelPeeking) && !flying,
   };
   for (const win of [panelWindow, petWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send("state", payload);
@@ -447,9 +520,25 @@ function setSessionProgress(progress) {
   return true;
 }
 
+function noteDistractionPause(active, now = Date.now()) {
+  if (active) {
+    if (!distractionPauseStart) distractionPauseStart = now;
+    return;
+  }
+  if (!distractionPauseStart) return;
+  distractionPausedMs += Math.max(0, now - distractionPauseStart);
+  distractionPauseStart = 0;
+}
+
+/** Wall clock with blocked-site time removed, so the session timer and bar hold. */
+function studyClockNow(now = Date.now()) {
+  const live = distractionPauseStart ? Math.max(0, now - distractionPauseStart) : 0;
+  return now - distractionPausedMs - live;
+}
+
 function syncSessionProgress(now = Date.now()) {
   if (!study) return setSessionProgress(0);
-  const progress = studyProgress(study, now);
+  const progress = studyProgress(study, studyClockNow(now));
   if (progress === null) return setSessionProgress(0);
   return setSessionProgress(progress);
 }
@@ -460,7 +549,7 @@ function syncSessionClock(now = Date.now()) {
     state = { ...state, sessionClock: "" };
     return true;
   }
-  const remaining = remainingStudyMs(study, now);
+  const remaining = remainingStudyMs(study, studyClockNow(now));
   const next = remaining === null ? "" : formatSessionClock(remaining);
   if (state.sessionClock === next) return false;
   state = { ...state, sessionClock: next };
@@ -511,7 +600,8 @@ const PANEL_EXPAND_MS = 280;
 function applyPanelBounds(mode, { movePet = true } = {}) {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
-  win.setBounds(panelBounds(mode), false);
+  const open = mode === "open" || mode === true;
+  win.setBounds(panelBoundsForDisplay(open), false);
   if (movePet) placePet();
 }
 
@@ -542,12 +632,34 @@ function panelBounds(open) {
   return currentOverlay(open).panel;
 }
 
+/** Closed left/top strip grows by PEEK_PAD so the peek head can stick out past the rail. */
+function panelBoundsForDisplay(open = panelOpen || panelBoundsOpen) {
+  const bounds = panelBounds(open);
+  const peeking = Boolean(state.panelPeeking) && !panelOpen;
+  if (!peeking) return bounds;
+  if (dock.edge === "left") {
+    return { ...bounds, width: bounds.width + PEEK_PAD };
+  }
+  if (dock.edge === "top") {
+    return { ...bounds, height: bounds.height + PEEK_PAD };
+  }
+  // Right already uses open-sized bounds; CSS clip expands into the peek zone.
+  return bounds;
+}
+
+function syncPeekBounds() {
+  const win = panelWindow;
+  if (!win || win.isDestroyed() || dockDrag) return;
+  if (panelOpen || dock.edge === "right") return;
+  win.setBounds(panelBoundsForDisplay(panelOpen || panelBoundsOpen), false);
+}
+
 function placePanel() {
   const win = panelWindow;
   if (!win || win.isDestroyed()) return;
   // Native + CSS shadows stacked a ghost frame around the transparent pad.
   win.setHasShadow(false);
-  win.setBounds(panelBounds(panelOpen || panelBoundsOpen), false);
+  win.setBounds(panelBoundsForDisplay(panelOpen || panelBoundsOpen), false);
 }
 
 function setDockEdgeState(edge) {
@@ -643,8 +755,217 @@ function destroyPetWindow() {
 }
 
 function placePet() {
-  // No floating overlay pet; studying sprite stays inside the open panel only.
+  // Floating pet is only used for the close-tab rocket flight.
+  if (state.flightActive) return;
   destroyPetWindow();
+}
+
+function flightWindowAt(cx, cy) {
+  return {
+    x: Math.round(cx - FLIGHT_W / 2),
+    y: Math.round(cy - FLIGHT_H / 2),
+    width: FLIGHT_W,
+    height: FLIGHT_H,
+  };
+}
+
+function easeInCubic(t) {
+  return t * t * t;
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function angleToward(fromX, fromY, toX, toY) {
+  return (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
+}
+
+/** CSS rotate(θ) turns the upright head (screen -90°) onto the flight path. Feet trail. */
+function headFirstAngle(fromX, fromY, toX, toY) {
+  return angleToward(fromX, fromY, toX, toY) + 90;
+}
+
+function shortestTurn(fromDeg, toDeg) {
+  const delta = ((toDeg - fromDeg + 540) % 360) - 180;
+  return fromDeg + delta;
+}
+
+async function capturePanelPetAnchor() {
+  const win = panelWindow;
+  if (!win || win.isDestroyed()) return null;
+  let info = null;
+  try {
+    info = await win.webContents.executeJavaScript(`(() => {
+      const peeking = document.body.classList.contains("is-peeking") && !document.body.classList.contains("is-open");
+      const open = document.body.classList.contains("is-open");
+      const el = peeking
+        ? document.getElementById("rail-peek-stack")
+        : open
+          ? document.getElementById("panel-pet-stack")
+          : null;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 2) || !(r.height > 2)) return null;
+      // Include parent mirrors (the right dock flips #shell) so the floater matches the pose.
+      const nodes = [];
+      for (let n = el; n && n.nodeType === 1; n = n.parentElement) nodes.push(n);
+      nodes.reverse();
+      let a = 1, b = 0, c = 0, d = 1;
+      for (const n of nodes) {
+        const t = getComputedStyle(n).transform;
+        if (!t || t === "none") continue;
+        const m = new DOMMatrix(t);
+        const na = m.a * a + m.c * b;
+        const nb = m.b * a + m.d * b;
+        const nc = m.a * c + m.c * d;
+        const nd = m.b * c + m.d * d;
+        a = na; b = nb; c = nc; d = nd;
+      }
+      // Local up (the head) after that matrix. rotate(head+90) aims the head the same way, unmirrored.
+      const head = Math.atan2(-d, -c) * 180 / Math.PI;
+      return {
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+        angleDeg: head + 90,
+        scaleX: 1,
+        peeking,
+        open,
+      };
+    })()`);
+  } catch {
+    return null;
+  }
+  if (!info) return null;
+  const b = win.getBounds();
+  return {
+    cx: b.x + info.left + info.width / 2,
+    cy: b.y + info.top + info.height / 2,
+    width: info.width,
+    height: info.height,
+    angleDeg: info.angleDeg,
+    scaleX: info.scaleX,
+    peeking: info.peeking,
+    open: info.open,
+  };
+}
+
+function openFlightPet(bounds) {
+  if (petWindow && !petWindow.isDestroyed()) {
+    petWindow.setBounds(bounds, false);
+    hardenOverlayWindow(petWindow);
+    petWindow.showInactive();
+    return petWindow;
+  }
+  petWindow = new BrowserWindow({
+    ...bounds,
+    show: true,
+    frame: false,
+    transparent: true,
+    movable: false,
+    resizable: false,
+    focusable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: false,
+    backgroundColor: "#00000000",
+    title: "Aurafarm pet",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  petWindow.setIgnoreMouseEvents(true, { forward: true });
+  hardenOverlayWindow(petWindow);
+  petWindow.loadFile(path.join(__dirname, "pet.html"));
+  petWindow.on("closed", () => {
+    petWindow = null;
+  });
+  return petWindow;
+}
+
+async function waitPetReady() {
+  const win = petWindow;
+  if (!win || win.isDestroyed()) return;
+  if (!win.webContents.isLoading()) {
+    publish();
+    return;
+  }
+  await new Promise((resolve) => {
+    win.webContents.once("did-finish-load", resolve);
+    setTimeout(resolve, 800);
+  });
+  publish();
+}
+
+async function animateFlightWindow(from, to, ms, ease = easeInCubic) {
+  const win = petWindow;
+  if (!win || win.isDestroyed()) return;
+  const steps = Math.max(8, Math.round(ms / 16));
+  for (let i = 1; i <= steps; i += 1) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    const t = ease(i / steps);
+    petWindow.setBounds(
+      {
+        x: Math.round(from.x + (to.x - from.x) * t),
+        y: Math.round(from.y + (to.y - from.y) * t),
+        width: from.width,
+        height: from.height,
+      },
+      false,
+    );
+    await waitMs(Math.max(8, Math.round(ms / steps)));
+  }
+  if (petWindow && !petWindow.isDestroyed()) petWindow.setBounds(to, false);
+}
+
+async function animateFlightAngle(fromDeg, toDeg, ms) {
+  const end = shortestTurn(fromDeg, toDeg);
+  const steps = Math.max(6, Math.round(ms / 16));
+  for (let i = 1; i <= steps; i += 1) {
+    const t = easeInOutCubic(i / steps);
+    state = {
+      ...state,
+      flightAngle: fromDeg + (end - fromDeg) * t,
+    };
+    publish();
+    await waitMs(Math.max(8, Math.round(ms / steps)));
+  }
+  state = { ...state, flightAngle: end };
+  publish();
+}
+
+function setFlightState(partial) {
+  state = { ...state, ...partial };
+  publish();
+}
+
+async function finishCloseFlight(home) {
+  try {
+    // Boom stays at the tab strip; clear it before the ease-home.
+    if (state.flightBoom) {
+      setFlightState({ flightBoom: false, flightAngle: 0, flightScaleX: 1, petPose: "idle" });
+    }
+    if (petWindow && !petWindow.isDestroyed() && home) {
+      const from = petWindow.getBounds();
+      await animateFlightWindow(from, home, FLIGHT_RETURN_MS, easeInOutCubic);
+    }
+  } finally {
+    petClosing = false;
+    petAnimating = false;
+    setFlightState({
+      flightActive: false,
+      flightBoom: false,
+      flightAngle: 0,
+      flightScaleX: 1,
+    });
+    destroyPetWindow();
+    applyRestingPetPose();
+    publish();
+  }
 }
 
 function placeOverlayFloating(panelRect, pointer) {
@@ -739,8 +1060,70 @@ function setPetPose(pose, flip) {
 }
 
 async function closeFrontTab(appName, host) {
-  // No floating pet walk — close the distracted tab directly.
-  void host;
+  if (petAnimating || state.flightActive) {
+    return closeFrontWindow(appName);
+  }
+  let homeBounds = null;
+  let animated = false;
+  try {
+    const anchor = await capturePanelPetAnchor();
+    const bounds = await readFrontWindowBounds(appName);
+    const parsed = bounds.ok ? parseWindowBounds(bounds.value) : null;
+    if (anchor && parsed) {
+      petClosing = true;
+      petAnimating = true;
+      animated = true;
+      const start = flightWindowAt(anchor.cx, anchor.cy);
+      homeBounds = start;
+      // Arm flight state first so the panel/peek copy hides as the floater appears.
+      state = {
+        ...state,
+        flightActive: true,
+        flightBoom: false,
+        flightAngle: anchor.angleDeg,
+        flightScaleX: 1,
+        petPose: "struggle",
+        petFlip: false,
+        chatBubble: CHAT_CLOSING,
+        chatBubbleScope: "pet",
+      };
+      publish();
+      openFlightPet(start);
+      await waitPetReady();
+      const origin = petOriginForTabStrip(parsed, PET_SIZE);
+      const display = screen.getDisplayNearestPoint({
+        x: origin.x + PET_SIZE / 2,
+        y: origin.y + PET_SIZE / 2,
+      });
+      const aim = clampPetOrigin(origin, PET_SIZE, display.bounds);
+      const target = flightWindowAt(aim.x + PET_SIZE / 2, aim.y + PET_SIZE / 2);
+      const aimDeg = headFirstAngle(anchor.cx, anchor.cy, aim.x + PET_SIZE / 2, aim.y + PET_SIZE / 2);
+      await animateFlightAngle(anchor.angleDeg, aimDeg, FLIGHT_AIM_MS);
+      await animateFlightWindow(start, target, FLIGHT_ROCKET_MS, easeInCubic);
+      // Arrive: upright + normal eyes, boom covers the pet.
+      setFlightState({
+        flightAngle: 0,
+        flightScaleX: 1,
+        petPose: "idle",
+        flightBoom: true,
+      });
+      await waitMs(FLIGHT_BOOM_CLOSE_MS);
+      const still = await readFrontBrowser();
+      if (hostnameFromUrl(still.url || "") !== host) {
+        await finishCloseFlight(homeBounds);
+        return { ok: false, error: "", skipped: true };
+      }
+      const result = await closeFrontWindow(appName);
+      await waitMs(FLIGHT_BOOM_HOLD_MS);
+      await finishCloseFlight(homeBounds);
+      return result;
+    }
+  } catch {
+    if (animated) {
+      await finishCloseFlight(homeBounds);
+      return { ok: false, error: "", skipped: true };
+    }
+  }
   petClosing = false;
   petAnimating = false;
   return closeFrontWindow(appName);
@@ -755,7 +1138,8 @@ function hardenOverlayWindow(win) {
 }
 
 function openPet() {
-  // Floating overlay pet removed; panel hosts the studying sprite when open.
+  // Floating pet is only for close-tab flight; studying sprite lives in the panel.
+  if (state.flightActive) return;
   destroyPetWindow();
 }
 
@@ -973,7 +1357,17 @@ function tickStudyClock() {
   const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, now) : "";
   const statusChanged = Boolean(countdown && state.status !== countdown);
   if (statusChanged) state = { ...state, status: countdown };
-  if (progressChanged || clockChanged || statusChanged) publish();
+  // Focused study: flip study1 ↔ study2 once a second so the pen and legs animate.
+  let poseChanged = false;
+  if (!petAnimating && !petClosing && !onDistractedHost) {
+    const nextPose = state.petPose === "study2" ? "study1" : "study2";
+    if (state.petPose !== nextPose) {
+      state = { ...state, petPose: nextPose };
+      poseChanged = true;
+    }
+  }
+  // Distracted: republish each second so warn → mad phase / peek bounds stay in sync.
+  if (progressChanged || clockChanged || statusChanged || poseChanged || onDistractedHost) publish();
   advanceChatLine();
 }
 
@@ -991,9 +1385,25 @@ function stopStudyClock() {
 
 function advanceChatLine() {
   chatLineTick += 1;
+  const preview = chatBubbleLines(chatBubbleInput());
+  if (isOpenBarIdleChat(preview)) {
+    if (chatIdlePhase === "show") {
+      if (chatLineTick < CHAT_SHOW_TICKS) return;
+      chatLineTick = 0;
+      chatIdlePhase = "silence";
+      if (syncChatBubble()) publish();
+      return;
+    }
+    if (chatLineTick < CHAT_SILENCE_TICKS) return;
+    chatLineTick = 0;
+    chatIdlePhase = "show";
+    nextChatLine(preview.lines.length);
+    if (syncChatBubble()) publish();
+    return;
+  }
   if (chatLineTick < CHAT_LINE_TICKS) return;
   chatLineTick = 0;
-  chatLineIndex += 1;
+  nextChatLine(preview.lines.length);
   if (syncChatBubble()) publish();
 }
 
@@ -1004,7 +1414,8 @@ function beginFrontWatch(body, browser = "") {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
-    closeBlocked: body.close_blocked === true,
+    // Close blocked tabs stays on for the desktop pet (no user toggle).
+    closeBlocked: true,
     closeWatch: createCloseWatch(),
     log: createFrontLog(),
     distractedHosts: [],
@@ -1059,10 +1470,22 @@ function stopFrontWatch() {
   study = null;
   petClosing = false;
   onDistractedHost = false;
+  distractionPausedMs = 0;
+  distractionPauseStart = 0;
   chatLineIndex = 0;
   chatLineTick = 0;
   chatLineScenario = "";
-  state = { ...state, chatBubble: "", chatBubbleScope: "none", sessionProgress: 0, sessionClock: "" };
+  chatLineBag = [];
+  chatIdlePhase = "show";
+  state = {
+    ...state,
+    chatBubble: "",
+    chatBubbleScope: "none",
+    panelPeeking: false,
+    distractionPhase: "none",
+    sessionProgress: 0,
+    sessionClock: "",
+  };
   const debugBefore = state.debug;
   setDebug(describeCloseDebug({ session: false }));
   if (state.debug === debugBefore) publish();
@@ -1126,6 +1549,22 @@ async function finishSession() {
   } finally {
     finishing = false;
   }
+}
+
+/** Score the active session if one is running (used by Finish and Quit). */
+async function endSessionIfNeeded() {
+  if (!study?.token) return;
+  if (finishing) {
+    while (finishing) await waitMs(50);
+    return;
+  }
+  await finishSession();
+}
+
+/** Finish any active study session, then exit the pet. */
+async function quitApp() {
+  await endSessionIfNeeded();
+  app.quit();
 }
 
 async function noteFrontApp() {
@@ -1264,7 +1703,8 @@ async function pollFront() {
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
-    if (typeof preference.value === "boolean") current.closeBlocked = preference.value;
+    // Always close blocked tabs on desktop; preference is debug-only.
+    current.closeBlocked = true;
     const now = Date.now();
     const leftBrowser = Boolean(reading.app) && !reading.error && !supportedFrontBrowser(reading.app);
     const decision = nextCloseWatch(current.closeWatch, {
@@ -1386,7 +1826,7 @@ ipcMain.on("open-update", () => {
   if (typeof state.updateUrl === "string" && state.updateUrl) void shell.openExternal(state.updateUrl);
 });
 ipcMain.on("quit-app", () => {
-  app.quit();
+  void quitApp();
 });
 ipcMain.on("set-panel-open", (_event, open) => {
   setPanelOpen(open);
@@ -1438,15 +1878,18 @@ if (!gotLock) {
   let petPresenceReleased = false;
   app.on("before-quit", (event) => {
     appQuitting = true;
-    stopFrontWatch();
     if (petPresenceReleased) return;
     event.preventDefault();
-    const release = touchPetPresence(false);
-    const timeout = new Promise((resolve) => setTimeout(resolve, 1500));
-    void Promise.race([release, timeout]).finally(() => {
+    void (async () => {
+      // Quit (button or menu) should end an active session, not leave it hanging.
+      await endSessionIfNeeded();
+      stopFrontWatch();
+      const release = touchPetPresence(false);
+      const timeout = new Promise((resolve) => setTimeout(resolve, 1500));
+      await Promise.race([release, timeout]);
       petPresenceReleased = true;
       app.quit();
-    });
+    })();
   });
 
   app.on("open-url", (event, url) => {

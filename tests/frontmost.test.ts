@@ -7,9 +7,12 @@ const require = createRequire(import.meta.url);
 const {
   BLOCKED,
   CLOSE_AFTER_MS,
+  DISTRACTION_PEEK_MS,
+  DISTRACTION_MAD_MS,
   createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,
+  distractionPhase,
   hostMatchesBlocklist: petMatchesBlocklist,
   hostnameFromUrl,
   describeCloseDebug,
@@ -22,6 +25,13 @@ const {
 } = require("../desktop/frontmost.js") as {
   BLOCKED: readonly string[];
   CLOSE_AFTER_MS: number;
+  DISTRACTION_PEEK_MS: number;
+  DISTRACTION_MAD_MS: number;
+  distractionPhase: (
+    watch: { host: string; since: number } | null | undefined,
+    now?: number,
+    limitMs?: number,
+  ) => "none" | "warn" | "mad";
   createCloseWatch: () => { host: string; since: number; attemptedHost: string; close: boolean };
   nextCloseWatch: (
     watch: { host: string; since: number; attemptedHost: string; close: boolean },
@@ -289,6 +299,19 @@ function dwell(watch: ReturnType<typeof createCloseWatch>, rawUrl: string, now: 
     now,
   });
 }
+
+test("distraction peek starts after 1s and mad covers the last 5s", () => {
+  assert.equal(CLOSE_AFTER_MS, 15_000);
+  assert.equal(DISTRACTION_PEEK_MS, 1_000);
+  assert.equal(DISTRACTION_MAD_MS, 5_000);
+  const watch = { host: "www.youtube.com", since: 1_000 };
+  assert.equal(distractionPhase(watch, 1_999), "none");
+  assert.equal(distractionPhase(watch, 2_000), "warn");
+  assert.equal(distractionPhase(watch, 10_999), "warn");
+  assert.equal(distractionPhase(watch, 11_000), "mad");
+  assert.equal(distractionPhase(watch, 16_000), "mad");
+  assert.equal(distractionPhase({ host: "", since: 1_000 }, 5_000), "none");
+});
 
 test("a blocked host is closed once after 15 seconds on that page", () => {
   assert.equal(CLOSE_AFTER_MS, 15_000);

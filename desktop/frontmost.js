@@ -70,9 +70,27 @@ function nextFrontLog(active, log, rawUrl, blocklist, deskHost) {
 }
 
 const CLOSE_AFTER_MS = 15_000;
+/** Wait this long on a blocked host before the peek / nudge starts. */
+const DISTRACTION_PEEK_MS = 1_000;
+/** Mad face + firmer lines for this long before close (end of the 15s window). */
+const DISTRACTION_MAD_MS = 5_000;
 
 function createCloseWatch() {
   return { host: "", since: 0, attemptedHost: "", close: false };
+}
+
+/**
+ * Distraction UX phase while a blocked host is still front.
+ * none → warn (peek / nudge) after grace → mad for the last DISTRACTION_MAD_MS.
+ * @returns {"none" | "warn" | "mad"}
+ */
+function distractionPhase(watch, now = Date.now(), limitMs = CLOSE_AFTER_MS) {
+  if (!watch?.host || !(Number(watch.since) > 0)) return "none";
+  const elapsed = Number(now) - Number(watch.since);
+  if (!(elapsed >= DISTRACTION_PEEK_MS)) return "none";
+  const left = Number(watch.since) + Number(limitMs) - Number(now);
+  if (left <= DISTRACTION_MAD_MS) return "mad";
+  return "warn";
 }
 
 function clearedCloseWatch() {
@@ -172,6 +190,8 @@ function describeFrontRead(reading, log) {
 module.exports = {
   BLOCKED,
   CLOSE_AFTER_MS,
+  DISTRACTION_PEEK_MS,
+  DISTRACTION_MAD_MS,
   createCloseWatch,
   createFrontLog,
   deskHostFromOrigin,
@@ -180,6 +200,7 @@ module.exports = {
   describeCloseDebug,
   describeFrontRead,
   closeCountdownStatus,
+  distractionPhase,
   nextCloseWatch,
   nextFrontLog,
   noteCloseAttempt,

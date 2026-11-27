@@ -1,5 +1,6 @@
 const petStack = document.getElementById("pet-stack");
 const petChat = document.getElementById("pet-chat");
+const petBoom = document.getElementById("pet-boom");
 const layerNodes = {
   floor: petStack.querySelector('[data-layer="floor"]'),
   chair: petStack.querySelector('[data-layer="chair"]'),
@@ -56,7 +57,45 @@ function applyPetSprite() {
   if (layerNodes.hat) layerNodes.hat.classList.toggle("is-head", stack.hatPlacement === "head");
   setLayer(layerNodes.desk, stack.desk ? base + stack.desk : null);
   setLayer(layerNodes.pen, stack.pen ? base + stack.pen : null);
+  applyPetFlightTransform();
+}
+
+let flightAngle = 0;
+let flightScaleX = 1;
+let flightActive = false;
+let boomPlaying = false;
+
+function applyPetFlightTransform() {
+  if (!petStack) return;
+  if (flightActive) {
+    const sx = flightScaleX < 0 ? -1 : 1;
+    const flip = shownFlip ? -sx : sx;
+    petStack.style.transform = `scaleX(${flip}) rotate(${flightAngle}deg)`;
+    return;
+  }
   petStack.style.transform = shownFlip ? "scaleX(-1)" : "";
+}
+
+function applyFlightFx(state) {
+  flightActive = state.flightActive === true;
+  flightAngle = Number.isFinite(Number(state.flightAngle)) ? Number(state.flightAngle) : 0;
+  flightScaleX = Number(state.flightScaleX) < 0 ? -1 : 1;
+  document.body.classList.toggle("is-flight", flightActive);
+  const boom = state.flightBoom === true;
+  document.body.classList.toggle("is-boom", boom);
+  if (petBoom) {
+    const base = String(assetOrigin || "").replace(/\/$/, "");
+    const src = base ? `${base}/pet-assets/fx/boom.gif` : "";
+    if (boom && src && !boomPlaying) {
+      // Start once. Later state pushes must not reload it (that would loop).
+      boomPlaying = true;
+      petBoom.src = `${src}?t=${Date.now()}`;
+    } else if (!boom) {
+      boomPlaying = false;
+      petBoom.removeAttribute("src");
+    }
+  }
+  applyPetFlightTransform();
 }
 
 function applyChatBubble(state) {
@@ -185,6 +224,7 @@ window.pet.onState((state) => {
   shownHat = typeof state.petHat === "string" ? state.petHat : null;
   shownClothes = typeof state.petClothes === "string" ? state.petClothes : null;
   if (typeof state.petFlip === "boolean") shownFlip = state.petFlip;
+  applyFlightFx(state);
   applyPetSprite();
   applyChatBubble(state);
 });

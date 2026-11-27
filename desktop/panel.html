@@ -25,6 +25,8 @@
         --shell-radius: 10px;
         --rail: 31px;
         --frame-pad: 8px;
+        --peek: 112px;
+        --session-distracted: #8a8f86;
         margin: 0;
         box-sizing: border-box;
         height: 100%;
@@ -67,8 +69,15 @@
       body.edge-right.is-bounds-open:not(.is-open) #shell {
         clip-path: inset(0 calc(100% - var(--rail)) 0 0);
       }
+      body.edge-left.is-bounds-open:not(.is-open).is-peeking #shell,
+      body.edge-right.is-bounds-open:not(.is-open).is-peeking #shell {
+        clip-path: inset(0 calc(100% - var(--rail) - var(--peek)) 0 0);
+      }
       body.edge-top.is-bounds-open:not(.is-open) #shell {
         clip-path: inset(0 0 calc(100% - var(--rail)) 0);
+      }
+      body.edge-top.is-bounds-open:not(.is-open).is-peeking #shell {
+        clip-path: inset(0 0 calc(100% - var(--rail) - var(--peek)) 0);
       }
       body.edge-bottom.is-bounds-open:not(.is-open) #shell {
         clip-path: inset(calc(100% - var(--rail)) 0 0 0);
@@ -93,6 +102,11 @@
       body.edge-right #panel-body {
         transform: scaleX(-1);
       }
+      /*
+       * Do not scaleX #rail-peek — flipping that box around its center threw the
+       * absolutely positioned pet off the rail. Shell scaleX already mirrors layout;
+       * the stack/chat undo sprite/text mirror themselves.
+       */
       body.edge-top #shell,
       body.edge-bottom #shell {
         flex-direction: column;
@@ -275,6 +289,230 @@
       body.is-rest-day #session-fill {
         background: var(--session-rest);
       }
+      body.is-distracted #session-fill {
+        background: var(--session-distracted);
+      }
+      /* × marks on both ends of the capsule while a blocked site is up. */
+      #session-marks {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: none;
+        pointer-events: none;
+        color: #4a5248;
+        font: 700 11px/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+      }
+      body.is-distracted #session-marks {
+        display: block;
+      }
+      #session-marks span {
+        position: absolute;
+        display: grid;
+        place-items: center;
+      }
+      body.edge-left #session-marks span:first-child,
+      body.edge-right #session-marks span:first-child {
+        top: 2px;
+        left: 0;
+        right: 0;
+      }
+      body.edge-left #session-marks span:last-child,
+      body.edge-right #session-marks span:last-child {
+        bottom: 2px;
+        left: 0;
+        right: 0;
+      }
+      body.edge-top #session-marks span:first-child,
+      body.edge-bottom #session-marks span:first-child {
+        left: 2px;
+        top: 0;
+        bottom: 0;
+      }
+      body.edge-top #session-marks span:last-child,
+      body.edge-bottom #session-marks span:last-child {
+        right: 2px;
+        top: 0;
+        bottom: 0;
+      }
+      /* Closed-bar peek: pet head behind the rail, tilted out toward the desktop. */
+      #rail-peek {
+        position: absolute;
+        z-index: 0;
+        display: none;
+        pointer-events: none;
+      }
+      body.is-peeking:not(.is-open) #rail-peek {
+        display: block;
+      }
+      /*
+       * Side docks: pet center sits on the content-facing white wall of the capsule,
+       * near the bottom (slightly above the round end), then rotates ±45°.
+       */
+      body.edge-left #rail-peek,
+      body.edge-right #rail-peek {
+        top: auto;
+        bottom: 22px;
+        left: 0;
+        width: calc(var(--rail) + var(--peek));
+        height: 56px;
+        margin: 0;
+      }
+      body.is-bounds-open.edge-left #rail-peek,
+      body.is-bounds-open.edge-right #rail-peek {
+        /* Open-sized window centers the shorter rail; match the capsule bottom. */
+        bottom: calc(var(--frame-pad) / 2 + 22px);
+      }
+      /* Top dock: original peek below the rail (upside-down). */
+      body.edge-top #rail-peek {
+        top: var(--rail);
+        bottom: auto;
+        left: 50%;
+        width: 7.5rem;
+        height: var(--peek);
+        margin-left: -3.75rem;
+      }
+      #rail-peek-chat {
+        position: absolute;
+        z-index: 2;
+        max-width: 15rem;
+        min-height: 2rem;
+        margin: 0;
+        padding: 0.34rem 0.48rem;
+        font-size: 11px;
+      }
+      body.edge-left #rail-peek-chat,
+      body.edge-right #rail-peek-chat {
+        left: var(--rail);
+        right: auto;
+        bottom: calc(100% + 4px);
+        width: 8.25rem;
+        max-width: none;
+      }
+      /* Shell scaleX(-1) would mirror bubble text; undo on the bubble only. */
+      body.edge-right #rail-peek-chat {
+        transform: scaleX(-1);
+        transform-origin: center center;
+      }
+      /* Tip points at the pet: left of bubble on left dock, right of bubble on right dock. */
+      body.edge-left #rail-peek-chat::before,
+      body.edge-left #rail-peek-chat::after {
+        left: 16px;
+      }
+      body.edge-right #rail-peek-chat::before,
+      body.edge-right #rail-peek-chat::after {
+        left: auto;
+        right: 16px;
+        margin-left: 0;
+      }
+      body.edge-right #rail-peek-chat::before {
+        margin-right: -7px;
+      }
+      body.edge-right #rail-peek-chat::after {
+        margin-right: -5.5px;
+      }
+      /*
+       * Top: bubble sits just under the upside-down pet (still inside the peek strip
+       * so shell clip-path does not hide it). Tip centered, pointing up.
+       */
+      body.edge-top #rail-peek-chat {
+        left: 50%;
+        top: 56px;
+        bottom: auto;
+        width: 8.25rem;
+        max-width: none;
+        margin-left: -4.125rem;
+        transform-origin: 50% 0;
+      }
+      body.edge-top #rail-peek-chat::before,
+      body.edge-top #rail-peek-chat::after {
+        top: -7px;
+        bottom: auto;
+        left: 50%;
+        border-top: 0;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-bottom: 7px solid #9daa90;
+      }
+      body.edge-top #rail-peek-chat::before {
+        margin-left: -7px;
+      }
+      body.edge-top #rail-peek-chat::after {
+        top: -5px;
+        margin-left: -5.5px;
+        border-top: 0;
+        border-left: 5.5px solid transparent;
+        border-right: 5.5px solid transparent;
+        border-bottom: 5.5px solid #fffdf6;
+      }
+      #rail-peek-stack {
+        position: absolute;
+        display: block;
+        width: 52px;
+        height: 52px;
+        transform-origin: 50% 50%;
+      }
+      /* Half of 52px stack → center sits on the white wall at --rail. */
+      body.edge-left #rail-peek-stack,
+      body.edge-right #rail-peek-stack {
+        left: calc(var(--rail) - 26px);
+        bottom: 0;
+      }
+      body.edge-left #rail-peek-stack {
+        transform: rotate(45deg);
+      }
+      /*
+       * Right dock: same local anchor + rotate(45deg) as left. Shell scaleX(-1)
+       * flips that into the opposite screen tilt; stack scaleX(-1) only un-mirrors
+       * the sprite (does not move the rail-wall center).
+       */
+      body.edge-right #rail-peek-stack {
+        transform: scaleX(-1) rotate(-45deg);
+      }
+      body.edge-top #rail-peek-stack {
+        position: absolute;
+        left: 50%;
+        top: 2px;
+        bottom: auto;
+        margin-left: -26px;
+        transform-origin: 50% 20%;
+        transform: rotate(180deg);
+      }
+      #rail-peek .pet-figure {
+        position: absolute;
+        inset: 0;
+      }
+      #rail-peek .pet-layer {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        outline: none;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      #rail-peek .pet-layer.is-legs { z-index: 1; }
+      #rail-peek .pet-layer.is-body { z-index: 2; }
+      #rail-peek .pet-layer.is-clothes { z-index: 3; }
+      #rail-peek .pet-layer.is-face { z-index: 4; }
+      #rail-peek .pet-layer.is-hat { z-index: 5; }
+      #rail-peek .pet-layer.is-hat.is-head {
+        top: -12%;
+        right: auto;
+        bottom: auto;
+        left: 14%;
+        width: 72%;
+        height: 72%;
+      }
+      #rail-peek .pet-layer:not([src]),
+      #rail-peek .pet-layer[hidden] {
+        display: none;
+      }
+      .pet-chat strong {
+        font-weight: 800;
+        font-style: italic;
+      }
       body.edge-top #session-fill,
       body.edge-bottom #session-fill {
         top: 0;
@@ -393,9 +631,12 @@
         padding: 0.15rem 0 0.35rem;
       }
       #session-clock {
-        margin: 0;
+        position: relative;
+        z-index: 3;
+        flex: none;
+        margin: 0 0 0.15rem;
         color: var(--shell-ink);
-        font: 700 0.95rem/1.2 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        font: 700 1.55rem/1.15 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         letter-spacing: 0.02em;
         text-align: center;
         font-variant-numeric: tabular-nums;
@@ -406,14 +647,17 @@
       }
       #panel-pet {
         display: none;
-        position: absolute;
-        inset: 0;
-        width: auto;
-        height: auto;
+        position: relative;
+        flex: none;
+        width: 100%;
+        max-width: 9.5rem;
+        margin: 0 auto;
         pointer-events: none;
       }
       body.is-open #panel-pet.is-visible {
-        display: block;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
       .pet-chat {
         position: relative;
@@ -423,15 +667,15 @@
         justify-content: center;
         box-sizing: border-box;
         width: 100%;
-        min-height: 2.2rem;
-        max-width: 9.5rem;
+        min-height: 2.35rem;
+        max-width: 10.5rem;
         margin: 0 0 0.45rem;
-        padding: 0.35rem 0.45rem;
+        padding: 0.4rem 0.5rem;
         border: 1.5px solid #9daa90;
         border-radius: 4px;
         background: #fffdf6;
         color: #23392d;
-        font: 650 10px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        font: 650 11px/1.25 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
         text-align: center;
         opacity: 0;
         transform-origin: 50% calc(100% + 7px);
@@ -465,12 +709,13 @@
         border-top: 5.5px solid #fffdf6;
       }
       #panel-pet .pet-chat {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: calc(90px + 0.35rem + 0.45rem);
-        width: min(100%, 9.5rem);
-        margin: 0 auto;
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: min(100%, 10.5rem);
+        margin: 0 0 0.35rem;
+        order: 0;
       }
       .pet-chat.is-on {
         opacity: 1;
@@ -482,15 +727,16 @@
         }
       }
       #panel-pet-stack {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0.35rem;
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
         display: block;
         width: 90px;
         height: 90px;
-        margin-inline: auto;
+        margin: 0 auto;
         flex: none;
+        order: 1;
         pointer-events: none;
         cursor: inherit;
       }
@@ -532,6 +778,59 @@
       #panel-pet .pet-layer:not([src]),
       #panel-pet .pet-layer[hidden] {
         display: none;
+      }
+      /* Float over the open panel; does not take layout space. */
+      #keep-open {
+        position: absolute;
+        top: 0.4rem;
+        right: 0.4rem;
+        z-index: 5;
+        display: none;
+        align-items: center;
+        gap: 0.32rem;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font: 500 0.68rem/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        color: #8a9380;
+      }
+      body.is-open #keep-open {
+        display: inline-flex;
+      }
+      #keep-open-label {
+        pointer-events: none;
+        user-select: none;
+      }
+      #keep-open-track {
+        position: relative;
+        display: block;
+        box-sizing: border-box;
+        width: 26px;
+        height: 14px;
+        border-radius: 999px;
+        background: #d5d9ce;
+        border: 1px solid #b7bfae;
+        transition: background-color 160ms ease, border-color 160ms ease;
+      }
+      #keep-open-thumb {
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fffdf6;
+        box-shadow: 0 0 0 1px rgba(35, 57, 45, 0.12);
+        transition: transform 160ms ease;
+      }
+      #keep-open[aria-checked="true"] #keep-open-track {
+        background: #c5ef47;
+        border-color: #97b839;
+      }
+      #keep-open[aria-checked="true"] #keep-open-thumb {
+        transform: translateX(12px);
       }
       #panel-actions {
         display: grid;
@@ -587,6 +886,28 @@
         outline: 3px solid #8261a7;
         outline-offset: 3px;
       }
+      /* Keep the corner switch tiny; undo the full-width action-button rules. */
+      #panel-body #keep-open {
+        display: none;
+        width: auto;
+        border-radius: 0;
+        padding: 0;
+        font: 500 0.68rem/1 "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+        background: transparent;
+        border: 0;
+        filter: none;
+      }
+      body.is-open #panel-body #keep-open {
+        display: inline-flex;
+      }
+      #panel-body #keep-open:hover {
+        filter: none;
+      }
+      #panel-body #keep-open:focus-visible {
+        outline: 2px solid #8261a7;
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
       #panel-body button.primary,
       #panel-body button.finish {
         background: #c5ef47;
@@ -621,6 +942,10 @@
               <span></span>
               <span></span>
             </span>
+            <span id="session-marks" aria-hidden="true">
+              <span>×</span>
+              <span>×</span>
+            </span>
           </span>
           <span id="panel-chevron" aria-hidden="true">
             <svg viewBox="0 0 12 12" focusable="false">
@@ -636,7 +961,29 @@
           </span>
         </button>
       </div>
+      <div id="rail-peek" aria-hidden="true">
+        <p id="rail-peek-chat" class="pet-chat"></p>
+        <div id="rail-peek-stack">
+          <span class="pet-figure">
+            <img class="pet-layer is-legs" data-peek-layer="legs" alt="" draggable="false" hidden />
+            <img class="pet-layer is-body" data-peek-layer="body" alt="" draggable="false" hidden />
+            <img class="pet-layer is-clothes" data-peek-layer="clothes" alt="" draggable="false" hidden />
+            <img class="pet-layer is-face" data-peek-layer="face" alt="" draggable="false" hidden />
+            <img class="pet-layer is-hat" data-peek-layer="hat" alt="" draggable="false" hidden />
+          </span>
+        </div>
+      </div>
       <div id="panel-body">
+        <button
+          id="keep-open"
+          type="button"
+          role="switch"
+          aria-checked="false"
+          title="Keep the bar open when the cursor leaves"
+        >
+          <span id="keep-open-label">toggle</span>
+          <span id="keep-open-track" aria-hidden="true"><span id="keep-open-thumb"></span></span>
+        </button>
         <div id="panel-stage">
           <p id="session-clock" hidden></p>
           <div id="panel-pet" aria-hidden="true">
