@@ -3060,25 +3060,19 @@ button.dialog-row {
   position: absolute;
   margin: 0;
   padding: 0;
-  object-fit: contain;
-  image-rendering: auto;
   pointer-events: none;
 }
 
-.room-calendar-art[data-streak-tone="study-pending"] {
-  filter: sepia(0.65) saturate(4) hue-rotate(-18deg) brightness(0.92);
-}
-
-.room-calendar-art[data-streak-tone="study-done"] {
-  filter: sepia(0.4) saturate(3.2) hue-rotate(-8deg) brightness(1.04);
-}
-
-.room-calendar-art[data-streak-tone="rest-pending"] {
-  filter: grayscale(0.15) sepia(0.45) hue-rotate(170deg) saturate(2.2);
-}
-
-.room-calendar-art[data-streak-tone="rest-done"] {
-  filter: grayscale(0.05) sepia(0.55) hue-rotate(250deg) saturate(2.8) brightness(1.05);
+.room-calendar-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+  image-rendering: auto;
+  pointer-events: none;
 }
 
 .room-streak-calendar {
@@ -3086,7 +3080,21 @@ button.dialog-row {
   margin: 0;
   padding: 0;
   pointer-events: none;
+  /* Label sits below the hit target; keep overflow visible so it isn't clipped. */
   overflow: visible;
+  container-type: size;
+}
+
+.room-streak-calendar-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /*
+    Clip to the calendar body: trim side gutters + the bottom drop-shadow band
+    so line-fire edge pixels never show outside the cream page.
+  */
+  clip-path: inset(0 2.5% 4.2% 2.5%);
 }
 
 .room-streak-calendar.is-open,
@@ -3100,23 +3108,134 @@ button.dialog-row {
   width: 100%;
   height: 100%;
   pointer-events: auto;
+  /* Above art so the hover label paints over neighboring props. */
+  z-index: 4;
+  overflow: visible;
+}
+
+/*
+  Cream page center ≈ 50% × 64% of the 44×48 art (ignore drop-shadow).
+  Digit is absolutely centered; font scales with the calendar box itself.
+*/
+.streak-calendar-face {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
 }
 
 .room-streak-calendar .streak-calendar-count {
   position: absolute;
   left: 50%;
-  top: 56%;
-  z-index: 1;
+  top: 50%;
+  z-index: 3;
   transform: translate(-50%, -50%);
   font-family: var(--bungee);
-  font-size: clamp(1.35rem, 5.5cqw, 2rem);
+  /* Scale with the calendar, not a distant room container. */
+  font-size: clamp(0.95rem, 55cqmin, 1.85rem);
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1;
+  text-align: center;
   color: #1a2e22;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  /* Bungee digits sit slightly heavy on the right; nudge optical center. */
+  margin-left: -0.04em;
+}
+
+/*
+  Line-of-fire sheet: 8 frames × 48×20 (room-streak-line-fire.svg).
+  Same animation model as cylinder-fire: fixed native px viewport + strip,
+  discrete translateX(−N×frameW px). Scale the viewport with cqw so it
+  spans the calendar — resize only changes scale, never the step math.
+  Foot mid (x=23.5) stays locked; cream foot sits just above the shadow clip.
+*/
+.streak-calendar-fire {
+  --fire-frame-w: 48px;
+  --fire-frame-h: 20px;
+  --fire-frames: 8;
+  position: absolute;
+  left: 50%;
+  /* Cream body ends ~y 92/96; clip cuts the shadow below. */
+  bottom: 4.2%;
+  z-index: 2;
+  width: var(--fire-frame-w);
+  height: var(--fire-frame-h);
+  opacity: 0.43;
+  /*
+    Native 48px cell → full calendar width via container query.
+    transform-origin bottom center keeps the foot planted while scaling.
+  */
+  transform: translateX(-50%) scale(calc(100cqw / var(--fire-frame-w)));
+  transform-origin: bottom center;
+  overflow: hidden;
   pointer-events: none;
-  user-select: none;
+}
+
+.streak-calendar-fire-strip {
+  display: block;
+  width: calc(var(--fire-frame-w) * var(--fire-frames)); /* 384px */
+  height: var(--fire-frame-h);
+  max-width: none;
+  border: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: streak-line-fire 800ms infinite;
+  will-change: transform;
+}
+
+/*
+  Discrete holds: frame f (1…8) → strip −(f−1)×48px.
+  Exact px steps (like cylinder-fire’s −60px) keep the shared foot mid locked.
+*/
+@keyframes streak-line-fire {
+  0%,
+  12.499% {
+    transform: translateX(0);
+  }
+  12.5%,
+  24.999% {
+    transform: translateX(-48px);
+  }
+  25%,
+  37.499% {
+    transform: translateX(-96px);
+  }
+  37.5%,
+  49.999% {
+    transform: translateX(-144px);
+  }
+  50%,
+  62.499% {
+    transform: translateX(-192px);
+  }
+  62.5%,
+  74.999% {
+    transform: translateX(-240px);
+  }
+  75%,
+  87.499% {
+    transform: translateX(-288px);
+  }
+  87.5%,
+  100% {
+    transform: translateX(-336px);
+  }
+}
+
+.streak-calendar-fire.is-rest {
+  filter: hue-rotate(195deg) saturate(0.9);
+}
+
+.streak-calendar-fire.is-study {
+  filter: none;
 }
 
 .room-prop-hotspot-pad[data-prop-hotspot="calendar"]::before {
@@ -3993,7 +4112,11 @@ button.dialog-row {
 
 @media (prefers-reduced-motion: reduce) {
   .room-cylinder-liquid { transition: none; }
-  .room-cylinder-fire-strip { animation: none; transform: none; }
+  .room-cylinder-fire-strip,
+  .streak-calendar-fire-strip {
+    animation: none;
+    transform: none;
+  }
 }
 
 .living-room-labels {

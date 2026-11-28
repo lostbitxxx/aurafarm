@@ -875,6 +875,10 @@ export function LivingRoom({
   const planPadZ = Math.max(0, planArtZ - 1);
   const planZ = ROOM_LABEL_Z;
   const planModeSrc = STUDY_MODE_ART[studyMode ?? "knight"];
+  const calendarArtSrc =
+    streakTone === "rest-pending" || streakTone === "rest-done"
+      ? "/pet-assets/room/calendar/rest.svg"
+      : "/pet-assets/room/calendar/study.svg";
   const calendarBox = coverBox(
     STREAK_CALENDAR_BOUNDS,
     roomSize.width,
@@ -1162,19 +1166,20 @@ export function LivingRoom({
           ) : null;
         })}
         {isFurniturePlaced(decor, "calendar") ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <div
             className="room-calendar-art"
-            src={roomFurnitureSrc(
-              ROOM_FURNITURE.find((item) => item.id === "calendar")!,
-              decor,
-            )}
-            alt=""
-            draggable={false}
             data-furniture="calendar"
             data-streak-tone={streakTone}
             style={{ ...calendarStyle, zIndex: calendarArtZ }}
-          />
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="room-calendar-art-img"
+              src={calendarArtSrc}
+              alt=""
+              draggable={false}
+            />
+          </div>
         ) : null}
         {isFurniturePlaced(decor, "plan") ? (
           <div className="room-plan-painting" style={{ ...planStyle, zIndex: planArtZ }} data-furniture="plan">
@@ -1359,9 +1364,34 @@ export function LivingRoom({
               onPointerEnter={onCalendarPointerEnter}
               onPointerLeave={onCalendarPointerLeave}
             >
-              <span className="streak-calendar-count" aria-hidden="true">
-                {streakSafe}
-              </span>
+              {/*
+                Clip fire/digit here only — not the outer box — so the hover
+                label can sit below the calendar without being cut off.
+              */}
+              <div className="room-streak-calendar-art" aria-hidden="true">
+                {streakTone === "study-done" || streakTone === "rest-done" ? (
+                  <span
+                    className={
+                      streakTone === "rest-done"
+                        ? "streak-calendar-fire is-rest"
+                        : "streak-calendar-fire is-study"
+                    }
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="streak-calendar-fire-strip"
+                      src="/room-streak-line-fire.svg"
+                      alt=""
+                      width={384}
+                      height={20}
+                      draggable={false}
+                    />
+                  </span>
+                ) : null}
+                <span className="streak-calendar-face">
+                  <span className="streak-calendar-count">{streakSafe}</span>
+                </span>
+              </div>
               <button
                 type="button"
                 className="room-prop-hotspot room-streak-calendar-hit"
@@ -1377,7 +1407,7 @@ export function LivingRoom({
                   else openCalendarMenu();
                 }}
               >
-                <span className="room-prop-hotspot-label">Streak</span>
+                <span className="room-prop-hotspot-label">Calendar</span>
               </button>
             </div>
             {calendarMenu !== "closed" && popoverBox
