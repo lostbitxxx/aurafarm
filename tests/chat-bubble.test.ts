@@ -10,6 +10,7 @@ const {
   CHAT_MAD,
   CHAT_FOCUSED,
   CHAT_RECOVERED,
+  CHAT_BREAK,
   chatSiteName,
   chatBubbleCopy,
   pickChatLineIndex,
@@ -21,10 +22,12 @@ const {
   CHAT_MAD: string[];
   CHAT_FOCUSED: string[];
   CHAT_RECOVERED: string[];
+  CHAT_BREAK: string[];
   chatSiteName: (host?: string) => string;
   chatBubbleCopy: (input?: {
     sessionActive?: boolean;
     closing?: boolean;
+    timeUp?: boolean;
     onDistracted?: boolean;
     distractionPhase?: "none" | "warn" | "mad";
     everDistracted?: boolean;
@@ -57,6 +60,45 @@ test("closing beats distraction and open-bar idle lines", () => {
       panelOpen: true,
     }),
     { text: CHAT_CLOSING, scope: "pet" },
+  );
+});
+
+test("time-up break lines show on closed peek and open panel", () => {
+  assert.deepEqual(CHAT_BREAK, [
+    "Break time!",
+    "Times up!",
+    "Take a short break!",
+    "Stay hydrated!",
+    "Take a sip of water!",
+  ]);
+  assert.deepEqual(
+    chatBubbleCopy({ sessionActive: true, timeUp: true, panelOpen: false }),
+    { text: CHAT_BREAK[0], scope: "peek" },
+  );
+  assert.deepEqual(
+    chatBubbleCopy({
+      sessionActive: true,
+      timeUp: true,
+      panelOpen: false,
+      onDistracted: true,
+      distractionPhase: "mad",
+      lineIndex: 2,
+    }),
+    { text: CHAT_BREAK[2], scope: "peek" },
+  );
+  assert.deepEqual(
+    chatBubbleCopy({ sessionActive: true, timeUp: true, panelOpen: true, everDistracted: false }),
+    { text: CHAT_BREAK[0], scope: "panel" },
+  );
+  assert.deepEqual(
+    chatBubbleCopy({
+      sessionActive: true,
+      timeUp: true,
+      panelOpen: true,
+      everDistracted: true,
+      lineIndex: 3,
+    }),
+    { text: CHAT_BREAK[3], scope: "panel" },
   );
 });
 

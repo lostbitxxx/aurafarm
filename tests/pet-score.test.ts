@@ -50,7 +50,13 @@ const { clampPetOrigin, parseWindowBounds, petOriginForTabStrip } = require("../
     petSize: number,
   ) => { x: number; y: number };
 };
-const { formatSessionClock, formatStudyClock, remainingStudyMs, studyProgress } = require("../desktop/study-clock.js") as {
+const {
+  formatSessionClock,
+  formatStudyClock,
+  remainingStudyMs,
+  studyProgress,
+  studyTimeUp,
+} = require("../desktop/study-clock.js") as {
   formatSessionClock: (remainingMs: number) => string;
   formatStudyClock: (remainingMs: number) => string;
   remainingStudyMs: (
@@ -61,6 +67,10 @@ const { formatSessionClock, formatStudyClock, remainingStudyMs, studyProgress } 
     study: { plannedSeconds?: number; startedAtMs?: number },
     now: number,
   ) => number | null;
+  studyTimeUp: (
+    study: { plannedSeconds?: number; startedAtMs?: number },
+    now: number,
+  ) => boolean;
 };
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("../desktop/score.js") as {
   finishLabel: (blockedCount: number) => string;
@@ -283,8 +293,15 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(panel, /id="session-capsule"/);
   assert.doesNotMatch(panel, /id="session-track"/);
   assert.match(panel, /id="session-fill"/);
+  assert.match(panel, /id="session-overflow-sweep"/);
+  assert.match(panel, /body\.is-time-up #session-overflow-sweep/);
   assert.match(panel, /id="session-ticks"/);
   assert.match(panel, /id="session-clock"/);
+  assert.match(panel, /id="status-row"/);
+  assert.match(panel, /id="finish-arrow"/);
+  assert.match(panel, /id="status-row"[\s\S]*id="status"[\s\S]*id="finish-arrow"/);
+  assert.match(panel, /body\.is-open\.is-time-up\.has-session #finish-arrow/);
+  assert.match(main, /End your session!/);
   assert.doesNotMatch(panel, /id="exp-track"|id="exp-fill"|id="exp-level"/);
   assert.match(panel, /#session-fill[\s\S]*bottom: 0;/);
   assert.match(panel, /#session-capsule[\s\S]*border-radius: var\(--capsule-radius\)/);
@@ -501,6 +518,10 @@ test("the sign-in panel can quit the pet", () => {
   assert.match(main, /function panelBoundsForDisplay/);
   assert.match(main, /distractionPhase/);
   assert.match(main, /panelPeeking/);
+  assert.match(main, /sessionTimeUp/);
+  assert.match(main, /studyTimeUp/);
+  assert.match(main, /CHAT_BREAK_LINE_TICKS = 5/);
+  assert.match(main, /closeBlocked = !timeUp/);
   assert.match(panel, /id="rail-peek"/);
   assert.match(panel, /id="session-marks"/);
   assert.match(panel, /is-peeking/);
@@ -556,6 +577,10 @@ test("the study clock shows the planned time that is left", () => {
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), 0.5);
   assert.equal(studyProgress({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), 1);
   assert.equal(studyProgress({ startedAtMs: started }, started), null);
+  assert.equal(studyTimeUp({ plannedSeconds: 120, startedAtMs: started }, started + 60_000), false);
+  assert.equal(studyTimeUp({ plannedSeconds: 120, startedAtMs: started }, started + 120_000), true);
+  assert.equal(studyTimeUp({ plannedSeconds: 120, startedAtMs: started }, started + 180_000), true);
+  assert.equal(studyTimeUp({ startedAtMs: started }, started), false);
 });
 
 test("the pet aims beside the traffic lights on the tab strip", () => {

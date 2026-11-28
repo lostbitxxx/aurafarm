@@ -434,6 +434,7 @@ window.pet.onState((state) => {
   finishButton.hidden = !state.finishLabel;
   finishButton.textContent = state.finishLabel || "Finish session :)";
   document.body.classList.toggle("has-session", Boolean(state.finishLabel));
+  document.body.classList.toggle("is-time-up", state.sessionTimeUp === true);
   note.textContent = state.finishNote || "";
   if (state.updateUrl) {
     update.hidden = false;
