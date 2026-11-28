@@ -15,6 +15,12 @@ function studyProgress(current, now) {
   return Math.min(1, Math.max(0, fraction));
 }
 
+/** Planned session time has elapsed (overtime / break reminder). */
+function studyTimeUp(current, now) {
+  const remaining = remainingStudyMs(current, now);
+  return remaining !== null && remaining <= 0;
+}
+
 function formatStudyClock(remainingMs) {
   const total = Math.max(0, Math.ceil(Number(remainingMs) / 1000));
   const hours = Math.floor(total / 3600);
@@ -37,4 +43,5 @@ module.exports = {
   formatStudyClock,
   remainingStudyMs,
   studyProgress,
+  studyTimeUp,
 };

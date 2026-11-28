@@ -32,6 +32,14 @@ const CHAT_RECOVERED = [
   "Let's keep on farming!",
   "You ready?",
 ];
+/** Closed-bar peek after planned study time is up (break reminder). */
+const CHAT_BREAK = [
+  "Break time!",
+  "Times up!",
+  "Take a short break!",
+  "Stay hydrated!",
+  "Take a sip of water!",
+];
 
 /** Hostname for debug / site lines. Drops a leading www and a trailing .com. */
 function chatSiteName(host) {
@@ -47,6 +55,7 @@ function chatSiteName(host) {
  * @param {{
  *   sessionActive?: boolean,
  *   closing?: boolean,
+ *   timeUp?: boolean,
  *   onDistracted?: boolean,
  *   distractionPhase?: "none" | "warn" | "mad",
  *   everDistracted?: boolean,
@@ -58,6 +67,7 @@ function chatSiteName(host) {
 function chatBubbleLines(input = {}) {
   const sessionActive = Boolean(input.sessionActive);
   const closing = Boolean(input.closing);
+  const timeUp = Boolean(input.timeUp);
   const onDistracted = Boolean(input.onDistracted);
   const everDistracted = Boolean(input.everDistracted);
   const panelOpen = Boolean(input.panelOpen);
@@ -65,6 +75,8 @@ function chatBubbleLines(input = {}) {
 
   if (!sessionActive) return { lines: [CHAT_NO_SESSION], scope: "pet" };
   if (closing) return { lines: [CHAT_CLOSING], scope: "pet" };
+  // Time-up: break lines on closed-bar peek and open-panel pet.
+  if (timeUp) return { lines: CHAT_BREAK, scope: panelOpen ? "panel" : "peek" };
   if (onDistracted && phase !== "none") {
     const lines = phase === "mad" ? CHAT_MAD : CHAT_NUDGE;
     return { lines, scope: panelOpen ? "panel" : "peek" };
@@ -78,6 +90,7 @@ function chatBubbleLines(input = {}) {
  * @param {{
  *   sessionActive?: boolean,
  *   closing?: boolean,
+ *   timeUp?: boolean,
  *   onDistracted?: boolean,
  *   distractionPhase?: "none" | "warn" | "mad",
  *   everDistracted?: boolean,
@@ -150,6 +163,7 @@ module.exports = {
   CHAT_MAD,
   CHAT_FOCUSED,
   CHAT_RECOVERED,
+  CHAT_BREAK,
   chatSiteName,
   chatBubbleLines,
   chatBubbleCopy,

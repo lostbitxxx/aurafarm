@@ -46,7 +46,7 @@ const {
 } = require("./dock");
 const { petDisplayProgress } = require("./xp");
 const { finishLabel, interpretScoreResponse, scoreRequestBody, usableApiOrigin } = require("./score");
-const { formatSessionClock, remainingStudyMs, studyProgress } = require("./study-clock");
+const { formatSessionClock, remainingStudyMs, studyProgress, studyTimeUp } = require("./study-clock");
 const { updateOffer } = require("./version");
 const { version: PET_VERSION } = require("./package.json");
 const { CHAT_CLOSING, chatBubbleCopy, chatBubbleLines, takeShuffledLine } = require("./chat-bubble");
@@ -138,6 +138,8 @@ let chatLineScenario = "";
 let chatLineBag = [];
 /** Distraction / peek / closing: advance every N seconds. */
 const CHAT_LINE_TICKS = 3;
+/** Break-time peek lines rotate this often (seconds). */
+const CHAT_BREAK_LINE_TICKS = 5;
 /** Open-bar idle: show a line, then silence, then a new random line. */
 const CHAT_SHOW_TICKS = 5;
 const CHAT_SILENCE_TICKS = 60;
@@ -170,6 +172,7 @@ let state = {
   level: null,
   statsPetId: null,
   sessionProgress: 0,
+  sessionTimeUp: false,
   sessionClock: "",
   status: "Let's study together!",
   panelOpen: false,
@@ -260,11 +263,17 @@ function currentDistractionPhase() {
   return distractionPhase(study.closeWatch, Date.now());
 }
 
+function currentSessionTimeUp(now = Date.now()) {
+  if (!study?.token) return false;
+  return studyTimeUp(study, studyClockNow(now));
+}
+
 function chatScenarioKey() {
   const host = onDistractedHost ? String(study?.closeWatch?.host || "") : "";
   return [
     Boolean(study?.token),
     petClosing,
+    currentSessionTimeUp(),
     onDistractedHost,
     currentDistractionPhase(),
     everDistractedThisSession(),
@@ -277,6 +286,7 @@ function chatBubbleInput() {
   return {
     sessionActive: Boolean(study?.token),
     closing: petClosing,
+    timeUp: currentSessionTimeUp(),
     onDistracted: onDistractedHost,
     distractionPhase: currentDistractionPhase(),
     everDistracted: everDistractedThisSession(),
@@ -297,6 +307,7 @@ function isOpenBarIdleChat(preview) {
     preview.scope === "panel" &&
     !onDistractedHost &&
     !petClosing &&
+    !currentSessionTimeUp() &&
     Boolean(study?.token) &&
     panelOpen
   );
@@ -304,9 +315,14 @@ function isOpenBarIdleChat(preview) {
 
 function syncChatBubble(options = {}) {
   if (typeof options.onDistracted === "boolean") onDistractedHost = options.onDistracted;
+  const timeUp = currentSessionTimeUp();
+  // Break-time owns the closed-bar peek; ignore distraction while overtime.
+  if (timeUp) onDistractedHost = false;
   noteDistractionPause(onDistractedHost);
-  const phase = currentDistractionPhase();
-  const peeking = Boolean(onDistractedHost && phase !== "none" && !panelOpen);
+  const phase = timeUp ? "none" : currentDistractionPhase();
+  const breakPeek = timeUp && !panelOpen;
+  const distractPeek = Boolean(onDistractedHost && phase !== "none" && !panelOpen);
+  const peeking = breakPeek || distractPeek;
   const scenario = chatScenarioKey();
   const preview = chatBubbleLines(chatBubbleInput());
   if (scenario !== chatLineScenario) {
@@ -332,7 +348,8 @@ function syncChatBubble(options = {}) {
     state.chatBubbleScope === nextScope &&
     state.panelPetVisible === panelPetVisible &&
     state.panelPeeking === nextPeeking &&
-    state.distractionPhase === phase
+    state.distractionPhase === phase &&
+    state.sessionTimeUp === timeUp
   ) {
     return false;
   }
@@ -343,6 +360,7 @@ function syncChatBubble(options = {}) {
     panelPetVisible,
     panelPeeking: nextPeeking,
     distractionPhase: phase,
+    sessionTimeUp: timeUp,
   };
   return true;
 }
@@ -350,6 +368,13 @@ function syncChatBubble(options = {}) {
 function applyRestingPetPose() {
   // Close-flight owns the face (struggle → idle under boom); don't fight it.
   if (state.flightActive) return;
+  const timeUp = currentSessionTimeUp();
+  // Break peek / open-bar idle after time-up: keep a calm idle face.
+  if (timeUp) {
+    if (state.petPose === "idle" || petAnimating) return;
+    state = { ...state, petPose: "idle" };
+    return;
+  }
   const phase = currentDistractionPhase();
   const pose = restingPetPose({
     sessionActive: Boolean(study?.token),
@@ -1390,22 +1415,38 @@ async function cancelStudy() {
 function tickStudyClock() {
   if (!study || finishing) return;
   const now = Date.now();
+  const timeUp = currentSessionTimeUp(now);
+  const timeUpChanged = state.sessionTimeUp !== timeUp;
   const progressChanged = syncSessionProgress(now);
   const clockChanged = syncSessionClock(now);
-  const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, now) : "";
-  const statusChanged = Boolean(countdown && state.status !== countdown);
-  if (statusChanged) state = { ...state, status: countdown };
+  const nextStatus = timeUp
+    ? "End your session!"
+    : study.closeBlocked
+      ? closeCountdownStatus(study.closeWatch, now)
+      : "";
+  const statusChanged = Boolean(nextStatus && state.status !== nextStatus);
+  if (statusChanged) state = { ...state, status: nextStatus };
   // Focused study: flip study1 ↔ study2 once a second so the pen and legs animate.
   let poseChanged = false;
-  if (!petAnimating && !petClosing && !onDistractedHost) {
+  if (!petAnimating && !petClosing && !onDistractedHost && !timeUp) {
     const nextPose = state.petPose === "study2" ? "study1" : "study2";
     if (state.petPose !== nextPose) {
       state = { ...state, petPose: nextPose };
       poseChanged = true;
     }
   }
-  // Distracted: republish each second so warn → mad phase / peek bounds stay in sync.
-  if (progressChanged || clockChanged || statusChanged || poseChanged || onDistractedHost) publish();
+  // Distracted / time-up: republish so peek bounds and overtime UI stay in sync.
+  if (
+    progressChanged ||
+    clockChanged ||
+    statusChanged ||
+    poseChanged ||
+    onDistractedHost ||
+    timeUpChanged ||
+    timeUp
+  ) {
+    publish();
+  }
   advanceChatLine();
 }
 
@@ -1439,7 +1480,8 @@ function advanceChatLine() {
     if (syncChatBubble()) publish();
     return;
   }
-  if (chatLineTick < CHAT_LINE_TICKS) return;
+  const lineTicks = currentSessionTimeUp() ? CHAT_BREAK_LINE_TICKS : CHAT_LINE_TICKS;
+  if (chatLineTick < lineTicks) return;
   chatLineTick = 0;
   nextChatLine(preview.lines.length);
   if (syncChatBubble()) publish();
@@ -1452,7 +1494,7 @@ function beginFrontWatch(body, browser = "") {
     // Held in memory for the later score submit. It is not written to disk.
     token: typeof body.token === "string" ? body.token : "",
     blocklist: body.blocklist.filter((host) => typeof host === "string"),
-    // Close blocked tabs stays on for the desktop pet (no user toggle).
+    // Close blocked tabs while studying; disabled automatically after time-up.
     closeBlocked: true,
     closeWatch: createCloseWatch(),
     log: createFrontLog(),
@@ -1524,6 +1566,7 @@ function stopFrontWatch() {
     panelPeeking: false,
     distractionPhase: "none",
     sessionProgress: 0,
+    sessionTimeUp: false,
     sessionClock: "",
   };
   const debugBefore = state.debug;
@@ -1683,6 +1726,10 @@ async function submitScoreDirect(current, body, postFailure) {
 
 function publishWatch(reading) {
   if (!study) return;
+  if (currentSessionTimeUp()) {
+    setStatus("End your session!");
+    return;
+  }
   const countdown = study.closeBlocked ? closeCountdownStatus(study.closeWatch, Date.now()) : "";
   if (countdown) {
     setStatus(countdown);
@@ -1743,12 +1790,13 @@ async function pollFront() {
     }
     const preference = await readCloseBlocked();
     if (study !== current) return;
-    // Always close blocked tabs on desktop; preference is debug-only.
-    current.closeBlocked = true;
     const now = Date.now();
+    const timeUp = studyTimeUp(current, studyClockNow(now));
+    // After planned time is up: disable close-blocked so break peek owns the rail.
+    current.closeBlocked = !timeUp;
     const leftBrowser = Boolean(reading.app) && !reading.error && !supportedFrontBrowser(reading.app);
     const decision = nextCloseWatch(current.closeWatch, {
-      enabled: true,
+      enabled: current.closeBlocked,
       rawUrl: reading.url || "",
       blocklist: current.blocklist,
       deskHost: DESK_HOST,
@@ -1756,14 +1804,19 @@ async function pollFront() {
       leftBrowser,
     });
     current.closeWatch = decision;
-    if (decision.host && decision.since > 0 && now - decision.since >= CLOSE_AFTER_MS) {
+    if (
+      current.closeBlocked &&
+      decision.host &&
+      decision.since > 0 &&
+      now - decision.since >= CLOSE_AFTER_MS
+    ) {
       if (!current.distractedHosts.includes(decision.host)) {
         current.distractedHosts = [...current.distractedHosts, decision.host];
       }
     }
     let closeNote = "";
     let closeError = "";
-    const onDistracted = Boolean(decision.host);
+    const onDistracted = current.closeBlocked && Boolean(decision.host);
     syncChatBubble({ onDistracted });
     if (decision.close && current.closeBlocked) {
       const closed = await closeFrontTab(reading.app, decision.host);
