@@ -435,6 +435,13 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   max-width: 38rem;
 }
 
+.privacy-back-row {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 38rem;
+  margin-top: 1.25rem;
+}
+
 .paper-shell .auth-layout {
   flex: 1;
   width: min(1120px, calc(100% - 8vw));

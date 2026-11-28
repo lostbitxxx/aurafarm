@@ -33,7 +33,7 @@ test("desk header stacks nav under Aurafarm and uses a Settings menu", () => {
   assert.match(css, /\.topbar-settings-list[\s\S]*right:\s*0/);
 });
 
-test("Settings lists Download, Privacy, Replay tutorial, Dev tools, then Sign out", () => {
+test("Settings lists Download, Replay tutorial, Privacy, Dev tools, then Sign out", () => {
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   const settingsBlock = header.slice(
     header.indexOf("const settingsItems"),
@@ -50,10 +50,10 @@ test("Settings lists Download, Privacy, Replay tutorial, Dev tools, then Sign ou
 
   assert.equal(editPlan, -1);
   assert.ok(download >= 0);
-  assert.ok(privacy > download);
-  assert.ok(replay > privacy);
+  assert.ok(replay > download);
+  assert.ok(privacy > replay);
   assert.equal(social, -1);
-  assert.ok(devTools > replay);
+  assert.ok(devTools > privacy);
   assert.ok(signOut > devTools);
   assert.match(header, /data-tutorial="settings"/);
   assert.match(header, /onReplayTutorial/);

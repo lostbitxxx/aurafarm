@@ -66,14 +66,14 @@ export function SiteHeader({
           Download desktop pet
         </button>
       ) : null}
-      <Link href="/privacy" role="menuitem" onClick={() => setSettingsOpen(false)}>
-        Privacy
-      </Link>
       {onReplayTutorial ? (
         <button type="button" role="menuitem" onClick={() => runSettingsAction(onReplayTutorial)}>
           Replay tutorial
         </button>
       ) : null}
+      <Link href="/privacy" role="menuitem" onClick={() => setSettingsOpen(false)}>
+        Privacy
+      </Link>
       {onOpenDevTools ? (
         <button type="button" role="menuitem" onClick={() => runSettingsAction(onOpenDevTools)}>
           Dev tools
