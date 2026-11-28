@@ -131,16 +131,16 @@ const STORAGE_RACK_BOUNDS: RoomRectPx = { x: 292, y: 78, width: 130, height: 65 
 /** On the wall above and slightly left of the storage rack. */
 const BLACKBOARD_BOUNDS: RoomRectPx = { x: 248, y: 22, width: 100, height: 48 };
 /**
- * Streak calendar on the wall just left of the blackboard — same height (48px).
+ * Streak calendar on the wall left of the blackboard — same height (48px).
  * Width keeps the calendar art aspect (88∶96).
  */
-export const STREAK_CALENDAR_BOUNDS: RoomRectPx = { x: 198, y: 22, width: 44, height: 48 };
+export const STREAK_CALENDAR_BOUNDS: RoomRectPx = { x: 182, y: 22, width: 44, height: 48 };
 /** Wall calendar: always behind pets and floor furniture (no walk collision). */
 export const CALENDAR_DEPTH_TOP = 0;
 /**
- * Edit-plan painting on the wall just left of the streak calendar — smaller square than the calendar.
+ * Edit-plan painting between the blackboard and the bookshelf — smaller square than the calendar.
  */
-export const PLAN_PAINTING_BOUNDS: RoomRectPx = { x: 156, y: 22, width: 36, height: 36 };
+export const PLAN_PAINTING_BOUNDS: RoomRectPx = { x: 392, y: 22, width: 36, height: 36 };
 /** Wall plan painting: always behind pets and floor furniture (no walk collision). */
 export const PLAN_PAINTING_DEPTH_TOP = 0;
 

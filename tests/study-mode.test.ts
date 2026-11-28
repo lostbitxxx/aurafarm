@@ -201,16 +201,27 @@ test("local calendar days map to ISO weekdays and scheduled study checks", () =>
 
 test("goals step uses weekday toggles instead of a monthly session field", () => {
   const wizard = readFileSync(new URL("../components/customize-wizard.tsx", import.meta.url), "utf8");
-  assert.match(wizard, /Set this week’s goal/);
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(wizard, /Set your week goals/);
+  assert.match(wizard, /Choose your study days and rest days/);
   assert.match(wizard, /weekday-strip/);
   assert.match(wizard, /studyWeekdays/);
   assert.match(wizard, /sessionMinutes/);
-  assert.match(wizard, /SESSION_MINUTE_OPTIONS/);
+  assert.match(wizard, /customize-goal-summary/);
+  assert.match(wizard, /Goal summary/);
+  assert.match(wizard, /weekGoalMinutes = sessionMinutes \* studyWeekdays\.length/);
+  assert.match(wizard, /weekGoalRemainderMins === 0/);
+  assert.match(wizard, /\$\{weekGoalHours\}hr \$\{weekGoalRemainderMins\}mins/);
   assert.match(wizard, /✦Recommended✦/);
-  assert.match(wizard, /SESSION_MINUTE_COPY/);
+  assert.doesNotMatch(wizard, /Daily goal/);
+  assert.doesNotMatch(wizard, /SESSION_MINUTE_OPTIONS/);
+  assert.doesNotMatch(wizard, /SESSION_MINUTE_COPY/);
   assert.doesNotMatch(wizard, /session-minute-custom/);
   assert.doesNotMatch(wizard, /name="monthlySessions"/);
   assert.doesNotMatch(wizard, /Set this month’s goal/);
+  assert.match(css, /\.customize-goal-summary/);
+  assert.match(css, /\.customize-goal-summary-total/);
+  assert.match(css, /\.customize-goal-summary-formula/);
 });
 
 test("customize wizard options use radiogroup semantics and visible radio markers", () => {

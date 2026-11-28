@@ -9,8 +9,6 @@ import {
 } from "react";
 import {
   BEHAVIOR_QUESTIONS,
-  SESSION_MINUTE_COPY,
-  SESSION_MINUTE_OPTIONS,
   STUDY_MODES,
   WEEKDAYS,
   WEEKDAY_LABELS,
@@ -129,6 +127,9 @@ export function CustomizeWizard({
 
   // Highlight follows the recommendation until the user taps a mode card.
   const activeMode = (modePickedByUser ? pickedMode : null) ?? recommended ?? "knight";
+  const weekGoalMinutes = sessionMinutes * studyWeekdays.length;
+  const weekGoalHours = Math.floor(weekGoalMinutes / 60);
+  const weekGoalRemainderMins = weekGoalMinutes % 60;
 
   function chooseAnswer<K extends keyof BehaviorAnswers>(id: K, value: BehaviorAnswers[K]) {
     const next = { ...answers, [id]: value };
@@ -229,15 +230,15 @@ export function CustomizeWizard({
             ? "How do you study?"
             : step === 1
               ? "Choose your study mode"
-              : "Set this week’s goal"}
+              : "Set your week goals"}
         </h1>
-        <p className="customize-lede">
-          {step === 0
-            ? "Three short questions. We’ll recommend a study style you can still change."
-            : step === 1
-              ? "Assassin, Knight, or Lord — pick the one that fits, even if we guessed wrong."
-              : "Pick which days you study and how long. Rest days stay optional."}
-        </p>
+        {step === 0 ? (
+          <p className="customize-lede">
+            Three short questions. We’ll recommend a study style you can still change.
+          </p>
+        ) : step === 2 ? (
+          <p className="customize-lede">Choose your study days and rest days.</p>
+        ) : null}
 
         {step === 0 ? (
           <div className="customize-panel">
@@ -310,8 +311,7 @@ export function CustomizeWizard({
           <div className="customize-panel">
             {recommended ? (
               <p className="customize-recommend" role="status">
-                Suggested for you: <strong>{modeLabel(recommended)}</strong> —{" "}
-                {modeTagline(recommended)}
+                Suggested for you: <strong>{modeLabel(recommended)}</strong>
               </p>
             ) : null}
             <div className="customize-modes">
@@ -330,7 +330,7 @@ export function CustomizeWizard({
                       ) : null}
                     </div>
                     <span>{modeTagline(item)}</span>
-                    <em>{planForMode(item).sessionMinutes} min blocks</em>
+                    <em>{planForMode(item).sessionMinutes} min daily goal</em>
                   </div>
                   <img
                     className="customize-mode-art"
@@ -395,49 +395,18 @@ export function CustomizeWizard({
               </div>
             </fieldset>
 
-            <fieldset className="customize-question">
-              <legend id="customize-session-minutes-legend">Daily goal</legend>
-              <div
-                className="customize-options session-minute-options"
-                role="radiogroup"
-                aria-labelledby="customize-session-minutes-legend"
-                onKeyDown={(event) =>
-                  onRadioGroupKeyDown(
-                    event,
-                    SESSION_MINUTE_OPTIONS.map(String),
-                    String(sessionMinutes),
-                    (value) => setSessionMinutes(Number(value)),
-                  )
-                }
-              >
-                {SESSION_MINUTE_OPTIONS.map((minutes) => {
-                  const selected = sessionMinutes === minutes;
-                  const recommended = minutes === modeSessionMinutes(activeMode);
-                  return (
-                    <button
-                      key={minutes}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      tabIndex={selected ? 0 : -1}
-                      data-radio-value={minutes}
-                      className={`customize-option${selected ? " is-selected" : ""}`}
-                      onClick={() => setSessionMinutes(minutes)}
-                    >
-                      <span className="customize-option-radio" aria-hidden="true" />
-                      <span className="customize-option-copy">
-                        <strong className="customize-option-label">{minutes} min</strong>
-                        {recommended ? (
-                          <span className="customize-option-recommended">✦Recommended✦</span>
-                        ) : (
-                          <span className="customize-option-detail">{SESSION_MINUTE_COPY[minutes]}</span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <aside className="customize-goal-summary" aria-live="polite">
+              <p className="customize-goal-summary-label">Goal summary</p>
+              <p className="customize-goal-summary-total">
+                {weekGoalRemainderMins === 0
+                  ? `${weekGoalHours}hr`
+                  : `${weekGoalHours}hr ${weekGoalRemainderMins}mins`}
+              </p>
+              <p className="customize-goal-summary-formula">
+                {sessionMinutes} min × {studyWeekdays.length}{" "}
+                {studyWeekdays.length === 1 ? "study day" : "study days"}
+              </p>
+            </aside>
 
             <p className="customize-note customize-note-underline">
               You can still study on rest days and grow your streak!

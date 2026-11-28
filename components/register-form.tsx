@@ -49,7 +49,7 @@ export function RegisterForm({ configured }: { configured: boolean }) {
         {pending ? "Signing you up…" : "Create account"}
       </button>
       <p className="form-switch">
-        Already have a farm? <Link href="/login">Sign in</Link>
+        Already have an account? <Link href="/login">Sign in</Link>
       </p>
     </form>
   );

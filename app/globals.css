@@ -409,6 +409,18 @@ h1 { font-size: clamp(3rem, 6vw, 5.4rem); line-height: 0.92; margin: 0; }
   image-rendering: pixelated;
 }
 
+/* Tall/wide register: center pet only; keep headline/copy left-aligned. */
+@media (min-width: 861px) and (min-height: 720px) {
+  .paper-shell .auth-aside:has(.auth-pet-art) {
+    display: grid;
+    justify-items: start;
+  }
+
+  .paper-shell .auth-aside:has(.auth-pet-art) .auth-pet-art {
+    justify-self: center;
+  }
+}
+
 .paper-main {
   width: min(40rem, calc(100% - 8vw));
   margin: 0 auto;
@@ -5819,6 +5831,19 @@ button.dialog-row {
 .customize-mode.is-selected .customize-mode-art {
   opacity: 1;
   transform: translateX(0);
+  /* Animation (not transition) so the slide also plays when the step mounts selected. */
+  animation: customize-mode-art-in 640ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes customize-mode-art-in {
+  from {
+    opacity: 0.35;
+    transform: translateX(45%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5829,6 +5854,7 @@ button.dialog-row {
 
   .customize-mode.is-selected .customize-mode-art {
     transform: none;
+    animation: none;
   }
 }
 
@@ -5951,6 +5977,44 @@ button.dialog-row {
 
 .goal-visual-weekly {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customize-goal-summary {
+  display: grid;
+  gap: 0.2rem;
+  width: fit-content;
+  min-width: 11.5rem;
+  margin-top: 0.35rem;
+  padding: 0.85rem 1.05rem;
+  border-radius: 16px;
+  background: rgba(198, 239, 74, 0.16);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--slime-deep) 55%, transparent);
+  color: var(--ink);
+}
+
+.customize-goal-summary-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.customize-goal-summary-total {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.customize-goal-summary-formula {
+  margin: 0.15rem 0 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
 }
 
 .weekday-strip {
