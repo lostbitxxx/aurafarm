@@ -124,7 +124,7 @@ test("edit plan lives on the wall as a square framed painting", () => {
   assert.match(room, /aria-label="Edit plan"/);
   assert.match(layout, /PLAN_PAINTING_BOUNDS/);
   assert.match(layout, /id: "plan"/);
-  assert.match(layout, /x: 156, y: 22, width: 36, height: 36/);
+  assert.match(layout, /x: 354, y: 22, width: 36, height: 36/);
   assert.match(decor, /mover: "plan"/);
   assert.match(planSvg, /viewBox="0 0 48 48"/);
 });

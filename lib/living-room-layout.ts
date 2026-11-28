@@ -138,9 +138,9 @@ export const STREAK_CALENDAR_BOUNDS: RoomRectPx = { x: 198, y: 22, width: 44, he
 /** Wall calendar: always behind pets and floor furniture (no walk collision). */
 export const CALENDAR_DEPTH_TOP = 0;
 /**
- * Edit-plan painting on the wall just left of the streak calendar — smaller square than the calendar.
+ * Edit-plan painting on the wall just right of the blackboard — smaller square than the calendar.
  */
-export const PLAN_PAINTING_BOUNDS: RoomRectPx = { x: 156, y: 22, width: 36, height: 36 };
+export const PLAN_PAINTING_BOUNDS: RoomRectPx = { x: 354, y: 22, width: 36, height: 36 };
 /** Wall plan painting: always behind pets and floor furniture (no walk collision). */
 export const PLAN_PAINTING_DEPTH_TOP = 0;
 
