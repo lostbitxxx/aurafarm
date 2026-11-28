@@ -213,7 +213,7 @@ function blackboardPiece(): RoomFurniturePiece {
 function calendarPiece(): RoomFurniturePiece {
   return {
     id: "calendar",
-    src: "/pet-assets/room/calendar/base.svg",
+    src: "/pet-assets/room/calendar/study.svg",
     bounds: STREAK_CALENDAR_BOUNDS,
     depthTop: CALENDAR_DEPTH_TOP,
     block: {

@@ -75,19 +75,23 @@ test("sumPetLevels floors and ignores non-finite values", () => {
   assert.equal(sumPetLevels([]), 0);
 });
 
-test("an unfinished study day tints the streak calendar red instead of grey", () => {
+test("streak calendar uses study/rest SVG headers and cream-centered digit", () => {
   const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
-  const pending = css.slice(
-    css.indexOf('[data-streak-tone="study-pending"]'),
-    css.indexOf('[data-streak-tone="study-done"]'),
-  );
-  const rest = css.slice(
-    css.indexOf('[data-streak-tone="rest-pending"]'),
-    css.indexOf('[data-streak-tone="rest-done"]'),
-  );
-  assert.doesNotMatch(pending, /grayscale\(1\)/);
-  assert.match(pending, /hue-rotate\(-18deg\)/);
-  assert.match(rest, /hue-rotate\(170deg\)/);
+  const room = readFileSync(new URL("../components/living-room.tsx", import.meta.url), "utf8");
+  const studySvg = readFileSync(new URL("../public/pet-assets/room/calendar/study.svg", import.meta.url), "utf8");
+  const restSvg = readFileSync(new URL("../public/pet-assets/room/calendar/rest.svg", import.meta.url), "utf8");
+  assert.match(room, /calendar\/study\.svg/);
+  assert.match(room, /calendar\/rest\.svg/);
+  assert.match(room, /streak-calendar-face/);
+  assert.match(room, /room-streak-line-fire\.svg/);
+  assert.doesNotMatch(room, /room-calendar-header/);
+  assert.doesNotMatch(css, /room-calendar-header/);
+  assert.match(css, /streak-calendar-face/);
+  assert.match(css, /streak-calendar-fire/);
+  assert.match(studySvg, /viewBox="0 0 44 48"/);
+  assert.match(restSvg, /viewBox="0 0 44 48"/);
+  assert.ok(existsSync(new URL("../public/pet-assets/room/calendar/study.svg", import.meta.url)));
+  assert.ok(existsSync(new URL("../public/pet-assets/room/calendar/rest.svg", import.meta.url)));
 });
 
 test("streak calendar svg asset exists and is transparent-backed", () => {
