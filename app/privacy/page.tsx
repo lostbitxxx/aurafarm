@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PrivacyBackButton } from "@/components/privacy-back-button";
 import { PublicHeader } from "@/components/public-header";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function PrivacyPage() {
           </li>
           <li>Stopping the session or quitting the pet stops the address-bar check.</li>
         </ul>
+        <PrivacyBackButton />
       </main>
     </div>
   );

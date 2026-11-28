@@ -14,7 +14,7 @@ export function PetStatus({
       ) : null}
       {downloadUrl ? (
         <a className="button" href={downloadUrl}>
-          Download the Mac pet
+          Download here!
         </a>
       ) : (
         <p>

@@ -55,8 +55,12 @@ test("the privacy page states what the pet reads", () => {
   assert.match(page, /stores the duration, the experience, and the blocked hostnames/);
   assert.doesNotMatch(page, /heartbeat/);
   assert.match(page, /quitting the pet stops the address-bar check/);
+  assert.match(page, /PrivacyBackButton/);
   const header = readFileSync(new URL("../components/site-header.tsx", import.meta.url), "utf8");
   assert.match(header, /href="\/privacy"/);
+  const back = readFileSync(new URL("../components/privacy-back-button.tsx", import.meta.url), "utf8");
+  assert.match(back, /router\.back\(\)/);
+  assert.match(back, />\s*Back\s*</);
 });
 
 test("the pet config route returns only the public supabase values", () => {

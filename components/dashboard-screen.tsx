@@ -561,8 +561,8 @@ export function DashboardScreen({
         />
       ) : null}
       {dialog === "download" ? (
-        <HistoryDialog title="Mac companion" onClose={() => setDialog(null)}>
-          <PetStatus downloadUrl={downloadUrl} />
+        <HistoryDialog title="Download your desktop pet" onClose={() => setDialog(null)}>
+          <PetStatus downloadUrl={downloadUrl} showHeading={false} />
         </HistoryDialog>
       ) : null}
       {dialog === "dev-tools" ? (
